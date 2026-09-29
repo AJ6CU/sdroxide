@@ -92,6 +92,24 @@ pub(in crate::app) fn settings_ui_tab(
             });
         ui.end_row();
 
+        ui.label("Control strip");
+        crate::chrome::checkbox(ui, &mut cfg.control_strip, "Show across the top").on_hover_text(
+            "Off gives the panadapter the whole window, for SDRoxide used as the band \
+                 display beside a controller with its own frequency, mode and filter \
+                 controls. A STRIP chip in the top-right corner brings it back.",
+        );
+        ui.end_row();
+
+        ui.label("CW panel");
+        crate::chrome::checkbox(ui, &mut cfg.cw_panel, "Show under the waterfall in CW")
+            .on_hover_text(
+                "Off gives the waterfall the whole height in CW, for when the copy is shown \
+                 somewhere else — another program fed by Settings → Servers, or a controller \
+                 beside your transceiver. The decoder keeps running; only the panel goes, and \
+                 with it the keyboard, pitch and QRG controls, until this is switched back on.",
+            );
+        ui.end_row();
+
         ui.label("Tuning buttons");
         ui.horizontal(|ui| {
             crate::chrome::checkbox(ui, &mut cfg.tune_step_buttons, "Show on phone and tablet")

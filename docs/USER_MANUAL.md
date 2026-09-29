@@ -1804,6 +1804,13 @@ a panel underneath it. CW is not a digital mode — the tone stays audible, the
 waterfall stays on the whole band, and nothing about the way you tune changes —
 but a decoder reads what you are listening to, and a keyboard sends.
 
+The panel can be switched off — **Settings → UI → CW panel** — for when the copy
+is shown somewhere else, such as another program fed by the decoded-CW UDP
+output ([6.9](#69-servers-letting-other-programs-drive-the-radio)). The
+waterfall then has the whole height and keeps its cursor; the decoder goes on
+running. The keyboard, pitch and QRG controls go with the panel until it is
+switched back on.
+
 ![The CW panel: decoded text above, what you are sending below](images/cw.jpg)
 
 **The cursor is the frequency.** The cyan line on the waterfall marks the tone
@@ -11450,6 +11457,17 @@ emptying it fast enough, the log says how much was lost.
 The **UI** tab holds display preferences, stored in `config.toml` under `[ui]`, and the
 spoken announcements below them under `[speech]`:
 
+- **Control strip** — whether the control strip runs across the top of the
+  window. On by default; off gives the panadapter the whole window, for
+  SDRoxide used as the band display beside a controller that has its own
+  frequency, mode and filter controls. A **STRIP** chip in the top-right corner
+  brings it back. With the strip off the window can be made much smaller —
+  down to 400 × 200, or 400 × 360 while the CW panel is showing — where with
+  it on it stops at 800 × 500; turning the strip back on in a smaller window
+  grows the window to fit.
+- **CW panel** — whether CW shows its panel under the waterfall
+  ([2.14](#214-cw-decoding-and-keyboard-sending)). On by default; off gives the
+  waterfall the whole height while the decoder keeps running.
 - **Layout** — which control strip the window wears. **Auto** picks one from the
   window size and is what you want; **Desktop**, **Tablet**, **Small screen**
   and **Phone** force it, to see how the compact strips look without a phone to
