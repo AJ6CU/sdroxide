@@ -1162,6 +1162,41 @@ impl MultiApp {
 }
 
 impl MultiApp {
+    /// Keep the window's minimum to what the radios on screen need: the
+    /// control strip's [`crate::layout::MIN_WINDOW`] while any of them shows
+    /// it, and otherwise their bare panadapters side by side
+    /// ([`SdroxideApp::min_view_size`]) — never more than the strip's, which
+    /// is what the window always had. Sent only when it changes. Switching
+    /// the strip back on in a window smaller than it needs also grows the
+    /// window to fit, since a minimum alone does not resize one.
+    #[cfg(not(target_arch = "wasm32"))]
+    fn fit_minimum(&self, ctx: &egui::Context, pane_tabs: &[usize]) {
+        let full = crate::layout::MIN_WINDOW;
+        let sizes: Vec<egui::Vec2> =
+            pane_tabs.iter().map(|&i| self.tabs[i].app.min_view_size()).collect();
+        let want = if sizes.iter().any(|s| *s == full) {
+            full
+        } else {
+            // The split view's column gap, and the radio strip over the panes.
+            let gaps = 6.0 * sizes.len().saturating_sub(1) as f32;
+            let strip = if sizes.len() > 1 || self.strip_wanted() { 30.0 } else { 0.0 };
+            let w = sizes.iter().map(|s| s.x).sum::<f32>() + gaps;
+            let h = sizes.iter().map(|s| s.y).fold(0.0, f32::max) + strip;
+            egui::vec2(w.min(full.x), h.min(full.y))
+        };
+        let id = egui::Id::new("window-minimum");
+        if ctx.data(|d| d.get_temp::<egui::Vec2>(id)) == Some(want) {
+            return;
+        }
+        ctx.data_mut(|d| d.insert_temp(id, want));
+        ctx.send_viewport_cmd(egui::ViewportCommand::MinInnerSize(want));
+        if let Some(inner) = ctx.input(|i| i.viewport().inner_rect.map(|r| r.size()))
+            && (inner.x < want.x || inner.y < want.y)
+        {
+            ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(inner.max(want)));
+        }
+    }
+
     /// Bring a window that opened bigger than its screen back onto it.
     ///
     /// The size asked for at startup is in *points*, and a scaled display has
@@ -1195,7 +1230,7 @@ impl MultiApp {
         // screen too small for that is one where something has to be cut off
         // either way.
         if let Some(want) =
-            crate::layout::fit_inner_size(monitor, outer, inner, egui::vec2(800.0, 500.0))
+            crate::layout::fit_inner_size(monitor, outer, inner, crate::layout::MIN_WINDOW)
         {
             tracing::info!(
                 "window {}x{} does not fit a {}x{} point screen — bringing it in to {}x{}",
@@ -1221,6 +1256,8 @@ impl eframe::App for MultiApp {
         // Pane order → tab index; `sanitize_panes` guaranteed each exists.
         let pane_tabs: Vec<usize> =
             self.panes.iter().filter_map(|id| self.tabs.iter().position(|t| t.id == *id)).collect();
+        #[cfg(not(target_arch = "wasm32"))]
+        self.fit_minimum(&ctx, &pane_tabs);
         // Hidden tabs first: their engines' unbounded event channels must not
         // back up, and their digital modes keep working in the background.
         // (The visible ones drain at the top of their own frame loop.)

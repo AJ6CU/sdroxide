@@ -277,6 +277,17 @@ pub fn salted_id(ctx: &egui::Context, name: &str) -> egui::Id {
 /// underneath it.
 const DESKTOP_CHROME_H: f32 = 48.0;
 
+/// The window's minimum while a radio on screen shows its control strip:
+/// what the strip needs to wrap into rows it can still be used in.
+pub const MIN_WINDOW: egui::Vec2 = egui::vec2(800.0, 500.0);
+
+/// The smallest minimum there is — a bare panadapter, with the control strip
+/// and the CW panel switched off. The window is *created* with this one, so
+/// that a size saved that small is not cut back to [`MIN_WINDOW`] before the
+/// first frame has had its say; the shell sets the real minimum from then on
+/// (`MultiApp::fit_minimum`).
+pub const MIN_WINDOW_BARE: egui::Vec2 = egui::vec2(400.0, 200.0);
+
 /// The inner size to shrink a window to so that the whole of it — title bar,
 /// borders and all — fits on the screen it is on, or `None` when it already
 /// does.

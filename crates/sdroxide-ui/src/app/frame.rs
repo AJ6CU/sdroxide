@@ -61,6 +61,25 @@ fn digi_split(total: f32, divider_h: f32, fraction: f32, row_h: f32) -> (f32, f3
     (usable - panel_h, panel_h)
 }
 
+impl SdroxideApp {
+    /// The smallest window this radio's view can use, which the shell makes
+    /// the window's minimum ([`crate::MultiApp`]). The control strip is what
+    /// needs the width and most of the height; with it switched off
+    /// (`UiSettings::control_strip`) the panadapter alone sets the floor, and
+    /// the CW panel adds to it only while it is on screen.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub(crate) fn min_view_size(&self) -> egui::Vec2 {
+        if self.ui_settings.control_strip {
+            return crate::layout::MIN_WINDOW;
+        }
+        let cw_panel = self.ui_settings.cw_panel && self.state.rx[0].mode == Mode::Cw;
+        egui::vec2(
+            crate::layout::MIN_WINDOW_BARE.x,
+            if cw_panel { 360.0 } else { crate::layout::MIN_WINDOW_BARE.y },
+        )
+    }
+}
+
 /// Whether a state update that kept the mode moved the receiver far enough to
 /// throw the copied decodes away.
 ///
@@ -258,17 +277,38 @@ impl eframe::App for SdroxideApp {
             }
         }
 
-        egui::Panel::top(crate::layout::salted_id(&ctx, "topbar"))
-            .frame(
-                egui::Frame::new()
-                    .fill(crate::theme::BG_DEEP())
-                    .inner_margin(egui::Margin::symmetric(8, 6)),
-            )
-            .show(ui, |ui| {
-                crate::chrome::angled_frame(ui, crate::theme::PINK(), |ui| {
-                    self.top_bar(ui, &mut cmds);
+        if self.ui_settings.control_strip {
+            egui::Panel::top(crate::layout::salted_id(&ctx, "topbar"))
+                .frame(
+                    egui::Frame::new()
+                        .fill(crate::theme::BG_DEEP())
+                        .inner_margin(egui::Margin::symmetric(8, 6)),
+                )
+                .show(ui, |ui| {
+                    crate::chrome::angled_frame(ui, crate::theme::PINK(), |ui| {
+                        self.top_bar(ui, &mut cmds);
+                    });
                 });
-            });
+        } else {
+            // The strip switched off (`UiSettings::control_strip`): the
+            // panadapter has the window, and this one chip in the corner is
+            // the way back — the strip holds the Settings button, so it must
+            // never be reachable only from inside itself.
+            egui::Area::new(crate::layout::salted_id(&ctx, "strip-restore"))
+                .anchor(egui::Align2::RIGHT_TOP, egui::vec2(-8.0, 8.0))
+                .order(egui::Order::Foreground)
+                .show(&ctx, |ui| {
+                    if crate::chrome::chip(ui, false, "STRIP")
+                        .on_hover_text(
+                            "Show the control strip again (Settings → UI → Control strip)",
+                        )
+                        .clicked()
+                    {
+                        self.ui_settings.control_strip = true;
+                        crate::app::persist::persist_ui_settings(&self.ui_settings);
+                    }
+                });
+        }
         // A persistent radio-audio warning (input unavailable / mono-for-IQ)
         // rides above the panadapter with a dismiss button, so a silent RX
         // failure is explained rather than reading as "waiting for spectrum".
@@ -817,7 +857,10 @@ impl eframe::App for SdroxideApp {
             // with nothing under it that leaves the pane empty, which is what
             // switching both off asks for.
             let layers = tier.waterfall_only() || self.view.panadapter_visible();
-            let (wf_h, panel_h, show_wf, show_panel) = if !cw_mode {
+            // With the panel switched off (`UiSettings::cw_panel`) CW is laid
+            // out like any other mode: the cursor stays, the decoder keeps
+            // running in the engine, and the waterfall has the height.
+            let (wf_h, panel_h, show_wf, show_panel) = if !cw_mode || !self.ui_settings.cw_panel {
                 (ui.available_height(), 0.0, layers, false)
             } else if phone {
                 self.digi_tabs(ui, Mode::Cw);

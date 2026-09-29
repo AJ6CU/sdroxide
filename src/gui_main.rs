@@ -173,7 +173,9 @@ pub fn run_multi(
         wgpu_options: sdroxide_ui::wgpu_options(),
         viewport: eframe::egui::ViewportBuilder::default()
             .with_inner_size([1280.0, 800.0])
-            .with_min_inner_size([800.0, 500.0])
+            // The smallest there is; the window's real minimum follows the
+            // control strip from the first frame on (`MultiApp::fit_minimum`).
+            .with_min_inner_size(sdroxide_ui::layout::MIN_WINDOW_BARE)
             // Matches StartupWMClass in packaging/linux/sdroxide.desktop, so
             // the window groups under the menu entry in taskbars and docks.
             .with_app_id("sdroxide")
@@ -398,7 +400,7 @@ pub fn run_remote(url: &str) -> Result<()> {
         wgpu_options: sdroxide_ui::wgpu_options(),
         viewport: eframe::egui::ViewportBuilder::default()
             .with_inner_size([1280.0, 800.0])
-            .with_min_inner_size([800.0, 500.0])
+            .with_min_inner_size(sdroxide_ui::layout::MIN_WINDOW_BARE)
             .with_app_id("sdroxide")
             .with_icon(sdroxide_ui::app_icon())
             .with_title(format!("sdroxide — remote {url}")),

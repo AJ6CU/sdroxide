@@ -668,6 +668,18 @@ pub struct UiSettings {
     /// ([`crate::Mode::tunes_off_dial`]) and could join it, but each wants
     /// checking against real signals first.
     pub cw_qrg: bool,
+    /// Show the CW panel under the waterfall in CW. On by default. Off gives
+    /// the waterfall the whole height for an operator whose copy is shown
+    /// somewhere else — another program fed by the decoded-CW UDP output, or
+    /// a controller beside a transceiver. The decoder is the engine's and
+    /// goes on running either way; only this screen's panel goes.
+    pub cw_panel: bool,
+    /// Show the control strip across the top of the window. On by default.
+    /// Off leaves the panadapter the whole window, for SDRoxide used as the
+    /// band display beside a controller that has its own frequency, mode and
+    /// filter controls. A small STRIP chip in the corner brings it back, so
+    /// the Settings button inside the strip is never out of reach.
+    pub control_strip: bool,
     /// Draw the world's cities on the flat maps — the dot per place and the
     /// name beside it.
     ///
@@ -753,6 +765,8 @@ impl Default for UiSettings {
             // who has not asked for the change should not find their readout
             // reading differently from the rig beside it.
             cw_qrg: false,
+            cw_panel: true,
+            control_strip: true,
             frame_rate_fps: 60,
             waterfall_speed: Speed::Medium,
             spectrum_speed: Speed::Medium,
