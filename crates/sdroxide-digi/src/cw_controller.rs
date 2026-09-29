@@ -213,6 +213,10 @@ pub struct CwController {
     /// and replaced wholesale each time, so the last word or two visibly firms
     /// up instead of appearing late.
     rx_pending: String,
+    /// Settled text appended since the last poll, handed out as
+    /// [`DigiAction::CwText`] and cleared. Kept apart from `rx_text`, which is
+    /// trimmed from the front and so cannot say what is new.
+    rx_new: String,
     /// The neural decoder, when it is the engine in force and the model
     /// loaded. `None` means the classic decoder's text is what the panel shows
     /// — either because the operator asked for it ([`DigiConfig::cw_engine`],
@@ -313,6 +317,7 @@ impl CwController {
             rx_rs: MonoResampler::new(tap_rate, CW_RATE),
             rx_text: String::new(),
             rx_pending: String::new(),
+            rx_new: String::new(),
             deep,
             deep_failed,
             tuner: Tuner::new(tap_rate, pitch as f64),
@@ -356,8 +361,19 @@ impl CwController {
             && self.deep.is_some()
         {
             self.rx_text.push(' ');
+            self.rx_new.push(' ');
         }
         self.rx_text.push_str(text);
+        // What is new goes out once, whole; bounded like the window, in case
+        // nothing has polled for a while.
+        self.rx_new.push_str(text);
+        if self.rx_new.len() > RX_TEXT_CAP {
+            let cut = self.rx_new.len() - RX_TEXT_CAP;
+            let cut = (cut..self.rx_new.len())
+                .find(|&i| self.rx_new.is_char_boundary(i))
+                .unwrap_or(self.rx_new.len());
+            self.rx_new.drain(..cut);
+        }
         if self.rx_text.len() > RX_TEXT_CAP {
             let cut = self.rx_text.len() - RX_TEXT_CAP;
             let cut = (cut..self.rx_text.len())
@@ -665,6 +681,9 @@ impl DigiEngine for CwController {
         if moved {
             self.last_cw = cw;
             self.status_dirty = true;
+        }
+        if !self.rx_new.is_empty() {
+            actions.push(DigiAction::CwText(std::mem::take(&mut self.rx_new)));
         }
         if self.status_dirty {
             self.status_dirty = false;
@@ -1008,6 +1027,31 @@ mod tests {
         c.set_tx_text("CQ CQ DE W1AW".into());
         c.set_tx_active(true);
         assert!(keys(&mut c), "a refused over must not cost every later one");
+    }
+
+    /// Settled text goes out once, as it settles, with the space between
+    /// words that the window has — so a listener that appends every
+    /// [`DigiAction::CwText`] ends up with what the panel shows.
+    #[test]
+    fn settled_text_is_handed_out_once() {
+        let mut c = CwController::new(cfg(), 48_000.0, None);
+        fn texts(c: &mut CwController) -> Vec<String> {
+            c.poll(SystemTime::now(), 14_030_000.0)
+                .into_iter()
+                .filter_map(|a| match a {
+                    DigiAction::CwText(t) => Some(t),
+                    _ => None,
+                })
+                .collect()
+        }
+        assert!(texts(&mut c).is_empty(), "nothing decoded, nothing sent");
+
+        c.append_rx("CQ CQ ");
+        c.append_rx("DE W1AW");
+        let sent = texts(&mut c).concat();
+        assert!(sent.starts_with("CQ CQ ") && sent.ends_with("W1AW"), "got {sent:?}");
+        assert_eq!(sent, c.rx_text, "what is sent is what the window holds");
+        assert!(texts(&mut c).is_empty(), "sent once, not again");
     }
 
     /// Settle the receive window: the model decodes on its own thread, so the

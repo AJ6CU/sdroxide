@@ -12322,6 +12322,22 @@ particular contest's rules say it means, and a number invented here would be a
 claim about a contest that was not being worked; the logger receiving the
 contact is the thing that knows the rules.
 
+**Decoded CW over UDP**, also on this page with its own switch, sends the CW
+panel's copy ([2.14](#214-cw-decoding-and-keyboard-sending)) as plain UTF-8
+text, a datagram at a time as it settles — for a station controller, a
+logger's CW window or a script. There is no protocol: a listener appends what
+arrives, and `nc -ul 9999` shows it as it comes. Only settled text goes out,
+never the last word or two the neural decoder is still revising, so nothing
+sent is ever taken back. SDRangel's Morse decoder sends its copy in the same
+form to the same default port, so a listener written for one serves the other.
+
+- **Send to** — `127.0.0.1` for this machine; a LAN address, or this subnet's
+  broadcast address, for others.
+- **Port** — 9999.
+
+It sends only while the radio is in CW with the panel decoding; the skimmer's
+spots are not part of it.
+
 ### 6.10 TLE: satellites and their frequencies
 
 The **TLE** tab decides which satellites the tracker in the 3D view
