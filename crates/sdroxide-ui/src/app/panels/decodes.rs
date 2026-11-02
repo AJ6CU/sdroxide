@@ -1184,6 +1184,21 @@ impl SdroxideApp {
             }
         };
         let right = |me: &mut Self, ui: &mut egui::Ui| {
+            // **One right-to-left run, in the order they should appear.** These
+            // used to be drawn into the same rect by two separate scopes, so the
+            // chips that came later were painted on top of the earlier ones: the
+            // gear was behind LIVE LOG and invisible, which is how a settings
+            // button "disappeared" when the word beside it was removed (bench,
+            // 2026-11-02). LIVE LOG goes first, so it takes the far edge.
+            if crate::chrome::chip(ui, me.show_session_qsos, &tr!("decodes-live-log")).clicked() {
+                me.show_session_qsos = !me.show_session_qsos;
+                if me.show_session_qsos {
+                    me.ui_settings.tool_windows_open |= crate::app::frame::TW_SESSION_QSOS;
+                } else {
+                    me.ui_settings.tool_windows_open &= !crate::app::frame::TW_SESSION_QSOS;
+                }
+                crate::app::persist::persist_ui_settings(&me.ui_settings);
+            }
             // **The way out only where there is a way back in**: in a floating
             // panel the arrow would say what has already happened, and next to the
             // dock chip it did — two icons for one state, which is half the mess.
@@ -1244,22 +1259,6 @@ impl SdroxideApp {
                 },
             );
         }
-        ui.scope_builder(
-            egui::UiBuilder::new()
-.max_rect(zone(2.0))
-.layout(egui::Layout::right_to_left(egui::Align::Center)),
-            |ui| {
-                if crate::chrome::chip(ui, self.show_session_qsos, &tr!("decodes-live-log")).clicked() {
-                    self.show_session_qsos = !self.show_session_qsos;
-                    if self.show_session_qsos {
-                        self.ui_settings.tool_windows_open |= crate::app::frame::TW_SESSION_QSOS;
-                    } else {
-                        self.ui_settings.tool_windows_open &= !crate::app::frame::TW_SESSION_QSOS;
-                    }
-                    crate::app::persist::persist_ui_settings(&self.ui_settings);
-                }
-            },
-        );
         ui.add_space(5.0);
         // World map — its height is a user-draggable fraction of the QSO area,
         // clamped so the station card + a usable transcript + the action buttons
