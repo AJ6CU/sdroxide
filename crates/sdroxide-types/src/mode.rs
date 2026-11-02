@@ -717,6 +717,15 @@ impl Mode {
     /// the keyboards, the FT/PSK/RTTY families) is an operator moving to another
     /// band and expecting to carry on in the mode they were using.
     ///
+    /// **The test to apply when this list is argued with:** if the band/mode
+    /// dock offers the mode as a chip, it carries. An operator switching band
+    /// from the dock with that mode selected is doing the ordinary thing, and a
+    /// mode that fell back there would undo their own click.
+    ///
+    /// SSTV settled it (maintainer, 2026-11-02): it sits under a chip with a
+    /// band change beneath it, so it belongs on the carrying side — which is
+    /// also why the rule is a list and not "every decoder falls back".
+    ///
     /// Read by the band change, which keeps a mode only where this is false.
     /// **The list is a judgement, not a law**: adding a decoder here is saying
     /// it should not follow an operator to another band, and that is the whole
@@ -724,9 +733,7 @@ impl Mode {
     pub fn belongs_to_a_service(self) -> bool {
         matches!(
             self,
-            Mode::Sstv
-                | Mode::SstvFm
-                | Mode::Wefax
+            Mode::Wefax
                 | Mode::Navtex
                 | Mode::Dsc
                 | Mode::Acars
@@ -2675,7 +2682,6 @@ mod tests {
             Mode::Dsc,
             Mode::Navtex,
             Mode::Wefax,
-            Mode::Sstv,
             Mode::Adsb,
             Mode::Vdl2,
             Mode::Ais,
@@ -2696,6 +2702,8 @@ mod tests {
             Mode::Psk,
             Mode::Rtty,
             Mode::Olivia,
+            Mode::Sstv,
+            Mode::SstvFm,
         ] {
             assert!(!m.belongs_to_a_service(), "{m:?} is a mode an operator carries");
         }
