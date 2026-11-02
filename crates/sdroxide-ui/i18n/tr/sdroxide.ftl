@@ -9032,3 +9032,7 @@ topbar-preset-reset-hint = Bu modun yerleşik ön ayarını geri yükle
 topbar-preset-cancel = İptal
 wefax-schedule = PROGRAM
 wefax-schedule-hint = Tarayıcıda { $station } istasyonunun yayımladığı programı açar — haritalar ve UTC saatleri.
+
+tx-bands-check-again = YENİDEN
+
+tx-bands-check-again-hint = Onayı geri alır, liste yeniden kontrol edilebilir. Bir bandı değiştirmek bunu kendiliğinden yapar.

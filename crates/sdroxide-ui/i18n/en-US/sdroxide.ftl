@@ -9035,3 +9035,9 @@ topbar-preset-reset-hint = Put back this mode's built-in preset
 topbar-preset-cancel = Cancel
 wefax-schedule = SCHEDULE
 wefax-schedule-hint = Opens the timetable { $station } publishes, charts and UTC times, in a browser.
+
+# Chip beside the green 'transmit bands confirmed' line; pressing it withdraws the confirmation so the list can be reviewed and checked again.
+tx-bands-check-again = CHECK AGAIN
+
+# Hover on the CHECK AGAIN chip over the transmit band list.
+tx-bands-check-again-hint = Withdraw the confirmation and check the list again. Changing any band does this by itself.

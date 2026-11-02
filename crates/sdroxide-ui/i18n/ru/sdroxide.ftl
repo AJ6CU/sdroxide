@@ -9047,3 +9047,7 @@ topbar-preset-reset-hint = Вернуть встроенный пресет эт
 topbar-preset-cancel = Отмена
 wefax-schedule = ГРАФИК
 wefax-schedule-hint = Открывает в браузере расписание, которое публикует { $station }, — карты и время UTC.
+
+tx-bands-check-again = ПРОВЕРИТЬ
+
+tx-bands-check-again-hint = Отзывает подтверждение, чтобы список можно было проверить снова. Изменение любой полосы делает это само.

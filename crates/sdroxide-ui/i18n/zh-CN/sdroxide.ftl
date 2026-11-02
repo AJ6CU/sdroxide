@@ -8970,3 +8970,7 @@ topbar-preset-reset-hint = 恢复此模式的内置预设
 topbar-preset-cancel = 取消
 wefax-schedule = 时刻表
 wefax-schedule-hint = 在浏览器中打开 { $station } 发布的时刻表，含图卡与 UTC 时间。
+
+tx-bands-check-again = 重新确认
+
+tx-bands-check-again-hint = 撤回确认以便重新检查列表。更改任何频段都会自动这样做。

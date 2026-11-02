@@ -7799,11 +7799,23 @@ impl RadioConfig {
     }
 
     /// Tick or untick one band of the transmit list.
+    ///
+    /// **A change to the list withdraws the confirmation.** That flag is the
+    /// operator saying they have checked every band on it, and a list they have
+    /// not seen cannot carry that: without this, ticking a band after confirming
+    /// granted transmit on it with no acknowledgement at all — and the settings
+    /// row then showed "confirmed" for a list nobody had checked.
+    /// (Bench report, 2026-11-01: the confirmation could only ever be given
+    /// once, so there was no way to change the list and check it again.)
     pub fn set_tx_band(&mut self, band: Band, on: bool) {
         let bands = self.tx_band_enable.get_or_insert_with(Vec::new);
+        let had = bands.contains(&band);
         bands.retain(|b| *b != band);
         if on {
             bands.push(band);
+        }
+        if had != on {
+            self.tx_bands_confirmed = false;
         }
     }
 
@@ -8008,6 +8020,28 @@ impl RadioConfig {
 
 #[cfg(test)]
 mod tests {
+    /// **A change to the transmit band list withdraws the confirmation.**
+    ///
+    /// The flag means "I have looked at every band on this list". Ticking a
+    /// band after confirming used to leave it set, so transmit was granted on a
+    /// band nobody had acknowledged — and the settings row went on saying
+    /// "confirmed" — while the control that would have said otherwise stayed
+    /// hidden for the life of the radio. (Bench report, 2026-11-01.)
+    #[test]
+    fn changing_the_transmit_band_list_withdraws_the_confirmation() {
+        let mut cfg = RadioConfig { tx_band_enable: Some(vec![Band::M20]), ..Default::default() };
+        cfg.tx_bands_confirmed = true;
+        cfg.set_tx_band(Band::M11, true);
+        assert!(cfg.tx_band_enable.as_ref().unwrap().contains(&Band::M11));
+        assert!(!cfg.tx_bands_confirmed, "a band the operator has not seen cannot be confirmed");
+
+        // Re-setting what is already there is not a change, so a row that
+        // redraws every frame cannot withdraw the confirmation on its own.
+        cfg.tx_bands_confirmed = true;
+        cfg.set_tx_band(Band::M11, true);
+        assert!(cfg.tx_bands_confirmed, "an unchanged list keeps its confirmation");
+    }
+
     use super::*;
 
     /// The SoapySDR block's defaults must mean "change nothing", because it

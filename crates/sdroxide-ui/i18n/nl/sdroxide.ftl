@@ -9040,3 +9040,7 @@ topbar-preset-reset-hint = De ingebouwde voorinstelling van deze modus terugzett
 topbar-preset-cancel = Annuleren
 wefax-schedule = SCHEMA
 wefax-schedule-hint = Opent het door { $station } gepubliceerde schema — kaarten en UTC-tijden — in een browser.
+
+tx-bands-check-again = OPNIEUW
+
+tx-bands-check-again-hint = Trekt de bevestiging in om de lijst opnieuw te bekijken. Een band wijzigen doet dat al vanzelf.

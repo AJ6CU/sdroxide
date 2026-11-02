@@ -9030,3 +9030,7 @@ topbar-preset-reset-hint = Die eingebaute Voreinstellung dieses Modus wiederhers
 topbar-preset-cancel = Abbrechen
 wefax-schedule = SENDEZEITEN
 wefax-schedule-hint = Öffnet den von { $station } veröffentlichten Fahrplan — Karten und UTC-Zeiten — im Browser.
+
+tx-bands-check-again = PRÜFEN
+
+tx-bands-check-again-hint = Nimmt die Bestätigung zurück, damit die Liste erneut geprüft werden kann. Das Ändern eines Bandes tut das von selbst.

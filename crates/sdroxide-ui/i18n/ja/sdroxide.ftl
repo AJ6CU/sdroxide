@@ -8980,3 +8980,7 @@ topbar-preset-reset-hint = このモードの組み込みプリセットに戻�
 topbar-preset-cancel = キャンセル
 wefax-schedule = スケジュール
 wefax-schedule-hint = { $station } が公開しているスケジュール（図と UTC 時刻）をブラウザーで開きます。
+
+tx-bands-check-again = 再確認
+
+tx-bands-check-again-hint = 確認を取り消してリストを見直します。バンドを変更すると自動的にそうなります。

@@ -9043,3 +9043,7 @@ topbar-preset-reset-hint = Remettre le préréglage d'origine de ce mode
 topbar-preset-cancel = Annuler
 wefax-schedule = HORAIRES
 wefax-schedule-hint = Ouvre dans un navigateur les horaires publiés par { $station } — cartes et heures UTC.
+
+tx-bands-check-again = VÉRIFIER
+
+tx-bands-check-again-hint = Retire la confirmation pour revoir la liste. Changer une bande le fait déjà tout seul.

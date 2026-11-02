@@ -995,14 +995,23 @@ fn tx_bands_table(ui: &mut egui::Ui, cfg: &mut sdroxide_types::RadioConfig) {
             ui.end_row();
         });
     if let Some((band, on)) = set {
-        let bands = cfg.tx_band_enable.get_or_insert_with(Vec::new);
-        bands.retain(|b| *b != band);
-        if on {
-            bands.push(band);
-        }
+        apply_tx_band_choice(cfg, band, on);
     }
 
     ui.add_space(6.0);
+    // **The list can be reviewed and checked again at any time.** Confirming is
+    // the operator saying "I have looked at every band here", and the row used
+    // to answer that with a green label and nothing else for the rest of the
+    // radio's life: a list that later changed showed "confirmed" for something
+    // nobody had checked, and there was no way back to the control that would
+    // have said so. (Bench report, 2026-11-01.)
+    if cfg.tx_bands_confirmed
+        && crate::chrome::chip(ui, true, tr!("tx-bands-check-again"))
+            .on_hover_text(tr!("tx-bands-check-again-hint"))
+            .clicked()
+    {
+        cfg.tx_bands_confirmed = false;
+    }
     if cfg.tx_bands_confirmed {
         ui.label(RichText::new(tr!("tx-bands-confirmed")).color(crate::theme::GREEN()));
     } else {
@@ -1020,6 +1029,88 @@ fn tx_bands_table(ui: &mut egui::Ui, cfg: &mut sdroxide_types::RadioConfig) {
         }
     }
     ui.end_row();
+}
+
+/// What the band grid does with a choice the operator made: nothing at all when
+/// the cell already shows that value (the grid redraws every frame), and one
+/// call to [`RadioConfig::set_tx_band`] otherwise.
+///
+/// It is a function of its own so the grid has exactly one way to write the
+/// list. The grid used to edit `tx_band_enable` in place here, which left
+/// `tx_bands_confirmed` standing: the row went on saying "confirmed" about a
+/// list nobody had looked at, and the engine, which only reads the flag, kept
+/// keying on a band the operator had just switched off (review, 2026-11-01).
+fn apply_tx_band_choice(cfg: &mut sdroxide_types::RadioConfig, band: sdroxide_types::Band, on: bool) {
+    let had = cfg.tx_band_enable.as_ref().is_some_and(|b| b.contains(&band));
+    if had != on {
+        cfg.set_tx_band(band, on);
+    }
+}
+
+#[cfg(test)]
+mod tx_band_grid_tests {
+    use super::apply_tx_band_choice;
+    use sdroxide_types::{Band, RadioConfig};
+
+    fn confirmed(bands: &[Band]) -> RadioConfig {
+        RadioConfig {
+            tx_band_enable: Some(bands.to_vec()),
+            tx_bands_confirmed: true,
+            ..RadioConfig::default()
+        }
+    }
+
+    /// **The grid's own path withdraws the confirmation.** The cell the
+    /// operator changed is the one thing they have *not* checked, so the row
+    /// stops claiming they have.
+    ///
+    /// What a click test would add is the popup itself, and there is no harness
+    /// for one in this tree: the value is chosen inside `ComboBox::show_ui`, and
+    /// a stand-in for a click asserts only that the stand-in ran — the same
+    /// reasoning as `an_apply_is_a_request_of_its_own_and_not_a_rescan` above.
+    /// So the grid has one way to write the list (`apply_tx_band_choice`) and
+    /// that is the function this test calls.
+    #[test]
+    fn changing_a_band_in_the_grid_withdraws_the_confirmation() {
+        let mut cfg = confirmed(&[Band::M40, Band::M11]);
+        apply_tx_band_choice(&mut cfg, Band::M11, false);
+        assert!(!cfg.tx_bands_confirmed, "a band was changed after the check");
+        assert_eq!(cfg.tx_band_enable, Some(vec![Band::M40]));
+
+        let mut cfg = confirmed(&[Band::M40]);
+        apply_tx_band_choice(&mut cfg, Band::M11, true);
+        assert!(!cfg.tx_bands_confirmed, "a band was added after the check");
+        assert_eq!(cfg.tx_band_enable, Some(vec![Band::M40, Band::M11]));
+    }
+
+    /// Re-drawing the grid must not withdraw anything: the popup's value is
+    /// read every frame, and a "no change" that counts as a change would leave
+    /// a confirmed list unconfirmable — the row would flip back the moment the
+    /// operator pressed the button.
+    #[test]
+    fn a_cell_that_already_shows_that_value_changes_nothing() {
+        let mut cfg = confirmed(&[Band::M40, Band::M11]);
+        apply_tx_band_choice(&mut cfg, Band::M40, true);
+        assert!(cfg.tx_bands_confirmed, "nothing changed, so nothing to withdraw");
+        apply_tx_band_choice(&mut cfg, Band::M20, false);
+        assert!(cfg.tx_bands_confirmed, "a band that was off and stays off");
+        assert_eq!(cfg.tx_band_enable, Some(vec![Band::M40, Band::M11]));
+    }
+
+    /// And the grid has no second way in: the direct edit that left the
+    /// confirmation standing is gone, and this keeps it gone. Read as text
+    /// because the fault was a write, not a result — `set_tx_band` was correct
+    /// throughout and simply not called.
+    #[test]
+    fn the_grid_does_not_edit_the_list_in_place() {
+        let src = include_str!("mod.rs");
+        let direct = concat!("tx_band_enable", ".get_or_insert");
+        assert!(
+            !src.contains(direct),
+            "the band grid must call set_tx_band, not push into the vector: a band \
+             changed that way leaves tx_bands_confirmed true and the engine keying"
+        );
+    }
 }
 
 /// The operator's hard ceiling on transmit drive (issue #504).
