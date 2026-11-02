@@ -21,6 +21,9 @@ v2.2.3.5_brown (pre-release). Open PRs: 0. Open issues: 7 (re-measured
 
 ## Now
 
+- PR #414 — decodes: the settings gear was painted over by LIVE LOG and there were two chips for the same flag (reported by Roy, owned by Claude). One right-to-left run now; the worded duplicate gone with its message in all eleven languages. Wacht op F4NRM's review.
+- PR #415 — digi: TX STOPPEN left the QSO machine in the calling step, so CALL CQ stayed greyed out with no QSO on screen (reported by Roy, owned by Claude). `abort_tx` ends the QSO; test verified red. Wacht op F4NRM's review.
+
 - SWL users group requests (added by the SWL users group, owned by Roy) — three of four in review: **1** band/mode dock remembered per radio (PR #409), **3** a band never visited keeps the mode in use (PR #406), **4** CTR ratchets the span down on keyboard tuning while the user cannot widen it again — ours, and exposed by #397's per-rate usable span, needs a `ctr_zoom_sim` case with `usable < rate`. **2** (start in Listening/Operating per radio) parked.
 
 - Translation rules in AGENTS.md and the "new language" sync rule in CLAUDE.md (added by F4NRM, owned by Claude) — branch `f4nrm/compassionate-mendel-e3kjll`, PR pending: the maintainer's agent is driven by AGENTS.md, which lacked the translation rule, and shipped English-only messages (#395); AGENTS.md now carries the eleven-language rule, and CLAUDE.md says a new language must update the list in both files. Docs only. Wacht op F4NRM's review.
