@@ -21,6 +21,9 @@ v2.2.3.5_brown (pre-release). Open PRs: 0. Open issues: 7 (re-measured
 
 ## Now
 
+- PR #417 — #413: a service decoder (ACARS, DSC, NAVTEX, WEFAX, SSTV, ADS-B, VDL2, AIS, HFDL, DAB, HD Radio, DRM…) falls back to the band's own mode on a band change; a mode you carry (SSB/FM/CW, FT8/FT4/JS8, PSK, RTTY, Olivia…) keeps following. `Mode::belongs_to_a_service`, test verified red (reported by drdatapi, owned by Claude). Wacht op F4NRM's review.
+- #388 HL2/HPSDR P1 loses 2-10 datagrams per 2 s (reported by DK8JV, owned by Claude) — the two seconds is our own reporting interval, so the loss is continuous; his build is v2.2.3.5, from before #396's 4 MB receive buffer. Asked him to try v2.2.3.6.1 and send the `UDP receive buffer … bytes` line. **Be careful here: at the bench an identical symptom was the operator's OS update, not our code.**
+
 - PR #414 — decodes: the settings gear was painted over by LIVE LOG and there were two chips for the same flag (reported by Roy, owned by Claude). One right-to-left run now; the worded duplicate gone with its message in all eleven languages. Wacht op F4NRM's review.
 - PR #415 — digi: TX STOPPEN left the QSO machine in the calling step, so CALL CQ stayed greyed out with no QSO on screen (reported by Roy, owned by Claude). `abort_tx` ends the QSO; test verified red. Wacht op F4NRM's review.
 
