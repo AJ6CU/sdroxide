@@ -9040,3 +9040,9 @@ tx-bands-check-again = CHECK AGAIN
 
 # Hover on the CHECK AGAIN chip over the transmit band list.
 tx-bands-check-again-hint = Withdraw the confirmation and check the list again. Changing any band does this by itself.
+
+topbar-bw-hint-title = Adjust and memorise the filter
+
+topbar-bw-hint-body = Click to open the filter settings. Right-click a preset chip to change it, or click M+ to store the current passband in your own memory.
+
+topbar-preset-memory-hint = Empty memory: click to store the current passband here, right-click to type one

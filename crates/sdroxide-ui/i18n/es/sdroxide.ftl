@@ -9034,3 +9034,9 @@ wefax-schedule-hint = Abre en un navegador el horario que publica { $station }, 
 tx-bands-check-again = REVISAR
 
 tx-bands-check-again-hint = Retira la confirmación para revisar la lista. Cambiar cualquier banda ya lo hace solo.
+
+topbar-bw-hint-title = Ajustar y memorizar el filtro
+
+topbar-bw-hint-body = Haga clic para abrir los ajustes del filtro. Clic derecho en un preajuste para cambiarlo, o clic en M+ para guardar el ancho de banda actual en su memoria.
+
+topbar-preset-memory-hint = Memoria vacía: clic para guardar aquí el ancho de banda actual, clic derecho para escribir uno

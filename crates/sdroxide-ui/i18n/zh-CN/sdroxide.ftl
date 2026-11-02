@@ -8973,3 +8973,9 @@ wefax-schedule-hint = 在浏览器中打开 { $station } 发布的时刻表，�
 tx-bands-check-again = 重新确认
 
 tx-bands-check-again-hint = 撤回确认以便重新检查列表。更改任何频段都会自动这样做。
+
+topbar-bw-hint-title = 调整并记忆滤波器
+
+topbar-bw-hint-body = 单击打开滤波器设置。右键单击预设可修改，单击 M+ 可将当前通带存入您自己的存储。
+
+topbar-preset-memory-hint = 空存储：单击存入当前通带，右键单击手动输入

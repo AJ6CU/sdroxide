@@ -9035,3 +9035,9 @@ wefax-schedule-hint = Tarayıcıda { $station } istasyonunun yayımladığı pro
 tx-bands-check-again = YENİDEN
 
 tx-bands-check-again-hint = Onayı geri alır, liste yeniden kontrol edilebilir. Bir bandı değiştirmek bunu kendiliğinden yapar.
+
+topbar-bw-hint-title = Filtreyi ayarla ve kaydet
+
+topbar-bw-hint-body = Filtre ayarlarını açmak için tıklayın. Bir ön ayarı değiştirmek için sağ tıklayın; geçerli geçirme bandını kendi belleğinize kaydetmek için M+ düğmesine tıklayın.
+
+topbar-preset-memory-hint = Boş bellek: geçerli geçirme bandını buraya kaydetmek için tıklayın, elle girmek için sağ tıklayın

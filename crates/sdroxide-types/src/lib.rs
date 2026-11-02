@@ -243,7 +243,7 @@ pub use memory::{BandStackEntry, MemoryChannel, MemoryFolder, MemorySort, RttyMe
 pub use meters::{Meters, OVERLOAD_FRACTION, PsMeter, TxMeters, TxTelemetry};
 pub use mode::{
     AgcMode, CustomFilterPreset, Mode, NrEngine, NrLevel, NrStrength, SlotTiming,
-    filter_presets_with,
+    filter_memory_slot, filter_presets_with,
 };
 pub use morse_trainer::{ADVANCE_RUN, Answer, KOCH_ORDER, MorseProgress, START_UNLOCKED};
 pub use netcfg::{

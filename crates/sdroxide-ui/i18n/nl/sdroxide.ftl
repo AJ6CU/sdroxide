@@ -9043,3 +9043,9 @@ wefax-schedule-hint = Opent het door { $station } gepubliceerde schema — kaart
 tx-bands-check-again = OPNIEUW
 
 tx-bands-check-again-hint = Trekt de bevestiging in om de lijst opnieuw te bekijken. Een band wijzigen doet dat al vanzelf.
+
+topbar-bw-hint-title = Filter instellen en opslaan
+
+topbar-bw-hint-body = Klik om de filterinstellingen te openen. Rechtsklik op een preset om die te wijzigen, of klik op M+ om de huidige doorlaatband in je eigen geheugen op te slaan.
+
+topbar-preset-memory-hint = Leeg geheugen: klik om de huidige doorlaatband hier op te slaan, rechtsklik om er een in te typen

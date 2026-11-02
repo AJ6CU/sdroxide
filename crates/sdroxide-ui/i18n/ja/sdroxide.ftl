@@ -8983,3 +8983,9 @@ wefax-schedule-hint = { $station } が公開しているスケジュール（図
 tx-bands-check-again = 再確認
 
 tx-bands-check-again-hint = 確認を取り消してリストを見直します。バンドを変更すると自動的にそうなります。
+
+topbar-bw-hint-title = フィルターの調整と記憶
+
+topbar-bw-hint-body = クリックでフィルター設定を開きます。プリセットを右クリックすると変更でき、M+ をクリックすると現在の通過帯域を自分のメモリーに保存します。
+
+topbar-preset-memory-hint = 空のメモリー：クリックで現在の通過帯域を保存、右クリックで数値を入力

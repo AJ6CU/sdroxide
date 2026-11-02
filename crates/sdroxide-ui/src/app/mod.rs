@@ -893,6 +893,12 @@ pub struct SdroxideApp {
     /// Fade clock for the receive-filter popup behind the BW chip, like
     /// `nr_popup_since`.
     bw_popup_since: Option<f64>,
+    /// When the pointer started resting on the BW chip, for the large timed
+    /// hint ([`BW_HINT_SECS`]); `None` while it is elsewhere.
+    bw_hint_since: Option<f64>,
+    /// The BW chip was clicked during this hover: the hint stays away until
+    /// the pointer has left and come back.
+    bw_hint_dismissed: bool,
     /// Fade clocks for the repeater popups in the VFO box — the DUPLEX shift
     /// and the TONE encoder — like `tone_popup_since`.
     duplex_popup_since: Option<f64>,
@@ -2336,6 +2342,8 @@ impl SdroxideApp {
             rec_gate_s: None,
             rec_gate: Default::default(),
             bw_popup_since: None,
+            bw_hint_since: None,
+            bw_hint_dismissed: false,
             duplex_popup_since: None,
             rpt_tone_popup_since: None,
             // A station that keeps the band/mode selector docked gets it back
