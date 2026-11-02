@@ -15756,7 +15756,16 @@ impl Engine {
                 // The `accepts_mode` check is the same one below: a band that
                 // cannot carry the mode keeps its own default, which is how
                 // picking the FM broadcast band from USB still lands on WFM.
-                let mode = if band.accepts_mode(rx.mode) { rx.mode } else { default_mode };
+                // ...and **not for a decoder that belongs to a service**: ACARS
+                // is on the airband and there is nothing to decode on 70cm, so
+                // keeping it left the operator on "70cm — ACARS" with the panel
+                // still open and no way back but choosing the mode by hand
+                // (#413). A mode an operator can carry to any band still carries.
+                let mode = if band.accepts_mode(rx.mode) && !rx.mode.belongs_to_a_service() {
+                    rx.mode
+                } else {
+                    default_mode
+                };
                 let (filter_lo, filter_hi) = mode.default_filter_at(freq_hz);
                 BandStackEntry { freq_hz, mode, filter_lo, filter_hi }
             });

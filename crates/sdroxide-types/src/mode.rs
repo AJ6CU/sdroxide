@@ -706,6 +706,46 @@ impl Mode {
     ];
 
     /// True for modes that use a dedicated decode/QSO layer over USB.
+    /// True for the modes that **belong to a service and a frequency** rather
+    /// than to the operator's own choice of modulation.
+    ///
+    /// ACARS is on the airband, DSC and NAVTEX on the marine channels, ADSB on
+    /// 1090 MHz, DAB on Band III: choosing one of these is choosing a *service*,
+    /// and following it onto another band is meaningless — there is nothing
+    /// there to decode, and the operator is left on "70cm — ACARS" instead of
+    /// the band's own mode. Everything else here (the sideband and FM modes,
+    /// the keyboards, the FT/PSK/RTTY families) is an operator moving to another
+    /// band and expecting to carry on in the mode they were using.
+    ///
+    /// Read by the band change, which keeps a mode only where this is false.
+    /// **The list is a judgement, not a law**: adding a decoder here is saying
+    /// it should not follow an operator to another band, and that is the whole
+    /// of the rule. Reported by drdatapi, 2026-11-02 (#413).
+    pub fn belongs_to_a_service(self) -> bool {
+        matches!(
+            self,
+            Mode::Sstv
+                | Mode::SstvFm
+                | Mode::Wefax
+                | Mode::Navtex
+                | Mode::Dsc
+                | Mode::Acars
+                | Mode::Adsb
+                | Mode::Vdl2
+                | Mode::Ais
+                | Mode::Hfdl
+                | Mode::Dab
+                | Mode::HdRadio
+                | Mode::Drm
+                | Mode::RfPaint
+                | Mode::Pi4
+                | Mode::Ale
+                | Mode::Cis11
+                | Mode::Aprs
+                | Mode::UvPacket
+        )
+    }
+
     pub fn is_digital(self) -> bool {
         matches!(
             self,
@@ -2621,6 +2661,45 @@ mod custom_preset_tests {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// **The band change keeps a mode only where it can carry**, and this is
+    /// the split it reads: a service decoder stays where the service is, and an
+    /// operator's own mode follows them (#413).
+    ///
+    /// Both halves are asserted, because either one alone is satisfied by a
+    /// predicate that answers the same thing everywhere.
+    #[test]
+    fn a_service_decoder_does_not_belong_to_the_operator_s_choice() {
+        for m in [
+            Mode::Acars,
+            Mode::Dsc,
+            Mode::Navtex,
+            Mode::Wefax,
+            Mode::Sstv,
+            Mode::Adsb,
+            Mode::Vdl2,
+            Mode::Ais,
+            Mode::Hfdl,
+            Mode::Dab,
+        ] {
+            assert!(m.belongs_to_a_service(), "{m:?} is a service, not a mode");
+        }
+        for m in [
+            Mode::Usb,
+            Mode::Lsb,
+            Mode::Am,
+            Mode::Nfm,
+            Mode::Cw,
+            Mode::Ft8,
+            Mode::Ft4,
+            Mode::Js8,
+            Mode::Psk,
+            Mode::Rtty,
+            Mode::Olivia,
+        ] {
+            assert!(!m.belongs_to_a_service(), "{m:?} is a mode an operator carries");
+        }
+    }
 
     /// A mode whose passband is a channel about the carrier must have nothing
     /// but symmetric presets, and a mode with an asymmetric preset must not
