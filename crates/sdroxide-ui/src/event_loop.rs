@@ -89,6 +89,22 @@ pub fn run(
         }
     });
 
+    // eframe keeps `app.ron` (window geometry, view state such as the SPOTS
+    // chips, UI settings) in a folder named after `viewport.app_id` when one is
+    // set, and only falls back to `app_name` when it is not. Our windows set
+    // `app_id("sdroxide")` — the Wayland/WM class the packaging matches on — so
+    // Brown wrote into upstream's folder and the two builds overwrote each
+    // other's BC filter and window position (issue #283). Pin the file to
+    // `app_name`, which is ours, and leave `app_id` alone.
+    if options.persistence_path.is_none() {
+        if let Some(own) = storage_file(app_name) {
+            if let Some(shared) = options.viewport.app_id.as_deref().and_then(storage_file) {
+                adopt_shared_storage(&own, &shared);
+            }
+            options.persistence_path = Some(own);
+        }
+    }
+
     // `centered` is a first-start convenience, and eframe applies it *after*
     // it has restored the geometry the last session saved — so leaving it set
     // walks a remembered window back to the middle of the screen on every
@@ -125,8 +141,80 @@ pub fn run(
 /// leaves the window centred; the worst a wrong guess can do is centre a
 /// window that had a position, exactly as before this existed.
 fn remembers_geometry(app_name: &str) -> bool {
-    let Some(dir) = eframe::storage_dir(app_name) else { return false };
-    std::fs::read_to_string(dir.join("app.ron")).is_ok_and(|s| s.contains("\"window\""))
+    let Some(file) = storage_file(app_name) else { return false };
+    std::fs::read_to_string(file).is_ok_and(|s| s.contains("\"window\""))
+}
+
+/// The `app.ron` eframe would use for `id`.
+fn storage_file(id: &str) -> Option<std::path::PathBuf> {
+    eframe::storage_dir(id).map(|d| d.join("app.ron"))
+}
+
+/// Give a build its own `app.ron` the first time, starting from the one it was
+/// writing before (the folder shared with upstream), so an existing operator
+/// keeps their window and view settings. A copy, never a move: the shared file
+/// stays exactly as it was for the other build. Does nothing once `own` exists.
+fn adopt_shared_storage(own: &std::path::Path, shared: &std::path::Path) {
+    if own == shared || own.exists() || !shared.is_file() {
+        return;
+    }
+    if let Some(dir) = own.parent() {
+        let _ = std::fs::create_dir_all(dir);
+    }
+    let _ = std::fs::copy(shared, own);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn scratch(name: &str) -> std::path::PathBuf {
+        let dir = std::env::temp_dir().join(format!("sdroxide-evloop-{name}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    #[test]
+    fn first_start_copies_the_shared_file_and_leaves_it_alone() {
+        let dir = scratch("copy");
+        let shared = dir.join("sdroxide/data/app.ron");
+        let own = dir.join("sdroxide-brown/data/app.ron");
+        std::fs::create_dir_all(shared.parent().unwrap()).unwrap();
+        std::fs::write(&shared, "(window: 1)").unwrap();
+        adopt_shared_storage(&own, &shared);
+        assert_eq!(std::fs::read_to_string(&own).unwrap(), "(window: 1)");
+        assert_eq!(std::fs::read_to_string(&shared).unwrap(), "(window: 1)");
+    }
+
+    #[test]
+    fn the_two_files_stay_independent_afterwards() {
+        let dir = scratch("indep");
+        let shared = dir.join("a/app.ron");
+        let own = dir.join("b/app.ron");
+        std::fs::create_dir_all(shared.parent().unwrap()).unwrap();
+        std::fs::write(&shared, "bc: on").unwrap();
+        adopt_shared_storage(&own, &shared);
+        std::fs::write(&own, "bc: off").unwrap();
+        adopt_shared_storage(&own, &shared);
+        assert_eq!(std::fs::read_to_string(&own).unwrap(), "bc: off", "never overwritten");
+        assert_eq!(std::fs::read_to_string(&shared).unwrap(), "bc: on");
+    }
+
+    #[test]
+    fn nothing_shared_means_nothing_created() {
+        let dir = scratch("none");
+        let own = dir.join("b/app.ron");
+        adopt_shared_storage(&own, &dir.join("a/app.ron"));
+        assert!(!own.exists());
+    }
+
+    #[test]
+    fn brown_and_upstream_do_not_share_a_storage_folder() {
+        if let (Some(a), Some(b)) = (storage_file("sdroxide-brown"), storage_file("sdroxide")) {
+            assert_ne!(a, b);
+        }
+    }
 }
 
 /// eframe's own handler, with the one thing it does not do: put the loop back
