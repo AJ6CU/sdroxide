@@ -15,7 +15,6 @@ and the [README](https://github.com/madmedicnl/sdroxide-brown#readme).
 
 ### Fixed
 - **S-meter of a paired radio** — with a transceiver (e.g. a Wolf on CAT + sound card) whose panadapter is another radio (e.g. an RSP1), the transceiver's S-meter or its audio level was shown; it is only the transmitter and cannot be right. The S-meter is now the attached receiver's, measured on its I/Q and calibrated with S-Meter calib.
-- **S-meter stuck low after the S-Meter calib change** — a `radio.json` still holding an old dB-era value (e.g. `-15`) was clamped to −5 S (−30 dB) and pinned the needle. A value outside −5…+5 now counts as 0, and Settings → Radio shows and saves 0.
 - **`sdroxide-config` builds again** — the Aoki index error message passed a redundant `url, e` to `format!` ("redundant argument"), which stopped `sdroxide-ui` from compiling.
 - **Choppy audio and a stuttering waterfall in the web client on a healthy network** — the server now sets `TCP_NODELAY` on every connection, serves audio ahead of the other lanes, gives the audio lane twice the room, and logs when it has to drop audio packets. Plan and the native/Linux checks still owed: `docs/WEB-LAG-PLAN.md`.
 - **MEMORIES panel no longer overflows on the right** — the name and folder boxes now take what their button leaves ("Nouveau dossier" was wider than the 100 pt the row assumed, so the window grew and the button stuck out). The colour swatch wears a chip frame and PST is chip height. Opens at 510 pt; still resizable and detachable.
@@ -25,7 +24,6 @@ and the [README](https://github.com/madmedicnl/sdroxide-brown#readme).
 - **PROGRAMS keeps its state on the station, not in the browser** — TOUT, the starred stations, the filters and sort, and the colours were written to the browser's own storage on the web client (and the favourites not at all), so after a restart the chip was off and the waterfall labels were gone. A client connected to a station now reads that state from it at start and writes every change back (`GET`/`POST /programs-state`, stored in `programs-state.json` in the station's config folder, behind the same sign-in as the sockets); the browser keeps none of it. A station that is still empty takes over what the client already had, once. The program on the radio's own machine keeps using its config file.
 
 ### Added
-- **S-Meter calib is documented as it is today** — Settings → Radio, under *Antenna is*: −5 to +5 S-units (6 dB each) per radio, display-only (needle, S and dBm figures); the squelch and auto-record level are not touched.
 - **PROGRAMS window tidied** — aligned columns with a Sort menu over each, the colour in a chip-style frame, a two-row top bar that no longer overlaps, ACCORD → LISTEN, SOLAR TIME → LOCAL TIME, CARTE → SHOW MAP, and every filter, the sort and ALL kept between sessions.
 - **Radio Classic** — EXTRAS → RADIO: a classic-radio face for broadcast listening (bands, memories, schedule, S-meter, stereo VU, 9-digit VFO, RDS name and RadioText), docked under the waterfall in the voice modes and detachable from Settings. — madmedicnl (wire 257)
 
