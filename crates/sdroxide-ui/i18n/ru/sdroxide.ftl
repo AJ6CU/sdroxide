@@ -8898,7 +8898,6 @@ sessionqso-include-cw = Включая CW
 
 decodes-live-log = ЖИВОЙ ЖУРНАЛ
 
-decodes-setup = ⚙ НАСТРОЙКА
 
 schedule-colour-all = Цвет
 

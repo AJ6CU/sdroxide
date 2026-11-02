@@ -8883,7 +8883,6 @@ sessionqso-include-cw = CW'yi dahil et
 
 decodes-live-log = CANLI GÜNLÜK
 
-decodes-setup = ⚙ KURULUM
 
 schedule-colour-all = Renk
 

@@ -8821,7 +8821,6 @@ sessionqso-include-cw = 包含CW
 
 decodes-live-log = 实时日志
 
-decodes-setup = ⚙ 设置
 
 schedule-colour-all = 颜色
 

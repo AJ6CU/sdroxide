@@ -8892,7 +8892,6 @@ sessionqso-include-cw = Includi CW
 
 decodes-live-log = LOG LIVE
 
-decodes-setup = ⚙ CONFIGURA
 
 schedule-colour-all = Colore
 

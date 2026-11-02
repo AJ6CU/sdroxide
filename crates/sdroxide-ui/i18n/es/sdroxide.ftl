@@ -8880,7 +8880,6 @@ sessionqso-include-cw = Incluir CW
 
 decodes-live-log = REGISTRO EN VIVO
 
-decodes-setup = ⚙ AJUSTES
 
 schedule-colour-all = Color
 

@@ -8883,7 +8883,6 @@ sessionqso-include-cw = Incluir CW
 
 decodes-live-log = LOG AO VIVO
 
-decodes-setup = ⚙ CONFIG
 
 schedule-colour-all = Cor
 
