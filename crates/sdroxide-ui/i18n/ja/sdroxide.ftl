@@ -8831,7 +8831,6 @@ sessionqso-include-cw = CW を含める
 
 decodes-live-log = ライブログ
 
-decodes-setup = ⚙ 設定
 
 schedule-colour-all = 色
 

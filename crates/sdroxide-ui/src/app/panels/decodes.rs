@@ -1258,9 +1258,6 @@ impl SdroxideApp {
                     }
                     crate::app::persist::persist_ui_settings(&self.ui_settings);
                 }
-                if crate::chrome::chip(ui, self.show_digi_settings, &tr!("decodes-setup")).clicked() {
-                    self.show_digi_settings = !self.show_digi_settings;
-                }
             },
         );
         ui.add_space(5.0);

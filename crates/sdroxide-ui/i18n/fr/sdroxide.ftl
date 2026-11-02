@@ -8892,7 +8892,6 @@ sessionqso-include-cw = Inclure le CW
 
 decodes-live-log = JOURNAL EN DIRECT
 
-decodes-setup = ⚙ RÉGLAGES
 
 schedule-colour-all = Couleur
 
