@@ -3370,6 +3370,25 @@ fn offset_bracket(
     label_box(p, pos2(hi + 4.0, y - 6.0), label, color, bounds);
 }
 
+/// Where a label of `size` sits, given the place it would like to be and the
+/// rectangle it has to stay inside.
+///
+/// **Both edges are ordered, not clamped against each other.** `y.clamp(bounds.top(),
+/// bounds.bottom() - size.y)` panics outright — `min > max, or either was NaN` —
+/// as soon as the box is taller than the room it has, and that is not a rare
+/// state: for one frame at start-up on a source with a narrow span the
+/// panadapter is laid out shorter than an 11 pt label, and the whole program
+/// died on the first frame with a signal in it (bench, 2026-11-02: 284.5 against
+/// 283.0 on a KiwiSDR and on the sound-card radio, twice each).
+///
+/// A label that cannot fit goes to the top-left of the room it was given, which
+/// is the closest thing to "inside" that exists.
+pub(crate) fn label_origin(top_left: Pos2, bounds: Rect, size: egui::Vec2) -> Pos2 {
+    let rightmost = (bounds.right() - size.x).max(bounds.left());
+    let lowest = (bounds.bottom() - size.y).max(bounds.top());
+    pos2(top_left.x.clamp(bounds.left(), rightmost), top_left.y.clamp(bounds.top(), lowest))
+}
+
 /// Draw `text` in a small semi-transparent black box, clamped inside `bounds`.
 pub(crate) fn label_box(p: &egui::Painter, top_left: Pos2, text: &str, fg: Color32, bounds: Rect) {
     let galley = p.layout_no_wrap(
@@ -3379,9 +3398,9 @@ pub(crate) fn label_box(p: &egui::Painter, top_left: Pos2, text: &str, fg: Color
     );
     let pad = vec2(4.0, 2.0);
     let size = galley.size() + pad * 2.0;
-    let x = (top_left.x).min(bounds.right() - size.x).max(bounds.left());
-    let y = (top_left.y).clamp(bounds.top(), bounds.bottom() - size.y);
-    let bg = Rect::from_min_size(pos2(x, y), size);
+    let pos = label_origin(top_left, bounds, size);
+    let (x, y) = (pos.x, pos.y);
+    let bg = Rect::from_min_size(pos, size);
     p.rect_filled(bg, 2.0, Color32::from_rgba_unmultiplied(0, 0, 0, 180));
     p.galley(pos2(x + pad.x, y + pad.y), galley, fg);
 }
@@ -3775,6 +3794,30 @@ mod axis_tests {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// **A label taller than the room it has must not end the program.** The
+    /// panadapter is laid out shorter than an 11 pt label for a frame at
+    /// start-up on a narrow-band source, and the clamp that placed the label
+    /// panicked with `min > max … 284.5 against 283.0` — on a KiwiSDR and on
+    /// the sound-card radio, on the first frame with a signal in it (bench,
+    /// 2026-11-02).
+    #[test]
+    fn a_label_that_cannot_fit_is_placed_at_the_top_left_instead_of_panicking() {
+        let bounds = egui::Rect::from_min_size(pos2(10.0, 20.0), egui::vec2(200.0, 1.5));
+        let pos = label_origin(pos2(300.0, 300.0), bounds, egui::vec2(40.0, 15.0));
+        assert_eq!(pos.x, 170.0, "a label that fits across is still placed inside");
+        assert_eq!(pos.y, 20.0, "and to the top edge, which is all the room there is");
+    }
+
+    /// The ordinary case still puts the box inside the corner it was aimed at.
+    #[test]
+    fn a_label_that_fits_stays_inside_the_bounds() {
+        let bounds = egui::Rect::from_min_size(pos2(0.0, 0.0), egui::vec2(200.0, 100.0));
+        let pos = label_origin(pos2(500.0, 500.0), bounds, egui::vec2(40.0, 15.0));
+        assert_eq!(pos, pos2(160.0, 85.0));
+        let pos = label_origin(pos2(12.0, 8.0), bounds, egui::vec2(40.0, 15.0));
+        assert_eq!(pos, pos2(12.0, 8.0), "a label with room to spare is left where it asked");
+    }
 
     /// A frame of `bins` bins over 800 Hz centred on `center`: one bin per
     /// 100 Hz, so the arithmetic in these tests is readable.
