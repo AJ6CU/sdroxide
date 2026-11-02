@@ -2338,8 +2338,17 @@ impl SdroxideApp {
             bw_popup_since: None,
             duplex_popup_since: None,
             rpt_tone_popup_since: None,
-            band_docked: false,
-            band_dock_visible: false,
+            // A station that keeps the band/mode selector docked gets it back
+            // on the next start. Per radio and presentation only: the dock's
+            // own width rule (`band_dock_room`) still decides whether there is
+            // room for it — an open-on-a-phone setting is not a promise that a
+            // phone can show it. (SWL users group, 2026-11-01.)
+            band_docked: ui_settings.band_dock_open.contains_key(&radio_id),
+            // Docked and hidden is a state of its own: the operator put the
+            // column away with the eye but kept it docked, and the next start
+            // has to show the chip that brings it back rather than a dock they
+            // had already put away (review, 2026-11-01).
+            band_dock_visible: ui_settings.band_dock_open.get(&radio_id).copied().unwrap_or(false),
             #[cfg(not(target_arch = "wasm32"))]
             band_keypad: Default::default(),
             // Corrected on the first frame, once the viewport size is known.
@@ -3621,11 +3630,6 @@ mod tests {
         clicked
     }
 
-    /// A CW spot is tuned the **operator's own** sidetone pitch below its
-    /// signal, so it lands on the CW cursor — not the mode's 700 Hz default.
-    ///
-    /// Thieu (VERON, contest op), 2.0.9.x: *"when I select a CW spot the tuning
-    /// is 600 Hz (my pitch) off; in the upper WIDE window it is right"*. The
     /// **The received-audio stream is reachable on an SDR too.**
     ///
     /// Reported by the operator, who went to set it as instructed and found no
@@ -3778,6 +3782,70 @@ mod tests {
         );
     }
 
+    /// **A station that keeps the band/mode selector docked gets it back on the
+    /// next start**, per radio, and a dock it had hidden comes back hidden.
+    ///
+    /// Per radio matters: the dock needs room the window may not have, so a
+    /// phone that later connects to the same station must not be able to turn
+    /// the shack display's dock off, nor the other way round. Reported by the
+    /// SWL users group (2026-11-01), who had to open it by hand on every start.
+    #[test]
+    fn the_docked_band_selector_comes_back_on_the_next_start() {
+        let _guard = crate::multi::frame_test_lock();
+        let dir = std::env::temp_dir().join(format!("sdroxide-banddock-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        // SAFETY: no other thread reads the environment here — `frame_test_lock`
+        // serialises this against the frame tests, and the variable is set before
+        // any `SdroxideApp` in this test reads its configuration. Set once, never
+        // removed again: a `set_var`/`remove_var` pair racing another test's read
+        // is the thing that would be unsafe, and leaving the temp dir in place is
+        // a cheaper price than a race.
+        unsafe { std::env::set_var("SDROXIDE_CONFIG_DIR", &dir) };
+
+        // As the operator left it: radio 1 with the dock open, radio 0 with it
+        // docked and hidden, radio 2 without one at all.
+        let mut settings = crate::app::persist::load_ui_settings(None);
+        settings.band_dock_open.insert(1, true);
+        settings.band_dock_open.insert(0, false);
+        crate::app::persist::persist_ui_settings(&settings);
+
+        let ctx = egui::Context::default();
+        let mut make = |radio: u32| {
+            let controller: Box<dyn RadioController> = Box::new(RecordingController::default());
+            SdroxideApp::new_tab(&ctx, None, None, controller, radio, true)
+        };
+        let mut one = make(1);
+        assert!(one.band_docked, "radio 1 had the dock open");
+        assert!(one.band_dock_visible, "and visible");
+        let zero = make(0);
+        assert!(zero.band_docked, "radio 0 had it docked");
+        assert!(!zero.band_dock_visible, "and hidden, which is a state of its own");
+        let two = make(2);
+        assert!(!two.band_docked && !two.band_dock_visible, "radio 2 never did");
+
+        // Hiding it is written out at once, not only on a clean quit, and takes
+        // nothing else with it: radio 0's entry has to survive radio 1's write.
+        one.band_dock_visible = false;
+        one.remember_band_dock();
+        let read = crate::app::persist::load_ui_settings(None);
+        assert_eq!(read.band_dock_open.get(&1), Some(&false), "hiding it is remembered");
+        assert_eq!(read.band_dock_open.get(&0), Some(&false), "and the other radio is untouched");
+        assert_eq!(read.band_dock_open.len(), 2, "no third radio appeared: {read:?}");
+
+        // Undocking is the same write in the other direction.
+        one.band_docked = false;
+        one.remember_band_dock();
+        let read = crate::app::persist::load_ui_settings(None);
+        assert!(!read.band_dock_open.contains_key(&1), "an undocked radio leaves the map");
+        assert_eq!(read.band_dock_open.get(&0), Some(&false), "radio 0 still there");
+    }
+
+    /// A CW spot is tuned the **operator's own** sidetone pitch below its
+    /// signal, so it lands on the CW cursor — not the mode's 700 Hz default.
+    ///
+    /// Thieu (VERON, contest op), 2.0.9.x: *"when I select a CW spot the tuning
+    /// is 600 Hz (my pitch) off; in the upper WIDE window it is right"*. The
     /// SPOTS list used the default while the skimmer overlay used his cursor.
     #[test]
     fn a_cw_spot_is_tuned_on_the_operators_own_pitch() {

@@ -2950,6 +2950,7 @@ impl SdroxideApp {
                 .clicked()
             {
                 self.band_dock_visible = !self.band_dock_visible;
+                self.remember_band_dock();
             }
             return;
         }
@@ -3016,6 +3017,7 @@ impl SdroxideApp {
         if dock {
             self.band_docked = true;
             self.band_dock_visible = true;
+            self.remember_band_dock();
             egui::Popup::close_id(ui.ctx(), popup_id);
         }
         #[cfg(not(target_arch = "wasm32"))]
@@ -3023,6 +3025,7 @@ impl SdroxideApp {
             // The window *is* the selector now: leave the dock behind, so there
             // is one selector on screen rather than two.
             self.band_docked = false;
+            self.remember_band_dock();
             self.set_module_detached(sdroxide_types::DetachableModule::BandMenu, true);
             egui::Popup::close_id(ui.ctx(), popup_id);
         }
@@ -3079,6 +3082,7 @@ impl SdroxideApp {
                             .clicked()
                         {
                             self.band_docked = false;
+                            self.remember_band_dock();
                         }
                         // The window is the wider surface: the docked column
                         // cannot show the modes in five columns without
@@ -3089,6 +3093,7 @@ impl SdroxideApp {
                             .clicked()
                         {
                             self.band_docked = false;
+                            self.remember_band_dock();
                             self.set_module_detached(
                                 sdroxide_types::DetachableModule::BandMenu,
                                 true,
@@ -3106,6 +3111,7 @@ impl SdroxideApp {
             });
         if !visible {
             self.band_dock_visible = false;
+            self.remember_band_dock();
         }
     }
 
