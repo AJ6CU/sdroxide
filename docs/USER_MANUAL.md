@@ -652,7 +652,8 @@ mode. What is in the box never changes; only where the two rows are cut does.
   refusing it. The sub receiver still has to live inside the span, so if it was
   parked outside the new one it is moved back in.
 - **BW** — the receive filter as a number. The chip reads the passband width
-  the receiver is running (`BW 2.7k`, `BW 500`), and clicking it opens the
+  the receiver is running (`BW 2.7k`, `BW 500`) — or, when the passband is one
+  of the mode's preset chips, that chip's name (`BW 3.0k`) — and clicking it opens the
   width, the two edges and the mode's standard filters as fields you can type
   into. The panadapter's grips are the quick way to place a passband by eye
   against what is on the band; this is where an exact figure — 2200, 2700,
@@ -931,6 +932,16 @@ filter you have now. **Save** puts your preset in place of the built-in one and
 selects it; **Reset** brings the built-in back. Each mode keeps its own, so
 changing a USB chip leaves LSB's alone. They are kept per machine in
 `filter_presets.json`.
+
+After the presets comes a fifth chip, **M+**, your own memory for that mode.
+While it is empty a click stores the passband you have now in it (labelled with
+its width) and a right-click opens the editor to type one; once filled it is a
+chip like the others — click to recall, right-click to edit, **Reset** to empty
+it. The **BW** chip carries the name of whichever chip matches the filter in
+force, so you can tell which setting is applied; on a passband that matches
+none it reads the width. Resting the pointer on the **BW** chip raises a large
+reminder of all this for ten seconds; a click on the chip puts it away until
+the next time the pointer comes back.
 
 In **AM, SAM, DSB, ISB and the FM modes** the two edges move together: the passband
 is a channel carved out about the carrier, both halves carry the same signal,

@@ -4023,9 +4023,24 @@ impl SdroxideApp {
     /// The BW chip: the receive filter's width, and the popup that sets it.
     fn bw_button(&mut self, ui: &mut egui::Ui, cmds: &mut Vec<Command>) {
         let rx0 = self.state.rx[0];
-        let btn =
-            crate::chrome::chip(ui, false, bw_chip_label(rx0.mode, rx0.filter_lo, rx0.filter_hi))
-                .on_hover_text(bw_chip_hint(rx0.mode, rx0.filter_lo, rx0.filter_hi));
+        let active = active_preset_label(
+            rx0.mode,
+            &sdroxide_types::filter_presets_with(rx0.mode, &self.filter_presets),
+            self.cw_pitch_hz(),
+            rx0.filter_lo,
+            rx0.filter_hi,
+        );
+        let btn = crate::chrome::chip(
+            ui,
+            false,
+            bw_chip_label(rx0.mode, rx0.filter_lo, rx0.filter_hi, active.as_deref()),
+        );
+        let big_hint = self.bw_big_hint(ui, &btn);
+        let btn = if big_hint {
+            btn
+        } else {
+            btn.on_hover_text(bw_chip_hint(rx0.mode, rx0.filter_lo, rx0.filter_hi))
+        };
 
         let popup_id = egui::Popup::default_response_id(&btn);
         let now = ui.input(|i| i.time);
@@ -4047,6 +4062,45 @@ impl SdroxideApp {
                 self.bw_popup_since = Some(now);
             }
         }
+    }
+
+    /// The large hint under the BW chip: that the filter can be adjusted and
+    /// memorised from the popup. Shown while the pointer rests on the chip, for
+    /// [`BW_HINT_SECS`] at most, and put away by a click on the chip; the next
+    /// hover starts it afresh. Returns whether it is up, so the plain tooltip
+    /// can take over when it is not.
+    fn bw_big_hint(&mut self, ui: &egui::Ui, btn: &egui::Response) -> bool {
+        let now = ui.input(|i| i.time);
+        if !btn.hovered() {
+            self.bw_hint_since = None;
+            self.bw_hint_dismissed = false;
+            return false;
+        }
+        if btn.clicked() {
+            self.bw_hint_dismissed = true;
+        }
+        if self.bw_hint_dismissed {
+            self.bw_hint_since = None;
+            return false;
+        }
+        let since = *self.bw_hint_since.get_or_insert(now);
+        if now - since >= BW_HINT_SECS {
+            return false;
+        }
+        ui.ctx().request_repaint_after(std::time::Duration::from_millis(250));
+        let pos = btn.rect.left_bottom() + egui::vec2(0.0, 6.0);
+        egui::Area::new(egui::Id::new("bw_big_hint"))
+            .order(egui::Order::Tooltip)
+            .fixed_pos(pos)
+            .interactable(false)
+            .show(ui.ctx(), |ui| {
+                egui::Frame::popup(ui.style()).show(ui, |ui| {
+                    ui.set_max_width(340.0);
+                    ui.label(egui::RichText::new(tr!("topbar-bw-hint-title")).size(17.0).strong());
+                    ui.label(egui::RichText::new(tr!("topbar-bw-hint-body")).size(15.0));
+                });
+            });
+        true
     }
 
     /// Send a passband to the main receiver, clamped to what the mode allows.
@@ -4094,7 +4148,9 @@ impl SdroxideApp {
             self.preset_edit = None;
         }
         let presets = sdroxide_types::filter_presets_with(mode, &self.filter_presets);
-        if !presets.is_empty() {
+        if !mode.filter_presets().is_empty() {
+            let memory = sdroxide_types::filter_memory_slot(mode);
+            let memory_empty = presets.len() <= memory;
             crate::chrome::menu_caption(ui, &tr!("topbar-presets"));
             ui.horizontal_wrapped(|ui| {
                 for (slot, (label, plo, phi)) in presets.into_iter().enumerate() {
@@ -4117,6 +4173,20 @@ impl SdroxideApp {
                     }
                     if resp.secondary_clicked() {
                         self.preset_edit = Some(PresetEdit { mode, slot, label, lo: plo, hi: phi });
+                    }
+                }
+                if memory_empty {
+                    // The empty memory: a click stores the passband in force,
+                    // a right-click opens the editor to type one.
+                    let resp = crate::chrome::chip(ui, false, "M+")
+                        .on_hover_text(tr!("topbar-preset-memory-hint"));
+                    let (lo, hi) = (rx0.filter_lo, rx0.filter_hi);
+                    if resp.clicked() {
+                        self.store_filter_memory(mode, lo, hi);
+                    }
+                    if resp.secondary_clicked() {
+                        let label = width_text(filter_width_hz(mode, lo, hi));
+                        self.preset_edit = Some(PresetEdit { mode, slot: memory, label, lo, hi });
                     }
                 }
             });
@@ -4174,6 +4244,20 @@ impl SdroxideApp {
         });
     }
 
+    /// Put a passband into `mode`'s memory chip, labelled with its width, and
+    /// keep it in `filter_presets.json`. The receiver is already on it.
+    fn store_filter_memory(&mut self, mode: Mode, lo: f32, hi: f32) {
+        let slot = sdroxide_types::filter_memory_slot(mode);
+        let (plo, phi) = preset_shape(mode, lo, hi);
+        let label = width_text(filter_width_hz(mode, lo, hi));
+        let preset = sdroxide_types::CustomFilterPreset { mode, slot, label, lo: plo, hi: phi };
+        match self.filter_presets.iter_mut().find(|c| c.mode == mode && c.slot == slot) {
+            Some(c) => *c = preset,
+            None => self.filter_presets.push(preset),
+        }
+        crate::app::persist::persist_filter_presets(&self.filter_presets);
+    }
+
     /// The editor a right-click on a preset chip opens, under the chips: the
     /// chip's label and its two edges. Saving keeps it in
     /// `filter_presets.json` in place of the built-in and selects it; Reset
@@ -4224,7 +4308,10 @@ impl SdroxideApp {
         if save {
             let (lo, hi) = preset_shape(mode, edit.lo, edit.hi);
             let label = match edit.label.trim() {
-                "" => mode.filter_presets()[edit.slot].0.to_string(),
+                "" => match mode.filter_presets().get(edit.slot) {
+                    Some(p) => p.0.to_string(),
+                    None => width_text(filter_width_hz(mode, edit.lo, edit.hi)),
+                },
                 l => l.to_string(),
             };
             let preset =
@@ -7620,6 +7707,9 @@ fn preset_shape(mode: Mode, lo: f32, hi: f32) -> (f32, f32) {
     }
 }
 
+/// How long the large hint under the BW chip stays up, in seconds.
+const BW_HINT_SECS: f64 = 10.0;
+
 /// A preset's edges, once the operator's own station is accounted for.
 ///
 /// Taken as written everywhere but CW, where the table is drawn about the
@@ -7645,22 +7735,54 @@ pub(in crate::app) struct PresetEdit {
     hi: f32,
 }
 
-/// The BW chip's label: `BW 2.7k`, `BW 500`, `BW 1.2M`.
+/// A passband width as the BW chip writes it: `2.7k`, `500`, `1.2M`.
 ///
 /// Three scales because the modes span six decades — a 250 Hz CW filter and
 /// the 2 MHz an ADS-B receiver reads are both "the filter" — and a figure in
 /// bare hertz stops being readable somewhere above ten kilohertz.
-fn bw_chip_label(mode: Mode, lo: f32, hi: f32) -> String {
-    let w = filter_width_hz(mode, lo, hi);
+fn width_text(w: f32) -> String {
     if w >= 1_000_000.0 {
-        format!("BW {:.1}M", w / 1e6)
+        format!("{:.1}M", w / 1e6)
     } else if w >= 10_000.0 {
-        format!("BW {:.0}k", w / 1e3)
+        format!("{:.0}k", w / 1e3)
     } else if w >= 1_000.0 {
-        format!("BW {:.1}k", w / 1e3)
+        format!("{:.1}k", w / 1e3)
     } else {
-        format!("BW {w:.0}")
+        format!("{w:.0}")
     }
+}
+
+/// The BW chip's label: `BW 2.7k`, `BW 500`, `BW 1.2M`, or `BW <name>` when
+/// the passband is one of the mode's preset chips.
+///
+/// A preset's name is the operator's own word ("3.0k" on edges that are 2.7 kHz
+/// wide), so the width alone would contradict the chip they just pressed:
+/// the name of the preset in force wins, the measured width is for a passband
+/// that belongs to none.
+fn bw_chip_label(mode: Mode, lo: f32, hi: f32, preset: Option<&str>) -> String {
+    match preset {
+        // Four characters, the width the figures fill: the chip's place in the
+        // strip is reserved for `BW 888k`, and a name of eight would push its
+        // neighbours about. The popup shows the whole name.
+        Some(name) => format!("BW {}", name.chars().take(4).collect::<String>()),
+        None => format!("BW {}", width_text(filter_width_hz(mode, lo, hi))),
+    }
+}
+
+/// The name of the preset chip whose edges the receiver is on, if any — the
+/// first one when two share the same edges. Edges are compared the way the
+/// popup lights its chips (within 1 Hz), CW presets about the operator's pitch.
+fn active_preset_label(
+    mode: Mode,
+    presets: &[(String, f32, f32)],
+    cw_pitch_hz: f32,
+    lo: f32,
+    hi: f32,
+) -> Option<String> {
+    presets.iter().find_map(|(label, plo, phi)| {
+        let (plo, phi) = preset_edges(mode, *plo, *phi, cw_pitch_hz);
+        ((lo - plo).abs() < 1.0 && (hi - phi).abs() < 1.0).then(|| label.clone())
+    })
 }
 
 /// The compact NR chip's label.
@@ -11372,6 +11494,30 @@ mod tests {
 
     /// The chip's label must never outgrow what [`RxChip::width_label`]
     /// reserves for it, or the box breathes as the filter is dragged.
+    /// The saved "3.0k" preset is 2.7 kHz wide; the chip must say what the
+    /// operator pressed, not the measured width.
+    #[test]
+    fn the_bw_chip_names_the_preset_in_force() {
+        let presets = vec![("3.0k".to_string(), -2850.0, -150.0), ("Rag".to_string(), -2600.0, -200.0)];
+        let on = active_preset_label(Mode::Lsb, &presets, 700.0, -2850.0, -150.0);
+        assert_eq!(on.as_deref(), Some("3.0k"));
+        assert_eq!(bw_chip_label(Mode::Lsb, -2850.0, -150.0, on.as_deref()), "BW 3.0k");
+        // Off every preset the chip falls back to the width.
+        assert_eq!(active_preset_label(Mode::Lsb, &presets, 700.0, -2700.0, -150.0), None);
+        assert_eq!(bw_chip_label(Mode::Lsb, -2700.0, -150.0, None), "BW 2.5k");
+        // A long name is cut to what the chip has room for.
+        assert_eq!(bw_chip_label(Mode::Lsb, -2600.0, -200.0, Some("Narrower")), "BW Narr");
+    }
+
+    #[test]
+    fn a_cw_preset_is_matched_about_the_operators_pitch() {
+        let presets = vec![("500".to_string(), 450.0, 950.0)];
+        // Pitch 600: the 500 Hz chip sits on 350..850.
+        let on = active_preset_label(Mode::Cw, &presets, 600.0, 350.0, 850.0);
+        assert_eq!(on.as_deref(), Some("500"));
+        assert_eq!(active_preset_label(Mode::Cw, &presets, 600.0, 450.0, 950.0), None);
+    }
+
     #[test]
     fn the_bw_chip_never_outgrows_its_reservation() {
         let (ctx, input) = desktop_ctx();
@@ -11389,13 +11535,15 @@ mod tests {
                     (0.0, crate::input::MIN_FILTER_HZ),
                     (150.0, 2850.0),
                 ] {
-                    let label = bw_chip_label(mode, lo, hi);
+                    for name in [None, Some("3.0k"), Some("8.8k")] {
+                    let label = bw_chip_label(mode, lo, hi, name);
                     let w = crate::chrome::chip_width(ui, &label, None);
                     if w > reserved + 0.5 {
                         over.push(format!(
                             "{mode:?} {lo}..{hi} reads {label:?} at {w} pt, over the \
                              {reserved} pt reserved"
                         ));
+                    }
                     }
                 }
             }

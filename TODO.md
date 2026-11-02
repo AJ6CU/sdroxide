@@ -3,7 +3,7 @@
 Working queue. Rules in AGENTS.md. Last updated 2026-11-02.
 
 State: `main` at crate 2.2.0, PROTO_VERSION 260 (0x50). Latest release
-v2.2.3.5_brown (pre-release). Open PRs: 0. Open issues: 7 (re-measured
+v2.2.3.5_brown (pre-release). Open PRs: 2 (#417 and the BW chip PR). Open issues: 7 (re-measured
 2026-11-02).
 
 ## Task tracking rules
@@ -21,6 +21,7 @@ v2.2.3.5_brown (pre-release). Open PRs: 0. Open issues: 7 (re-measured
 
 ## Now
 
+- PR — BW chip names the preset in force (was the measured width: a "3.0k" preset on 2.7 kHz edges read "BW 2.7k"), a fifth memory chip `M+` per mode (click stores the current passband, right-click edits, Reset empties it; `filter_presets.json`, slot after the built-ins), and a large 10 s hint under the BW chip, put away by a click, back on the next hover; 3 new messages in 11 languages (reported by the operator, added by madmedicnl, owned by Claude). Wacht op F4NRM's review.
 - PR #417 — #413: a service decoder (ACARS, DSC, NAVTEX, WEFAX, SSTV, ADS-B, VDL2, AIS, HFDL, DAB, HD Radio, DRM…) falls back to the band's own mode on a band change; a mode you carry (SSB/FM/CW, FT8/FT4/JS8, PSK, RTTY, Olivia…) keeps following. `Mode::belongs_to_a_service`, test verified red (reported by drdatapi, owned by Claude). Wacht op F4NRM's review.
 - #388 HL2/HPSDR P1 loses 2-10 datagrams per 2 s (reported by DK8JV, owned by Claude) — the two seconds is our own reporting interval, so the loss is continuous; his build is v2.2.3.5, from before #396's 4 MB receive buffer. Asked him to try v2.2.3.6.1 and send the `UDP receive buffer … bytes` line. **Be careful here: at the bench an identical symptom was the operator's OS update, not our code.**
 
@@ -111,6 +112,7 @@ v2.2.3.5_brown (pre-release). Open PRs: 0. Open issues: 7 (re-measured
 - AppImage — beslissing nodig.
 
 ## Recently done
+- 2026-11-02 — BW chip shows the active preset's name instead of the measured width, `M+` memory chip as the fifth preset, large timed hover hint on the BW chip (see Now; PR for F4NRM's review).
 - 2026-11-02 — FT8 on the CRT SS9900v fell away mid-over (reported by Roy, owned by Claude): **the USB topology, not the audio**. The radio's sound card sat behind two hubs, sharing them with a USB mass-storage device and a Billboard device, all at full speed; isochronous audio cannot hold its 1 ms frames there, so the card's output stuttered and the VOX let go. Straight on a root port: no drops, no warnings, a clean 100 s run. Ruled out on the way (each by measurement, not reasoning): the card itself (5 s read directly, 240022 frames, real signal), the app's audio (48 000 samples/s for the whole 12.64 s over, peak 1.000, `the over finished` on time), the radio (10 W, SWR 1.1, TOT 6:05), the band rails (no refusal logged), the mute (it was on, and that accounted for the silence the operator heard), and the tone offset (2727 Hz sat above the rig's 450–2500 Hz SSB passband; now 810 Hz).
 - 2026-11-02 — #408 and #409 merged by F4NRM after the review rounds.
 - 2026-11-01 — Custom receive filter presets: right-click a chip in the BW popup to edit label and edges (`filter_presets.json`), Reset restores the built-in chip, CW keeps the operator's pitch; 12 new messages in 11 languages. Wacht op F4NRM's review.

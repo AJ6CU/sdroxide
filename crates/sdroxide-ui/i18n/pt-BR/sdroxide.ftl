@@ -9035,3 +9035,9 @@ wefax-schedule-hint = Abre no navegador a programação publicada por { $station
 tx-bands-check-again = REVER
 
 tx-bands-check-again-hint = Retira a confirmação para rever a lista. Alterar qualquer banda já faz isso sozinho.
+
+topbar-bw-hint-title = Ajustar e memorizar o filtro
+
+topbar-bw-hint-body = Clique para abrir os ajustes do filtro. Clique com o botão direito em uma predefinição para alterá-la, ou clique em M+ para guardar a banda passante atual na sua memória.
+
+topbar-preset-memory-hint = Memória vazia: clique para guardar aqui a banda passante atual, botão direito para digitar uma

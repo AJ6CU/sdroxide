@@ -2573,7 +2573,9 @@ impl AgcMode {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CustomFilterPreset {
     pub mode: Mode,
-    /// Which built-in chip this stands in for, counted from the left.
+    /// Which built-in chip this stands in for, counted from the left. The slot
+    /// just past the built-ins ([`filter_memory_slot`]) is the operator's own
+    /// memory chip, which stands in for nothing.
     pub slot: usize,
     pub label: String,
     /// Edges in Hz relative to the carrier, like the built-ins.
@@ -2581,10 +2583,18 @@ pub struct CustomFilterPreset {
     pub hi: f32,
 }
 
+/// The slot of `mode`'s memory chip: the one just after its built-in presets.
+/// It starts empty and holds whatever passband the operator stores in it.
+pub fn filter_memory_slot(mode: Mode) -> usize {
+    mode.filter_presets().len()
+}
+
 /// The chips `mode` shows: its built-in presets, with any of `custom` that
-/// belong to it standing in for theirs.
+/// belong to it standing in for theirs, and the memory chip last once it holds
+/// something. An empty memory is not listed: the interface draws it as `M+`.
 pub fn filter_presets_with(mode: Mode, custom: &[CustomFilterPreset]) -> Vec<(String, f32, f32)> {
-    mode.filter_presets()
+    let mut chips: Vec<(String, f32, f32)> = mode
+        .filter_presets()
         .iter()
         .enumerate()
         .map(|(slot, &(label, lo, hi))| {
@@ -2593,7 +2603,12 @@ pub fn filter_presets_with(mode: Mode, custom: &[CustomFilterPreset]) -> Vec<(St
                 None => (label.to_string(), lo, hi),
             }
         })
-        .collect()
+        .collect();
+    let memory = filter_memory_slot(mode);
+    if let Some(c) = custom.iter().find(|c| c.mode == mode && c.slot == memory) {
+        chips.push((c.label.clone(), c.lo, c.hi));
+    }
+    chips
 }
 
 #[cfg(test)]
@@ -2615,6 +2630,25 @@ mod custom_preset_tests {
         assert_eq!(usb[1], ("Rag".to_string(), 100.0, 3000.0));
         // LSB is its own mode with its own chips.
         assert_eq!(filter_presets_with(Mode::Lsb, &custom)[1].0, "2.4k");
+    }
+
+    #[test]
+    fn the_memory_chip_comes_last_and_only_once_filled() {
+        let builtin = Mode::Usb.filter_presets().len();
+        assert_eq!(filter_presets_with(Mode::Usb, &[]).len(), builtin);
+        let custom = [CustomFilterPreset {
+            mode: Mode::Usb,
+            slot: filter_memory_slot(Mode::Usb),
+            label: "Mine".into(),
+            lo: 200.0,
+            hi: 2600.0,
+        }];
+        let usb = filter_presets_with(Mode::Usb, &custom);
+        assert_eq!(usb.len(), builtin + 1);
+        assert_eq!(usb[builtin], ("Mine".to_string(), 200.0, 2600.0));
+        // The built-ins are untouched, and another mode has no memory.
+        assert_eq!(usb[0].0, Mode::Usb.filter_presets()[0].0);
+        assert_eq!(filter_presets_with(Mode::Lsb, &custom).len(), Mode::Lsb.filter_presets().len());
     }
 }
 

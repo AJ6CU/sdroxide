@@ -9033,3 +9033,9 @@ wefax-schedule-hint = Öffnet den von { $station } veröffentlichten Fahrplan �
 tx-bands-check-again = PRÜFEN
 
 tx-bands-check-again-hint = Nimmt die Bestätigung zurück, damit die Liste erneut geprüft werden kann. Das Ändern eines Bandes tut das von selbst.
+
+topbar-bw-hint-title = Filter einstellen und speichern
+
+topbar-bw-hint-body = Klicken, um die Filtereinstellungen zu öffnen. Rechtsklick auf eine Voreinstellung zum Ändern, oder auf M+ klicken, um den aktuellen Durchlassbereich im eigenen Speicher abzulegen.
+
+topbar-preset-memory-hint = Leerer Speicher: Klick legt den aktuellen Durchlassbereich ab, Rechtsklick zum Eintippen

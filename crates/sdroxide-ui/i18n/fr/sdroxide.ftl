@@ -9046,3 +9046,9 @@ wefax-schedule-hint = Ouvre dans un navigateur les horaires publiés par { $stat
 tx-bands-check-again = VÉRIFIER
 
 tx-bands-check-again-hint = Retire la confirmation pour revoir la liste. Changer une bande le fait déjà tout seul.
+
+topbar-bw-hint-title = Régler et mémoriser le filtre
+
+topbar-bw-hint-body = Cliquez pour ouvrir les réglages du filtre. Clic droit sur un préréglage pour le modifier, ou cliquez sur M+ pour stocker la bande passante actuelle dans votre mémoire.
+
+topbar-preset-memory-hint = Mémoire vide : cliquez pour y stocker la bande passante actuelle, clic droit pour en saisir une
