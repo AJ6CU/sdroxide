@@ -63,6 +63,8 @@ v2.2.3.5_brown (pre-release). Open PRs: 2 (#417 and the BW chip PR). Open issues
 
 ## Backlog — our open issues (board: Todo)
 
+- **STANAG 4481 FSK** (added by madmedicnl, owned by Claude) — doable, per a worked decode shown on video: <https://www.youtube.com/watch?v=ofiSzScw6RM> ("Decoding STANAG 4481 FSK"). Kept as the reference for the mode: FSK, not 4285's PSK, and the video is the evidence that off-air decoding is within reach. Not started; the scope and the legal question get settled with the operator first, as 4285's coded payload did.
+
 - #388 HL2 (HPSDR P1) datagram loss every ~2 s (added by DK8JV, owned by Roy).
 - #340 S-meter (added by F4NRM, owned by Roy) — measurement disagrees with the report; the measurement is the first suspect.
 - #331 Long labels in the tab strip (added by F4NRM, owned by Roy).
