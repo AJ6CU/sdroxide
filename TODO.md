@@ -3,8 +3,8 @@
 Working queue. Rules in AGENTS.md. Last updated 2026-11-03.
 
 State: `main` at crate 2.2.0, PROTO_VERSION 260 (0x50). Latest release
-v2.2.3.6.2_brown (pre-release). Open PRs: 3 (#425 dynamic DNS, #434 public-SDR
-favourites, #435 the carrier rule's corrected trigger). Open issues: 7
+v2.2.3.6.2_brown (pre-release). Open PRs: 4 (#425 dynamic DNS, #434 public-SDR
+favourites, #435 the carrier rule's corrected trigger, the unit tests' language). Open issues: 7
 (re-measured 2026-11-03).
 
 ## Task tracking rules
@@ -25,6 +25,7 @@ favourites, #435 the carrier rule's corrected trigger). Open issues: 7
 - **PR #435 — the carrier rule reads power, not the band's share** (added by madmedicnl, owned by Claude): #432 merged a trigger the bench disproved within hours — over a real gap 1687 of 1687 windows read "in band", because the share test cannot see one. The rule keeps a twenty-second reference of the subcarrier band's power and ends a page after 90 s at 10 dB below it. Not fired on air yet. Wacht op review.
 - **PR #425 — dynamic DNS** (added by madmedicnl, owned by Claude): back after F4NRM's review. The worker lives in the engine now (a headless Pi updates; a laptop UI cannot send its own address), the answer travels as `RadioEvent::DyndnsAnswer` / `ServerMsg::DyndnsAnswer` (PROTO_VERSION 260 → 262 on the branch), the address field is hidden, `answer_is_ok` reads the first word, and the token-in-clear note is in all eleven languages. Wacht op F4NRM.
 - **PR #434 — public-SDR favourites** (added by madmedicnl, owned by Claude): a star on every row and a MINE chip, kept by address in the settings so a renamed receiver keeps its star. Three tests, four messages in eleven languages. Wacht op review.
+- **Unit tests follow the machine's language** (added by madmedicnl, owned by Claude): on a French system 56 `sdroxide-ui` lib tests fail (aircraft, panels, frame… expect English); `main` in an English locale passes 1495/0. Not a leak between tests: "follow the system" read the OS locale. In test builds the system language is now empty (English) unless `SDROXIDE_TEST_SYSTEM_LANG` is set. Wacht op review.
 - **#427 SSTV starts on voice** (added by F4NRM, owned by Claude) — ours after F4NRM made no move: the decoder stops looking for a VIS once an image starts, so a false start costs the real picture. #343 was closed into it. The fix (keep hunting while drawing) is proposed in the issue and waiting on a yes.
 - **#421 NB with Kiwi** (added by trainrhd-del, owned by Claude) — the reporter came back: the blanker works on strong noise and not on weak, and its threshold is in samples, so it means something different at 20 kHz than at 768 kHz. A build that counts what it removes was promised.
 - **#388 HL2 datagram loss** (added by DK8JV, owned by Claude) — the reporter confirms it gone in v2.2.3.6.1; today's WEFAX findings are posted there. Closes when his fax test comes back clean.
