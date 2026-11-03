@@ -11,7 +11,7 @@
 //! a leading punctuation character — the command is echoed with its long name,
 //! every value is labelled, and the block always ends `RPRT n`.
 
-use sdroxide_types::{Command, NrLevel, NrStrength, RigctldConfig, RxId, Vfo};
+use sdroxide_types::{Command, Direction, NrLevel, NrStrength, RigctldConfig, RxId, Vfo};
 
 use crate::state::{
     RigState, agc_from_hamlib, agc_to_hamlib, filter_for, from_hamlib_mode, nr_engine_for,
@@ -73,6 +73,7 @@ const VFO_MASK: u32 = 0x3;
 /// level it thinks we lack.
 mod rig_level {
     pub const AF: u64 = 1 << 3;
+    pub const RF: u64 = 1 << 4;
     pub const SQL: u64 = 1 << 5;
     pub const NR: u64 = 1 << 8;
     pub const RFPOWER: u64 = 1 << 12;
@@ -475,6 +476,15 @@ fn dispatch(
                 out.value("Level Value", agc_to_hamlib(st.agc));
                 out.finish(OK, true)
             }
+            // The front-end gain, where the radio has one: 0.0..=1.0 over the
+            // stage's range.
+            Some(l) if l == "RF" => match &st.rf_gain {
+                Some(g) => {
+                    out.value("Level Value", format!("{:.6}", g.level()));
+                    out.finish(OK, true)
+                }
+                None => out.finish(ENAVAIL, true),
+            },
             Some(l) if l == "STRENGTH" => {
                 // Hamlib's STRENGTH is S-units above S9, in dB: S9 = -73 dBm.
                 out.value("Level Value", st.strength_dbm + 73);
@@ -519,6 +529,17 @@ fn dispatch(
                         out.finish(OK, false)
                     }
                     None => out.finish(EINVAL, false),
+                },
+                ("RF", Some(v)) => match &st.rf_gain {
+                    Some(g) => {
+                        cmds.push(Command::SetGain {
+                            dir: Direction::Rx,
+                            element: g.element.clone(),
+                            db: g.value_for(v),
+                        });
+                        out.finish(OK, false)
+                    }
+                    None => out.finish(ENAVAIL, false),
                 },
                 ("", _) => out.finish(EINVAL, false),
                 (_, None) => out.finish(EINVAL, false),
@@ -784,7 +805,10 @@ fn dump_state(st: &RigState, cfg: &RigctldConfig) -> String {
 
     // get_func, set_func, get_level, set_level, get_parm, set_parm.
     s.push_str(&format!("0x{FUNC_MASK:x}\n0x{FUNC_MASK:x}\n"));
-    s.push_str(&format!("0x{LEVEL_GET:x}\n0x{LEVEL_SET:x}\n"));
+    // RF only where there is a gain stage to set: a client that sees it
+    // advertised offers the control, and one refused every time looks broken.
+    let rf = if st.rf_gain.is_some() { rig_level::RF } else { 0 };
+    s.push_str(&format!("0x{:x}\n0x{:x}\n", LEVEL_GET | rf, LEVEL_SET | rf));
     s.push_str("0x0\n0x0\n"); // get/set parm
 
     // The trailing key=value block.
@@ -1029,6 +1053,64 @@ mod tests {
             vec![Command::SetAgc { rx: RxId::Main, agc: AgcMode::Med }]
         );
         assert_eq!(run_with("L AGC 9", &s, &cfg).0, "RPRT -1\n");
+    }
+
+    /// An RTL-SDR's tuner stage: 0..=49.6 dB in 0.1 dB steps, set at 29.7.
+    fn with_gain() -> RigState {
+        RigState {
+            rf_gain: Some(crate::state::RfGain {
+                element: "TUNER".into(),
+                min: 0.0,
+                max: 49.6,
+                step: 0.1,
+                value: 29.7,
+            }),
+            ..st()
+        }
+    }
+
+    /// The level mask lines of `\dump_state`: get, then set.
+    fn level_masks(d: &str) -> (u64, u64) {
+        let lines: Vec<&str> = d.lines().collect();
+        let ops = lines.iter().position(|l| l.starts_with("vfo_ops=")).expect("vfo_ops");
+        let hex = |l: &str| u64::from_str_radix(l.trim_start_matches("0x"), 16).expect("hex");
+        (hex(lines[ops - 4]), hex(lines[ops - 3]))
+    }
+
+    /// RF is the front-end gain across the stage's own range, read and set on
+    /// its own steps.
+    #[test]
+    fn rf_gain_round_trips_over_the_stage_range() {
+        let s = with_gain();
+        let cfg = RigctldConfig::default();
+        assert_eq!(run_with("l RF", &s, &cfg).0, "0.598790\n");
+        let set = |line: &str| run_with(line, &s, &cfg).1;
+        let gain =
+            |db: f64| vec![Command::SetGain { dir: Direction::Rx, element: "TUNER".into(), db }];
+        assert_eq!(set("L RF 0"), gain(0.0));
+        assert_eq!(set("L RF 1"), gain(49.6));
+        assert_eq!(set("L RF 7"), gain(49.6), "clamped to the top of the range");
+        // Half of 49.6 is 24.8, a whole step already.
+        let (_, cmds) = run_with("L RF 0.5", &s, &cfg);
+        let Command::SetGain { db, .. } = &cmds[0] else { panic!("{cmds:?}") };
+        assert!((db - 24.8).abs() < 1e-9, "{db}");
+        // Between steps it lands on one.
+        let (_, cmds) = run_with("L RF 0.3333", &s, &cfg);
+        let Command::SetGain { db, .. } = &cmds[0] else { panic!("{cmds:?}") };
+        assert!((db * 10.0 - (db * 10.0).round()).abs() < 1e-6, "{db} is not on a 0.1 dB step");
+    }
+
+    /// No gain stage, no RF level: refused, and not advertised either.
+    #[test]
+    fn rf_gain_is_absent_without_a_gain_stage() {
+        let cfg = RigctldConfig::default();
+        assert_eq!(run("l RF").0, "RPRT -11\n");
+        assert_eq!(run("L RF 0.5"), ("RPRT -11\n".to_string(), Vec::new()));
+        let rf = 1u64 << 4;
+        let (get, set) = level_masks(&run("\\dump_state").0);
+        assert_eq!((get & rf, set & rf), (0, 0));
+        let (get, set) = level_masks(&run_with("\\dump_state", &with_gain(), &cfg).0);
+        assert_eq!((get & rf, set & rf), (rf, rf));
     }
 
     /// NR's strength is Hamlib's `NR` level; the engine stays the one chosen.

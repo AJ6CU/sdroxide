@@ -43,6 +43,10 @@ pub struct RigState {
     pub squelch_db: f32,
     /// AGC setting, reported as Hamlib's `AGC` — see [`agc_to_hamlib`].
     pub agc: AgcMode,
+    /// The receiver's front-end gain — the stage the top bar's Gain slider
+    /// moves — reported as Hamlib's `RF` level. `None` on a radio with no RX
+    /// gain the software can set, which then has no `RF` level at all.
+    pub rf_gain: Option<RfGain>,
     /// Whether this radio can transmit at all. False empties the TX range list
     /// in `\dump_state`, which makes Hamlib itself refuse to key.
     pub can_tx: bool,
@@ -77,6 +81,7 @@ impl Default for RigState {
             auto_notch: false,
             squelch_db: SQUELCH_OPEN_DB,
             agc: AgcMode::Med,
+            rf_gain: None,
             can_tx: false,
             rx_ranges: Vec::new(),
             tx_ranges: Vec::new(),
@@ -113,6 +118,44 @@ impl RigState {
     pub fn sql_level(&self) -> f32 {
         ((self.squelch_db - SQUELCH_OPEN_DB) / (SQUELCH_CLOSED_DB - SQUELCH_OPEN_DB))
             .clamp(0.0, 1.0)
+    }
+}
+
+/// The front-end RX gain stage, and where it is set.
+///
+/// Hamlib's `RF` level is 0.0..=1.0; this spreads it linearly over the stage's
+/// own range, in whatever the stage counts in (dB, or a hardware ladder's
+/// steps), which is what the Gain slider does too.
+#[derive(Debug, Clone, PartialEq)]
+pub struct RfGain {
+    /// The device's name for the stage, as `Command::SetGain` wants it.
+    pub element: String,
+    pub min: f64,
+    pub max: f64,
+    /// The stage's increment; 0 when it has none.
+    pub step: f64,
+    /// Where it is set now.
+    pub value: f64,
+}
+
+impl RfGain {
+    /// Where the stage is set, as Hamlib's `RF` level.
+    pub fn level(&self) -> f64 {
+        if self.max <= self.min {
+            return 0.0;
+        }
+        ((self.value - self.min) / (self.max - self.min)).clamp(0.0, 1.0)
+    }
+
+    /// A Hamlib `RF` level as a setting of the stage, on its own steps.
+    pub fn value_for(&self, level: f64) -> f64 {
+        let raw = self.min + level.clamp(0.0, 1.0) * (self.max - self.min);
+        let snapped = if self.step > 0.0 {
+            self.min + ((raw - self.min) / self.step).round() * self.step
+        } else {
+            raw
+        };
+        snapped.clamp(self.min, self.max)
     }
 }
 
