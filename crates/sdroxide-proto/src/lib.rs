@@ -3470,6 +3470,15 @@ mod tests {
         let answer =
             ServerMsg::DyndnsAnswer { at_unix: 1_790_000_000, ok: true, text: "good".into() };
         let bytes = encode(&answer).unwrap();
+        // The position, not just the round trip: a variant inserted mid-enum
+        // would round-trip perfectly and still shift every peer's reading of
+        // what follows. The last variant's index moves when one is appended,
+        // and this line is then the conscious edit that a bump requires.
+        // **The position, not just the round trip.** A variant inserted mid-enum
+        // would round-trip perfectly and still shift every peer's reading of
+        // what follows. 81 is where this one sits; appending another variant
+        // moves it, and this line is then the conscious edit a bump requires.
+        assert_eq!(bytes[1], 81, "DyndnsAnswer is no longer the last variant");
         match decode::<ServerMsg>(&bytes).unwrap() {
             ServerMsg::DyndnsAnswer { at_unix, ok, text } => {
                 assert_eq!((at_unix, ok, text.as_str()), (1_790_000_000, true, "good"));

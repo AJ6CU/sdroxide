@@ -39,6 +39,13 @@ pub struct DyndnsAnswer {
     pub ok: bool,
 }
 
+/// Seconds before one retry after a failed update.
+///
+/// A station whose network is not up yet at boot would otherwise wait a whole
+/// interval — five minutes by default — before its name was right. One retry
+/// covers that without hammering a provider that is refusing the token.
+const RETRY_S: u64 = 60;
+
 /// The worker, in step with the network settings.
 #[derive(Default)]
 pub struct Dyndns {
@@ -90,15 +97,26 @@ impl Dyndns {
         std::thread::Builder::new()
             .name("sdroxide-dyndns".into())
             .spawn(move || {
+                // One short retry after a failure, then the normal interval:
+                // a station whose network is not up yet at boot gets its name
+                // right a minute later instead of a whole interval later.
+                let mut retried = false;
                 while !stopped.load(Ordering::Relaxed) {
                     let answer = update_once(&url);
+                    let ok = answer.ok;
                     if tx.send(answer).is_err() {
                         return;
                     }
+                    let wait = if !ok && !retried {
+                        retried = true;
+                        RETRY_S.min(u64::from(minutes) * 60)
+                    } else {
+                        retried = false;
+                        u64::from(minutes) * 60
+                    };
                     // Wake once a second so a settings change stops it promptly
                     // instead of after a whole interval.
-                    let until = std::time::Instant::now()
-                        + std::time::Duration::from_secs(u64::from(minutes) * 60);
+                    let until = std::time::Instant::now() + std::time::Duration::from_secs(wait);
                     while std::time::Instant::now() < until {
                         if stopped.load(Ordering::Relaxed) {
                             return;

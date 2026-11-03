@@ -443,7 +443,7 @@ pub struct NetworkConfig {
     /// the program works the same offline as it always has.
     ///
     /// It is a secret — the token is part of the address — so it is never
-    /// written to a log and the screen shows it masked.
+    /// written to a log and the screen never shows it back.
     /// Appended last, as the wire requires.
     #[serde(default)]
     pub dyndns_url: String,

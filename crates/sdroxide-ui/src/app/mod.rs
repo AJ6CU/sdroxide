@@ -823,13 +823,13 @@ pub struct SdroxideApp {
     update: update::UpdateCheck,
     #[cfg(not(target_arch = "wasm32"))]
     update_dismissed: bool,
-    /// Dynamic DNS: one worker, only while an update address is set. Empty is
-    /// off, and off means no thread exists at all.
-    #[cfg(not(target_arch = "wasm32"))]
     /// The dynamic-DNS worker's last answer, as the engine reported it: (unix,
     /// ok, the provider's own word). The worker lives in the engine because the
     /// name has to point at the machine that is heard — see `crate::dyndns` in
     /// `sdroxide-radio` — so the screen only ever holds the answer.
+    ///
+    /// Not gated on the target: the browser client receives the same answer as
+    /// `ServerMsg::DyndnsAnswer`, so it holds it too (review, 2026-11-03).
     dyndns_last: Option<(i64, bool, String)>,
     /// Which half of the band/mode menu was last shown (listen or operate).
     band_menu_tab: top_bar::BandMenuTab,
