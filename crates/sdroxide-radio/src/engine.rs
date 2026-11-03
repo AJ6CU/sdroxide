@@ -20848,7 +20848,11 @@ fn save_wefax_rx(png: &[u8], dial_hz: f64) -> Option<String> {
         // recording — better an unlabelled chart than a mislabelled one.
         dial_hz: (dial_hz > 0.0).then_some(dial_hz),
     };
-    let name = meta.file_name();
+    // **A name another receiver has already used is not a name.** Two radios on
+    // one frequency finish the same transmission in the same second; the first
+    // keeps the plain name and the rest take -2, -3, … rather than overwriting
+    // each other (bench, 2026-11-03).
+    let name = free_chart_name(&dir, &meta);
     let path = dir.join(&name);
     match std::fs::write(&path, png) {
         Ok(()) => Some(name),
@@ -20857,6 +20861,23 @@ fn save_wefax_rx(png: &[u8], dial_hz: f64) -> Option<String> {
             None
         }
     }
+}
+
+/// A chart name no file in `dir` is using yet.
+///
+/// The first chart of a transmission keeps the plain name; a second one — another
+/// receiver on the same frequency, or another instance of the program — takes
+/// `-2`, `-3`, … rather than overwriting it (bench, 2026-11-03: a local RSP1 and
+/// a remote KiwiSDR both on DWD 3855, one chart lost to the other).
+fn free_chart_name(dir: &std::path::Path, meta: &sdroxide_types::WefaxChartMeta) -> String {
+    let mut name = meta.file_name();
+    for n in 2..=99u32 {
+        if !dir.join(&name).exists() {
+            break;
+        }
+        name = meta.file_name_numbered(n);
+    }
+    name
 }
 
 /// Encode a single-channel raster as a grayscale PNG.
@@ -23196,6 +23217,32 @@ mod mic_input_tests {
         let msg = silent_mic_notice("there is no microphone open");
         assert!(msg.starts_with("That over went out with no audio"), "{msg}");
         assert!(msg.contains("there is no microphone open"), "{msg}");
+    }
+}
+
+#[cfg(test)]
+mod chart_name_tests {
+    use super::free_chart_name;
+
+    /// **A name another receiver has used is not free.** Two radios on one
+    /// frequency finish the same transmission in the same second; the first
+    /// keeps the plain name and the second takes -2 instead of overwriting it
+    /// (bench, 2026-11-03).
+    #[test]
+    fn a_chart_that_would_overwrite_another_gets_its_own_name() {
+        let dir = std::env::temp_dir().join(format!("sdroxide-chartnames-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let meta = sdroxide_types::WefaxChartMeta {
+            unix: sdroxide_types::ymd_hms_to_unix(2026, 11, 3, 11, 30, 0),
+            dial_hz: Some(3_853_100.0),
+        };
+        assert_eq!(free_chart_name(&dir, &meta), "wefax-20261103-113000Z-3853.1kHz-DWD.png");
+        std::fs::write(dir.join(meta.file_name()), b"x").unwrap();
+        assert_eq!(free_chart_name(&dir, &meta), "wefax-20261103-113000Z-3853.1kHz-DWD-2.png");
+        std::fs::write(dir.join(meta.file_name_numbered(2)), b"x").unwrap();
+        assert_eq!(free_chart_name(&dir, &meta), "wefax-20261103-113000Z-3853.1kHz-DWD-3.png");
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }
 
