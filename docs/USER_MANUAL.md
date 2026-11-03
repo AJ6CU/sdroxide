@@ -13921,11 +13921,18 @@ fails on 4532, the usual cause is a real `rigctld` already running.
 
 Supported: frequency, mode and passband, PTT, VFO A/B and split (including split
 frequency and mode), RIT and XIT, the `RFPOWER` / `AF` / `MICGAIN` / `STRENGTH`
-levels, the `NB` / `NR` / `ANF` / `MUTE` functions, the `XCHG` / `CPY` /
-`TOGGLE` / `BAND_UP` / `BAND_DOWN` / `TUNE` VFO operations, and the voice keyer
+/ `SQL` / `AGC` / `NR` levels, the `NB` / `NR` / `ANF` / `MUTE` functions, the
+`XCHG` / `CPY` / `TOGGLE` / `BAND_UP` / `BAND_DOWN` / `TUNE` VFO operations, and
+the voice keyer
 (`send_voice_mem 1`…`10`, `stop_voice_mem` — see
 [2.11](#211-voice-keyer)). The voice keyer obeys **Allow clients to transmit**
 like PTT does.
+
+`SQL` is the squelch threshold, 0 open to 1 closed. `AGC` is Hamlib's
+`RIG_AGC_*` number: 0 off, 2 fast, 5 medium, 3 slow. The `NR` level is the
+strength (a third, two thirds, 1 for low, medium, high) of the engine chosen in
+the NR panel, which it leaves alone; `U NR 1` brings back the engine and
+strength last on.
 
 Setting up clients:
 
