@@ -705,7 +705,6 @@ impl Mode {
         Mode::Dtmf,
     ];
 
-    /// True for modes that use a dedicated decode/QSO layer over USB.
     /// True for the modes that **belong to a service and a frequency** rather
     /// than to the operator's own choice of modulation.
     ///
@@ -753,6 +752,7 @@ impl Mode {
         )
     }
 
+    /// True for modes that use a dedicated decode/QSO layer over USB.
     pub fn is_digital(self) -> bool {
         matches!(
             self,

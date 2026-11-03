@@ -315,13 +315,6 @@ fn a_qsy_empties_the_call_queue() {
 
 }
 
-/// **A band this receiver has never been on takes the mode already in use.**
-///
-/// The band's own default is what it opens in — AM on the broadcast bands — and
-/// the band stack only remembers bands that have been visited. A listener who
-/// works in USB was therefore dropped into AM on every band without a stack of
-/// its own and had to put the mode back, band after band. Reported by the SWL
-/// users group (2026-11-01).
 /// **A decoder that belongs to a service does not follow the operator to
 /// another band.** ACARS lives on the airband; carried onto 70cm it leaves the
 /// operator on "70cm — ACARS" with the decoder still open and nothing to
@@ -357,6 +350,13 @@ fn a_service_decoder_does_not_carry_to_another_band() {
     shutdown(h);
 }
 
+/// **A band this receiver has never been on takes the mode already in use.**
+///
+/// The band's own default is what it opens in — AM on the broadcast bands — and
+/// the band stack only remembers bands that have been visited. A listener who
+/// works in USB was therefore dropped into AM on every band without a stack of
+/// its own and had to put the mode back, band after band. Reported by the SWL
+/// users group (2026-11-01).
 #[test]
 fn a_band_with_no_stack_takes_the_mode_in_use() {
     let _ = isolate_config();
