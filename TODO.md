@@ -1,10 +1,11 @@
 # TODO — SDR Oxide Brown
 
-Working queue. Rules in AGENTS.md. Last updated 2026-11-02.
+Working queue. Rules in AGENTS.md. Last updated 2026-11-03.
 
 State: `main` at crate 2.2.0, PROTO_VERSION 260 (0x50). Latest release
-v2.2.3.5_brown (pre-release). Open PRs: 2 (#417 and the BW chip PR). Open issues: 7 (re-measured
-2026-11-02).
+v2.2.3.6.2_brown (pre-release). Open PRs: 3 (#425 dynamic DNS, #434 public-SDR
+favourites, #435 the carrier rule's corrected trigger). Open issues: 7
+(re-measured 2026-11-03).
 
 ## Task tracking rules
 
@@ -120,6 +121,8 @@ v2.2.3.5_brown (pre-release). Open PRs: 2 (#417 and the BW chip PR). Open issues
 - AppImage — beslissing nodig.
 
 ## Recently done
+- 2026-11-03 — WEFAX bench day on DWD 3855 (added by madmedicnl, owned by Claude). **Merged**: #429 (unique chart names), #430 (KiwiSDR tuning range), #431 (auto-slant fitted over the whole phasing signal — the 14:07 chart leaned 21 ppm, 51 px, under the 25 ppm a twenty-line measurement could act on), #432 (a page ends when the carrier goes away), #433 (schedule links to the keepers' own timetables), #417 (mode fallback — merged by F4NRM). **Open**: #435, because the carrier rule #432 merged reads the wrong thing and the bench proved it the same evening (1687/1687 windows "in band" over a real gap). What the day showed about the decoder itself: four pages ended on their own boundary (1353/1357/1434/1440 lines), the schedule charts are legible to the footer, and 8 ppm of slant is what is left after the fit. The test stopped at 21:20 when propagation went.
+- 2026-11-03 — #343 (Scottie 2 colour shift) closed into #427: F4NRM's own comment there says the decoder is activated by voice without an SSTV signal, and a picture that starts on a false lock reads its colour channels from the wrong line.
 - 2026-11-02 — BW chip shows the active preset's name instead of the measured width, `M+` memory chip as the fifth preset, large timed hover hint on the BW chip (see Now; PR for F4NRM's review).
 - 2026-11-02 — FT8 on the CRT SS9900v fell away mid-over (reported by Roy, owned by Claude): **the USB topology, not the audio**. The radio's sound card sat behind two hubs, sharing them with a USB mass-storage device and a Billboard device, all at full speed; isochronous audio cannot hold its 1 ms frames there, so the card's output stuttered and the VOX let go. Straight on a root port: no drops, no warnings, a clean 100 s run. Ruled out on the way (each by measurement, not reasoning): the card itself (5 s read directly, 240022 frames, real signal), the app's audio (48 000 samples/s for the whole 12.64 s over, peak 1.000, `the over finished` on time), the radio (10 W, SWR 1.1, TOT 6:05), the band rails (no refusal logged), the mute (it was on, and that accounted for the silence the operator heard), and the tone offset (2727 Hz sat above the rig's 450–2500 Hz SSB passband; now 810 Hz).
 - 2026-11-02 — #408 and #409 merged by F4NRM after the review rounds.

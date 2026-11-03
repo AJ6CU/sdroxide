@@ -256,9 +256,10 @@ are closed/unlicensed (research only). SDRuno look is parked.
 
 ## Where the work stands
 
-- `main` at crate 2.2.0, PROTO_VERSION 256 (0x4C). Latest release v2.2.0.3_brown.
-- Open issues: 13 (re-measured 2026-10-29). Open PRs: 4 (antenna #304, navtex
-  #317, adsb #312, ft8 #323) + upstream #651 (SAT Doppler, SP9TKN testing).
+- `main` at crate 2.2.0, PROTO_VERSION 260 (0x50). Latest release
+  v2.2.3.6.2_brown (pre-release).
+- Open issues: 7 (re-measured 2026-11-03). Open PRs: 3 — #425 dynamic DNS,
+  #434 public-SDR favourites, #435 the carrier rule's corrected trigger.
 - STANAG 4285 finished (Mark proved decode with video; coded payload not
   implemented — legal restriction). Olivia proven by user (RX+TX). Grey-line
   confirmed. S-meter still an issue.
@@ -270,13 +271,21 @@ are closed/unlicensed (research only). SDRuno look is parked.
 
 ## Current work
 
-- SAT Doppler for CAT rigs: branch `fork/sat-doppler-cat`, step 1+2a+2b+2c
-  implemented. MSI build available. Wacht op SP9TKN's testresultaten.
-- NAVTEX restore: PR #317 open, mergeable, wacht op F4NRM's test.
-- ADS-B overlay: PR #312 open, wacht op F4NRM's review.
-- Airspy HF+: PR #309 open, wacht op Graeme's test.
-- Antenna: PR #304 open.
-- FT8 auto queue UI: PR #323 open (not live-tested).
+- WEFAX is ours now (the operator's call, 2026-11-03) and still goes up as a PR
+  for a second pair of eyes. Merged that day: unique chart names, KiwiSDR tuning
+  range, the auto-slant fit, the carrier-gone ending, the schedule links. Open:
+  #435, the carrier rule's corrected trigger — #432 merged one that the bench
+  disproved within hours (1687/1687 windows read "in band" over a real gap).
+- Dynamic DNS (#425) back after F4NRM's review: the worker moved into the
+  engine, the answer relayed as a wire message (PROTO_VERSION 260 → 262 on that
+  branch), the address hidden, the token-in-clear note in eleven languages.
+- Public-SDR favourites (#434): a star per receiver and a MINE chip, kept by
+  address in the settings.
+- #427 SSTV starts on voice: ours after F4NRM made no move; the fix is to keep
+  hunting for a VIS while drawing, so a false start cannot cost the real picture.
+- #421 NB with Kiwi: the reporter came back — the blanker works on strong noise
+  and not on weak, and its threshold is in samples, so it means something
+  different at 20 kHz than at 768 kHz. A counter build was promised.
 
 
 ## History
