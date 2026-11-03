@@ -161,7 +161,9 @@ impl WefaxStation {
 /// US Coast Guard transmitters have had their hours cut repeatedly — so this is
 /// a starting point for finding a signal, and the timetable is the station's
 /// own: [`WefaxStation::schedule`] is a link to it as its keeper publishes it,
-/// rather than a copy that would be out of date the season after next.
+/// rather than a copy that would be out of date the season after next. Where
+/// the keeper publishes only a PDF, or nothing a link can point at, the mirror
+/// at `weatherfax.com` is kept instead of a guess at a page that may not exist.
 ///
 /// Every one of these sends charts at **120 LPM and IOC 576** — the standard,
 /// and what the WMO's radiofacsimile schedule prints in its RPM/IOC column for
@@ -177,7 +179,10 @@ pub const WEFAX_STATIONS: &[WefaxStation] = &[
         lon: 9.80,
         lpm: WefaxLpm::L120,
         ioc: WefaxIoc::I576,
-        schedule: Some("https://weatherfax.com/ddh3-ddk6-hamburg/"),
+        // The keeper's own page: the schedule charts of 2026-11-03 print
+        // "Further details at www.dwd.de/sendeplan" across the foot of part two,
+        // and the fax timetable PDF is there.
+        schedule: Some("https://www.dwd.de/sendeplan"),
     },
     WefaxStation {
         name: "GYA Northwood (UK)",
@@ -195,7 +200,7 @@ pub const WEFAX_STATIONS: &[WefaxStation] = &[
         lon: -70.50,
         lpm: WefaxLpm::L120,
         ioc: WefaxIoc::I576,
-        schedule: Some("https://weatherfax.com/nmf-boston/"),
+        schedule: Some("https://www.weather.gov/marine/uscg_broadcasts"),
     },
     WefaxStation {
         name: "NMG New Orleans (USCG)",
@@ -204,7 +209,7 @@ pub const WEFAX_STATIONS: &[WefaxStation] = &[
         lon: -89.94,
         lpm: WefaxLpm::L120,
         ioc: WefaxIoc::I576,
-        schedule: Some("https://weatherfax.com/nmg-new-orleans/"),
+        schedule: Some("https://www.weather.gov/marine/uscg_broadcasts"),
     },
     WefaxStation {
         name: "NMC Point Reyes (USCG)",
@@ -213,7 +218,7 @@ pub const WEFAX_STATIONS: &[WefaxStation] = &[
         lon: -122.87,
         lpm: WefaxLpm::L120,
         ioc: WefaxIoc::I576,
-        schedule: Some("https://weatherfax.com/nmc-point-reyes/"),
+        schedule: Some("https://www.weather.gov/marine/uscg_broadcasts"),
     },
     WefaxStation {
         name: "NOJ Kodiak (USCG)",
@@ -222,7 +227,7 @@ pub const WEFAX_STATIONS: &[WefaxStation] = &[
         lon: -152.48,
         lpm: WefaxLpm::L120,
         ioc: WefaxIoc::I576,
-        schedule: Some("https://weatherfax.com/noj-kodiak/"),
+        schedule: Some("https://www.weather.gov/marine/uscg_broadcasts"),
     },
     WefaxStation {
         name: "CFH Halifax (Canada)",
@@ -249,7 +254,7 @@ pub const WEFAX_STATIONS: &[WefaxStation] = &[
         lon: 146.25,
         lpm: WefaxLpm::L120,
         ioc: WefaxIoc::I576,
-        schedule: Some("https://weatherfax.com/vmc-charleville/"),
+        schedule: Some("https://www.bom.gov.au/marine/radio-sat/radio-fax-schedule.shtml"),
     },
     WefaxStation {
         name: "VMW Wiluna (Australia)",
@@ -258,7 +263,7 @@ pub const WEFAX_STATIONS: &[WefaxStation] = &[
         lon: 120.22,
         lpm: WefaxLpm::L120,
         ioc: WefaxIoc::I576,
-        schedule: Some("https://weatherfax.com/vmw-wiluna/"),
+        schedule: Some("https://www.bom.gov.au/marine/radio-sat/radio-fax-schedule.shtml"),
     },
     // Additional stations (weatherfax.com)
     WefaxStation {
@@ -416,7 +421,7 @@ pub const WEFAX_STATIONS: &[WefaxStation] = &[
         // in this file, and the published page's own address is spelled with
         // the m and the w the other way round. Checked against the index at
         // weatherfax.com/stations/ — it is their slug, not a typo of ours.
-        schedule: Some("https://weatherfax.com/kwm70-honolulu/"),
+        schedule: Some("https://www.weather.gov/marine/uscg_broadcasts"),
     },
 ];
 
@@ -650,6 +655,41 @@ mod tests {
             if let Some(url) = st.schedule {
                 assert!(url.starts_with("https://"), "{}: {url} is not a web address", st.name);
             }
+        }
+    }
+
+    /// **Where the keeper publishes a timetable, the link is the keeper's.**
+    ///
+    /// The DWD's own schedule charts of 2026-11-03 print "Further details at
+    /// www.dwd.de/sendeplan" across the foot of part two, and the fax timetable
+    /// PDF is there. The US Coast Guard's five fax stations are scheduled by the
+    /// NWS page that lists all of them, and Australia's two by the Bureau of
+    /// Meteorology's own fax schedule. The rest keep the mirror: their keepers
+    /// publish a PDF, a dead page, or nothing a link can point at.
+    #[test]
+    fn the_stations_whose_keeper_publishes_a_timetable_point_at_it() {
+        let link_of = |start: &str| {
+            WEFAX_STATIONS
+                .iter()
+                .find(|s| s.name.starts_with(start))
+                .unwrap_or_else(|| panic!("{start} in the table"))
+                .schedule
+        };
+        assert_eq!(link_of("DWD"), Some("https://www.dwd.de/sendeplan"));
+        for uscg in ["NMF Boston", "NMG New Orleans", "NMC Point Reyes", "NOJ Kodiak"] {
+            assert_eq!(
+                link_of(uscg),
+                Some("https://www.weather.gov/marine/uscg_broadcasts"),
+                "{uscg}"
+            );
+        }
+        assert_eq!(link_of("KVM70"), Some("https://www.weather.gov/marine/uscg_broadcasts"));
+        for au in ["VMC Charleville", "VMW Wiluna"] {
+            assert_eq!(
+                link_of(au),
+                Some("https://www.bom.gov.au/marine/radio-sat/radio-fax-schedule.shtml"),
+                "{au}"
+            );
         }
     }
 
