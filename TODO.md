@@ -21,6 +21,8 @@ v2.2.3.5_brown (pre-release). Open PRs: 2 (#417 and the BW chip PR). Open issues
 
 ## Now
 
+- PR #426 — WEFAX pages closed a minute early, cutting the chart's footer: "blank" meant a line whose mean brightness cleared 0.9, which a chart's nearly-white footer does with ink on it. Blank now also demands no ink, and the fallback limit went 60 s → 120 s. Test verified red on the old rule (reported from the bench by madmedicnl, owned by Claude; decoder, so a PR). Wacht op F4NRM's review.
+
 - PR #425 — Dynamic DNS: one provider update URL and an interval, off unless an address is set (no thread, no request), the URL never logged and shown masked, and only the *applied* address used. `NetworkConfig` gained two fields at the end, so PROTO_VERSION 260 → 261 (owner: Claude, asked by madmedicnl). Wacht op F4NRM's review.
 
 - PR #424 — the crash that ended the program on the first frame with a signal in it (`min > max … 284.5 against 283.0`, and `584.0625` against `582.1875` the day before): `label_box` clamped a label into a box shorter than the label. Placement ordered instead, test verified red. Found from a KiwiSDR run at the bench where it killed two receivers within five seconds of connecting (owned by Claude). Wacht op F4NRM's review.
