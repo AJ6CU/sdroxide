@@ -577,6 +577,11 @@ pub struct WefaxRx {
     had_content: bool,
     blank_run: u32,
     blank_gap: u32,
+    /// Seconds the subcarrier has been absent, in the tone windows that measure
+    /// its share of the band. A page whose carrier is gone is over: between two
+    /// transmissions a station is silent for minutes, and a page that runs
+    /// through that gap draws noise.
+    carrier_gone_s: f64,
 
     start_det: ToneDetect,
     stop_det: ToneDetect,
@@ -830,6 +835,12 @@ impl SlantFit {
     }
 }
 
+/// Seconds without the subcarrier that end a page.
+///
+/// Long enough to ride a deep fade on a night path — a chart that ends early
+/// because the band dropped for a minute is the complaint #426 was — and short
+/// enough to cut the silence between two transmissions, which is minutes.
+const CARRIER_GONE_S: f64 = 90.0;
 /// Phasing lines the auto-slant measures the drift over. Twenty is ten seconds
 /// at 120 LPM, well inside the thirty-second phasing signal, and long enough
 /// that a few parts-per-million of line-clock error move the pulse several
@@ -921,6 +932,7 @@ impl WefaxRx {
             stop_miss: 0,
             had_content: false,
             blank_run: 0,
+            carrier_gone_s: 0.0,
             blank_gap: 0,
             start_ioc: Ioc::default(),
             audio_tone: AudioToneDetect::new(rate),
@@ -1128,6 +1140,7 @@ impl WefaxRx {
         self.rephase_lines = 0;
         self.had_content = false;
         self.blank_run = 0;
+        self.carrier_gone_s = 0.0;
         self.blank_gap = 0;
         self.start_det.reset();
         self.start_run = 0;
@@ -1551,9 +1564,28 @@ impl WefaxRx {
                 // Same two conditions as a start signal: it has to be the
                 // subcarrier swinging, not a plain audio tone or a steady
                 // carrier that the discriminator reads as noise.
-                let in_band = self.band_sub >= self.band_raw * self.subcarrier_share();
+                // Silence is not a carrier either: with no energy in the
+                // window the share test would say "in band" about nothing.
+                let in_band =
+                    self.band_raw > 0.0 && self.band_sub >= self.band_raw * self.subcarrier_share();
                 self.band_raw = 0.0;
                 self.band_sub = 0.0;
+                // **The carrier went away.** A white line is not this: a
+                // chart's footer is white with the carrier still there, which
+                // is why that rule needs no ink (#426) — but noise has ink, so
+                // a page that runs into the gap between transmissions passes
+                // the blank test. The subcarrier's own share of the band is the
+                // honest test, and a minute and a half of its absence is a gap
+                // between transmissions, not a fade.
+                if in_band {
+                    self.carrier_gone_s = 0.0;
+                } else {
+                    self.carrier_gone_s += TONE_WINDOW_S;
+                    if self.carrier_gone_s >= CARRIER_GONE_S {
+                        self.finish(false, out);
+                        return;
+                    }
+                }
                 if in_band
                     && self.stop_det.swing
                     && (alt_hz - STOP_TONE_HZ).abs() <= STOP_TONE_HZ * self.tone_tol()
@@ -2502,6 +2534,34 @@ mod tests {
 
     fn completes(ev: &[WefaxEvent]) -> usize {
         ev.iter().filter(|e| matches!(e, WefaxEvent::Complete { .. })).count()
+    }
+
+    /// **A page ends when the carrier goes away.**
+    ///
+    /// DWD on 3855 is off the air for minutes between transmissions, and the
+    /// schedule chart of 2026-11-03 14:25 UTC ran through that gap: 2286 lines
+    /// for a twelve-minute chart, the last six and a half minutes of it noise,
+    /// ending only when the next transmission's tone arrived. Neither the stop
+    /// tone nor the rephase signal can end such a page — neither is being sent —
+    /// and the blank-carrier rule cannot either, because noise has ink in it.
+    #[test]
+    fn a_page_ends_when_the_carrier_goes_away() {
+        let lpm = Lpm::L120;
+        let mut rx = WefaxRx::new(RATE);
+        rx.set_lpm(lpm);
+        let mut ev = auto_page(&mut rx, lpm, 70);
+        assert!(rx.receiving(), "the page should be under way: {ev:?}");
+
+        // The transmitter goes off: noise, and no 1900 Hz subcarrier in it.
+        let mut gone = vec![0.0f32; (RATE * 100.0) as usize];
+        noise(&mut gone, 0.5);
+        ev.extend(drain(&mut rx, &gone));
+
+        let done = ev.iter().filter(|e| matches!(e, WefaxEvent::Complete { .. })).count();
+        assert!(
+            done >= 1,
+            "the page ran on through a hundred seconds of no carrier ({done} complete)"
+        );
     }
 
     /// A near-white stretch **with a ruled border across it** is content, not
