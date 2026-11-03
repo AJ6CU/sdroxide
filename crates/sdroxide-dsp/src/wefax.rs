@@ -539,13 +539,14 @@ pub struct WefaxRx {
     /// Sample-clock trim in parts per million. Positive stretches the line,
     /// which corrects an image slanting to the left.
     slant_ppm: f64,
-    /// Auto-slant: the pulse position and phasing-line index the drift is
-    /// measured from. A pulse a few lines later that has moved names the slant,
-    /// and the trim is corrected once rather than per line. `None` while the
-    /// phasing signal has not shown a clear pulse yet.
-    slant_anchor: Option<(f64, u32)>,
-    /// Phasing lines seen so far, to index [`Self::slant_anchor`] without
-    /// trusting `phase_samples` (the line length changes as the trim does).
+    /// Auto-slant: a least-squares fit of the phasing pulse's position against
+    /// the phasing-line index. The pulse sits at the same place in every
+    /// phasing line, so the slope of that fit *is* the line-clock error — and
+    /// a fit over the whole phasing signal is a far steadier number than the
+    /// walk between two lines twenty apart.
+    slant_fit: SlantFit,
+    /// Phasing lines seen so far, to index the fit without trusting
+    /// `phase_samples` (the line length changes as the trim does).
     phasing_lines: u32,
 
     phase: Phase,
@@ -792,15 +793,66 @@ const PHASING_SIGNAL_S: f64 = 30.0;
 /// length rejects it. That is [`phasing_skew_strict`]'s job; this only keeps a
 /// passing shape from cutting the page on a line or two of it.
 const REPHASE_LINES: u32 = 8;
+/// Least-squares sums of a phasing pulse's position against its line index:
+/// `n`, `Σi`, `Σp`, `Σip` and `Σi²`.
+///
+/// The slope is the line-clock error in samples per line. Accumulated rather
+/// than stored, because a page reads a line every half second for as long as
+/// the phasing lasts and the whole fit is five numbers.
+#[derive(Clone, Copy, Default)]
+struct SlantFit {
+    n: f64,
+    sx: f64,
+    sy: f64,
+    sxy: f64,
+    sxx: f64,
+}
+
+impl SlantFit {
+    fn add(&mut self, i: f64, p: f64) {
+        self.n += 1.0;
+        self.sx += i;
+        self.sy += p;
+        self.sxy += i * p;
+        self.sxx += i * i;
+    }
+
+    /// Samples of walk per line, once there are enough lines to say.
+    fn slope(&self, need: u32) -> Option<f64> {
+        if self.n < f64::from(need) {
+            return None;
+        }
+        let den = self.n * self.sxx - self.sx * self.sx;
+        if den.abs() < f64::EPSILON {
+            return None;
+        }
+        Some((self.n * self.sxy - self.sx * self.sy) / den)
+    }
+}
+
 /// Phasing lines the auto-slant measures the drift over. Twenty is ten seconds
 /// at 120 LPM, well inside the thirty-second phasing signal, and long enough
 /// that a few parts-per-million of line-clock error move the pulse several
 /// samples — which is what makes the slant measurable at all.
 const SLANT_PROBE_LINES: u32 = 20;
-/// The smallest drift the auto-slant will act on, in parts per million. Below
-/// this the picture's own edge-wander swamps the measurement, and "correcting"
-/// it would only add a wobble the operator never asked for.
-const SLANT_MIN_PPM: f64 = 25.0;
+/// The smallest drift the auto-slant will act on once the whole phasing signal
+/// has been fitted, in parts per million.
+///
+/// A chart of DWD on 3855 (bench, 2026-11-03 14:07) came out with its frame
+/// border walking 51 px to the right over 1354 lines: twenty-one parts per
+/// million, under the twenty-five a twenty-line measurement can act on, so
+/// nothing was applied and the page leaned. Fitting the whole signal brings the
+/// measurement's own noise down to a couple of parts per million, and this is
+/// the floor that then becomes useful.
+const SLANT_MIN_PPM: f64 = 10.0;
+/// The smallest drift the auto-slant will act on from a short fit, in parts per
+/// million. Below this the pulse's own edge-wander swamps the measurement, and
+/// "correcting" it would only add a wobble the operator never asked for.
+const SLANT_COARSE_MIN_PPM: f64 = 25.0;
+/// Phasing lines the fit must cover before a correction under
+/// [`SLANT_COARSE_MIN_PPM`] is believed. The phasing signal is thirty seconds —
+/// sixty lines at 120 LPM, and the lock takes five — so this is most of it.
+const SLANT_FINE_LINES: u32 = 50;
 /// The largest line-clock error the auto-slant will believe, in parts per
 /// million.
 ///
@@ -851,7 +903,7 @@ impl WefaxRx {
             auto_start: true,
             auto_stop: true,
             slant_ppm: 0.0,
-            slant_anchor: None,
+            slant_fit: SlantFit::default(),
             phasing_lines: 0,
             phase: Phase::Idle,
             line_buf: Vec::new(),
@@ -1064,7 +1116,7 @@ impl WefaxRx {
         self.line_start = self.sample_idx as f64;
         self.line_no = 0;
         self.phase_samples = 0;
-        self.slant_anchor = None;
+        self.slant_fit = SlantFit::default();
         self.phasing_lines = 0;
         self.auto_begun = auto;
         self.phasing_stack.reset();
@@ -1381,42 +1433,48 @@ impl WefaxRx {
     /// number, and it costs nothing real: the next chart's phasing is minutes
     /// away, never seconds.
     /// Measure the line clock's drift over the phasing signal and correct the
-    /// slant once, from the pulse's movement across [`SLANT_PROBE_LINES`] lines.
+    /// slant from the pulse's movement across it.
     ///
     /// The pulse sits at the same place in every phasing line; if the line clock
     /// is a little long or short it walks a few samples per line, and that walk
-    /// *is* the slant. Measured rather than per line so a weak line's edge-wander
-    /// does not turn into a wobble, and only when the drift is large enough to
-    /// mean something ([`SLANT_MIN_PPM`]).
+    /// *is* the slant. Fitted over every phasing line seen rather than measured
+    /// between two of them, so a weak line's edge-wander averages out instead of
+    /// turning into a wobble — and so a slant too small for a twenty-line
+    /// measurement to name is still corrected once the whole signal has been
+    /// read (see [`SLANT_FINE_LINES`]).
     fn probe_slant(&mut self, line: &[f32]) {
         let Some(pos) = phasing_skew_strict(line) else { return };
         self.phasing_lines += 1;
-        let pos = pos as f64;
-        let i = self.phasing_lines;
-        let Some((p0, i0)) = self.slant_anchor else {
-            self.slant_anchor = Some((pos, i));
-            return;
-        };
-        let di = (i - i0) as f64;
-        if di < f64::from(SLANT_PROBE_LINES) {
-            return;
-        }
+        self.slant_fit.add(f64::from(self.phasing_lines), f64::from(pos));
+        let Some(slope) = self.slant_fit.slope(SLANT_PROBE_LINES) else { return };
         // Pulse movement in samples per line, as a fraction of the nominal
         // line: a clock that is too long walks the pulse backwards, and that is
         // exactly the amount the trim must come down by.
         let nominal = self.rate * self.lpm.line_secs();
-        let ppm = (pos - p0) / di / nominal * 1e6;
-        if (SLANT_MIN_PPM..=SLANT_MAX_PPM).contains(&ppm.abs()) {
+        let ppm = slope / nominal * 1e6;
+        // Small corrections need more evidence than large ones: over twenty
+        // lines the fit's own noise is several parts per million, over the
+        // whole signal it is a couple. Acting on the noise is worse than
+        // leaving the picture as it is.
+        let floor = if self.slant_fit.n >= f64::from(SLANT_FINE_LINES) {
+            SLANT_MIN_PPM
+        } else {
+            SLANT_COARSE_MIN_PPM
+        };
+        if (floor..=SLANT_MAX_PPM).contains(&ppm.abs()) {
             // Clamped as well as filtered: a handful of small mis-measures in a
             // row must not walk the clock away from the signal either.
             self.slant_ppm = (self.slant_ppm + ppm).clamp(-SLANT_MAX_PPM, SLANT_MAX_PPM);
+            // The clock has just moved, so every walk measured so far was
+            // measured against the old one: the next window starts here.
+            self.slant_fit = SlantFit::default();
+            self.phasing_lines = 0;
         } else if ppm.abs() > SLANT_MAX_PPM {
-            // Not drift: re-take the baseline from this line rather than keep
-            // measuring the same mistake against a stale anchor.
-            self.slant_anchor = Some((pos, i));
-            return;
+            // Not drift: re-take the baseline rather than keep measuring the
+            // same mistake against a stale one.
+            self.slant_fit = SlantFit::default();
+            self.phasing_lines = 0;
         }
-        self.slant_anchor = None;
     }
 
     fn note_phasing_line(&mut self, line: &[f32]) -> bool {
@@ -1543,9 +1601,9 @@ impl WefaxRx {
                     self.calibrate(&line, &line_hz);
                     self.line_start += f64::from(mean);
                     // The line clock has just been re-aligned to the pulse, so
-                    // the pulse position's baseline moved: the auto-slant's
-                    // anchor has to restart from here.
-                    self.slant_anchor = None;
+                    // the pulse position's baseline moved: the auto-slant's fit
+                    // has to restart from here.
+                    self.slant_fit = SlantFit::default();
                     self.phasing_lines = 0;
                     self.phasing_stack.reset();
                     self.phase = Phase::Image;
@@ -1946,13 +2004,22 @@ mod tests {
     /// pulse sits at the end of each of *these* lines, so against the nominal
     /// line clock it walks right by that fraction of a line per line.
     fn phasing_slanted(lpm: Lpm, count: usize, slant_ppm: f64) -> Vec<f32> {
-        let per = (RATE * lpm.line_secs()) as usize;
-        let slanted = (per as f64 * (1.0 + slant_ppm * 1e-6)).round() as usize;
-        let pulse = (slanted as f64 * 0.05) as usize;
+        let per = RATE * lpm.line_secs();
+        let slanted = per * (1.0 + slant_ppm * 1e-6);
+        let pulse = (slanted * 0.05) as usize;
+        // The fractional part of the line length **accumulates**: a clock that
+        // is twenty-one parts per million long is 0.126 samples longer per line,
+        // and rounding each line on its own would make that zero. A sound card's
+        // crystal does not round.
         let mut levels = Vec::new();
+        let mut at = 0.0f64;
+        let mut cut = 0usize;
         for _ in 0..count {
-            levels.extend(std::iter::repeat_n(0.0f32, slanted - pulse));
+            at += slanted;
+            let end = at.round() as usize;
+            levels.extend(std::iter::repeat_n(0.0f32, end - cut - pulse));
             levels.extend(std::iter::repeat_n(1.0f32, pulse));
+            cut = end;
         }
         modulate(&levels)
     }
@@ -2032,6 +2099,25 @@ mod tests {
                 rx.slant_ppm()
             );
         }
+    }
+
+    /// **A slant too small for a short measurement is still corrected.**
+    ///
+    /// The DWD chart of 2026-11-03 14:07 came out with its frame border walking
+    /// 51 px to the right over 1354 lines: twenty-one parts per million. That is
+    /// under the twenty-five a twenty-line measurement can name, so nothing was
+    /// applied and the page leaned. The phasing signal is sixty lines long, and
+    /// a fit over the whole of it names a slant this small.
+    #[test]
+    fn a_small_slant_is_corrected_over_the_whole_phasing_signal() {
+        let mut rx = WefaxRx::new(RATE);
+        rx.start_manual(&mut Vec::new());
+        let _ = drain(&mut rx, &phasing_slanted(Lpm::L120, 60, 21.0));
+        assert!(
+            (rx.slant_ppm() as f64 - 21.0).abs() < 6.0,
+            "21 ppm was left at {}",
+            rx.slant_ppm()
+        );
     }
 
     /// **A noisy phasing signal still cuts the page.**
