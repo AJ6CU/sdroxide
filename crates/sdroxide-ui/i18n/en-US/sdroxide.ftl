@@ -9046,3 +9046,17 @@ topbar-bw-hint-title = Adjust and memorise the filter
 topbar-bw-hint-body = Click to open the filter settings. Right-click a preset chip to change it, or click M+ to store the current passband in your own memory.
 
 topbar-preset-memory-hint = Empty memory: click to store the current passband here, right-click to type one
+
+settings-dyndns = DYNAMIC DNS
+
+settings-dyndns-hint = The provider's update address, token and all. Leave it empty to keep this off: nothing is sent and the program stays as it is. The address is a secret and is never written to a log.
+
+settings-dyndns-address = Address
+
+settings-dyndns-every = Every
+
+settings-dyndns-last = Last update { $when }: { $answer }
+
+settings-dyndns-off = Off — no address set, nothing is sent.
+
+settings-dyndns-waiting = Waiting for the first answer…

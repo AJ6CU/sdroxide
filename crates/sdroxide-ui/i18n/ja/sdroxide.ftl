@@ -8989,3 +8989,17 @@ topbar-bw-hint-title = フィルターの調整と記憶
 topbar-bw-hint-body = クリックでフィルター設定を開きます。プリセットを右クリックすると変更でき、M+ をクリックすると現在の通過帯域を自分のメモリーに保存します。
 
 topbar-preset-memory-hint = 空のメモリー：クリックで現在の通過帯域を保存、右クリックで数値を入力
+
+settings-dyndns = ダイナミックDNS
+
+settings-dyndns-hint = プロバイダーの更新アドレス（トークン込み）。空のままなら無効です。何も送信されず、プログラムはそのままです。このアドレスは秘密で、ログには残しません。
+
+settings-dyndns-address = アドレス
+
+settings-dyndns-every = 間隔
+
+settings-dyndns-last = 最終更新 { $when }: { $answer }
+
+settings-dyndns-off = 無効 — アドレス未設定、何も送信しません。
+
+settings-dyndns-waiting = 最初の応答を待っています…

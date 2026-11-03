@@ -9049,3 +9049,17 @@ topbar-bw-hint-title = Filter instellen en opslaan
 topbar-bw-hint-body = Klik om de filterinstellingen te openen. Rechtsklik op een preset om die te wijzigen, of klik op M+ om de huidige doorlaatband in je eigen geheugen op te slaan.
 
 topbar-preset-memory-hint = Leeg geheugen: klik om de huidige doorlaatband hier op te slaan, rechtsklik om er een in te typen
+
+settings-dyndns = DYNAMISCHE DNS
+
+settings-dyndns-hint = Het update-adres van de provider, met token. Leeg laten is uit: er wordt niets verstuurd en het programma blijft zoals het is. Het adres is geheim en komt nooit in een log.
+
+settings-dyndns-address = Adres
+
+settings-dyndns-every = Elke
+
+settings-dyndns-last = Laatste update { $when }: { $answer }
+
+settings-dyndns-off = Uit — geen adres, er wordt niets verstuurd.
+
+settings-dyndns-waiting = Wacht op het eerste antwoord…

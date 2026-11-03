@@ -9039,3 +9039,17 @@ topbar-bw-hint-title = Filter einstellen und speichern
 topbar-bw-hint-body = Klicken, um die Filtereinstellungen zu öffnen. Rechtsklick auf eine Voreinstellung zum Ändern, oder auf M+ klicken, um den aktuellen Durchlassbereich im eigenen Speicher abzulegen.
 
 topbar-preset-memory-hint = Leerer Speicher: Klick legt den aktuellen Durchlassbereich ab, Rechtsklick zum Eintippen
+
+settings-dyndns = DYNAMISCHES DNS
+
+settings-dyndns-hint = Die Update-Adresse des Anbieters, samt Token. Leer lassen heißt aus: es wird nichts gesendet und das Programm bleibt, wie es ist. Die Adresse ist ein Geheimnis und landet nie in einem Protokoll.
+
+settings-dyndns-address = Adresse
+
+settings-dyndns-every = Alle
+
+settings-dyndns-last = Letzte Aktualisierung { $when }: { $answer }
+
+settings-dyndns-off = Aus — keine Adresse, es wird nichts gesendet.
+
+settings-dyndns-waiting = Warte auf die erste Antwort…

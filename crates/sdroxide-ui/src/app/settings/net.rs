@@ -245,6 +245,52 @@ fn net_row_int(ui: &mut egui::Ui, label: &str, val: &mut u32) {
     });
 }
 
+/// **Dynamic DNS**: one update address, one interval, and nothing else.
+///
+/// Empty is off — the hint says so, and the engine of this is a thread that is
+/// never started while the field is empty. The address carries the operator's
+/// token, so what is shown back is the provider's answer and never the address.
+pub(in crate::app) fn dyndns_section(
+    ui: &mut egui::Ui,
+    cfg: &mut sdroxide_types::NetworkConfig,
+    // (unix, ok, provider's word) — the last answer, when there is one.
+    last: Option<(i64, bool, String)>,
+) {
+    net_heading(ui, &tr!("settings-dyndns"));
+    ui.label(
+        RichText::new(tr!("settings-dyndns-hint"))
+            .size(10.5)
+            .color(crate::theme::gray(140)),
+    );
+    ui.add_space(2.0);
+    net_row(ui, &tr!("settings-dyndns-address"), &mut cfg.dyndns_url, 300.0);
+    ui.horizontal(|ui| {
+        ui.add_sized([96.0, 22.0], egui::Label::new(tr!("settings-dyndns-every")));
+        let mut minutes = cfg.dyndns_minutes;
+        if ui
+            .add(egui::DragValue::new(&mut minutes).range(1..=1440).suffix(" min"))
+            .changed()
+        {
+            cfg.dyndns_minutes = minutes;
+        }
+    });
+    let line = if cfg.dyndns_url.trim().is_empty() {
+        Some((tr!("settings-dyndns-off").to_string(), crate::theme::gray(140)))
+    } else {
+        match last {
+            Some((at, ok, text)) => {
+                let when = crate::time::utc_clock(at);
+                let colour = if ok { crate::theme::GREEN() } else { crate::theme::ALERT() };
+                Some((tr!("settings-dyndns-last", when = when, answer = text), colour))
+            }
+            None => Some((tr!("settings-dyndns-waiting").to_string(), crate::theme::gray(140))),
+        }
+    };
+    if let Some((text, colour)) = line {
+        ui.label(RichText::new(text).size(10.5).color(colour));
+    }
+}
+
 /// A labelled single-line text field for the network settings tabs.
 pub(in crate::app) fn net_row(ui: &mut egui::Ui, label: &str, val: &mut String, w: f32) {
     ui.horizontal(|ui| {

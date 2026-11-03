@@ -9041,3 +9041,17 @@ topbar-bw-hint-title = Filtreyi ayarla ve kaydet
 topbar-bw-hint-body = Filtre ayarlarını açmak için tıklayın. Bir ön ayarı değiştirmek için sağ tıklayın; geçerli geçirme bandını kendi belleğinize kaydetmek için M+ düğmesine tıklayın.
 
 topbar-preset-memory-hint = Boş bellek: geçerli geçirme bandını buraya kaydetmek için tıklayın, elle girmek için sağ tıklayın
+
+settings-dyndns = DİNAMİK DNS
+
+settings-dyndns-hint = Sağlayıcının güncelleme adresi, jetonuyla birlikte. Boş bırakmak kapalı demektir: hiçbir şey gönderilmez ve program olduğu gibi kalır. Adres gizlidir ve asla günlüğe yazılmaz.
+
+settings-dyndns-address = Adres
+
+settings-dyndns-every = Her
+
+settings-dyndns-last = Son güncelleme { $when }: { $answer }
+
+settings-dyndns-off = Kapalı — adres yok, hiçbir şey gönderilmez.
+
+settings-dyndns-waiting = İlk yanıt bekleniyor…

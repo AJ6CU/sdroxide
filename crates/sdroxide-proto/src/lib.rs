@@ -2176,8 +2176,8 @@ use sdroxide_types::{
 /// an English `Notice`; now it carries the reason and the frequency, and the
 /// screen words it in the operator's language. `PROTO_VERSION` 259 → 260,
 /// `VERSION_BYTE` 0x4F → 0x50.
-pub const PROTO_VERSION: u16 = 260;
-const VERSION_BYTE: u8 = 0x50;
+pub const PROTO_VERSION: u16 = 261;
+const VERSION_BYTE: u8 = 0x51;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -3441,7 +3441,7 @@ mod tests {
             ServerMsg::TxRefused(w, hz) => assert_eq!((w, hz), (why, 7_074_000.0)),
             _ => panic!("TxRefused did not round-trip"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (260, 0x50));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (261, 0x51));
     }
 
     /// postcard is positional: a field inserted mid-struct shifts every byte
@@ -3471,9 +3471,12 @@ mod tests {
             (889, 17_500_317_737_597_158_402),
             "RadioConfig's wire layout shifted — append fields, never insert them"
         );
+        // 316 since the two Dynamic DNS fields were appended at the end
+        // (PROTO_VERSION 260 → 261). Appended, so an older peer reads the
+        // struct it knows and the two new bytes are simply not there.
         assert_eq!(
             (net.len(), fnv1a(&net)),
-            (314, 15_307_633_050_357_107_781),
+            (316, 9_696_214_884_124_040_590),
             "NetworkConfig's wire layout shifted — append fields, never insert them"
         );
     }

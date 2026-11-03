@@ -9040,3 +9040,17 @@ topbar-bw-hint-title = Ajustar y memorizar el filtro
 topbar-bw-hint-body = Haga clic para abrir los ajustes del filtro. Clic derecho en un preajuste para cambiarlo, o clic en M+ para guardar el ancho de banda actual en su memoria.
 
 topbar-preset-memory-hint = Memoria vacía: clic para guardar aquí el ancho de banda actual, clic derecho para escribir uno
+
+settings-dyndns = DNS DINÁMICO
+
+settings-dyndns-hint = La dirección de actualización del proveedor, con su token. Déjela vacía para mantenerlo desactivado: no se envía nada y el programa sigue igual. La dirección es un secreto y nunca se escribe en un registro.
+
+settings-dyndns-address = Dirección
+
+settings-dyndns-every = Cada
+
+settings-dyndns-last = Última actualización { $when }: { $answer }
+
+settings-dyndns-off = Desactivado — sin dirección, no se envía nada.
+
+settings-dyndns-waiting = Esperando la primera respuesta…

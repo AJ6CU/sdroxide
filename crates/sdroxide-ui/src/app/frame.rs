@@ -921,6 +921,16 @@ impl eframe::App for SdroxideApp {
         // The update check answers on its own thread; pick it up cheaply.
         #[cfg(not(target_arch = "wasm32"))]
         self.update.poll();
+        // Dynamic DNS: idle unless an update address is set, and cheap every
+        // frame either way.
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let armed = self.dyndns_armed.clone();
+            match armed {
+                Some((url, minutes)) => self.dyndns.poll(&url, minutes),
+                None => self.dyndns.poll("", 0),
+            }
+        }
         self.poll_adif_import();
         self.poll_settings_import();
         self.refresh_band_conditions(now);
@@ -4540,6 +4550,14 @@ impl SdroxideApp {
                         self.net_rbn_cmds = c.net.rbn.commands.join("\n");
                         self.net_rbn2_cmds = c.net.rbn2.commands.join("\n");
                         self.net_cfg_edit = c.net.clone();
+                        #[cfg(not(target_arch = "wasm32"))]
+                        {
+                            // The address the station is set up with is live
+                            // from here, without waiting for Apply.
+                            self.dyndns_armed = (!c.net.dyndns_url.trim().is_empty()).then(|| {
+                                (c.net.dyndns_url.clone(), c.net.dyndns_interval_minutes())
+                            });
+                        }
                         self.net_cfg_seeded = true;
                     }
                     if !self.rigctld_seeded {

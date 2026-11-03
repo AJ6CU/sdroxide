@@ -42,6 +42,7 @@ pub(in crate::app) mod bands;
 /// off the desktop and a browser has one window with nowhere to put it.
 #[cfg(not(target_arch = "wasm32"))]
 pub(in crate::app) mod classic;
+pub(in crate::app) mod dyndns;
 mod colour_edit;
 pub(in crate::app) mod contest;
 #[cfg(all(not(target_arch = "wasm32"), target_os = "linux"))]
@@ -823,6 +824,15 @@ pub struct SdroxideApp {
     update: update::UpdateCheck,
     #[cfg(not(target_arch = "wasm32"))]
     update_dismissed: bool,
+    /// Dynamic DNS: one worker, only while an update address is set. Empty is
+    /// off, and off means no thread exists at all.
+    #[cfg(not(target_arch = "wasm32"))]
+    dyndns: dyndns::Dyndns,
+    /// The address the worker is allowed to use: the **applied** one, not what
+    /// is being typed. Set where the network settings arrive and where Apply is
+    /// pressed, so a half-typed URL never sends an update.
+    #[cfg(not(target_arch = "wasm32"))]
+    dyndns_armed: Option<(String, u32)>,
     /// Which half of the band/mode menu was last shown (listen or operate).
     band_menu_tab: top_bar::BandMenuTab,
     /// Which slice of the spectrum the band menu's chips are narrowed to (HF,
@@ -2321,6 +2331,10 @@ impl SdroxideApp {
             },
             #[cfg(not(target_arch = "wasm32"))]
             update_dismissed: false,
+            #[cfg(not(target_arch = "wasm32"))]
+            dyndns: dyndns::Dyndns::default(),
+            #[cfg(not(target_arch = "wasm32"))]
+            dyndns_armed: None,
             band_menu_tab: if ui_settings.band_menu_listen {
                 top_bar::BandMenuTab::Listen
             } else {
