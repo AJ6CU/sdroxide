@@ -582,6 +582,14 @@ pub struct WefaxRx {
     /// transmissions a station is silent for minutes, and a page that runs
     /// through that gap draws noise.
     carrier_gone_s: f64,
+    /// The subcarrier band's mean power as it has been, which the drop is
+    /// measured against. Only ever follows a window that is *not* far below it,
+    /// so a gap cannot walk the reference down into the noise it is being
+    /// measured against.
+    carrier_ref: f32,
+    /// The last window's power against that reference, for the log: 1.0 is a
+    /// carrier where it has been, 0.01 is one twenty decibels down.
+    carrier_ratio: f32,
 
     start_det: ToneDetect,
     stop_det: ToneDetect,
@@ -841,6 +849,19 @@ impl SlantFit {
 /// because the band dropped for a minute is the complaint #426 was — and short
 /// enough to cut the silence between two transmissions, which is minutes.
 const CARRIER_GONE_S: f64 = 90.0;
+/// How far the subcarrier band's **power** must fall below where it has been,
+/// as a fraction, before the carrier counts as gone: 10 dB.
+///
+/// The first attempt tested the subcarrier band's *share* of the audio — what
+/// the tone detectors use — and the bench threw it out: over a real gap every
+/// one of 1687 windows still read "in band", because a receiver's audio is
+/// already band-limited and noise fills the share. What collapses when a
+/// station goes off is the power in that band, by tens of dB.
+const CARRIER_DROP: f32 = 0.1;
+/// Time constant of the reference that drop is measured against, in seconds:
+/// long enough to ride a chart's own modulation, short enough to settle within
+/// a page.
+const CARRIER_REF_S: f32 = 20.0;
 /// Phasing lines the auto-slant measures the drift over. Twenty is ten seconds
 /// at 120 LPM, well inside the thirty-second phasing signal, and long enough
 /// that a few parts-per-million of line-clock error move the pulse several
@@ -933,6 +954,8 @@ impl WefaxRx {
             had_content: false,
             blank_run: 0,
             carrier_gone_s: 0.0,
+            carrier_ref: 0.0,
+            carrier_ratio: 1.0,
             blank_gap: 0,
             start_ioc: Ioc::default(),
             audio_tone: AudioToneDetect::new(rate),
@@ -999,6 +1022,13 @@ impl WefaxRx {
 
     pub fn slant_ppm(&self) -> f32 {
         self.slant_ppm as f32
+    }
+
+    /// The subcarrier band's power against where it has been: 1.0 is a carrier
+    /// at the level it has held, 0.01 is one twenty decibels down. What the
+    /// carrier-gone rule reads, and what the log quotes while a page runs on.
+    pub fn carrier_ratio(&self) -> f32 {
+        self.carrier_ratio
     }
 
     /// The operator's receive sensitivity, `-5..=+5`; see [`WefaxRx::sens_k`].
@@ -1141,6 +1171,8 @@ impl WefaxRx {
         self.had_content = false;
         self.blank_run = 0;
         self.carrier_gone_s = 0.0;
+        self.carrier_ref = 0.0;
+        self.carrier_ratio = 1.0;
         self.blank_gap = 0;
         self.start_det.reset();
         self.start_run = 0;
@@ -1568,6 +1600,9 @@ impl WefaxRx {
                 // window the share test would say "in band" about nothing.
                 let in_band =
                     self.band_raw > 0.0 && self.band_sub >= self.band_raw * self.subcarrier_share();
+                // Taken before the band counters are cleared for the next
+                // window: this is the power the carrier rule is measured on.
+                let power = self.band_sub / (self.rate * TONE_WINDOW_S) as f32;
                 self.band_raw = 0.0;
                 self.band_sub = 0.0;
                 // **The carrier went away.** A white line is not this: a
@@ -1577,14 +1612,31 @@ impl WefaxRx {
                 // the blank test. The subcarrier's own share of the band is the
                 // honest test, and a minute and a half of its absence is a gap
                 // between transmissions, not a fade.
-                if in_band {
-                    self.carrier_gone_s = 0.0;
-                } else {
+                // **The carrier went away**, and the measure is the
+                // subcarrier band's **power** against what it has been for the
+                // last twenty seconds — not its share of the audio. `in_band`
+                // above is the share, and the bench showed a real gap reading
+                // "in band" in every one of 1687 windows: a receiver's audio is
+                // already band-limited, so noise fills the share. A station
+                // that goes off drops tens of dB in that band, and that shows.
+                if self.carrier_ref <= 0.0 {
+                    self.carrier_ref = power;
+                }
+                self.carrier_ratio =
+                    if self.carrier_ref > 0.0 { power / self.carrier_ref } else { 1.0 };
+                if self.carrier_ratio < CARRIER_DROP {
                     self.carrier_gone_s += TONE_WINDOW_S;
                     if self.carrier_gone_s >= CARRIER_GONE_S {
                         self.finish(false, out);
                         return;
                     }
+                } else {
+                    self.carrier_gone_s = 0.0;
+                    // Follow the level — but only from a window that is not far
+                    // below it, or a gap would drag the reference down to the
+                    // noise it is supposed to be measured against.
+                    let k = (TONE_WINDOW_S as f32 / CARRIER_REF_S).clamp(0.0, 1.0);
+                    self.carrier_ref += k * (power - self.carrier_ref);
                 }
                 if in_band
                     && self.stop_det.swing
