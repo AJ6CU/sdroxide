@@ -447,6 +447,19 @@ pub struct WefaxChartMeta {
 impl WefaxChartMeta {
     /// The file name to save this chart under.
     pub fn file_name(&self) -> String {
+        self.file_name_numbered(1)
+    }
+
+    /// The name for the `n`th chart saved under this one's.
+    ///
+    /// Two receivers on the same frequency, or two instances of the program,
+    /// complete the same transmission at the same second and would write the
+    /// same file — the second silently overwrote the first (bench, 2026-11-03,
+    /// a local RSP1 and a remote KiwiSDR both on DWD 3855). The first keeps the
+    /// plain name; the rest take `-2`, `-3`, … before the extension, which
+    /// [`from_file_name`](Self::from_file_name) reads as the callsign part and
+    /// ignores.
+    pub fn file_name_numbered(&self, n: u32) -> String {
         let (y, mo, d, h, mi, s) = crate::utc_ymd_hms(self.unix);
         let mut name = format!("wefax-{y:04}{mo:02}{d:02}-{h:02}{mi:02}{s:02}Z");
         if let Some(hz) = self.dial_hz {
@@ -460,6 +473,9 @@ impl WefaxChartMeta {
                 name.push('-');
                 name.push_str(call);
             }
+        }
+        if n > 1 {
+            name.push_str(&format!("-{n}"));
         }
         name.push_str(".png");
         name
@@ -712,6 +728,27 @@ mod tests {
         // Stations may share a carrier frequency (e.g. VFF/VFR), so duplicates are
         // allowed; the count is informational only.
         let _ = all;
+    }
+
+    /// **Two receivers on one frequency must not write the same file.**
+    ///
+    /// A local RSP1 and a remote KiwiSDR on DWD 3855 finish the same
+    /// transmission in the same second; before this, the second chart silently
+    /// overwrote the first and one of the two was lost (bench, 2026-11-03).
+    #[test]
+    fn a_second_chart_of_the_same_transmission_gets_its_own_name() {
+        let unix = ymd_hms_to_unix(2026, 11, 3, 11, 30, 0);
+        let m = WefaxChartMeta { unix, dial_hz: Some(3_853_100.0) };
+        assert_eq!(m.file_name_numbered(1), "wefax-20261103-113000Z-3853.1kHz-DWD.png");
+        assert_eq!(m.file_name_numbered(2), "wefax-20261103-113000Z-3853.1kHz-DWD-2.png");
+        assert_eq!(m.file_name_numbered(3), "wefax-20261103-113000Z-3853.1kHz-DWD-3.png");
+        // The numbered ones still read back as the same chart: the suffix lands
+        // where the callsign sits, which parsing ignores.
+        for n in 1..=3 {
+            let back = WefaxChartMeta::from_file_name(&m.file_name_numbered(n))
+                .unwrap_or_else(|| panic!("{n} does not parse"));
+            assert_eq!((back.unix, back.dial_hz), (unix, Some(3_853_100.0)), "{n}");
+        }
     }
 
     /// The file name is the only place a chart's date and frequency are
