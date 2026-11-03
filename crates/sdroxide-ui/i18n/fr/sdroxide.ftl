@@ -9052,3 +9052,19 @@ topbar-bw-hint-title = Régler et mémoriser le filtre
 topbar-bw-hint-body = Cliquez pour ouvrir les réglages du filtre. Clic droit sur un préréglage pour le modifier, ou cliquez sur M+ pour stocker la bande passante actuelle dans votre mémoire.
 
 topbar-preset-memory-hint = Mémoire vide : cliquez pour y stocker la bande passante actuelle, clic droit pour en saisir une
+
+settings-dyndns = DNS DYNAMIQUE
+
+settings-dyndns-hint = L'adresse de mise à jour du fournisseur, jeton compris. Laissez vide pour désactiver : rien n'est envoyé et le programme reste tel quel. Cette adresse est un secret et n'est jamais écrite dans un journal.
+
+settings-dyndns-address = Adresse
+
+settings-dyndns-every = Toutes les
+
+settings-dyndns-last = Dernière mise à jour { $when } : { $answer }
+
+settings-dyndns-off = Désactivé — aucune adresse, rien n'est envoyé.
+
+settings-dyndns-waiting = En attente de la première réponse…
+
+settings-dyndns-token-note = L'adresse contient votre jeton : elle est stockée en clair dans net.json et transmise à chaque écran connecté à cette station. Elle n'est jamais écrite dans un journal.

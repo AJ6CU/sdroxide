@@ -823,6 +823,14 @@ pub struct SdroxideApp {
     update: update::UpdateCheck,
     #[cfg(not(target_arch = "wasm32"))]
     update_dismissed: bool,
+    /// The dynamic-DNS worker's last answer, as the engine reported it: (unix,
+    /// ok, the provider's own word). The worker lives in the engine because the
+    /// name has to point at the machine that is heard — see `crate::dyndns` in
+    /// `sdroxide-radio` — so the screen only ever holds the answer.
+    ///
+    /// Not gated on the target: the browser client receives the same answer as
+    /// `ServerMsg::DyndnsAnswer`, so it holds it too (review, 2026-11-03).
+    dyndns_last: Option<(i64, bool, String)>,
     /// Which half of the band/mode menu was last shown (listen or operate).
     band_menu_tab: top_bar::BandMenuTab,
     /// Which slice of the spectrum the band menu's chips are narrowed to (HF,
@@ -2321,6 +2329,7 @@ impl SdroxideApp {
             },
             #[cfg(not(target_arch = "wasm32"))]
             update_dismissed: false,
+            dyndns_last: None,
             band_menu_tab: if ui_settings.band_menu_listen {
                 top_bar::BandMenuTab::Listen
             } else {

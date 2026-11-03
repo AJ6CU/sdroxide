@@ -4079,6 +4079,12 @@ impl SdroxideApp {
                     self.error = Some(e);
                     self.arm_retry(now);
                 }
+                // The engine's dynamic-DNS worker answered. Only the provider's
+                // word arrives — the address carries the token and stays in the
+                // engine — and this is what the settings row shows.
+                RadioEvent::DyndnsAnswer { at_unix, ok, text } => {
+                    self.dyndns_last = Some((at_unix, ok, text));
+                }
                 RadioEvent::LoginTest(r) => {
                     self.login_tests_pending.remove(&r.target);
                     self.push_net_log(format!(

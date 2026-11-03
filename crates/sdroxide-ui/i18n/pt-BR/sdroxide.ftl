@@ -9041,3 +9041,19 @@ topbar-bw-hint-title = Ajustar e memorizar o filtro
 topbar-bw-hint-body = Clique para abrir os ajustes do filtro. Clique com o botão direito em uma predefinição para alterá-la, ou clique em M+ para guardar a banda passante atual na sua memória.
 
 topbar-preset-memory-hint = Memória vazia: clique para guardar aqui a banda passante atual, botão direito para digitar uma
+
+settings-dyndns = DNS DINÂMICO
+
+settings-dyndns-hint = O endereço de atualização do provedor, com o token. Deixe vazio para manter desligado: nada é enviado e o programa continua como está. O endereço é secreto e nunca vai para um registro.
+
+settings-dyndns-address = Endereço
+
+settings-dyndns-every = A cada
+
+settings-dyndns-last = Última atualização { $when }: { $answer }
+
+settings-dyndns-off = Desligado — sem endereço, nada é enviado.
+
+settings-dyndns-waiting = À espera da primeira resposta…
+
+settings-dyndns-token-note = O endereço carrega seu token: ele fica gravado em texto claro no net.json e vai para toda tela conectada a esta estação. Nunca é escrito em um registro.

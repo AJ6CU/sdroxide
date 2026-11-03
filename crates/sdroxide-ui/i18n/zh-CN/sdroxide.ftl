@@ -8979,3 +8979,19 @@ topbar-bw-hint-title = 调整并记忆滤波器
 topbar-bw-hint-body = 单击打开滤波器设置。右键单击预设可修改，单击 M+ 可将当前通带存入您自己的存储。
 
 topbar-preset-memory-hint = 空存储：单击存入当前通带，右键单击手动输入
+
+settings-dyndns = 动态DNS
+
+settings-dyndns-hint = 服务商提供的更新地址，含令牌。留空即关闭：不发送任何内容，程序保持原样。该地址是秘密，永远不会写入日志。
+
+settings-dyndns-address = 地址
+
+settings-dyndns-every = 每隔
+
+settings-dyndns-last = 上次更新 { $when }：{ $answer }
+
+settings-dyndns-off = 已关闭 — 未设置地址，不发送任何内容。
+
+settings-dyndns-waiting = 等待第一次应答…
+
+settings-dyndns-token-note = 地址中含有你的令牌：它以明文保存在 net.json 中，并会发送到连接本站的每个画面。它永远不会写入日志。

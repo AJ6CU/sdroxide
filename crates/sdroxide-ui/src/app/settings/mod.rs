@@ -39,8 +39,8 @@ use self::alerts::alerts_settings;
 use self::controls::settings_controls_tab;
 use self::general::{cb_plan_combo, region_combo, remote_access_settings, signed_in_station};
 use self::net::{
-    broadcast_stations_settings, dx_cluster_status, net_heading, net_row, net_secret,
-    operator_identity_note, rbn_block, settings_freedv_tab, wavelog_section,
+    broadcast_stations_settings, dx_cluster_status, dyndns_section, net_heading, net_row,
+    net_secret, operator_identity_note, rbn_block, settings_freedv_tab, wavelog_section,
 };
 use self::profiles::settings_profiles_tab;
 use self::radio::{
@@ -1991,6 +1991,9 @@ impl SdroxideApp {
             self.net_cfg_edit.rbn.commands = split(&self.net_rbn_cmds);
             self.net_cfg_edit.rbn2.commands = split(&self.net_rbn2_cmds);
             // The engine persists net.json when it applies this.
+            // ...and only now may the update address be used: the engine's
+            // worker starts from the config it is handed, so a half-typed URL
+            // never goes out.
             cmds.push(Command::SetNetworkConfig(self.net_cfg_edit.clone()));
         }
         if net_sync {
@@ -4673,6 +4676,15 @@ impl SdroxideApp {
                     self.wsjtx_seeded,
                     io.wsjtx_apply,
                 );
+                ui.add_space(12.0);
+                ui.separator();
+                ui.end_row();
+                ui.add_space(8.0);
+                #[cfg(not(target_arch = "wasm32"))]
+                let dyndns_last = self.dyndns_last.clone();
+                #[cfg(target_arch = "wasm32")]
+                let dyndns_last = None;
+                dyndns_section(ui, &mut io.net_edit, dyndns_last);
                 ui.add_space(12.0);
                 ui.separator();
                 ui.end_row();

@@ -320,7 +320,7 @@ struct PendingUpload {
     at: Instant,
 }
 
-fn unix_now() -> i64 {
+pub(crate) fn unix_now() -> i64 {
     SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs() as i64)
 }
 
@@ -3767,6 +3767,9 @@ struct Engine {
     /// Network cockpit: owns the spot feeds (DX cluster / POTA / SOTA / PSK)
     /// and the lookup/upload worker threads. The engine only drains it.
     spots: sdroxide_net::SpotManager,
+    /// Dynamic DNS: the update worker, which lives here because the name has
+    /// to point at *this* machine's address — see [`crate::dyndns`].
+    dyndns: crate::dyndns::Dyndns,
     /// Winlink radio email: owns the mailbox and the forwarding-session worker.
     /// `None` when the mailbox directory could not be opened, which must not
     /// stop the radio from running — the operator simply gets an error the
@@ -5195,6 +5198,7 @@ fn engine_thread(
         // pair is folded in below, once the engine owns them.
         vfo_memory: [initial_vfo_memory.clone(), initial_vfo_memory],
         spots: sdroxide_net::SpotManager::new(),
+        dyndns: crate::dyndns::Dyndns::default(),
         winlink: open_mailbox(&sdroxide_types::WinlinkConfig::default()),
         kiss: None,
         packet_port: None,
@@ -5285,6 +5289,11 @@ fn engine_thread(
     }
     engine.spots.set_operator(&engine.effective_call(), &engine.report_grid());
     engine.net_cfg = sdroxide_config::load_network_config();
+    // The address, if there is one: from boot, with no screen open, because a
+    // headless station is exactly where this matters.
+    engine
+        .dyndns
+        .set(&engine.net_cfg.dyndns_url, engine.net_cfg.dyndns_interval_minutes());
     let decode_udp = engine.net_cfg.decode_udp.clone();
     engine.set_decode_feed(&decode_udp);
     // Hand the persisted account to the mailbox. Without this the manager keeps
@@ -10970,6 +10979,7 @@ impl Engine {
                     warn!("saving network config: {e}");
                 }
                 self.net_cfg = cfg.clone();
+                self.dyndns.set(&cfg.dyndns_url, cfg.dyndns_interval_minutes());
                 let decode_udp = cfg.decode_udp.clone();
                 self.set_decode_feed(&decode_udp);
                 // The mailbox root does not depend on the settings, but the
@@ -15179,6 +15189,16 @@ impl Engine {
         // thread, like the reporter above, so pushing every tick costs nothing.
         let (rx_freq, mode) = (self.state.rx_freq_hz(), self.state.rx[0].mode);
         self.spots.wavelog_radio(self.state.tx_freq_hz(), rx_freq, mode);
+
+        // Dynamic DNS answers go out as they come: one update an interval, and
+        // the screen shows the provider's word without ever seeing the address.
+        while let Some(a) = self.dyndns.poll() {
+            let _ = self.event_tx.send(RadioEvent::DyndnsAnswer {
+                at_unix: a.at_unix,
+                ok: a.ok,
+                text: a.text,
+            });
+        }
 
         for ev in self.spots.poll() {
             let re = match ev {

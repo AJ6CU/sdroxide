@@ -433,6 +433,40 @@ pub struct NetworkConfig {
     /// `SetNetworkConfig` whole.
     #[serde(default)]
     pub decode_udp: String,
+
+    // ── Dynamic DNS ──
+    /// The provider's **update URL**, exactly as it was issued — DuckDNS,
+    /// dynv6, No-IP, freedns and the rest all give one, with the token in it.
+    ///
+    /// **Empty is off, and empty is the default.** Nothing is started, no
+    /// request is made, and a station that does not want this never meets it:
+    /// the program works the same offline as it always has.
+    ///
+    /// It is a secret — the token is part of the address — so it is never
+    /// written to a log and the screen never shows it back.
+    /// Appended last, as the wire requires.
+    #[serde(default)]
+    pub dyndns_url: String,
+    /// How often that update goes out, in minutes. Held between 1 and 1440: a
+    /// provider asked more often than its own limit starts answering with
+    /// errors and eventually blocks the hostname, which is worse than being ten
+    /// minutes behind an address change.
+    /// Appended last, as the wire requires.
+    #[serde(default = "NetworkConfig::default_dyndns_minutes")]
+    pub dyndns_minutes: u32,
+}
+
+impl NetworkConfig {
+    /// Five minutes: often enough that an address change is invisible to a
+    /// listener, rare enough that no provider counts it as abuse.
+    pub fn default_dyndns_minutes() -> u32 {
+        5
+    }
+
+    /// The interval in force, clamped to what the providers tolerate.
+    pub fn dyndns_interval_minutes(&self) -> u32 {
+        self.dyndns_minutes.clamp(1, 1440)
+    }
 }
 
 impl Default for NetworkConfig {
@@ -473,6 +507,8 @@ impl Default for NetworkConfig {
             rbn2: RbnConfig::second(),
             wavelog: crate::WavelogConfig::default(),
             decode_udp: String::new(),
+            dyndns_url: String::new(),
+            dyndns_minutes: NetworkConfig::default_dyndns_minutes(),
         }
     }
 }
@@ -501,6 +537,50 @@ mod decode_udp_tests {
         v.as_object_mut().unwrap().remove("decode_udp");
         let old: NetworkConfig = serde_json::from_value(v).unwrap();
         assert!(old.decode_udp.is_empty());
+    }
+}
+
+#[cfg(test)]
+mod dyndns_tests {
+    use super::*;
+
+    /// The update URL and its interval ride `SetNetworkConfig` whole, so they
+    /// are on the wire and postcard reads positionally: a value set here comes
+    /// back, an older `net.json` without them loads as **off**, and the
+    /// interval is clamped to what the providers tolerate rather than trusted.
+    #[test]
+    fn the_dynamic_dns_settings_survive_the_wire_and_default_to_off() {
+        let mut cfg = NetworkConfig::default();
+        cfg.dyndns_url = "https://www.duckdns.org/update?domains=x&token=y".into();
+        cfg.dyndns_minutes = 15;
+        let bytes = postcard::to_stdvec(&cfg).expect("encode");
+        let back: NetworkConfig = postcard::from_bytes(&bytes).expect("decode");
+        assert_eq!(back.dyndns_url, cfg.dyndns_url);
+        assert_eq!(back.dyndns_minutes, 15);
+        assert_eq!(back, cfg);
+
+        // Off by default, and a file written before the fields existed loads
+        // with them off.
+        assert!(NetworkConfig::default().dyndns_url.is_empty());
+        let mut v = serde_json::to_value(NetworkConfig::default()).unwrap();
+        v.as_object_mut().unwrap().remove("dyndns_url");
+        v.as_object_mut().unwrap().remove("dyndns_minutes");
+        let old: NetworkConfig = serde_json::from_value(v).unwrap();
+        assert!(old.dyndns_url.is_empty());
+        assert_eq!(old.dyndns_minutes, NetworkConfig::default_dyndns_minutes());
+    }
+
+    /// An interval nobody can keep is not sent: zero would be a request every
+    /// frame, a million a hostname that never updates.
+    #[test]
+    fn the_interval_is_held_to_what_a_provider_tolerates() {
+        let mut cfg = NetworkConfig::default();
+        cfg.dyndns_minutes = 0;
+        assert_eq!(cfg.dyndns_interval_minutes(), 1);
+        cfg.dyndns_minutes = 100_000;
+        assert_eq!(cfg.dyndns_interval_minutes(), 1440);
+        cfg.dyndns_minutes = 30;
+        assert_eq!(cfg.dyndns_interval_minutes(), 30);
     }
 }
 
