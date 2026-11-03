@@ -9057,3 +9057,13 @@ settings-dyndns-off = Desligado — sem endereço, nada é enviado.
 settings-dyndns-waiting = À espera da primeira resposta…
 
 settings-dyndns-token-note = O endereço carrega seu token: ele fica gravado em texto claro no net.json e vai para toda tela conectada a esta estação. Nunca é escrito em um registro.
+
+publicsdr-mine = MEUS
+
+publicsdr-mine-hint = Apenas os receptores que você marcou
+
+publicsdr-mine-empty = Nada marcado ainda — a ☆ em uma linha guarda esse receptor aqui.
+
+publicsdr-star-receiver = Guardar este receptor em MEUS
+
+publicsdr-unstar-receiver = Remover este receptor de MEUS

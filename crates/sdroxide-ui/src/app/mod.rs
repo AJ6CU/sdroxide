@@ -601,6 +601,11 @@ pub struct SdroxideApp {
     /// their address, so a row that will not answer is shown greyed with the
     /// reason instead of offered again.
     dead_public_sdrs: std::collections::HashSet<String>,
+    /// The starred receivers, by address — the same list the settings keep, in
+    /// the shape a lookup wants. Written back to the settings on every star.
+    public_sdr_favourites: std::collections::HashSet<String>,
+    /// The **MINE** chip: only the starred receivers.
+    public_sdr_mine_only: bool,
     /// The address just handed to [`SdroxideApp::take_public_sdr`], so a
     /// following "Interface change failed" notice can be charged to it.
     last_public_sdr_try: Option<String>,
@@ -2230,6 +2235,8 @@ impl SdroxideApp {
             public_sdr_low_bw: false,
             public_sdr_confirm: None,
             dead_public_sdrs: std::collections::HashSet::new(),
+            public_sdr_favourites: ui_settings.public_sdr_favourites.iter().cloned().collect(),
+            public_sdr_mine_only: false,
             last_public_sdr_try: None,
             smartsdr_devices: Vec::new(),
             smartsdr_test_result: None,

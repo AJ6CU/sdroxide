@@ -55,7 +55,8 @@ fn entry_row(
     e: &PublicSdrEntry,
     distance_km: Option<f64>,
     dead: bool,
-) -> Option<PickAction> {
+    starred: bool,
+) -> Option<RowAction> {
     let blocked = e
         .blocked_reason()
         .or_else(|| dead.then(|| tr!("publicsdr-could-not-connect")));
@@ -68,8 +69,9 @@ fn entry_row(
     };
     /// What the buttons (or the refusal text) need on the right.
     const ACTIONS_W: f32 = 172.0;
-    /// The five fixed columns ahead of the place, and the gaps between them.
-    const FIXED_W: f32 = 60.0 + 176.0 + 80.0 + 46.0 + 4.0 * 6.0;
+    /// The five fixed columns ahead of the place, and the gaps between them —
+    /// the star first, then the network, the name, the coverage and the users.
+    const FIXED_W: f32 = 20.0 + 60.0 + 176.0 + 80.0 + 46.0 + 5.0 * 6.0;
     /// The distance column, which is only drawn when a station grid is set.
     const DISTANCE_W: f32 = 56.0 + 6.0;
     /// Narrower than this and a place name is an ellipsis, which is worth less
@@ -93,6 +95,27 @@ fn entry_row(
                     )
                     .add(lbl);
                 };
+                // The star, before anything else: a receiver worth keeping is
+                // worth keeping even while it is full, so this is drawn for
+                // every row, blocked or not.
+                let (star, star_col, star_hint) = if starred {
+                    ("★", crate::theme::YELLOW(), tr!("publicsdr-unstar-receiver"))
+                } else {
+                    ("☆", crate::theme::gray(120), tr!("publicsdr-star-receiver"))
+                };
+                ui.allocate_ui(egui::vec2(20.0, 20.0), |ui| {
+                    if ui
+                        .add(
+                            egui::Button::new(RichText::new(star).size(13.0).color(star_col))
+                                .frame(false)
+                                .min_size(egui::vec2(18.0, 18.0)),
+                        )
+                        .on_hover_text(star_hint)
+                        .clicked()
+                    {
+                        action = Some(RowAction::Star);
+                    }
+                });
                 col(
                     ui,
                     60.0,
@@ -190,7 +213,7 @@ fn entry_row(
                                 .on_hover_text(tr!("publicsdr-open-receiver-new-radio-own"))
                                 .clicked()
                             {
-                                action = Some(PickAction::NewRadio);
+                                action = Some(RowAction::Pick(PickAction::NewRadio));
                             }
                             if crate::chrome::chip(ui, false, tr!("publicsdr-use-chip"))
                                 .on_hover_text(tr!(
@@ -198,7 +221,7 @@ fn entry_row(
                                 ))
                                 .clicked()
                             {
-                                action = Some(PickAction::ThisRadio);
+                                action = Some(RowAction::Pick(PickAction::ThisRadio));
                             }
                         }
                     },
@@ -223,8 +246,17 @@ fn entry_row(
     action
 }
 
+/// What a row asked for.
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum RowAction {
+    /// One of the two buttons: take this receiver.
+    Pick(PickAction),
+    /// The star: keep it in MINE, or let it go.
+    Star,
+}
+
 /// What a row's buttons asked for.
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 enum PickAction {
     NewRadio,
     ThisRadio,
@@ -307,6 +339,35 @@ fn ranked<'a>(visible: &[&'a PublicSdrEntry], query: &str) -> Vec<(&'a PublicSdr
     rows
 }
 
+/// Whether a receiver survives the chips: its network shown, available if that
+/// is asked for, covering the dial if that is, and **starred** if MINE is on.
+///
+/// A free function so the rule can be read and tested on its own; the star is
+/// matched by **address**, because that is what a connection is made to and
+/// what the two directories agree on — a receiver renamed by its operator keeps
+/// its star.
+fn passes_chips(
+    e: &PublicSdrEntry,
+    nets_shown: &[bool],
+    free_only: bool,
+    in_band: bool,
+    dial_hz: f64,
+    mine_only: bool,
+    favourites: &std::collections::HashSet<String>,
+) -> bool {
+    // Indexed by the network's own position in `ALL`, so adding one is a
+    // single edit there rather than an arm here that is easy to forget.
+    let net_on = PublicSdrNetwork::ALL
+        .iter()
+        .position(|n| *n == e.network)
+        .and_then(|i| nets_shown.get(i).copied())
+        .unwrap_or(true);
+    net_on
+        && (!free_only || e.blocked_reason().is_none())
+        && (!in_band || e.covers(dial_hz))
+        && (!mine_only || favourites.contains(&e.address))
+}
+
 impl SdroxideApp {
     /// Everything the search and the chips let through, ranked.
     fn public_sdr_rows<'a>(
@@ -318,17 +379,15 @@ impl SdroxideApp {
         let visible: Vec<&PublicSdrEntry> = entries
             .iter()
             .filter(|e| {
-                // Indexed by the network's own position in `ALL`, so adding
-                // one is a single edit there rather than an arm here that is
-                // easy to forget.
-                let net_on = PublicSdrNetwork::ALL
-                    .iter()
-                    .position(|n| *n == e.network)
-                    .and_then(|i| self.public_sdr_nets_shown.get(i).copied())
-                    .unwrap_or(true);
-                net_on
-                    && (!self.public_sdr_free_only || e.blocked_reason().is_none())
-                    && (!self.public_sdr_in_band || e.covers(dial_hz))
+                passes_chips(
+                    e,
+                    &self.public_sdr_nets_shown,
+                    self.public_sdr_free_only,
+                    self.public_sdr_in_band,
+                    dial_hz,
+                    self.public_sdr_mine_only,
+                    &self.public_sdr_favourites,
+                )
             })
             .collect();
         ranked(&visible, query)
@@ -358,15 +417,29 @@ impl SdroxideApp {
         let mut refresh = false;
         let mut picked: Option<(PublicSdrEntry, PickAction)> = None;
         let mut answer: Option<Confirm> = None;
+        let mut star: Option<String> = None;
         let open = self.tool_window(
             ctx,
             "public-sdrs",
             &tr!("publicsdr-public-sdrs"),
             [980.0, 520.0],
             self.show_public_sdrs,
-            |me, ui| me.public_sdrs_body(ui, &mut refresh, &mut picked, &mut answer),
+            |me, ui| me.public_sdrs_body(ui, &mut refresh, &mut picked, &mut answer, &mut star),
         );
         self.show_public_sdrs = open;
+
+        // A star, kept in the settings so it is there on the next start. The
+        // list is stored sorted: it is read by the operator as much as by the
+        // filter, and a set's order would be whatever the toggling left behind.
+        if let Some(address) = star {
+            if !self.public_sdr_favourites.remove(&address) {
+                self.public_sdr_favourites.insert(address);
+            }
+            self.ui_settings.public_sdr_favourites =
+                self.public_sdr_favourites.iter().cloned().collect();
+            self.ui_settings.public_sdr_favourites.sort();
+            crate::app::persist::persist_ui_settings(&self.ui_settings);
+        }
 
         if refresh {
             self.public_sdrs = None;
@@ -414,6 +487,7 @@ impl SdroxideApp {
         refresh: &mut bool,
         picked: &mut Option<(PublicSdrEntry, PickAction)>,
         answer: &mut Option<Confirm>,
+        star: &mut Option<String>,
     ) {
         crate::chrome::window_body_bg(ui);
         let dial_hz = self.state.active_freq_hz();
@@ -440,6 +514,12 @@ impl SdroxideApp {
                 .clicked()
             {
                 self.public_sdr_free_only = !self.public_sdr_free_only;
+            }
+            if crate::chrome::chip(ui, self.public_sdr_mine_only, tr!("publicsdr-mine"))
+                .on_hover_text(tr!("publicsdr-mine-hint"))
+                .clicked()
+            {
+                self.public_sdr_mine_only = !self.public_sdr_mine_only;
             }
             if crate::chrome::chip(ui, self.public_sdr_in_band, tr!("publicsdr-band"))
                 .on_hover_text(tr!("publicsdr-only-receivers-cover-current-dial"))
@@ -542,16 +622,24 @@ impl SdroxideApp {
                     _ => None,
                 };
                 let dead = self.dead_public_sdrs.contains(&e.address);
-                if let Some(a) = entry_row(ui, e, km, dead) {
-                    *picked = Some(((*e).clone(), a));
+                let starred = self.public_sdr_favourites.contains(&e.address);
+                match entry_row(ui, e, km, dead, starred) {
+                    Some(RowAction::Pick(a)) => *picked = Some(((*e).clone(), a)),
+                    Some(RowAction::Star) => *star = Some(e.address.clone()),
+                    None => {}
                 }
             }
             if rows.is_empty() {
                 ui.add_space(8.0);
-                ui.label(
-                    RichText::new(tr!("publicsdr-nothing-matches-try-turning-filter"))
-                        .color(crate::theme::gray(120)),
-                );
+                // MINE with nothing starred is not "nothing matches": it is a
+                // state the operator can get out of, and the way out is the
+                // star on a row. Saying so costs one line.
+                let text = if self.public_sdr_mine_only && self.public_sdr_favourites.is_empty() {
+                    tr!("publicsdr-mine-empty")
+                } else {
+                    tr!("publicsdr-nothing-matches-try-turning-filter")
+                };
+                ui.label(RichText::new(text).color(crate::theme::gray(120)));
             }
         });
     }
@@ -806,6 +894,121 @@ mod tests {
         let rows = ranked(&visible, "");
         assert_eq!(rows.len(), 2);
         assert_eq!(rows[0].0.name, "R7KJG SDR");
+    }
+
+    /// One receiver, for the chip tests: only the fields the chips look at
+    /// are worth filling.
+    fn receiver(address: &str, name: &str) -> PublicSdrEntry {
+        // The directories' own lists are the fixtures' source of truth; this
+        // fills only what the chips and the row read.
+        PublicSdrEntry {
+            network: PublicSdrNetwork::KiwiSdr,
+            name: name.to_string(),
+            location: "Somewhere".into(),
+            antenna: String::new(),
+            device: "KiwiSDR".into(),
+            address: address.to_string(),
+            lat: None,
+            lon: None,
+            grid: String::new(),
+            min_hz: 0.0,
+            max_hz: 30_000_000.0,
+            users: 0,
+            max_users: 4,
+            api_channels: Some(1),
+            max_iq_rate: 12_000.0,
+            full_control: true,
+            session_limit_min: 0,
+            snr_db: None,
+        }
+    }
+
+    /// **A star is kept by address, not by name.** The operator renames a
+    /// receiver and keeps it; the address is what a connection is made to and
+    /// what the directories agree on.
+    #[test]
+    fn a_starred_receiver_is_kept_by_address_when_it_is_renamed() {
+        let starred = receiver("kiwi.example.org:8073", "Old name");
+        let renamed = receiver("kiwi.example.org:8073", "A new name, typed today");
+        let other = receiver("other.example.org:8073", "Old name");
+        let mut favourites = std::collections::HashSet::new();
+        favourites.insert("kiwi.example.org:8073".to_string());
+        // Built from the list itself: a fourth network added there must not
+        // quietly turn the "chip off" assertion below into a no-op.
+        let nets = vec![true; PublicSdrNetwork::ALL.len()];
+        let mine =
+            |e: &PublicSdrEntry| passes_chips(e, &nets, false, false, 0.0, true, &favourites);
+        assert!(mine(&starred), "the starred address");
+        assert!(mine(&renamed), "the same address under another name");
+        assert!(!mine(&other), "a different receiver that happens to share a name");
+    }
+
+    /// MINE is a filter and nothing else: with it off, an unstarred receiver is
+    /// still offered, and the other chips keep working beside it.
+    #[test]
+    fn mine_only_narrows_to_the_stars_and_nothing_else() {
+        let starred = receiver("a.example.org:8073", "A");
+        let plain = receiver("b.example.org:8073", "B");
+        let mut favourites = std::collections::HashSet::new();
+        favourites.insert("a.example.org:8073".to_string());
+        let nets = vec![true; PublicSdrNetwork::ALL.len()];
+        assert!(passes_chips(&plain, &nets, false, false, 0.0, false, &favourites));
+        assert!(!passes_chips(&plain, &nets, false, false, 0.0, true, &favourites));
+        assert!(passes_chips(&starred, &nets, false, false, 0.0, true, &favourites));
+        // A network chip switched off still wins over a star.
+        let nets_off = vec![false; PublicSdrNetwork::ALL.len()];
+        assert!(!passes_chips(&starred, &nets_off, false, false, 0.0, true, &favourites));
+    }
+
+    /// The row draws with and without a star, and pressing nothing asks for
+    /// nothing — the star must not fire on the frame it is drawn.
+    #[test]
+    fn a_row_draws_with_and_without_a_star_and_answers_nothing_untouched() {
+        let ctx = egui::Context::default();
+        let screen = egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(980.0, 400.0));
+        for starred in [false, true] {
+            let e = receiver("kiwi.example.org:8073", "Twente");
+            let mut action = Some(RowAction::Star);
+            ctx.run_ui(egui::RawInput { screen_rect: Some(screen), ..Default::default() }, |ui| {
+                action = entry_row(ui, &e, Some(120.0), false, starred);
+            })
+            .drop_without_applying_deltas();
+            assert_eq!(action, None, "an untouched row asked for something (starred={starred})");
+        }
+    }
+
+    /// **The star is on the row**, filled or empty as the answer says — a
+    /// column that draws nothing would still pass a test that only asked
+    /// whether the row was drawn.
+    #[test]
+    fn the_star_is_drawn_and_filled_only_for_a_starred_receiver() {
+        fn glyphs(shapes: &[egui::Shape], out: &mut Vec<String>) {
+            for shape in shapes {
+                match shape {
+                    egui::Shape::Text(t) => out.push(t.galley.text().to_string()),
+                    egui::Shape::Vec(v) => glyphs(v, out),
+                    _ => {}
+                }
+            }
+        }
+        let ctx = egui::Context::default();
+        let screen = egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(980.0, 400.0));
+        for (starred, want) in [(false, "☆"), (true, "★")] {
+            let e = receiver("kiwi.example.org:8073", "Twente");
+            let output = ctx.run_ui(
+                egui::RawInput { screen_rect: Some(screen), ..Default::default() },
+                |ui| {
+                    entry_row(ui, &e, None, false, starred);
+                },
+            );
+            let mut text = Vec::new();
+            let shapes: Vec<egui::Shape> = output.shapes.iter().map(|c| c.shape.clone()).collect();
+            glyphs(&shapes, &mut text);
+            assert!(
+                text.iter().any(|t| t.contains(want)),
+                "the {want} is not on the row (starred={starred}): {text:?}"
+            );
+        }
     }
 
     /// ...and a panel nobody has pressed answers nothing, or the question

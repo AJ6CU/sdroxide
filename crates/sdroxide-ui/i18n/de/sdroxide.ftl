@@ -9055,3 +9055,13 @@ settings-dyndns-off = Aus — keine Adresse, es wird nichts gesendet.
 settings-dyndns-waiting = Warte auf die erste Antwort…
 
 settings-dyndns-token-note = Die Adresse enthält dein Token: Sie steht im Klartext in net.json und geht an jeden Bildschirm, der mit dieser Station verbunden ist. In ein Protokoll kommt sie nie.
+
+publicsdr-mine = MEINE
+
+publicsdr-mine-hint = Nur die von dir markierten Empfänger
+
+publicsdr-mine-empty = Noch nichts markiert — der ☆ in einer Zeile hält diesen Empfänger hier.
+
+publicsdr-star-receiver = Diesen Empfänger in MEINE aufnehmen
+
+publicsdr-unstar-receiver = Diesen Empfänger aus MEINE entfernen

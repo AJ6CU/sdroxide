@@ -9066,3 +9066,13 @@ settings-dyndns-off = Disattivato — nessun indirizzo, non viene inviato nulla.
 settings-dyndns-waiting = In attesa della prima risposta…
 
 settings-dyndns-token-note = L'indirizzo contiene il tuo token: è salvato in chiaro in net.json e viene inviato a ogni schermo collegato a questa stazione. Non finisce mai in un registro.
+
+publicsdr-mine = MIEI
+
+publicsdr-mine-hint = Solo i ricevitori che hai contrassegnato
+
+publicsdr-mine-empty = Niente di contrassegnato — la ☆ su una riga tiene qui quel ricevitore.
+
+publicsdr-star-receiver = Tieni questo ricevitore nei MIEI
+
+publicsdr-unstar-receiver = Togli questo ricevitore dai MIEI
