@@ -36,7 +36,6 @@ Everything else that was in this list has been merged or closed since — see **
 
 ## Backlog — our open issues (board: Todo)
 
-- **STANAG 4481 FSK** (added by madmedicnl, owned by Claude) — doable, per a worked decode shown on video: <https://www.youtube.com/watch?v=ofiSzScw6RM> ("Decoding STANAG 4481 FSK"). Kept as the reference for the mode: FSK, not 4285's PSK, and the video is the evidence that off-air decoding is within reach. Not started; the scope and the legal question get settled with the operator first, as 4285's coded payload did.
 
 - #388 HL2 (HPSDR P1) datagram loss every ~2 s (added by DK8JV, owned by Roy).
 - #340 S-meter (added by F4NRM, owned by Roy) — measurement disagrees with the report; the measurement is the first suspect.
@@ -72,6 +71,7 @@ Everything else that was in this list has been merged or closed since — see **
 - #283 Settings question — gesloten (fix da78715b).
 
 ## Parked
+- **STANAG 4481 FSK** (added by madmedicnl, owned by Claude) — parked 2026-11-03 until there is more context. What the look found: the *modem* is simpler than 4285's (75 Bd two-tone FSK, 850 Hz shift, no equaliser or Viterbi) but our 4285 is **4866 lines**, and the real work is the same class — bit timing with no preamble, the character framing (5N1, and 5N1.5 / 5N3.8 in the wild), the speed and shift variants (50–600 Bd, 850/170 Hz, the 16-channel V3) and the end of signal. The **output** is less: 4285 gives uncoded text, 4481 is usually KG-84, so what is delivered is a bit editor with characters rendered — the video the operator sent shows exactly that, not a decrypted message. Licensing: the complete Rust receiver (`hfmodem`, W9SSJ) is **AGPL-3.0-only** and not on crates.io, which would pull this GPL-3 tree under the network clause; GPL-compatible references are fldigi's FSK path, Rivet (Java) and a small MIT bitstream script. Realistic scope if it is taken up: 1000–1500 lines plus the view, and a real recording with a known message before anything is claimed.
 - WEFAX broadcast schedules (added by Roy, owned by Roy) — station picker chip with times/links, offline data. Batch with other UI tweaks.
 
 - 4 brede PSK-banken (PSK125C12, PSK500C4, PSK500RC4, PSK1000C2) — 0/3
