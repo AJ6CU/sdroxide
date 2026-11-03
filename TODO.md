@@ -21,6 +21,8 @@ v2.2.3.5_brown (pre-release). Open PRs: 2 (#417 and the BW chip PR). Open issues
 
 ## Now
 
+- PR #425 — Dynamic DNS: one provider update URL and an interval, off unless an address is set (no thread, no request), the URL never logged and shown masked, and only the *applied* address used. `NetworkConfig` gained two fields at the end, so PROTO_VERSION 260 → 261 (owner: Claude, asked by madmedicnl). Wacht op F4NRM's review.
+
 - PR #424 — the crash that ended the program on the first frame with a signal in it (`min > max … 284.5 against 283.0`, and `584.0625` against `582.1875` the day before): `label_box` clamped a label into a box shorter than the label. Placement ordered instead, test verified red. Found from a KiwiSDR run at the bench where it killed two receivers within five seconds of connecting (owned by Claude). Wacht op F4NRM's review.
 
 - PR — BW chip names the preset in force (was the measured width: a "3.0k" preset on 2.7 kHz edges read "BW 2.7k"), a fifth memory chip `M+` per mode (click stores the current passband, right-click edits, Reset empties it; `filter_presets.json`, slot after the built-ins), and a large 10 s hint under the BW chip, put away by a click, back on the next hover; 3 new messages in 11 languages (reported by the operator, added by madmedicnl, owned by Claude). Wacht op F4NRM's review.
