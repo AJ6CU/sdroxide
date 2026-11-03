@@ -9063,3 +9063,5 @@ settings-dyndns-last = Laatste update { $when }: { $answer }
 settings-dyndns-off = Uit — geen adres, er wordt niets verstuurd.
 
 settings-dyndns-waiting = Wacht op het eerste antwoord…
+
+settings-dyndns-token-note = Het adres bevat je token: het staat leesbaar in net.json en gaat mee naar elk scherm dat met dit station verbonden is. Het komt nooit in een log.

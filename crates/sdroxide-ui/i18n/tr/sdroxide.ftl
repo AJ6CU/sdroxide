@@ -9055,3 +9055,5 @@ settings-dyndns-last = Son güncelleme { $when }: { $answer }
 settings-dyndns-off = Kapalı — adres yok, hiçbir şey gönderilmez.
 
 settings-dyndns-waiting = İlk yanıt bekleniyor…
+
+settings-dyndns-token-note = Adres jetonunuzu taşır: net.json içinde açık olarak saklanır ve bu istasyona bağlı her ekrana gönderilir. Hiçbir zaman günlüğe yazılmaz.

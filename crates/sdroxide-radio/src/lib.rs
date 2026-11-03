@@ -4,6 +4,7 @@
 //! dependency of any wasm-targeted crate.
 
 pub mod audio_wav;
+mod dyndns;
 #[cfg(feature = "soapy")]
 mod device;
 pub mod engine;

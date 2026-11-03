@@ -921,16 +921,6 @@ impl eframe::App for SdroxideApp {
         // The update check answers on its own thread; pick it up cheaply.
         #[cfg(not(target_arch = "wasm32"))]
         self.update.poll();
-        // Dynamic DNS: idle unless an update address is set, and cheap every
-        // frame either way.
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            let armed = self.dyndns_armed.clone();
-            match armed {
-                Some((url, minutes)) => self.dyndns.poll(&url, minutes),
-                None => self.dyndns.poll("", 0),
-            }
-        }
         self.poll_adif_import();
         self.poll_settings_import();
         self.refresh_band_conditions(now);
@@ -4089,6 +4079,12 @@ impl SdroxideApp {
                     self.error = Some(e);
                     self.arm_retry(now);
                 }
+                // The engine's dynamic-DNS worker answered. Only the provider's
+                // word arrives — the address carries the token and stays in the
+                // engine — and this is what the settings row shows.
+                RadioEvent::DyndnsAnswer { at_unix, ok, text } => {
+                    self.dyndns_last = Some((at_unix, ok, text));
+                }
                 RadioEvent::LoginTest(r) => {
                     self.login_tests_pending.remove(&r.target);
                     self.push_net_log(format!(
@@ -4550,14 +4546,6 @@ impl SdroxideApp {
                         self.net_rbn_cmds = c.net.rbn.commands.join("\n");
                         self.net_rbn2_cmds = c.net.rbn2.commands.join("\n");
                         self.net_cfg_edit = c.net.clone();
-                        #[cfg(not(target_arch = "wasm32"))]
-                        {
-                            // The address the station is set up with is live
-                            // from here, without waiting for Apply.
-                            self.dyndns_armed = (!c.net.dyndns_url.trim().is_empty()).then(|| {
-                                (c.net.dyndns_url.clone(), c.net.dyndns_interval_minutes())
-                            });
-                        }
                         self.net_cfg_seeded = true;
                     }
                     if !self.rigctld_seeded {

@@ -263,7 +263,9 @@ pub(in crate::app) fn dyndns_section(
             .color(crate::theme::gray(140)),
     );
     ui.add_space(2.0);
-    net_row(ui, &tr!("settings-dyndns-address"), &mut cfg.dyndns_url, 300.0);
+    // A secret: the address carries the operator's token, so the field hides it
+    // rather than putting it on a screenshot (review of #425).
+    net_secret(ui, &tr!("settings-dyndns-address"), &mut cfg.dyndns_url, 300.0);
     ui.horizontal(|ui| {
         ui.add_sized([96.0, 22.0], egui::Label::new(tr!("settings-dyndns-every")));
         let mut minutes = cfg.dyndns_minutes;
@@ -274,6 +276,11 @@ pub(in crate::app) fn dyndns_section(
             cfg.dyndns_minutes = minutes;
         }
     });
+    ui.label(
+        RichText::new(tr!("settings-dyndns-token-note"))
+            .size(10.0)
+            .color(crate::theme::gray(130)),
+    );
     let line = if cfg.dyndns_url.trim().is_empty() {
         Some((tr!("settings-dyndns-off").to_string(), crate::theme::gray(140)))
     } else {

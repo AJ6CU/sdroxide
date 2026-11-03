@@ -9060,3 +9060,6 @@ settings-dyndns-last = Last update { $when }: { $answer }
 settings-dyndns-off = Off — no address set, nothing is sent.
 
 settings-dyndns-waiting = Waiting for the first answer…
+
+# Shown under the Dynamic DNS address field: the URL is a secret but is not encrypted.
+settings-dyndns-token-note = The address carries your token: it is stored in the clear in net.json and travels to every screen connected to this station. It is never written to a log.

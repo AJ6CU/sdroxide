@@ -1991,18 +1991,10 @@ impl SdroxideApp {
             self.net_cfg_edit.rbn.commands = split(&self.net_rbn_cmds);
             self.net_cfg_edit.rbn2.commands = split(&self.net_rbn2_cmds);
             // The engine persists net.json when it applies this.
+            // ...and only now may the update address be used: the engine's
+            // worker starts from the config it is handed, so a half-typed URL
+            // never goes out.
             cmds.push(Command::SetNetworkConfig(self.net_cfg_edit.clone()));
-            // ...and only now may the update address be used: the worker takes
-            // the applied one, so a half-typed URL never goes out.
-            #[cfg(not(target_arch = "wasm32"))]
-            {
-                self.dyndns_armed = (!self.net_cfg_edit.dyndns_url.trim().is_empty()).then(|| {
-                    (
-                        self.net_cfg_edit.dyndns_url.clone(),
-                        self.net_cfg_edit.dyndns_interval_minutes(),
-                    )
-                });
-            }
         }
         if net_sync {
             cmds.push(Command::SyncConfirmations);
@@ -4689,7 +4681,7 @@ impl SdroxideApp {
                 ui.end_row();
                 ui.add_space(8.0);
                 #[cfg(not(target_arch = "wasm32"))]
-                let dyndns_last = self.dyndns.last().map(|a| (a.at_unix, a.ok, a.text.clone()));
+                let dyndns_last = self.dyndns_last.clone();
                 #[cfg(target_arch = "wasm32")]
                 let dyndns_last = None;
                 dyndns_section(ui, &mut io.net_edit, dyndns_last);

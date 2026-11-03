@@ -2176,8 +2176,8 @@ use sdroxide_types::{
 /// an English `Notice`; now it carries the reason and the frequency, and the
 /// screen words it in the operator's language. `PROTO_VERSION` 259 → 260,
 /// `VERSION_BYTE` 0x4F → 0x50.
-pub const PROTO_VERSION: u16 = 261;
-const VERSION_BYTE: u8 = 0x51;
+pub const PROTO_VERSION: u16 = 262;
+const VERSION_BYTE: u8 = 0x52;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -2746,6 +2746,19 @@ pub enum ServerMsg {
     ///
     /// Appended last, for the usual reason.
     TxRefused(sdroxide_types::TxBlock, f64),
+
+    /// The dynamic-DNS worker's last answer.
+    ///
+    /// From the **engine**, because the name has to point at the address of the
+    /// machine that is heard: a headless station updates with no screen open,
+    /// and a screen on a laptop driving a remote station must not send its own
+    /// address to the provider. Only the provider's word travels — never the
+    /// update address, which carries the operator's token.
+    DyndnsAnswer {
+        at_unix: i64,
+        ok: bool,
+        text: String,
+    },
 }
 
 /// What [`ServerMsg::ClientSettings`] carries.
@@ -3441,7 +3454,29 @@ mod tests {
             ServerMsg::TxRefused(w, hz) => assert_eq!((w, hz), (why, 7_074_000.0)),
             _ => panic!("TxRefused did not round-trip"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (261, 0x51));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (262, 0x52));
+    }
+
+    /// The dynamic-DNS answer rides last on [`ServerMsg`], and it has to: the
+    /// variant was appended, so an older peer reads every message it knows and
+    /// this one simply is not among them.
+    ///
+    /// It comes from the engine and not the screen on purpose — the name has to
+    /// point at the address of the machine that is heard, and a headless station
+    /// has no screen at all. Only the provider's word travels; the update
+    /// address carries the operator's token and never leaves the engine.
+    #[test]
+    fn the_dyndns_answer_is_appended_last() {
+        let answer =
+            ServerMsg::DyndnsAnswer { at_unix: 1_790_000_000, ok: true, text: "good".into() };
+        let bytes = encode(&answer).unwrap();
+        match decode::<ServerMsg>(&bytes).unwrap() {
+            ServerMsg::DyndnsAnswer { at_unix, ok, text } => {
+                assert_eq!((at_unix, ok, text.as_str()), (1_790_000_000, true, "good"));
+            }
+            other => panic!("the answer did not round-trip: {other:?}"),
+        }
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (262, 0x52));
     }
 
     /// postcard is positional: a field inserted mid-struct shifts every byte

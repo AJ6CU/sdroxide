@@ -8993,3 +8993,5 @@ settings-dyndns-last = 上次更新 { $when }：{ $answer }
 settings-dyndns-off = 已关闭 — 未设置地址，不发送任何内容。
 
 settings-dyndns-waiting = 等待第一次应答…
+
+settings-dyndns-token-note = 地址中含有你的令牌：它以明文保存在 net.json 中，并会发送到连接本站的每个画面。它永远不会写入日志。

@@ -9066,3 +9066,5 @@ settings-dyndns-last = Dernière mise à jour { $when } : { $answer }
 settings-dyndns-off = Désactivé — aucune adresse, rien n'est envoyé.
 
 settings-dyndns-waiting = En attente de la première réponse…
+
+settings-dyndns-token-note = L'adresse contient votre jeton : elle est stockée en clair dans net.json et transmise à chaque écran connecté à cette station. Elle n'est jamais écrite dans un journal.

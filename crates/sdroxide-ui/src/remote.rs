@@ -674,6 +674,9 @@ impl RemoteController {
             )),
             ServerMsg::Error(e) => self.pending.push_back(RadioEvent::ConnectionLost(e)),
             ServerMsg::Notice(n) => self.pending.push_back(RadioEvent::Notice(n)),
+            ServerMsg::DyndnsAnswer { at_unix, ok, text } => self
+                .pending
+                .push_back(RadioEvent::DyndnsAnswer { at_unix, ok, text }),
             ServerMsg::Ft8Decodes(d) => self.pending.push_back(RadioEvent::Ft8Decodes(d)),
             ServerMsg::WsprSpots(s) => self.pending.push_back(RadioEvent::WsprSpots(s)),
             ServerMsg::Pi4Spots(s) => self.pending.push_back(RadioEvent::Pi4Spots(s)),

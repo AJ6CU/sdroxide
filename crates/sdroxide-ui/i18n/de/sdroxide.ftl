@@ -9053,3 +9053,5 @@ settings-dyndns-last = Letzte Aktualisierung { $when }: { $answer }
 settings-dyndns-off = Aus — keine Adresse, es wird nichts gesendet.
 
 settings-dyndns-waiting = Warte auf die erste Antwort…
+
+settings-dyndns-token-note = Die Adresse enthält dein Token: Sie steht im Klartext in net.json und geht an jeden Bildschirm, der mit dieser Station verbunden ist. In ein Protokoll kommt sie nie.

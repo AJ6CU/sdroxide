@@ -9064,3 +9064,5 @@ settings-dyndns-last = Ultimo aggiornamento { $when }: { $answer }
 settings-dyndns-off = Disattivato — nessun indirizzo, non viene inviato nulla.
 
 settings-dyndns-waiting = In attesa della prima risposta…
+
+settings-dyndns-token-note = L'indirizzo contiene il tuo token: è salvato in chiaro in net.json e viene inviato a ogni schermo collegato a questa stazione. Non finisce mai in un registro.
