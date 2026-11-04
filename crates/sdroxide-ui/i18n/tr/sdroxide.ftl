@@ -9057,3 +9057,13 @@ settings-dyndns-off = Kapalı — adres yok, hiçbir şey gönderilmez.
 settings-dyndns-waiting = İlk yanıt bekleniyor…
 
 settings-dyndns-token-note = Adres jetonunuzu taşır: net.json içinde açık olarak saklanır ve bu istasyona bağlı her ekrana gönderilir. Hiçbir zaman günlüğe yazılmaz.
+
+publicsdr-mine = BENİM
+
+publicsdr-mine-hint = Yalnızca yıldızladığınız alıcılar
+
+publicsdr-mine-empty = Henüz yıldız yok — bir satırdaki ☆ o alıcıyı burada tutar.
+
+publicsdr-star-receiver = Bu alıcıyı BENİM içinde tut
+
+publicsdr-unstar-receiver = Bu alıcıyı BENİM içinden çıkar

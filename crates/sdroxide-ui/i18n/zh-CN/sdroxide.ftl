@@ -8995,3 +8995,13 @@ settings-dyndns-off = 已关闭 — 未设置地址，不发送任何内容。
 settings-dyndns-waiting = 等待第一次应答…
 
 settings-dyndns-token-note = 地址中含有你的令牌：它以明文保存在 net.json 中，并会发送到连接本站的每个画面。它永远不会写入日志。
+
+publicsdr-mine = 我的
+
+publicsdr-mine-hint = 仅显示你加星的接收机
+
+publicsdr-mine-empty = 还没有加星——点行上的 ☆ 即可把该接收机保存在这里。
+
+publicsdr-star-receiver = 将此接收机保存在“我的”中
+
+publicsdr-unstar-receiver = 从“我的”中移除此接收机

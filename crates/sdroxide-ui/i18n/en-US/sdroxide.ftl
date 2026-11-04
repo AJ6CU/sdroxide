@@ -9063,3 +9063,18 @@ settings-dyndns-waiting = Waiting for the first answer…
 
 # Shown under the Dynamic DNS address field: the URL is a secret but is not encrypted.
 settings-dyndns-token-note = The address carries your token: it is stored in the clear in net.json and travels to every screen connected to this station. It is never written to a log.
+
+# Chip in the PUBLIC SDRS window: show only the starred receivers.
+publicsdr-mine = MINE
+
+# Hover text for the MINE chip.
+publicsdr-mine-hint = Only the receivers you starred
+
+# Shown when the MINE chip is on and no receiver is starred yet.
+publicsdr-mine-empty = Nothing starred yet — the ☆ on a row keeps that receiver here.
+
+# Hover text on the empty star in a public SDR row.
+publicsdr-star-receiver = Keep this receiver in MINE
+
+# Hover text on the filled star in a public SDR row.
+publicsdr-unstar-receiver = Remove this receiver from MINE

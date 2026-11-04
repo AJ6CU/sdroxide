@@ -9072,3 +9072,13 @@ settings-dyndns-off = Выключено — адрес не задан, нич�
 settings-dyndns-waiting = Ждём первого ответа…
 
 settings-dyndns-token-note = Адрес содержит ваш токен: он хранится открытым текстом в net.json и передаётся на каждый экран, подключённый к этой станции. В журнал он не попадает никогда.
+
+publicsdr-mine = МОИ
+
+publicsdr-mine-hint = Только отмеченные вами приёмники
+
+publicsdr-mine-empty = Пока ничего не отмечено — ☆ в строке оставит этот приёмник здесь.
+
+publicsdr-star-receiver = Сохранить этот приёмник в МОИ
+
+publicsdr-unstar-receiver = Убрать этот приёмник из МОИ

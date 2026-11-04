@@ -9005,3 +9005,13 @@ settings-dyndns-off = 無効 — アドレス未設定、何も送信しませ�
 settings-dyndns-waiting = 最初の応答を待っています…
 
 settings-dyndns-token-note = アドレスにはトークンが含まれます。net.json に平文で保存され、この局に接続したすべての画面に送られます。ログには決して書きません。
+
+publicsdr-mine = マイ
+
+publicsdr-mine-hint = スターを付けた受信機のみ
+
+publicsdr-mine-empty = まだ何も登録されていません — 行の☆でその受信機をここに残せます。
+
+publicsdr-star-receiver = この受信機をマイに保存
+
+publicsdr-unstar-receiver = この受信機をマイから外す
