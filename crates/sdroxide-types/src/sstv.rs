@@ -187,6 +187,17 @@ impl SstvMode {
     }
 }
 
+/// Why a finished SSTV frame was not saved as a picture.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum SstvDrop {
+    /// The frame's rows had nothing to do with each other: the receiver locked
+    /// onto noise and drew it.
+    NotAPicture,
+    /// The sync pulses were all there and the content was not: a signal that
+    /// carried no picture.
+    NoPicture,
+}
+
 /// Broadcast status for the SSTV panel: what's being sent/received and how far
 /// along. Rides the wire as part of the digital-mode event stream.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -224,16 +235,18 @@ pub struct SstvStatus {
     /// looks for who sent it.
     #[serde(default)]
     pub rx_id: Option<String>,
-    /// Why the last finished frame was **not** kept, when it was not: "not a
-    /// picture" for a frame the receiver locked onto noise.
+    /// Why the last finished frame was **not** kept, when it was not.
     ///
     /// The lines of a frame are drawn as they arrive — that is the live view
     /// the operator wants — so a frame the save gate then drops stays on screen
     /// unless something says so. On a quiet frequency nothing follows for
     /// hours, and a panel holding a frame of noise reads as a receiver that has
     /// hung (bench, 2026-11-04). Cleared when a picture is kept.
+    ///
+    /// A **code**, not a sentence: the panel words it in the operator's own
+    /// language (review, 2026-11-04).
     #[serde(default)]
-    pub not_saved: Option<String>,
+    pub not_saved: Option<SstvDrop>,
 }
 
 impl Default for SstvStatus {

@@ -9066,8 +9066,15 @@ publicsdr-star-receiver = Diesen Empfänger in MEINE aufnehmen
 
 publicsdr-unstar-receiver = Diesen Empfänger aus MEINE entfernen
 
-sstv-not-saved = Letztes Bild nicht gespeichert: { $why }
 
 sstv-sync-pulses = SYNC-IMPULSE
 
 sstv-sync-pulses-hint = Wie viele Synchronimpulse der Empfänger sehen will, bevor er ein Bild ohne VIS-Kopf zeichnet: mehr ist auf einem verrauschten Band ruhiger, weniger erwischt eine laufende Übertragung früher. Die Sperre beginnt immer beim neuesten Impuls, ein Bild verliert also nichts.
+
+sstv-not-saved-not-a-picture = Letztes Bild nicht gespeichert: es war Rauschen, kein Bild.
+
+sstv-not-saved-no-picture = Letztes Bild nicht gespeichert: Das Signal enthielt kein Bild.
+
+sstv-save-all = ALLE SPEICHERN
+
+sstv-save-all-hint = Jedes fertige Bild speichern, auch die, die der Empfänger als Rauschen bezeichnen würde. Standardmäßig aus: die Sperre hält das Rauschen eines stillen Bandes aus der Galerie, und dies ist der Rückweg für ein Bild, das kaum da ist.

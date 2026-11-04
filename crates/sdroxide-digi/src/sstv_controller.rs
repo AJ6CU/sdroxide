@@ -26,9 +26,6 @@ const OUT_RATE: f64 = 48_000.0;
 /// heard cleanly manages and noise does not.
 const SAVE_SYNC_SHARE: f32 = 0.85;
 
-/// How much neighbouring rows must agree before a picture is kept, as a
-/// Pearson correlation over the whole frame.
-///
 /// The **primary** sign, and the one that does the work: how much neighbouring
 /// rows agree, as a Pearson correlation over the finished frame.
 ///
@@ -109,7 +106,7 @@ pub struct SstvController {
     /// [`sdroxide_types::SstvStatus::unsupported`].
     unsupported: Option<String>,
     /// Why the last finished frame was not kept, for the panel to show.
-    not_saved: Option<String>,
+    not_saved: Option<sdroxide_types::SstvDrop>,
     image_id: u32,
 
     // TX
@@ -323,7 +320,10 @@ impl DigiEngine for SstvController {
                     // but real picture is never dropped by a single measure.
                     let rows =
                         row_agreement(&self.rx_image, self.rx_w as usize, self.rx_h as usize);
-                    let keep = keep_frame(sync_share, rows);
+                    // The operator can have every frame, doubtful ones
+                    // included: the gate's margin is narrow and a near-flat
+                    // picture lives on its sync alone (review, 2026-11-04).
+                    let keep = self.cfg.sstv_save_all || keep_frame(sync_share, rows);
                     tracing::info!(
                         "SSTV: {}x{} {:?} complete — sync {:.2}, rows {:.2} → {}",
                         self.rx_w,
@@ -347,14 +347,11 @@ impl DigiEngine for SstvController {
                         // Syncs everywhere and no picture in the rows is a
                         // different failure from noise that looked like a
                         // header, and worth saying apart.
-                        self.not_saved = Some(
-                            if sync_share >= SAVE_SYNC_SHARE {
-                                "no picture in the frame"
-                            } else {
-                                "not a picture"
-                            }
-                            .to_string(),
-                        );
+                        self.not_saved = Some(if sync_share >= SAVE_SYNC_SHARE {
+                            sdroxide_types::SstvDrop::NoPicture
+                        } else {
+                            sdroxide_types::SstvDrop::NotAPicture
+                        });
                     }
                     self.rx_active = false;
                     self.status_dirty = true;

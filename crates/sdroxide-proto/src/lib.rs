@@ -3107,7 +3107,7 @@ mod tests {
                 // Why the last frame was not kept, which the panel says out
                 // loud — appended to the status rather than its own message
                 // (PROTO_VERSION 262 → 263).
-                not_saved: Some("not a picture".to_string()),
+                not_saved: Some(sdroxide_types::SstvDrop::NotAPicture),
                 ..SstvStatus::default()
             }),
         ];
@@ -3509,12 +3509,13 @@ mod tests {
         let digi = postcard::to_allocvec(&sdroxide_types::DigiConfig::default()).unwrap();
         let radio = postcard::to_allocvec(&sdroxide_types::RadioConfig::default()).unwrap();
         let net = postcard::to_allocvec(&sdroxide_types::NetworkConfig::default()).unwrap();
-        // 480 since SSTV's sync-pulse setting was appended at the tail
-        // (PROTO_VERSION 262 → 263). Appended, so an older peer reads the
-        // struct it knows and the new byte is simply not there.
+        // 481 since SSTV's sync-pulse setting and its save-everything switch
+        // were appended at the tail (PROTO_VERSION 262 → 263). Appended, so an
+        // older peer reads the struct it knows and the new bytes are simply not
+        // there.
         assert_eq!(
             (digi.len(), fnv1a(&digi)),
-            (480, 2_103_354_233_233_610_877),
+            (481, 5_599_147_536_364_706_919),
             "DigiConfig's wire layout shifted — append fields, never insert them"
         );
         assert_eq!(

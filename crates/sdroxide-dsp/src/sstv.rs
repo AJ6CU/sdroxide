@@ -953,8 +953,6 @@ impl SstvRx {
         }
     }
 
-    /// Set the mode used for free-run (no-VIS) decoding, or `None` for auto
-    /// (detect the mode from the sync cadence).
     /// How many sync pulses a free-run lock asks for: 4, 5 or 6, clamped.
     ///
     /// The pulses are evidence that a transmission is under way rather than
@@ -970,6 +968,8 @@ impl SstvRx {
         (self.freerun_links + 1).clamp(4, 6) as u8
     }
 
+    /// Set the mode used for free-run (no-VIS) decoding, or `None` for auto
+    /// (detect the mode from the sync cadence).
     pub fn set_expected(&mut self, mode: Option<SstvMode>) {
         self.expected = mode;
     }
@@ -2706,7 +2706,6 @@ mod tests {
         assert!(share > 0.9, "a clean picture reported a sync share of {share}");
     }
 
-    #[test]
     /// **The lock's evidence is the operator's to set.** Six pulses by
     /// default (the bench's answer for 27 MHz CB QRM), four where the band is
     /// quiet and a picture is worth catching early; the setter clamps.
@@ -2724,6 +2723,9 @@ mod tests {
         assert_eq!(rx.sync_pulses(), 4, "and to the least");
     }
 
+    /// Free-run: feed the RX the picture audio *after* the VIS header (as if we
+    /// tuned in mid-transmission). With the mode pre-selected it should lock onto
+    /// the sync cadence and decode.
     #[test]
     fn freerun_decodes_without_vis() {
         let rate = 48_000.0;

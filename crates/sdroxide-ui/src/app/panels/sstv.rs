@@ -999,12 +999,22 @@ impl SdroxideApp {
                                             .strong()
                                             .color(crate::theme::GREEN()),
                                     );
-                                } else if let Some(why) = st.not_saved.as_deref() {
+                                } else if let Some(why) = st.not_saved {
                                     // The frame that just ended was not a
-                                    // picture and was not saved. Said rather
-                                    // than left as a silent blank.
+                                    // picture and was not saved. Said in the
+                                    // operator's own language rather than in
+                                    // the decoder's English (review,
+                                    // 2026-11-04).
+                                    let msg = match why {
+                                        sdroxide_types::SstvDrop::NotAPicture => {
+                                            tr!("sstv-not-saved-not-a-picture")
+                                        }
+                                        sdroxide_types::SstvDrop::NoPicture => {
+                                            tr!("sstv-not-saved-no-picture")
+                                        }
+                                    };
                                     ui.label(
-                                        RichText::new(tr!("sstv-not-saved", why = why))
+                                        RichText::new(msg)
                                             .size(10.5)
                                             .color(crate::theme::YELLOW()),
                                     );
@@ -1215,6 +1225,23 @@ impl SdroxideApp {
                                             self.digi_cfg_edit.clone(),
                                         ));
                                     }
+                                }
+                                // The way back from the save gate: every
+                                // finished frame kept, doubtful ones included.
+                                ui.add_space(6.0);
+                                if crate::chrome::chip(
+                                    ui,
+                                    self.digi_cfg_edit.sstv_save_all,
+                                    tr!("sstv-save-all"),
+                                )
+                                .on_hover_text(tr!("sstv-save-all-hint"))
+                                .clicked()
+                                {
+                                    self.digi_cfg_edit.sstv_save_all =
+                                        !self.digi_cfg_edit.sstv_save_all;
+                                    cmds.push(Command::SetDigiConfig(
+                                        self.digi_cfg_edit.clone(),
+                                    ));
                                 }
 
                             });

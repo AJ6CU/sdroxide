@@ -347,7 +347,7 @@ pub use speech::{
     Verbosity,
 };
 pub use spot::{Spot, SpotKind, spots_to_kml};
-pub use sstv::{SstvMode, SstvStatus};
+pub use sstv::{SstvDrop, SstvMode, SstvStatus};
 pub use state::{
     CESSB_MAX_DB, MAX_DECIMATION, MAX_MANUAL_GAIN_DB, MIN_DECIMATED_RATE_HZ, OffsetState,
     RadioState, RxId, RxState, SQUELCH_CLOSED_DB, SQUELCH_OPEN_DB, SWR_LIMIT_MAX, SWR_LIMIT_MIN,

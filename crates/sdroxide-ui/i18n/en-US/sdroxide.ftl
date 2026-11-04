@@ -9080,10 +9080,21 @@ publicsdr-star-receiver = Keep this receiver in MINE
 publicsdr-unstar-receiver = Remove this receiver from MINE
 
 # SSTV panel: a finished frame was not a picture and was not saved. { $why } is a short English reason from the decoder.
-sstv-not-saved = Last frame not saved: { $why }
 
 # SSTV panel: how many sync pulses the receiver wants before it starts drawing a picture with no VIS header.
 sstv-sync-pulses = SYNC PULSES
 
 # Hover text for the SSTV sync-pulse chips (4, 5, 6).
 sstv-sync-pulses-hint = How many sync pulses the receiver wants before it draws a picture that has no VIS header: more is steadier on a noisy band, fewer catches a picture already under way sooner. The lock always starts at the newest pulse, so a picture loses nothing either way.
+
+# SSTV panel: the last finished frame was noise and was not saved.
+sstv-not-saved-not-a-picture = Last frame not saved: it was noise, not a picture.
+
+# SSTV panel: the frame's syncs were there but its content was not a picture.
+sstv-not-saved-no-picture = Last frame not saved: the signal carried no picture.
+
+# SSTV panel chip: keep every finished frame, including ones the noise gate would drop.
+sstv-save-all = SAVE ALL
+
+# Hover text for the SAVE ALL chip in the SSTV panel.
+sstv-save-all-hint = Keep every finished frame, including the ones the receiver would call noise. On by default is off: the gate is what keeps a quiet band's noise out of the gallery, and this is the way back for a picture that is barely there.

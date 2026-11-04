@@ -3266,6 +3266,16 @@ pub struct DigiConfig {
     /// wire change (`PROTO_VERSION` 262 → 263).
     #[serde(default = "sstv_default_sync_pulses")]
     pub sstv_sync_pulses: u8,
+    /// SSTV: save every finished frame, including the ones the gate would call
+    /// noise. Off by default.
+    ///
+    /// The way back. The gate's two signs separate the bench's speckle from its
+    /// pictures by a margin, not a gulf, and a near-flat picture lives on its
+    /// sync alone — so an operator who would rather have a doubtful frame than
+    /// miss one turns this on and nothing is discarded (review, 2026-11-04).
+    /// Appended at the tail, so this is a wire change.
+    #[serde(default)]
+    pub sstv_save_all: bool,
 }
 
 /// Six: the value the bench chose for a 27 MHz band full of CB QRM, where four
@@ -3563,6 +3573,7 @@ impl Default for DigiConfig {
             wefax_rx_sensitivity: 0,
             wefax_rx_auto: true,
             sstv_sync_pulses: sstv_default_sync_pulses(),
+            sstv_save_all: false,
         }
     }
 }

@@ -9076,8 +9076,15 @@ publicsdr-star-receiver = Deze ontvanger in MIJN bewaren
 
 publicsdr-unstar-receiver = Deze ontvanger uit MIJN halen
 
-sstv-not-saved = Laatste beeld niet bewaard: { $why }
 
 sstv-sync-pulses = SYNCPULSEN
 
 sstv-sync-pulses-hint = Hoeveel syncpulsen de ontvanger wil voordat hij een beeld tekent zonder VIS-header: meer is rustiger op een rumoerige band, minder pikt een lopende uitzending eerder op. De lock begint altijd op de nieuwste puls, dus een foto verliest hoe dan ook niets.
+
+sstv-not-saved-not-a-picture = Laatste beeld niet bewaard: het was ruis, geen foto.
+
+sstv-not-saved-no-picture = Laatste beeld niet bewaard: het signaal bevatte geen foto.
+
+sstv-save-all = ALLES BEWAREN
+
+sstv-save-all-hint = Bewaar elk afgemaakt beeld, ook wat de ontvanger ruis zou noemen. Standaard uit: de poort houdt de ruis van een stille band uit de galerij, en dit is de terugweg voor een foto die er nauwelijks is.
