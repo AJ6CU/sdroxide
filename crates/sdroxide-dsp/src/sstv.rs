@@ -575,7 +575,13 @@ pub enum SstvEvent {
     /// A finished scan line: `rgb` is `3 * width` bytes at row `y`.
     Line { y: u16, rgb: Vec<u8> },
     /// The current image reached its last line.
-    ImageComplete,
+    ///
+    /// `sync_share` is how much of it arrived *as* a picture: the fraction of
+    /// lines whose sync pulse was measured where the mode says it should be.
+    /// A frame the receiver locked onto noise has its lines placed by the clock
+    /// alone and scores near zero — which is what lets the caller keep noise
+    /// out of the gallery without a guess about the picture's content.
+    ImageComplete { sync_share: f32 },
     /// A station identified itself in tones after its picture — the FSK ID
     /// every SSTV program and unattended repeater sends and reads.
     FskId(String),
@@ -666,6 +672,12 @@ pub struct SstvRx {
     used_starts: Vec<(f64, f64)>,
     // Lines in a row whose sync pulse was not found.
     misses: u32,
+    /// Lines placed and lines whose sync pulse was actually measured, for the
+    /// picture's own account of how much of it arrived as a picture. A frame
+    /// locked onto noise has lines placed by the clock alone; a real picture
+    /// has its pulse where the mode says it is on almost every line.
+    sync_lines: u32,
+    sync_hits: u32,
     // The whole picture's frequency track, for the second pass at the end.
     track: FreqTrack,
     // Robot 4:2:0 chroma carried between lines.
@@ -920,6 +932,8 @@ impl SstvRx {
             fit: LineFit::new(1.0, 0.0),
             used_starts: Vec::new(),
             misses: 0,
+            sync_lines: 0,
+            sync_hits: 0,
             track: FreqTrack::new(),
             last_cr: Vec::new(),
             last_cb: Vec::new(),
@@ -961,6 +975,8 @@ impl SstvRx {
         self.line_samples = 0.0;
         self.used_starts.clear();
         self.misses = 0;
+        self.sync_lines = 0;
+        self.sync_hits = 0;
         self.track.clear();
         self.last_cr.clear();
         self.last_cb.clear();
@@ -1780,7 +1796,12 @@ impl SstvRx {
         self.line += rpl;
         if self.line >= h {
             self.final_pass(out);
-            out.push(SstvEvent::ImageComplete);
+            let share = if self.sync_lines > 0 {
+                self.sync_hits as f32 / self.sync_lines as f32
+            } else {
+                0.0
+            };
+            out.push(SstvEvent::ImageComplete { sync_share: share });
             self.phase = RxPhase::Hunt;
             self.vis_state = VisState::reset(self.sample_idx);
             self.track.clear();
@@ -1871,9 +1892,11 @@ impl SstvRx {
                 .or_else(|| measure(wide)),
             None => measure(wide),
         };
+        self.sync_lines += 1;
         match measured {
             Some(m) => {
                 self.misses = 0;
+                self.sync_hits += 1;
                 self.fit.add(k, m);
             }
             None => self.misses += 1,
@@ -2333,7 +2356,7 @@ mod tests {
                 match e {
                     SstvEvent::ModeDetected(m) => detected = Some(m),
                     SstvEvent::Line { .. } => lines += 1,
-                    SstvEvent::ImageComplete
+                    SstvEvent::ImageComplete { .. }
                     | SstvEvent::FskId(_)
                     | SstvEvent::UnsupportedMode { .. } => {}
                 }
@@ -2612,6 +2635,54 @@ mod tests {
     /// tuned in mid-transmission). With the mode pre-selected it should lock onto
     /// the sync cadence and decode.
     #[test]
+    /// **A picture says how much of it arrived as a picture.**
+    ///
+    /// The share of lines whose sync pulse was found where the mode says is
+    /// what keeps noise out of the gallery (see `sdroxide-digi`'s save gate): a
+    /// clean transmission has its pulse on every line, and a frame locked onto
+    /// noise has lines placed by the clock alone.
+    #[test]
+    fn a_clean_picture_reports_its_sync_share() {
+        let rate = 48_000.0;
+        let mode = SstvMode::Scottie1;
+        let (w, h) = mode.dimensions();
+        let mut rgb = vec![0u8; w as usize * h as usize * 3];
+        for yy in 0..h as usize {
+            for xx in 0..w as usize {
+                let i = (yy * w as usize + xx) * 3;
+                rgb[i] = (xx * 255 / w as usize) as u8;
+            }
+        }
+        let mut tx = SstvTx::new(mode, &rgb, w, h, rate, 0.0);
+        let mut audio = Vec::new();
+        let mut block = vec![0.0f32; 4096];
+        let mut guard = 0;
+        while !tx.done() && guard < 20_000 {
+            let n = tx.next_block(&mut block);
+            audio.extend_from_slice(&block[..n]);
+            guard += 1;
+        }
+        // Half a second of quiet after it: the last line is decoded once its
+        // full period of history exists, which the transmission's own end does
+        // not provide.
+        audio.extend(std::iter::repeat_n(0.0f32, (rate * 0.5) as usize));
+        let mut rx = SstvRx::new(rate);
+        rx.set_expected(None);
+        let mut events = Vec::new();
+        for chunk in audio.chunks(4096) {
+            rx.process(chunk, &mut events);
+        }
+        let share = events
+            .iter()
+            .find_map(|e| match e {
+                SstvEvent::ImageComplete { sync_share } => Some(*sync_share),
+                _ => None,
+            })
+            .expect("the picture should complete");
+        assert!(share > 0.9, "a clean picture reported a sync share of {share}");
+    }
+
+    #[test]
     fn freerun_decodes_without_vis() {
         let rate = 48_000.0;
         let mode = SstvMode::Scottie1;
@@ -2647,7 +2718,7 @@ mod tests {
                 match e {
                     SstvEvent::ModeDetected(m) => detected = Some(m),
                     SstvEvent::Line { .. } => lines += 1,
-                    SstvEvent::ImageComplete
+                    SstvEvent::ImageComplete { .. }
                     | SstvEvent::FskId(_)
                     | SstvEvent::UnsupportedMode { .. } => {}
                 }
@@ -2852,7 +2923,7 @@ mod tests {
                         let at = y as usize * wu * 3;
                         got[at..at + row.len()].copy_from_slice(&row);
                     }
-                    SstvEvent::ImageComplete => complete = true,
+                    SstvEvent::ImageComplete { .. } => complete = true,
                     _ => {}
                 }
             }

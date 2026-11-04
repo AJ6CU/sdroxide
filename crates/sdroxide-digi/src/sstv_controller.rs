@@ -14,6 +14,66 @@ use crate::DigiEngine;
 /// TX audio sample rate (injected as "mic", then USB-modulated).
 const OUT_RATE: f64 = 48_000.0;
 
+/// The share of a picture's lines whose sync pulse must be found before it is
+/// kept, whatever its content looks like.
+///
+/// Measured on the bench (2026-11-04): a picture that arrived properly has its
+/// pulse where the mode says on almost every line, a frame locked onto noise
+/// on none. A third of the lines is far below a real picture's score and far
+/// above noise's, which leaves room for a picture heard through a fade.
+const SAVE_SYNC_SHARE: f32 = 0.3;
+
+/// How much neighbouring rows must agree before a picture is kept, as a
+/// Pearson correlation over the whole frame.
+///
+/// The second opinion, for a picture whose syncs were lost to a deep fade but
+/// whose content is plainly there. Measured on the same gallery: speckle scores
+/// 0.00–0.20 between rows, real pictures 0.29–0.91 — a threshold in the gap,
+/// and deliberately low, because a weak picture is worth keeping.
+const SAVE_ROW_AGREEMENT: f32 = 0.25;
+
+/// Whether a finished frame is a picture worth keeping.
+///
+/// Either sign is enough: a real picture heard through a fade may lose its
+/// syncs and still be plainly there, and one that arrived cleanly has them all
+/// even if its content is a flat grey field.
+fn keep_frame(sync_share: f32, rows: f32) -> bool {
+    sync_share >= SAVE_SYNC_SHARE || rows >= SAVE_ROW_AGREEMENT
+}
+
+/// How much one row of `rgb` agrees with the next, as a Pearson correlation:
+/// 1.0 for a picture that repeats across the frame, 0.0 for speckle, whose
+/// rows have nothing to do with each other.
+///
+/// Cheap enough to run once per picture: two sums over the frame.
+fn row_agreement(rgb: &[u8], w: usize, h: usize) -> f32 {
+    if w == 0 || h < 2 || rgb.len() < w * h * 3 {
+        return 0.0;
+    }
+    let row = |y: usize| &rgb[y * w * 3..(y + 1) * w * 3];
+    let (mut n, mut sa, mut sb, mut saa, mut sbb, mut sab) =
+        (0.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64);
+    for y in 0..h - 1 {
+        for (&a, &b) in row(y).iter().zip(row(y + 1)) {
+            let (a, b) = (f64::from(a), f64::from(b));
+            n += 1.0;
+            sa += a;
+            sb += b;
+            saa += a * a;
+            sbb += b * b;
+            sab += a * b;
+        }
+    }
+    if n < 1.0 {
+        return 0.0;
+    }
+    let cov = sab / n - (sa / n) * (sb / n);
+    let va = saa / n - (sa / n).powi(2);
+    let vb = sbb / n - (sb / n).powi(2);
+    let den = (va * vb).sqrt();
+    if den <= f64::EPSILON { 0.0 } else { (cov / den) as f32 }
+}
+
 pub struct SstvController {
     cfg: DigiConfig,
     dial_hz: f64,
@@ -239,14 +299,37 @@ impl DigiEngine for SstvController {
                     self.unsupported = Some(label);
                     self.status_dirty = true;
                 }
-                SstvEvent::ImageComplete => {
-                    self.queued.push(DigiAction::SstvImage {
-                        image_id: self.image_id,
-                        mode: self.rx_mode,
-                        w: self.rx_w,
-                        h: self.rx_h,
-                        rgb: std::mem::take(&mut self.rx_image),
-                    });
+                SstvEvent::ImageComplete { sync_share } => {
+                    // **Not everything that decodes is a picture.** A frame the
+                    // receiver locked onto noise draws itself and would be
+                    // saved to the gallery: 9 of the 54 images on the bench were
+                    // speckle, with rows that had nothing to do with each other
+                    // (2026-11-04). Two independent signs say whether this one
+                    // arrived as a picture — the share of lines whose sync pulse
+                    // was found where the mode says, and how much neighbouring
+                    // rows agree — and either is enough to keep it, so a weak
+                    // but real picture is never dropped by a single measure.
+                    let rows =
+                        row_agreement(&self.rx_image, self.rx_w as usize, self.rx_h as usize);
+                    let keep = keep_frame(sync_share, rows);
+                    tracing::info!(
+                        "SSTV: {}x{} {:?} complete — sync {:.2}, rows {:.2} → {}",
+                        self.rx_w,
+                        self.rx_h,
+                        self.rx_mode,
+                        sync_share,
+                        rows,
+                        if keep { "kept" } else { "not a picture, not saved" }
+                    );
+                    if keep {
+                        self.queued.push(DigiAction::SstvImage {
+                            image_id: self.image_id,
+                            mode: self.rx_mode,
+                            w: self.rx_w,
+                            h: self.rx_h,
+                            rgb: std::mem::take(&mut self.rx_image),
+                        });
+                    }
                     self.rx_active = false;
                     self.status_dirty = true;
                 }
@@ -492,5 +575,55 @@ mod tests {
         c.set_sstv_image(SstvMode::Martin1, rgb, w, h);
         c.sstv_restart_rx();
         assert!(c.tx.is_some(), "the transmission was aborted by a receive control");
+    }
+
+    /// **Speckle is not a picture, and a picture is.**
+    ///
+    /// Nine of the fifty-four images on the bench were frames the receiver had
+    /// locked onto noise: rows with nothing to do with each other (2026-11-04).
+    /// The row agreement is what tells them apart without looking at content:
+    /// a gradient that repeats down the frame scores high, speckle scores near
+    /// zero.
+    #[test]
+    fn row_agreement_separates_speckle_from_a_picture() {
+        let (w, h) = (64usize, 48usize);
+        // A picture: the same column pattern on every row, so each row agrees
+        // with the next one exactly.
+        let mut picture = vec![0u8; w * h * 3];
+        for y in 0..h {
+            for x in 0..w {
+                let v = ((x * 255) / w) as u8;
+                let i = (y * w + x) * 3;
+                picture[i] = v;
+                picture[i + 1] = v;
+                picture[i + 2] = v;
+            }
+        }
+        // Speckle: a deterministic hash per pixel, unrelated across rows.
+        let mut noise = vec![0u8; w * h * 3];
+        let mut seed = 0x2545_F491_4F6C_DD1Du64;
+        for b in noise.iter_mut() {
+            seed ^= seed << 13;
+            seed ^= seed >> 7;
+            seed ^= seed << 17;
+            *b = (seed >> 40) as u8;
+        }
+        let picture_rows = row_agreement(&picture, w, h);
+        let noise_rows = row_agreement(&noise, w, h);
+        assert!(picture_rows > 0.9, "a picture should agree with itself, got {picture_rows}");
+        assert!(noise_rows < 0.2, "speckle should not agree, got {noise_rows}");
+        assert!(keep_frame(0.0, picture_rows), "a picture is kept on its rows alone");
+        assert!(!keep_frame(0.0, noise_rows), "speckle is not kept on its rows");
+    }
+
+    /// **The two signs are independent, and either one is enough.** A picture
+    /// heard through a fade loses its syncs but keeps its content; one that
+    /// arrived cleanly keeps its syncs even if it is a flat field.
+    #[test]
+    fn either_sign_keeps_a_picture() {
+        assert!(keep_frame(0.95, 0.0), "clean syncs keep it whatever the content");
+        assert!(keep_frame(0.0, 0.6), "plain content keeps it whatever the syncs");
+        assert!(!keep_frame(0.1, 0.05), "neither sign: not a picture");
+        assert!(!keep_frame(0.0, 0.0), "an empty frame is not a picture");
     }
 }
