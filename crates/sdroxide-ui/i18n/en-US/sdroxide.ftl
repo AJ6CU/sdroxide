@@ -821,7 +821,7 @@ settings-servers-t-127-0-0-1-reaches-2 = 127.0.0.1 reaches clients on this machi
 settings-servers-t-12060-port-n1mm-s-documentation = 12060 is the port N1MM's documentation recommends
 settings-servers-station-name = Station name
 settings-servers-what-n1mm-calls-stationname-name = What N1MM calls the StationName: the name of the computer that sent the packet. Loggers show it to tell one operating position from another.
-settings-servers-cw-panel-s-copy-plain = The CW panel's copy as plain text, one UDP datagram per piece as it settles — for a station controller, a logger's CW window or a script. No protocol: a listener just appends what arrives (try nc -ul 9999). Only settled text is sent, never the tail the decoder is still revising. Each radio has its own switch.
+settings-servers-cw-panel-s-copy-plain = The CW panel's copy as plain text, one UDP datagram per piece as it settles — for a station controller, a logger's CW window or a script. No protocol: a listener just appends what arrives (try nc -ul 9998). Only settled text is sent, never the tail the decoder is still revising. Each radio has its own switch.
 settings-servers-apply = {" "}APPLY{" "}
 settings-servers-persist-re-open-broadcast-sockets = Persist and (re)open the broadcast sockets
 settings-servers-hamlib-rigctld-server = Hamlib rigctld server
@@ -9101,3 +9101,9 @@ sstv-save-all-hint = Keep every finished frame, including the ones the receiver 
 
 # Hover text under Settings > Controls > Click-tune rounding.
 settings-controls-cw-keeps-the-fine-grid = CW clicks on the 10 Hz grid whatever is set here: a CW signal is narrower than a grid built for voice can land on.
+
+settings-servers-decoded-cw-udp = Decoded CW over UDP
+
+settings-servers-decoded-cw-udp-host-hint = 127.0.0.1 reaches programs on this machine; a LAN address or this subnet's broadcast address reaches others.
+
+settings-servers-decoded-cw-udp-port-hint = 9998 by default

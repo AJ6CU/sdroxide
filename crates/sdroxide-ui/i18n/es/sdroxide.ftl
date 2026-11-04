@@ -815,7 +815,7 @@ settings-servers-t-127-0-0-1-reaches-2 = 127.0.0.1 llega a los clientes de esta 
 settings-servers-t-12060-port-n1mm-s-documentation = 12060 es el puerto que recomienda la documentación de N1MM
 settings-servers-station-name = Nombre de la estación
 settings-servers-what-n1mm-calls-stationname-name = Lo que N1MM llama StationName: el nombre del ordenador que envió el paquete. Los programas de registro lo muestran para distinguir un puesto de operación de otro.
-settings-servers-cw-panel-s-copy-plain = La copia del panel de CW como texto plano, un datagrama UDP por fragmento a medida que se asienta — para un controlador de estación, la ventana de CW de un programa de registro o un script. Sin protocolo: un oyente simplemente añade lo que llega (prueba nc -ul 9999). Solo se envía el texto asentado, nunca la cola que el decodificador aún está revisando. Cada radio tiene su propio interruptor.
+settings-servers-cw-panel-s-copy-plain = La copia del panel de CW como texto plano, un datagrama UDP por fragmento a medida que se asienta — para un controlador de estación, la ventana de CW de un programa de registro o un script. Sin protocolo: un oyente simplemente añade lo que llega (prueba nc -ul 9998). Solo se envía el texto asentado, nunca la cola que el decodificador aún está revisando. Cada radio tiene su propio interruptor.
 settings-servers-apply = {" "}APLICAR{" "}
 settings-servers-persist-re-open-broadcast-sockets = Guardar y (re)abrir los sockets de difusión
 settings-servers-hamlib-rigctld-server = Servidor rigctld de Hamlib
@@ -9081,3 +9081,9 @@ sstv-save-all = GUARDAR TODO
 sstv-save-all-hint = Guardar cada imagen terminada, incluidas las que el receptor llamaría ruido. Desactivado por defecto: el filtro mantiene el ruido de una banda tranquila fuera de la galería, y esto es la vuelta atrás para una imagen que apenas está.
 
 settings-controls-cw-keeps-the-fine-grid = En CW el clic usa la rejilla de 10 Hz sea cual sea este ajuste: una señal CW es más estrecha de lo que una rejilla pensada para voz puede acertar.
+
+settings-servers-decoded-cw-udp = CW decodificado por UDP
+
+settings-servers-decoded-cw-udp-host-hint = 127.0.0.1 llega a los programas de este equipo; una dirección de la red local o la dirección de difusión de esta subred llega a los demás.
+
+settings-servers-decoded-cw-udp-port-hint = 9998 por defecto

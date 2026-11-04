@@ -2176,8 +2176,14 @@ use sdroxide_types::{
 /// an English `Notice`; now it carries the reason and the frequency, and the
 /// screen words it in the operator's language. `PROTO_VERSION` 259 → 260,
 /// `VERSION_BYTE` 0x4F → 0x50.
-pub const PROTO_VERSION: u16 = 263;
-const VERSION_BYTE: u8 = 0x53;
+/// v264: decoded CW over UDP. [`sdroxide_types::WsjtxConfig`] gains `cw_text`
+/// ([`sdroxide_types::CwTextConfig`]) on its tail, beside the N1MM broadcast it
+/// sits with. `WsjtxConfig` rides `Command::SetWsjtxConfig` whole, so a v263
+/// peer handed one reads the extra bytes as the start of the next message. The
+/// same change as upstream's v171. `PROTO_VERSION` 263 → 264, `VERSION_BYTE`
+/// 0x53 → 0x54.
+pub const PROTO_VERSION: u16 = 264;
+const VERSION_BYTE: u8 = 0x54;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -3458,7 +3464,7 @@ mod tests {
             ServerMsg::TxRefused(w, hz) => assert_eq!((w, hz), (why, 7_074_000.0)),
             _ => panic!("TxRefused did not round-trip"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (263, 0x53));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (264, 0x54));
     }
 
     /// The dynamic-DNS answer rides last on [`ServerMsg`], and it has to: the
@@ -3489,7 +3495,7 @@ mod tests {
             }
             other => panic!("the answer did not round-trip: {other:?}"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (263, 0x53));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (264, 0x54));
     }
 
     /// postcard is positional: a field inserted mid-struct shifts every byte
@@ -3690,6 +3696,39 @@ mod tests {
         let m = ServerMsg::StationConfig(Box::new(StationConfig { relay, ..no_station() }));
         let back: ServerMsg = decode(&encode(&m).unwrap()).unwrap();
         assert_eq!(back, m);
+    }
+
+    /// The WSJT-X / N1MM / decoded-CW output configuration, both ways.
+    ///
+    /// Worth its own test for `roundtrip_station_config`'s reason. It rides
+    /// `Command::SetWsjtxConfig` **whole**, and v264 appended `cw_text` to it:
+    /// a field the encoder carries but the decoder drops does not fail, it
+    /// silently arrives as its default, and the operator's setting is simply
+    /// never applied.
+    ///
+    /// Filled in rather than defaulted, and every field different from its
+    /// neighbour, so a field-order slip shows instead of hiding behind two
+    /// equal values.
+    #[test]
+    fn roundtrip_wsjtx_config() {
+        use sdroxide_types::{CwTextConfig, N1mmConfig, WsjtxConfig};
+
+        let cfg = WsjtxConfig {
+            enabled: true,
+            host: "192.0.2.7".into(),
+            port: 2238,
+            id: "SDR Oxide Brown".into(),
+            n1mm: N1mmConfig {
+                enabled: true,
+                host: "192.0.2.8".into(),
+                port: 12060,
+                station: "SHACK-2".into(),
+            },
+            cw_text: CwTextConfig { enabled: true, host: "192.0.2.9".into(), port: 9998 },
+        };
+        let cmd = ClientMsg::Command(Command::SetWsjtxConfig(cfg));
+        let back: ClientMsg = decode(&encode(&cmd).unwrap()).unwrap();
+        assert_eq!(back, cmd);
     }
 
     /// The interface configuration, both ways.

@@ -818,7 +818,7 @@ settings-servers-t-127-0-0-1-reaches-2 = 127.0.0.1 可到达本机上的客户�
 settings-servers-t-12060-port-n1mm-s-documentation = 12060 是 N1MM 文档推荐的端口
 settings-servers-station-name = 电台站点名称
 settings-servers-what-n1mm-calls-stationname-name = N1MM 所称的 StationName：发送该数据包的计算机名称。日志软件借此区分不同的操作位置。
-settings-servers-cw-panel-s-copy-plain = 将 CW 面板的文字以纯文本形式发送，每段稳定后作为一个 UDP 数据报发送——用于电台站点控制器、日志软件的 CW 窗口或脚本。没有协议：监听方只需追加接收到的内容（可尝试 nc -ul 9999）。只发送已确定的文字，从不发送解码器仍在修正的尾部。每台电台有各自的开关。
+settings-servers-cw-panel-s-copy-plain = 将 CW 面板的文字以纯文本形式发送，每段稳定后作为一个 UDP 数据报发送——用于电台站点控制器、日志软件的 CW 窗口或脚本。没有协议：监听方只需追加接收到的内容（可尝试 nc -ul 9998）。只发送已确定的文字，从不发送解码器仍在修正的尾部。每台电台有各自的开关。
 settings-servers-apply = {" "}应用{" "}
 settings-servers-persist-re-open-broadcast-sockets = 保存并（重新）打开广播套接字
 settings-servers-hamlib-rigctld-server = Hamlib rigctld 服务器
@@ -9020,3 +9020,9 @@ sstv-save-all = 全部保存
 sstv-save-all-hint = 保存每一幅完成的图像，包括接收机判定为噪声的那些。默认关闭：过滤器让安静频段的噪声不进画廊，而这是为一幅几乎收不到的图像留的后路。
 
 settings-controls-cw-keeps-the-fine-grid = 在 CW 下无论此项如何设置，点击都按 10 Hz 栅格对齐：CW 信号比面向语音的栅格所能命中的范围更窄。
+
+settings-servers-decoded-cw-udp = 通过 UDP 发送 CW 解码文本
+
+settings-servers-decoded-cw-udp-host-hint = 127.0.0.1 发送给本机上的程序；局域网地址或本子网的广播地址发送给其他机器。
+
+settings-servers-decoded-cw-udp-port-hint = 默认为 9998

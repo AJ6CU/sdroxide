@@ -815,7 +815,7 @@ settings-servers-t-127-0-0-1-reaches-2 = 127.0.0.1 erreicht Clients auf diesem R
 settings-servers-t-12060-port-n1mm-s-documentation = 12060 ist der Port, den die Dokumentation von N1MM empfiehlt
 settings-servers-station-name = Stationsname
 settings-servers-what-n1mm-calls-stationname-name = Was N1MM StationName nennt: der Name des Computers, der das Paket gesendet hat. Logger zeigen ihn an, um einen Bedienplatz von einem anderen zu unterscheiden.
-settings-servers-cw-panel-s-copy-plain = Die Mitschrift des CW-Panels als Klartext, ein UDP-Datagramm pro Stück, sobald es feststeht — für einen Stationscontroller, das CW-Fenster eines Loggers oder ein Skript. Kein Protokoll: Ein Empfänger hängt einfach an, was ankommt (probieren Sie nc -ul 9999). Nur festgelegter Text wird gesendet, nie der Schwanz, den der Decoder noch überarbeitet. Jedes Funkgerät hat seinen eigenen Schalter.
+settings-servers-cw-panel-s-copy-plain = Die Mitschrift des CW-Panels als Klartext, ein UDP-Datagramm pro Stück, sobald es feststeht — für einen Stationscontroller, das CW-Fenster eines Loggers oder ein Skript. Kein Protokoll: Ein Empfänger hängt einfach an, was ankommt (probieren Sie nc -ul 9998). Nur festgelegter Text wird gesendet, nie der Schwanz, den der Decoder noch überarbeitet. Jedes Funkgerät hat seinen eigenen Schalter.
 settings-servers-apply = {" "}ÜBERNEHMEN{" "}
 settings-servers-persist-re-open-broadcast-sockets = Speichern und die Broadcast-Sockets (erneut) öffnen
 settings-servers-hamlib-rigctld-server = Hamlib-rigctld-Server
@@ -9080,3 +9080,9 @@ sstv-save-all = ALLE SPEICHERN
 sstv-save-all-hint = Jedes fertige Bild speichern, auch die, die der Empfänger als Rauschen bezeichnen würde. Standardmäßig aus: die Sperre hält das Rauschen eines stillen Bandes aus der Galerie, und dies ist der Rückweg für ein Bild, das kaum da ist.
 
 settings-controls-cw-keeps-the-fine-grid = In CW wird auf dem 10-Hz-Raster geklickt, unabhängig von dieser Einstellung: ein CW-Signal ist schmaler, als ein für Sprache gedachtes Raster treffen kann.
+
+settings-servers-decoded-cw-udp = Dekodiertes CW über UDP
+
+settings-servers-decoded-cw-udp-host-hint = 127.0.0.1 erreicht Programme auf diesem Rechner; eine LAN-Adresse oder die Broadcast-Adresse dieses Subnetzes erreicht andere.
+
+settings-servers-decoded-cw-udp-port-hint = Standardmäßig 9998

@@ -14077,6 +14077,25 @@ For the modes no logger speaks — RTTY, PSK, Olivia, THOR, MFSK, DominoEX, Hell
 CW and WSPR — there is a plainer feed beside these two: see
 [§6.8.4](#684-decoded-text-over-udp).
 
+**Decoded CW over UDP**, also on this page with its own switch, sends the CW
+panel's copy ([2.14](#214-cw-decoding-and-keyboard-sending)) as plain UTF-8
+text, a datagram at a time as it settles — for a station controller, a
+logger's CW window or a script. There is no protocol: a listener appends what
+arrives, and `nc -ul 9998` shows it as it comes. Only settled text goes out,
+never the last word or two the neural decoder is still revising, so nothing
+sent is ever taken back. Each radio has its own switch and sends only its own
+copy; two radios sending to one port arrive interleaved. It is not the JSON
+feed of [§6.8.4](#684-decoded-text-over-udp), which sends a keyboard mode's
+lines only once they are complete, and the CW copy has no line ends.
+
+- **Send to** — `127.0.0.1` for this machine; a LAN address, or this subnet's
+  broadcast address, for others.
+- **Port** — 9998. Not 9999, which the JSON feed's box suggests: a listener
+  waiting for one would otherwise be handed the other's datagrams.
+
+It sends only while the radio is in CW with the panel decoding; the skimmer's
+spots are not part of it.
+
 #### 6.8.4 Decoded text over UDP
 
 The WSJT-X broadcast above speaks a logger's protocol, and it has a message only

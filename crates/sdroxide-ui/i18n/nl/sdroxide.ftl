@@ -816,7 +816,7 @@ settings-servers-t-127-0-0-1-reaches-2 = 127.0.0.1 bereikt clients op deze machi
 settings-servers-t-12060-port-n1mm-s-documentation = 12060 is de poort die de documentatie van N1MM aanbeveelt
 settings-servers-station-name = Stationsnaam
 settings-servers-what-n1mm-calls-stationname-name = Wat N1MM de StationName noemt: de naam van de computer die het pakket verstuurde. Loggers tonen die om de ene operatorpositie van de andere te onderscheiden.
-settings-servers-cw-panel-s-copy-plain = De kopie van het CW-paneel als platte tekst, één UDP-datagram per stuk zodra het vaststaat — voor een stationscontroller, het CW-venster van een logger of een script. Geen protocol: een luisteraar voegt gewoon toe wat binnenkomt (probeer nc -ul 9999). Alleen vaststaande tekst wordt verzonden, nooit de staart die de decoder nog herziet. Elke radio heeft zijn eigen schakelaar.
+settings-servers-cw-panel-s-copy-plain = De kopie van het CW-paneel als platte tekst, één UDP-datagram per stuk zodra het vaststaat — voor een stationscontroller, het CW-venster van een logger of een script. Geen protocol: een luisteraar voegt gewoon toe wat binnenkomt (probeer nc -ul 9998). Alleen vaststaande tekst wordt verzonden, nooit de staart die de decoder nog herziet. Elke radio heeft zijn eigen schakelaar.
 settings-servers-apply = {" "}TOEPASSEN{" "}
 settings-servers-persist-re-open-broadcast-sockets = Opslaan en de broadcastsockets (opnieuw) openen
 settings-servers-hamlib-rigctld-server = Hamlib rigctld-server
@@ -9090,3 +9090,9 @@ sstv-save-all = ALLES BEWAREN
 sstv-save-all-hint = Bewaar elk afgemaakt beeld, ook wat de ontvanger ruis zou noemen. Standaard uit: de poort houdt de ruis van een stille band uit de galerij, en dit is de terugweg voor een foto die er nauwelijks is.
 
 settings-controls-cw-keeps-the-fine-grid = In CW klikt het op het 10 Hz-raster wat hier ook staat: een CW-signaal is smaller dan een raster voor spraak kan raken.
+
+settings-servers-decoded-cw-udp = Gedecodeerde CW via UDP
+
+settings-servers-decoded-cw-udp-host-hint = 127.0.0.1 bereikt programma's op deze computer; een LAN-adres of het broadcastadres van dit subnet bereikt andere.
+
+settings-servers-decoded-cw-udp-port-hint = Standaard 9998
