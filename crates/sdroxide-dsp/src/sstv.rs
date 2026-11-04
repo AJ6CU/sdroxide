@@ -2006,6 +2006,12 @@ fn hz_in(hist: &[f64], base: u64, idx: i64) -> f64 {
     hist.get((idx - base as i64) as usize).copied().unwrap_or(1900.0)
 }
 
+/// How long the discriminator takes to settle after a tone change, in seconds.
+///
+/// The end of every scan is inside this, and reads the segment that follows it
+/// unless it is left out — see `decode_line`.
+const SCAN_SETTLE_S: f64 = 0.000_9;
+
 /// The shortest pixel in any of `mode`'s scans, in samples: the unit the
 /// second pass measures a correction worth making in.
 fn min_pixel_samples(mode: SstvMode, w: u16, rate: f64) -> f64 {
@@ -2077,8 +2083,17 @@ fn decode_line(
             Seg::Tone { dur, .. } => t += dur * rate,
             Seg::Scan { chan, width, px } => {
                 let step = px * rate;
+                // **The end of a scan is not its last pixel.** The tone changes
+                // into the next segment there and the discriminator is still
+                // settling, so the last millisecond of every scan reads what
+                // follows it: on Robot 36's chroma that painted a green edge
+                // down the right of every picture (bench, 2026-11-04). Those
+                // pixels repeat the last settled one.
+                let guard = ((SCAN_SETTLE_S * rate) / step).ceil().max(1.0) as usize;
+                let last = (width as usize).saturating_sub(1 + guard);
                 for x in 0..width as usize {
-                    let v = hz_to_value(pixel_hz(&hz, t + x as f64 * step, step));
+                    let at = x.min(last);
+                    let v = hz_to_value(pixel_hz(&hz, t + at as f64 * step, step));
                     let cri = x.min(cr.len().saturating_sub(1));
                     let cbi = x.min(cb.len().saturating_sub(1));
                     match chan {
@@ -2542,6 +2557,55 @@ mod tests {
         // +10 000 ppm = +1% longer transmission.
         let trimmed = SstvTx::new(mode, &rgb, w, h, rate, 10_000.0).total_samples() as f64;
         assert!((trimmed / base - 1.01).abs() < 0.0005, "ratio {}", trimmed / base);
+    }
+
+    /// **The right edge of a picture is the picture, not the next segment.**
+    ///
+    /// The tone changes into the next segment at the end of every scan and the
+    /// discriminator is still settling there, so the last pixels of a scan read
+    /// what follows it. On Robot 36's half-width chroma that painted a green
+    /// edge down the right of every picture received on the bench
+    /// (2026-11-04): a flat grey frame came back with its last columns pure
+    /// green.
+    #[test]
+    fn the_right_edge_of_a_picture_is_not_the_next_segment() {
+        let rate = 48_000.0;
+        let mode = SstvMode::Robot36;
+        let (w, h) = mode.dimensions();
+        // A flat mid-grey frame: every pixel the same, so any colour at the
+        // edge is the decoder's and not the picture's.
+        let rgb = vec![128u8; w as usize * h as usize * 3];
+        let mut tx = SstvTx::new(mode, &rgb, w, h, rate, 0.0);
+        let mut audio = Vec::new();
+        let mut block = vec![0.0f32; 4096];
+        let mut guard = 0;
+        while !tx.done() && guard < 200_000 {
+            let n = tx.next_block(&mut block);
+            audio.extend_from_slice(&block[..n]);
+            guard += 1;
+        }
+        audio.extend(std::iter::repeat_n(0.0f32, (rate * 0.5) as usize));
+        let mut rx = SstvRx::new(rate);
+        rx.set_expected(None);
+        let mut events = Vec::new();
+        for chunk in audio.chunks(4096) {
+            rx.process(chunk, &mut events);
+        }
+        let (_, row) = events
+            .iter()
+            .filter_map(|e| match e {
+                SstvEvent::Line { y, rgb } => Some((*y, rgb.clone())),
+                _ => None,
+            })
+            .nth(120)
+            .expect("a line of the picture");
+        let last = (row[row.len() - 3], row[row.len() - 2], row[row.len() - 1]);
+        let mid = (row[480], row[481], row[482]);
+        let green = |(r, g, b): (u8, u8, u8)| i32::from(g) - (i32::from(r) + i32::from(b)) / 2;
+        assert!(
+            green(last) - green(mid) < 20,
+            "the last column is {last:?} against a grey {mid:?}"
+        );
     }
 
     /// Free-run: feed the RX the picture audio *after* the VIS header (as if we
