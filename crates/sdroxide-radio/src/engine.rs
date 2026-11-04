@@ -6072,6 +6072,9 @@ struct RigDigest {
     nr_level: sdroxide_types::NrLevel,
     squelch: u32,
     agc: sdroxide_types::AgcMode,
+    /// The CW sidetone pitch, by bit pattern — a client's CW filter is centred
+    /// on it, so a change has to reach the protocol layer.
+    cw_pitch: u32,
     /// The front-end gain's setting and range, by bit pattern.
     rf_gain: Option<(u64, u64, u64)>,
     ranges: (usize, usize),
@@ -6103,6 +6106,7 @@ impl RigDigest {
             nr_level: s.nr_level,
             squelch: s.squelch_db.to_bits(),
             agc: s.agc,
+            cw_pitch: s.cw_pitch_hz.to_bits(),
             rf_gain: s
                 .rf_gain
                 .as_ref()
@@ -13883,6 +13887,7 @@ impl Engine {
             auto_notch: rx.auto_notch,
             squelch_db: rx.squelch_db,
             agc: rx.agc,
+            cw_pitch_hz: self.cw_pitch_hz(),
             rf_gain: self.rigctld_rf_gain().map(|(g, value)| sdroxide_rigctld::RfGain {
                 element: g.name.clone(),
                 min: g.min_db,
@@ -13953,6 +13958,7 @@ impl Engine {
             nr_level: rx.noise_reduction,
             squelch: rx.squelch_db.to_bits(),
             agc: rx.agc,
+            cw_pitch: self.cw_pitch_hz().to_bits(),
             rf_gain: self
                 .rigctld_rf_gain()
                 .map(|(g, value)| (value.to_bits(), g.min_db.to_bits(), g.max_db.to_bits())),
