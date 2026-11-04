@@ -2158,7 +2158,16 @@ pub fn show_ext(
                     // you hear, so tuning a signal to the dial is the one place
                     // it is guaranteed not to be audible.
                     let off = cursor_hz.map(f64::from).unwrap_or(0.0);
-                    let hz = cw_click_dial(view.x_to_freq(pos.x, &rect), off, step);
+                    let clicked = view.x_to_freq(pos.x, &rect);
+                    let hz = cw_click_dial(clicked, off, step);
+                    // DIAGNOSTIC (temporary): what a CW click actually did —
+                    // the frequency under the pointer, the offset it took off
+                    // and the dial it asked for (issue #439).
+                    tracing::info!(
+                        "cw click: pointer {clicked:.0} Hz, offset {off:.1} Hz (cursor {}), step {step:.0} Hz -> dial {hz:.0} Hz, mode {:?}",
+                        if cursor_hz.is_some() { "present" } else { "absent" },
+                        state.rx[0].mode
+                    );
                     cmds.push(Command::TuneInSpan { vfo: state.active_vfo, hz });
                 }
             }
