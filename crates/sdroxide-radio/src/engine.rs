@@ -3198,6 +3198,10 @@ struct Engine {
     /// band plan is only consulted when the dial has actually moved.
     auto_shift_dial: Option<f64>,
     nb: NoiseBlanker,
+    /// When the blanker's count was last reported. Once a second while it is
+    /// on, because a blanker that blanks nothing and one that never fires look
+    /// identical from the outside — see [`NoiseBlanker::read`] and #421.
+    nb_report_at: Instant,
     /// Converter headroom, read straight off the samples the device handed
     /// over. Fed before the blanker and before decimation — see
     /// [`sdroxide_dsp::AdcMeter`], which records why either of those would
@@ -5002,6 +5006,7 @@ fn engine_thread(
         burst_unkeys: false,
         auto_shift_dial: None,
         nb: NoiseBlanker::new(),
+        nb_report_at: Instant::now(),
         adc: AdcMeter::new(),
         audio_notch: AutoNotch::new(),
         audio_notch_on: false,
@@ -5628,6 +5633,28 @@ fn engine_thread(
                     // nothing left for the blanker to recognise.
                     if engine.state.noise_blanker {
                         engine.nb.process(&mut buf[..n]);
+                        // Once a second: what it removed, and how close the
+                        // strongest sample came to the bar. On a receiver whose
+                        // stream arrives already filtered (a Kiwi's 20 kHz) this
+                        // is what says whether the blanker is finding nothing or
+                        // finding nothing it recognises (#421).
+                        if engine.nb_report_at.elapsed() >= Duration::from_secs(1) {
+                            engine.nb_report_at = Instant::now();
+                            let r = engine.nb.read();
+                            if r.offered > 0 {
+                                info!(
+                                    "noise blanker: {} of {} samples blanked ({:.2}%), strongest \
+                                     {:.1}x the mean, mean {:.4}, bar {:.0}x, at {:.1} kHz",
+                                    r.blanked,
+                                    r.offered,
+                                    r.share() * 100.0,
+                                    r.peak_ratio,
+                                    r.mean,
+                                    NoiseBlanker::bar(),
+                                    engine.radio_fs / 1000.0
+                                );
+                            }
+                        }
                     }
                     let iq = decimate(engine.decim.as_mut(), &buf[..n], &mut dbuf);
                     engine.process_block(iq, pool.as_ref());
