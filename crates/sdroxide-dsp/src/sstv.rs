@@ -684,6 +684,9 @@ pub struct SstvRx {
     last_cr: Vec<u8>,
     last_cb: Vec<u8>,
 
+    /// How many line gaps a free-run lock must chain before it begins an
+    /// image: `sstv_sync_pulses - 1`, from the operator's setting.
+    freerun_links: u32,
     // Free-run (decode without VIS): lock onto a regular 1200 Hz sync cadence.
     // `expected` = a specific operator-selected mode, or `None` for auto (match
     // the cadence + sync length against every mode).
@@ -823,16 +826,21 @@ const SYNC_SLICE_HZ: f64 = 1400.0;
 const CADENCE_TOL_S: f64 = 0.002;
 const CADENCE_DRIFT: f64 = 0.005;
 
-/// A free-run lock takes a chain of this many line gaps, one pulse to the
-/// next, on the mode's cadence (see `cadence_chain`): four pulses. Three,
-/// which two gaps anywhere in the list was meant to be, let noise lock.
-const FREERUN_LINKS: u32 = 3;
+/// The default evidence a free-run lock asks for, in line gaps between one
+/// pulse and the next (see `cadence_chain`): five gaps, six pulses.
+///
+/// Three — four pulses — let noise lock: a receiver parked on 27 MHz with
+/// nothing but CB QRM on it began an image about once a minute (bench,
+/// 2026-11-04). The operator can ask for four, five or six pulses in the SSTV
+/// panel ([`SstvRx::set_sync_pulses`]); the lock always begins at the newest
+/// pulse, so more of them delays the decision and not the picture.
+const DEFAULT_FREERUN_LINKS: u32 = 5;
 
 /// A pulse's length may be this far off its mode's sync, as a fraction of it.
 const SYNC_LEN_TOL: f64 = 0.4;
 
 /// Recent sync pulses kept for the cadence: enough for a chain of
-/// `FREERUN_LINKS` with a lost pulse or two and some noise between.
+/// [`DEFAULT_FREERUN_LINKS`] with a lost pulse or two and some noise between.
 const SYNC_HIST_LEN: usize = 16;
 
 /// A dip out of sync shorter than this is noise inside a pulse, not the gap
@@ -938,6 +946,7 @@ impl SstvRx {
             last_cr: Vec::new(),
             last_cb: Vec::new(),
             expected: None,
+            freerun_links: DEFAULT_FREERUN_LINKS,
             sync_hist: Vec::new(),
             numbered: false,
             confirmed: false,
@@ -946,6 +955,21 @@ impl SstvRx {
 
     /// Set the mode used for free-run (no-VIS) decoding, or `None` for auto
     /// (detect the mode from the sync cadence).
+    /// How many sync pulses a free-run lock asks for: 4, 5 or 6, clamped.
+    ///
+    /// The pulses are evidence that a transmission is under way rather than
+    /// noise, and the lock begins at the newest of them — so this trades how
+    /// quickly the receiver joins a picture already in progress against how
+    /// often it starts on noise.
+    pub fn set_sync_pulses(&mut self, pulses: u8) {
+        self.freerun_links = u32::from(pulses.clamp(4, 6)).saturating_sub(1);
+    }
+
+    /// The setting in force, as the operator set it (4, 5 or 6).
+    pub fn sync_pulses(&self) -> u8 {
+        (self.freerun_links + 1).clamp(4, 6) as u8
+    }
+
     pub fn set_expected(&mut self, mode: Option<SstvMode>) {
         self.expected = mode;
     }
@@ -1623,13 +1647,13 @@ impl SstvRx {
     /// (Scottie against Martin).
     fn cadence_mode(&self, run: f64, expected: Option<SstvMode>) -> Option<SstvMode> {
         match expected {
-            Some(m) => (self.cadence_chain(m).0 >= FREERUN_LINKS).then_some(m),
+            Some(m) => (self.cadence_chain(m).0 >= self.freerun_links).then_some(m),
             None => SstvMode::ALL
                 .into_iter()
                 .filter_map(|m| {
                     let (links, singles, _) = self.cadence_chain(m);
                     let (_, sdur) = self.sync_span(m, m.dimensions().0, 0);
-                    (links >= FREERUN_LINKS).then_some((m, singles, (run - sdur).abs() / sdur))
+                    (links >= self.freerun_links).then_some((m, singles, (run - sdur).abs() / sdur))
                 })
                 .min_by(|a, b| b.1.cmp(&a.1).then(a.2.total_cmp(&b.2)))
                 .map(|(m, ..)| m),
@@ -2680,6 +2704,24 @@ mod tests {
             })
             .expect("the picture should complete");
         assert!(share > 0.9, "a clean picture reported a sync share of {share}");
+    }
+
+    #[test]
+    /// **The lock's evidence is the operator's to set.** Six pulses by
+    /// default (the bench's answer for 27 MHz CB QRM), four where the band is
+    /// quiet and a picture is worth catching early; the setter clamps.
+    #[test]
+    fn the_sync_pulse_setting_reaches_the_lock() {
+        let mut rx = SstvRx::new(48_000.0);
+        assert_eq!(rx.sync_pulses(), 6, "six by default");
+        rx.set_sync_pulses(4);
+        assert_eq!(rx.sync_pulses(), 4);
+        rx.set_sync_pulses(5);
+        assert_eq!(rx.sync_pulses(), 5);
+        rx.set_sync_pulses(9);
+        assert_eq!(rx.sync_pulses(), 6, "clamped to the most evidence there is");
+        rx.set_sync_pulses(1);
+        assert_eq!(rx.sync_pulses(), 4, "and to the least");
     }
 
     #[test]

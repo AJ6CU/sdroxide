@@ -1190,6 +1190,33 @@ impl SdroxideApp {
                                     self.sstv.rx_tex = None;
                                 }
 
+                                // **How much evidence the decoder asks for.**
+                                // A picture with no VIS header is joined on a
+                                // run of sync pulses; more of them means fewer
+                                // false starts on a noisy band, fewer means a
+                                // picture already under way is caught sooner.
+                                // Six by default (the bench's answer for 27 MHz
+                                // CB QRM), four for a quiet band.
+                                ui.add_space(8.0);
+                                ui.label(
+                                    RichText::new(tr!("sstv-sync-pulses"))
+                                        .size(9.5)
+                                        .color(crate::theme::CYAN_DIM())
+                                        .strong(),
+                                );
+                                for n in 4..=6u8 {
+                                    let on = self.digi_cfg_edit.sstv_sync_pulses == n;
+                                    if crate::chrome::chip(ui, on, n.to_string())
+                                        .on_hover_text(tr!("sstv-sync-pulses-hint"))
+                                        .clicked()
+                                    {
+                                        self.digi_cfg_edit.sstv_sync_pulses = n;
+                                        cmds.push(Command::SetDigiConfig(
+                                            self.digi_cfg_edit.clone(),
+                                        ));
+                                    }
+                                }
+
                             });
                             // **Receive sensitivity, on a line of its own.**
 

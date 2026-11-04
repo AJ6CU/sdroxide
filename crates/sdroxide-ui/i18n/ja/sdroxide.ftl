@@ -9017,3 +9017,7 @@ publicsdr-star-receiver = この受信機をマイに保存
 publicsdr-unstar-receiver = この受信機をマイから外す
 
 sstv-not-saved = 最後の画像は保存されていません：{ $why }
+
+sstv-sync-pulses = 同期パルス
+
+sstv-sync-pulses-hint = VISヘッダーのない画像を描く前に受信機が要求する同期パルス数。多いほど雑音の多いバンドで安定し、少ないほど進行中の送信を早く捉えます。ロックは常に最新のパルスから始まるため、画像が失われることはありません。

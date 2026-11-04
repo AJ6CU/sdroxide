@@ -9067,3 +9067,7 @@ publicsdr-star-receiver = Diesen Empfänger in MEINE aufnehmen
 publicsdr-unstar-receiver = Diesen Empfänger aus MEINE entfernen
 
 sstv-not-saved = Letztes Bild nicht gespeichert: { $why }
+
+sstv-sync-pulses = SYNC-IMPULSE
+
+sstv-sync-pulses-hint = Wie viele Synchronimpulse der Empfänger sehen will, bevor er ein Bild ohne VIS-Kopf zeichnet: mehr ist auf einem verrauschten Band ruhiger, weniger erwischt eine laufende Übertragung früher. Die Sperre beginnt immer beim neuesten Impuls, ein Bild verliert also nichts.

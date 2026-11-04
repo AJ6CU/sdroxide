@@ -9078,3 +9078,7 @@ publicsdr-star-receiver = Tieni questo ricevitore nei MIEI
 publicsdr-unstar-receiver = Togli questo ricevitore dai MIEI
 
 sstv-not-saved = Ultima immagine non salvata: { $why }
+
+sstv-sync-pulses = IMPULSI SYNC
+
+sstv-sync-pulses-hint = Quanti impulsi di sync vuole il ricevitore prima di disegnare un'immagine senza intestazione VIS: di più è più stabile su una banda rumorosa, di meno aggancia prima una trasmissione in corso. L'aggancio parte sempre dall'impulso più recente, quindi l'immagine non perde nulla.

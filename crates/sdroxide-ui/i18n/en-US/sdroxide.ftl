@@ -9081,3 +9081,9 @@ publicsdr-unstar-receiver = Remove this receiver from MINE
 
 # SSTV panel: a finished frame was not a picture and was not saved. { $why } is a short English reason from the decoder.
 sstv-not-saved = Last frame not saved: { $why }
+
+# SSTV panel: how many sync pulses the receiver wants before it starts drawing a picture with no VIS header.
+sstv-sync-pulses = SYNC PULSES
+
+# Hover text for the SSTV sync-pulse chips (4, 5, 6).
+sstv-sync-pulses-hint = How many sync pulses the receiver wants before it draws a picture that has no VIS header: more is steadier on a noisy band, fewer catches a picture already under way sooner. The lock always starts at the newest pulse, so a picture loses nothing either way.

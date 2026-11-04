@@ -9007,3 +9007,7 @@ publicsdr-star-receiver = 将此接收机保存在“我的”中
 publicsdr-unstar-receiver = 从“我的”中移除此接收机
 
 sstv-not-saved = 上一幅图像未保存：{ $why }
+
+sstv-sync-pulses = 同步脉冲
+
+sstv-sync-pulses-hint = 接收机在没有 VIS 头的情况下开始绘制图像前所需的同步脉冲数：多一些在噪声大的频段更稳，少一些能更早接上正在进行的发射。锁定总是从最新的脉冲开始，因此图像不会因此丢失。

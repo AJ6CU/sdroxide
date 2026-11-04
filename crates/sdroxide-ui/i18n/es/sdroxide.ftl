@@ -9068,3 +9068,7 @@ publicsdr-star-receiver = Guardar este receptor en MÍOS
 publicsdr-unstar-receiver = Quitar este receptor de MÍOS
 
 sstv-not-saved = Última imagen no guardada: { $why }
+
+sstv-sync-pulses = PULSOS DE SYNC
+
+sstv-sync-pulses-hint = Cuántos pulsos de sincronización quiere el receptor antes de dibujar una imagen sin cabecera VIS: más es más estable en una banda ruidosa, menos engancha antes una emisión en curso. El enganche siempre empieza en el pulso más reciente, así que la imagen no pierde nada.

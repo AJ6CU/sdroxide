@@ -9077,3 +9077,7 @@ publicsdr-star-receiver = Deze ontvanger in MIJN bewaren
 publicsdr-unstar-receiver = Deze ontvanger uit MIJN halen
 
 sstv-not-saved = Laatste beeld niet bewaard: { $why }
+
+sstv-sync-pulses = SYNCPULSEN
+
+sstv-sync-pulses-hint = Hoeveel syncpulsen de ontvanger wil voordat hij een beeld tekent zonder VIS-header: meer is rustiger op een rumoerige band, minder pikt een lopende uitzending eerder op. De lock begint altijd op de nieuwste puls, dus een foto verliest hoe dan ook niets.

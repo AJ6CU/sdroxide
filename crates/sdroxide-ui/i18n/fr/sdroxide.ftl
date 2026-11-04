@@ -9080,3 +9080,7 @@ publicsdr-star-receiver = Garder ce récepteur dans LES MIENS
 publicsdr-unstar-receiver = Retirer ce récepteur des MIENS
 
 sstv-not-saved = Dernière image non enregistrée : { $why }
+
+sstv-sync-pulses = IMPULSIONS SYNC
+
+sstv-sync-pulses-hint = Combien d'impulsions de synchronisation le récepteur veut avant de dessiner une image sans en-tête VIS : plus est plus stable sur une bande bruitée, moins accroche plus tôt une émission en cours. Le verrouillage commence toujours à l'impulsion la plus récente, l'image n'y perd rien.

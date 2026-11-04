@@ -9069,3 +9069,7 @@ publicsdr-star-receiver = Bu alıcıyı BENİM içinde tut
 publicsdr-unstar-receiver = Bu alıcıyı BENİM içinden çıkar
 
 sstv-not-saved = Son görüntü kaydedilmedi: { $why }
+
+sstv-sync-pulses = SENK PULSLARI
+
+sstv-sync-pulses-hint = Alıcının VIS başlığı olmayan bir görüntüyü çizmeden önce kaç senkron puls isteyeceği: fazlası gürültülü bantta daha kararlı, azı sürmekte olan bir yayını daha erken yakalar. Kilit her zaman en yeni pulsta başlar, yani görüntü hiçbir şekilde kaybolmaz.

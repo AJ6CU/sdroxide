@@ -142,6 +142,7 @@ impl SstvController {
         let mut rx = SstvRx::new(tap_rate);
         // Default to Auto: the RX auto-detects the mode; TX defaults to Martin 1.
         rx.set_expected(None);
+        rx.set_sync_pulses(cfg.sstv_sync_pulses);
         SstvController {
             cfg,
             dial_hz: 0.0,
@@ -431,6 +432,9 @@ impl DigiEngine for SstvController {
     }
 
     fn set_config(&mut self, cfg: DigiConfig) {
+        // The lock's evidence reaches the receiver, not just the config: it is
+        // the decoder that counts the pulses.
+        self.rx.set_sync_pulses(cfg.sstv_sync_pulses);
         self.cfg = cfg;
         self.status_dirty = true;
     }
@@ -600,6 +604,19 @@ mod tests {
         c.set_sstv_image(SstvMode::Martin1, rgb, w, h);
         c.sstv_restart_rx();
         assert!(c.tx.is_some(), "the transmission was aborted by a receive control");
+    }
+
+    /// **The setting reaches the receiver.** It is the decoder that counts the
+    /// pulses, so a config change that stayed in the config would be a control
+    /// that silently does nothing.
+    #[test]
+    fn the_sync_pulse_setting_reaches_the_receiver() {
+        let mut c = SstvController::new(Mode::Sstv, DigiConfig::default(), 48_000.0);
+        assert_eq!(c.rx.sync_pulses(), 6, "six by default");
+        let mut cfg = DigiConfig::default();
+        cfg.sstv_sync_pulses = 4;
+        c.set_config(cfg);
+        assert_eq!(c.rx.sync_pulses(), 4);
     }
 
     /// **Speckle is not a picture, and a picture is.**
