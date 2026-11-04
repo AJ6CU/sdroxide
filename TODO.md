@@ -3,9 +3,9 @@
 Working queue. Rules in AGENTS.md. Last updated 2026-11-04.
 
 State: `main` at crate 2.2.0, PROTO_VERSION 263 (0x53). Latest release
-v2.2.3.6.2_brown (pre-release). Open PRs: 6 (#453 decoded CW over UDP, blocked on
+v2.2.3.6.2_brown (pre-release). Open PRs: 7 (#453 decoded CW over UDP, blocked on
 AJ6CU's round-trip test; #456 the noise blanker's count; #458 the CW click
-grid; #459 CW PTT release; #460 public-SDR tight fuzzy; #461 audio reopen).
+grid; #459 CW PTT release; #460 public-SDR tight fuzzy; #461 audio reopen; #463 the CW width over rigctl).
 Open issues: 5 (re-measured 2026-11-04).
 
 ## Task tracking rules
@@ -23,6 +23,7 @@ Open issues: 5 (re-measured 2026-11-04).
 
 ## Now
 
+- **PR #463 — a CW width over rigctl is centred on the sidetone** (F4NRM's review of #451, owned by Claude): `filter_for` keeps the mode's default low edge, so `M CW 200` at a 700 Hz pitch set 450–650 and put the tone outside the filter; `M CW 500` looked right only because that width reproduces the default. Centred at the rigctl edge, not in the engine, because the engine must obey a deliberate CW edge drag. `RigState` and `RigDigest` gain the pitch (neither on the wire). Test red without the centring.
 - **PR #459 — a PTT release ends a keyed over** (taken from upstream `5f9f1aa3`, owned by Claude): our `set_ptt_hold` was upstream's pre-fix body line for line, so releasing PTT during a keyer over unkeyed the radio while the keyer stayed latched and nothing keyed again until CLEAR — with VOX on 11 m, a carrier that stays up. Test red without the extra condition.
 - **PR #460 — public SDRs fall back only to tight fuzzy matches** (taken from upstream `ee5b7fbf`, owned by Claude): a query nothing carried literally fell back to the whole fuzzy list, and `twente` came back as 181 unrelated receivers. The fallback now needs the letters inside a window a third longer than the term, so a typo still finds its receiver and scattered letters answer nothing.
 - **PR #461 — a microphone whose stream the host broke is reopened** (taken from upstream `eeb6bfc5`, owned by Claude): the stream records a host-reported break as distinct from a glitch, and the controller drops it and reopens every two seconds until it takes, never while an open is in flight. **Needs the bench**: unplug the sound card mid-session and see it come back on its own.
