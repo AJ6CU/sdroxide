@@ -9091,3 +9091,5 @@ sstv-not-saved-no-picture = Dernière image non enregistrée : le signal ne port
 sstv-save-all = TOUT ENREGISTRER
 
 sstv-save-all-hint = Enregistrer chaque image terminée, y compris celles que le récepteur appellerait du bruit. Désactivé par défaut : le filtre garde le bruit d'une bande calme hors de la galerie, et ceci est le retour pour une image à peine présente.
+
+settings-controls-cw-keeps-the-fine-grid = En CW, le clic se fait sur la grille de 10 Hz quel que soit ce réglage : un signal CW est plus étroit qu'une grille prévue pour la parole ne peut le viser.

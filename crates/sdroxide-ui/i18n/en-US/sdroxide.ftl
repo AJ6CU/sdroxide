@@ -9098,3 +9098,6 @@ sstv-save-all = SAVE ALL
 
 # Hover text for the SAVE ALL chip in the SSTV panel.
 sstv-save-all-hint = Keep every finished frame, including the ones the receiver would call noise. On by default is off: the gate is what keeps a quiet band's noise out of the gallery, and this is the way back for a picture that is barely there.
+
+# Hover text under Settings > Controls > Click-tune rounding.
+settings-controls-cw-keeps-the-fine-grid = CW clicks on the 10 Hz grid whatever is set here: a CW signal is narrower than a grid built for voice can land on.

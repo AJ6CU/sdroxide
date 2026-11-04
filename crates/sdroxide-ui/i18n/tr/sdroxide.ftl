@@ -9080,3 +9080,5 @@ sstv-not-saved-no-picture = Son görüntü kaydedilmedi: sinyalde görüntü yok
 sstv-save-all = TÜMÜNÜ KAYDET
 
 sstv-save-all-hint = Alıcının gürültü sayacağı dahil her tamamlanmış görüntüyü kaydet. Varsayılan olarak kapalı: filtre sessiz bir bandın gürültüsünü galeriden uzak tutar, bu da zar zor gelen bir görüntü için geri dönüş yoludur.
+
+settings-controls-cw-keeps-the-fine-grid = CW'de bu ayar ne olursa olsun tıklama 10 Hz ızgarasına oturur: bir CW sinyali, ses için yapılmış bir ızgaranın isabet edebileceğinden dardır.

@@ -9088,3 +9088,5 @@ sstv-not-saved-no-picture = Laatste beeld niet bewaard: het signaal bevatte geen
 sstv-save-all = ALLES BEWAREN
 
 sstv-save-all-hint = Bewaar elk afgemaakt beeld, ook wat de ontvanger ruis zou noemen. Standaard uit: de poort houdt de ruis van een stille band uit de galerij, en dit is de terugweg voor een foto die er nauwelijks is.
+
+settings-controls-cw-keeps-the-fine-grid = In CW klikt het op het 10 Hz-raster wat hier ook staat: een CW-signaal is smaller dan een raster voor spraak kan raken.
