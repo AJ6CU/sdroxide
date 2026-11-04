@@ -20831,7 +20831,7 @@ fn save_image_rx(kind: &str, png: &[u8]) -> Option<String> {
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_millis())
         .unwrap_or(0);
-    let name = format!("{kind}-{ts}.png");
+    let name = free_image_name(&dir, kind, ts);
     let path = dir.join(&name);
     match std::fs::write(&path, png) {
         Ok(()) => Some(name),
@@ -20839,6 +20839,59 @@ fn save_image_rx(kind: &str, png: &[u8]) -> Option<String> {
             warn!("saving {kind} image {}: {e}", path.display());
             None
         }
+    }
+}
+
+/// A file name for a received picture that nothing else has taken.
+///
+/// The same picture arrives on two receivers at once — a public SDR and the
+/// station's own radio on the same station — and both complete inside the same
+/// millisecond, so the plain name is written twice and the first is lost (the
+/// same fault WEFAX had, fixed the same way: the first keeps the plain name and
+/// the later ones take `-2`, `-3`).
+fn free_image_name(dir: &std::path::Path, kind: &str, ts: u128) -> String {
+    let mut name = format!("{kind}-{ts}.png");
+    for n in 2..=99u32 {
+        if !dir.join(&name).exists() {
+            break;
+        }
+        name = format!("{kind}-{ts}-{n}.png");
+    }
+    name
+}
+
+#[cfg(test)]
+mod image_name_tests {
+    use super::free_image_name;
+
+    /// **Two receivers finishing the same picture do not overwrite each other.**
+    ///
+    /// The same transmission heard on a public SDR and on the station's own
+    /// radio completes inside the same millisecond, so the plain name was
+    /// written twice and the first picture lost (bench, 2026-11-04). The first
+    /// keeps the plain name, the later ones take `-2`, `-3`, as WEFAX's charts
+    /// already did.
+    #[test]
+    fn a_picture_two_receivers_finish_at_once_keeps_both() {
+        let dir = std::env::temp_dir().join(format!("sdroxide-image-names-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).expect("temp dir");
+        let ts = 1_790_000_000_000u128;
+        assert_eq!(
+            free_image_name(&dir, "sstv", ts),
+            format!("sstv-{ts}.png"),
+            "the first keeps the plain name"
+        );
+        std::fs::write(dir.join(format!("sstv-{ts}.png")), b"x").expect("first");
+        assert_eq!(free_image_name(&dir, "sstv", ts), format!("sstv-{ts}-2.png"));
+        std::fs::write(dir.join(format!("sstv-{ts}-2.png")), b"x").expect("second");
+        assert_eq!(free_image_name(&dir, "sstv", ts), format!("sstv-{ts}-3.png"));
+        // Another kind is unaffected: the name carries it.
+        assert_eq!(
+            free_image_name(&dir, "wefax", ts),
+            format!("wefax-{ts}.png"),
+            "a different store does not share the count"
+        );
+        std::fs::remove_dir_all(&dir).ok();
     }
 }
 
