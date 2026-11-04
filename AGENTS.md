@@ -256,10 +256,10 @@ are closed/unlicensed (research only). SDRuno look is parked.
 
 ## Where the work stands
 
-- `main` at crate 2.2.0, PROTO_VERSION 260 (0x50). Latest release
+- `main` at crate 2.2.0, PROTO_VERSION 262 (0x52). Latest release
   v2.2.3.6.2_brown (pre-release).
-- Open issues: 7 (re-measured 2026-11-03). Open PRs: 3 — #425 dynamic DNS,
-  #434 public-SDR favourites, #435 the carrier rule's corrected trigger.
+- Open issues: 8 (re-measured 2026-11-04). Open PRs: 1 — #434 public-SDR
+  favourites.
 - STANAG 4285 finished (Mark proved decode with video; coded payload not
   implemented — legal restriction). Olivia proven by user (RX+TX). Grey-line
   confirmed. S-meter still an issue.
@@ -276,9 +276,10 @@ are closed/unlicensed (research only). SDRuno look is parked.
   range, the auto-slant fit, the carrier-gone ending, the schedule links. Open:
   #435, the carrier rule's corrected trigger — #432 merged one that the bench
   disproved within hours (1687/1687 windows read "in band" over a real gap).
-- Dynamic DNS (#425) back after F4NRM's review: the worker moved into the
-  engine, the answer relayed as a wire message (PROTO_VERSION 260 → 262 on that
-  branch), the address hidden, the token-in-clear note in eleven languages.
+- Dynamic DNS merged (#425, 2026-11-03): the worker lives in the engine, the
+  answer travels as `RadioEvent::DyndnsAnswer` / `ServerMsg::DyndnsAnswer`
+  (PROTO_VERSION 260 → 262), the address is hidden and the token-in-clear note
+  is in eleven languages.
 - Public-SDR favourites (#434): a star per receiver and a MINE chip, kept by
   address in the settings.
 - #427 SSTV starts on voice: ours after F4NRM made no move; the fix is to keep
