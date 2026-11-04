@@ -2840,7 +2840,7 @@ mod tests {
             .iter()
             .position(|e| matches!(e, SstvEvent::ModeDetected(SstvMode::Scottie2)))
             .expect("the second header");
-        let first_done = events.iter().position(|e| matches!(e, SstvEvent::ImageComplete));
+        let first_done = events.iter().position(|e| matches!(e, SstvEvent::ImageComplete { .. }));
         assert!(
             first_done.is_none_or(|done| done > second_at),
             "the false picture was completed after the real one had begun"
