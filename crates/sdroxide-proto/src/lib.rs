@@ -2176,8 +2176,14 @@ use sdroxide_types::{
 /// an English `Notice`; now it carries the reason and the frequency, and the
 /// screen words it in the operator's language. `PROTO_VERSION` 259 → 260,
 /// `VERSION_BYTE` 0x4F → 0x50.
-pub const PROTO_VERSION: u16 = 263;
-const VERSION_BYTE: u8 = 0x53;
+/// v264: decoded CW over UDP. [`sdroxide_types::WsjtxConfig`] gains `cw_text`
+/// ([`sdroxide_types::CwTextConfig`]) on its tail, beside the N1MM broadcast it
+/// sits with. `WsjtxConfig` rides `Command::SetWsjtxConfig` whole, so a v263
+/// peer handed one reads the extra bytes as the start of the next message. The
+/// same change as upstream's v171. `PROTO_VERSION` 263 → 264, `VERSION_BYTE`
+/// 0x53 → 0x54.
+pub const PROTO_VERSION: u16 = 264;
+const VERSION_BYTE: u8 = 0x54;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -3458,7 +3464,7 @@ mod tests {
             ServerMsg::TxRefused(w, hz) => assert_eq!((w, hz), (why, 7_074_000.0)),
             _ => panic!("TxRefused did not round-trip"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (263, 0x53));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (264, 0x54));
     }
 
     /// The dynamic-DNS answer rides last on [`ServerMsg`], and it has to: the
@@ -3489,7 +3495,7 @@ mod tests {
             }
             other => panic!("the answer did not round-trip: {other:?}"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (263, 0x53));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (264, 0x54));
     }
 
     /// postcard is positional: a field inserted mid-struct shifts every byte

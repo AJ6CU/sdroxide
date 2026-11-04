@@ -821,7 +821,7 @@ settings-servers-t-127-0-0-1-reaches-2 = 127.0.0.1 bu makinedeki istemcilere ula
 settings-servers-t-12060-port-n1mm-s-documentation = 12060, N1MM'nin belgelerinin önerdiği bağlantı noktasıdır
 settings-servers-station-name = İstasyon adı
 settings-servers-what-n1mm-calls-stationname-name = N1MM'nin StationName dediği şey: paketi gönderen bilgisayarın adı. Günlükleyiciler, bir işletim konumunu diğerinden ayırt etmek için bunu gösterir.
-settings-servers-cw-panel-s-copy-plain = CW panelinin kopyası düz metin olarak, oturduğu her parça için bir UDP datagramı — bir istasyon denetleyicisi, bir günlükleyicinin CW penceresi ya da bir betik için. Protokol yoktur: bir dinleyici, gelenleri sadece ekler (nc -ul 9999 deneyin). Yalnızca oturmuş metin gönderilir; çözücünün hâlâ düzeltmekte olduğu kuyruk asla gönderilmez. Her radyonun kendi anahtarı vardır.
+settings-servers-cw-panel-s-copy-plain = CW panelinin kopyası düz metin olarak, oturduğu her parça için bir UDP datagramı — bir istasyon denetleyicisi, bir günlükleyicinin CW penceresi ya da bir betik için. Protokol yoktur: bir dinleyici, gelenleri sadece ekler (nc -ul 9998 deneyin). Yalnızca oturmuş metin gönderilir; çözücünün hâlâ düzeltmekte olduğu kuyruk asla gönderilmez. Her radyonun kendi anahtarı vardır.
 settings-servers-apply = {" "}UYGULA{" "}
 settings-servers-persist-re-open-broadcast-sockets = Kaydet ve yayın soketlerini (yeniden) aç
 settings-servers-hamlib-rigctld-server = Hamlib rigctld sunucusu
@@ -9082,3 +9082,9 @@ sstv-save-all = TÜMÜNÜ KAYDET
 sstv-save-all-hint = Alıcının gürültü sayacağı dahil her tamamlanmış görüntüyü kaydet. Varsayılan olarak kapalı: filtre sessiz bir bandın gürültüsünü galeriden uzak tutar, bu da zar zor gelen bir görüntü için geri dönüş yoludur.
 
 settings-controls-cw-keeps-the-fine-grid = CW'de bu ayar ne olursa olsun tıklama 10 Hz ızgarasına oturur: bir CW sinyali, ses için yapılmış bir ızgaranın isabet edebileceğinden dardır.
+
+settings-servers-decoded-cw-udp = UDP üzerinden çözülmüş CW
+
+settings-servers-decoded-cw-udp-host-hint = 127.0.0.1 bu makinedeki programlara ulaşır; bir yerel ağ adresi veya bu alt ağın yayın adresi diğerlerine ulaşır.
+
+settings-servers-decoded-cw-udp-port-hint = Varsayılan 9998

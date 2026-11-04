@@ -818,7 +818,7 @@ settings-servers-t-127-0-0-1-reaches-2 = 127.0.0.1 はこのマシン上のク�
 settings-servers-t-12060-port-n1mm-s-documentation = 12060 は、N1MM のドキュメントが推奨するポートです
 settings-servers-station-name = ステーション名
 settings-servers-what-n1mm-calls-stationname-name = N1MM が StationName と呼ぶもの：パケットを送ったコンピューターの名前です。ロガーは、どの運用席かを区別するためにこれを表示します。
-settings-servers-cw-panel-s-copy-plain = CW パネルの受信文字を、確定するたびに 1 件の UDP データグラムずつ平文で送信します。ステーションのコントローラー、ロガーの CW ウィンドウ、スクリプト向けです。独自のプロトコルはなく、受信側は届いたものを追記するだけです（nc -ul 9999 などで試せます）。確定したテキストのみを送り、デコーダーがまだ書き直している末尾は送りません。無線機ごとに独自のスイッチがあります。
+settings-servers-cw-panel-s-copy-plain = CW パネルの受信文字を、確定するたびに 1 件の UDP データグラムずつ平文で送信します。ステーションのコントローラー、ロガーの CW ウィンドウ、スクリプト向けです。独自のプロトコルはなく、受信側は届いたものを追記するだけです（nc -ul 9998 などで試せます）。確定したテキストのみを送り、デコーダーがまだ書き直している末尾は送りません。無線機ごとに独自のスイッチがあります。
 settings-servers-apply = {" "}適用{" "}
 settings-servers-persist-re-open-broadcast-sockets = 保存して（再）オープン、ブロードキャストソケット
 settings-servers-hamlib-rigctld-server = Hamlib rigctld サーバー
@@ -9030,3 +9030,9 @@ sstv-save-all = すべて保存
 sstv-save-all-hint = 受信機が雑音とみなすものも含め、完成したすべての画像を保存します。既定ではオフ：フィルタは静かなバンドの雑音をギャラリーに入れず、これはかろうじて届いた画像のための戻り道です。
 
 settings-controls-cw-keeps-the-fine-grid = CW ではこの設定にかかわらず 10 Hz の刻みでクリックします。CW の信号は、音声向けの刻みでは捉えられないほど狭いためです。
+
+settings-servers-decoded-cw-udp = UDPでCWデコード文を送信
+
+settings-servers-decoded-cw-udp-host-hint = 127.0.0.1 はこのマシン上のプログラムに届きます。LAN のアドレスやこのサブネットのブロードキャストアドレスなら他のマシンに届きます。
+
+settings-servers-decoded-cw-udp-port-hint = 既定値は 9998
