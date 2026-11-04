@@ -4,7 +4,7 @@ Working queue. Rules in AGENTS.md. Last updated 2026-11-04.
 
 State: `main` at crate 2.2.0, PROTO_VERSION 263 (0x53). Latest release
 v2.2.3.6.2_brown (pre-release). Open PRs: 1 (#453 decoded CW over UDP, blocked on
-AJ6CU's round-trip test). Open issues: 8 (re-measured 2026-11-04).
+AJ6CU's round-trip test). Open issues: 7 (re-measured 2026-11-04).
 
 ## Task tracking rules
 
@@ -24,7 +24,6 @@ AJ6CU's round-trip test). Open issues: 8 (re-measured 2026-11-04).
 - **#439 CW click lands 370 Hz low** (added by drdatapi via #439, owned by Claude) — does not reproduce: four clicks on the bench put the dial at pointer − pitch on the 10 Hz grid and the readout on the pointer, the operator confirmed the same on his own screen, and v2.2.3.6.3's code for that path is identical to `main` (diffed). Asked on the issue for the pitch box's value at the moment it happens; that is the only arithmetic that fits.
 - **#421 NB with Kiwi** (added by trainrhd-del, owned by Claude) — the reporter came back: the blanker works on strong noise and not on weak, and its threshold is in samples, so it means something different at 20 kHz than at 768 kHz. A build that counts what it removes was promised.
 - **#388 HL2 datagram loss** (added by DK8JV, owned by Claude) — the reporter confirms it gone in v2.2.3.6.1; today's WEFAX findings are posted there. Closes when his fax test comes back clean.
-- **#402 "#283 still same problem"** (added by kvenl, owned by nobody) — a pointer to #283, which is closed; a candidate to close as a duplicate.
 - **WEFAX bench test — stopped 2026-11-03 21:20 UTC**: propagation went before the night half could run; the DWD 3855 sweep of 2026-11-04 ran 14:20–16:10 UTC and gave five complete charts, and WEFAX is finished from our side. Logs: `/tmp/wefax-dwd3855.log`.
 - SWL users group requests (added by the SWL users group, owned by Roy) — point **4** is still ours: CTR ratchets the span down on keyboard tuning while the user cannot widen it again, exposed by #397's per-rate usable span; needs a `ctr_zoom_sim` case with `usable < rate`. Points 1 and 3 are in (#409, #406); 2 (start in Listening/Operating per radio) is parked.
 Everything else that was in this list has been merged or closed since — see **Recently done** and the PR list on the board.
@@ -89,6 +88,7 @@ Everything else that was in this list has been merged or closed since — see **
 
 ## Recently done
 
+- 2026-11-04 — #402 closed as a duplicate of #283 (added by kvenl, owned by Claude, the operator's call): a pointer to a closed issue cannot be worked from; a fresh report with the version and what is actually seen is what gets it looked at. #419 (DRM) answered the same day: not in the queue now, a PR would be reviewed, otherwise F4NRM's to pick up — with a line on what "not working" means asked for so it is actionable.
 - 2026-11-04 — AJ6CU's rigctl set merged (added by AJ6CU, owned by Claude): **#451** a new width in the mode already running sets the filter and leaves the mode alone, with the `PKT` guard so a digital session still ignores WSJT-X's periodic write; **#452** squelch, AGC and NR strength as Hamlib levels, and `U NR 1` now restores the engine and strength last on instead of always the spectral NR at medium; **#454** the front-end gain as `RF`, advertised in `\dump_state` only where a gain stage exists. Checked on a local build before merging: gate silent, `sdroxide-rigctld` 48 tests, and `l RF` moves the same element the top bar's slider moves. **#453** (decoded CW over UDP) is blocked on its `WsjtxConfig` round-trip test — see Waiting on other people.
 - 2026-11-04 — SSTV's save gate reads the rows only (added by the operator at the bench, owned by Claude; **merged** #450): four of nine frames kept in one evening were speckle with a sliver of picture at the top, their rows 0.03–0.10, and the sync arm at 0.85 had let them through — so the share is not a discriminator at any threshold, and the rows are. A genuinely flat frame is the casualty and SAVE ALL is the way back. Red verified with the gate off; the reason code `SstvDrop::NoPicture` stays in the type for a peer that sends it.
 - 2026-11-04 — WEFAX finished from our side (added by madmedicnl, owned by Claude): five of five charts complete on DWD 3855, each ending on the station's own boundary, posted in #444. Residual slant after the auto-slant, measured on each chart's printed frame line: −11.5, −2.9, +6.5, −1.1, +12.3 ppm — a 24 ppm spread from one transmitter to one receiver in 70 minutes, so the varying part is our twenty-line measurement and not the clocks. Reported in #444; the better fit (over the whole chart's frame line) is F4NRM's call.
