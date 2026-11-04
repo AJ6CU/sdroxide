@@ -2559,10 +2559,6 @@ mod tests {
         assert!((trimmed / base - 1.01).abs() < 0.0005, "ratio {}", trimmed / base);
     }
 
-    /// Free-run: feed the RX the picture audio *after* the VIS header (as if we
-    /// tuned in mid-transmission). With the mode pre-selected it should lock onto
-    /// the sync cadence and decode.
-    #[test]
     /// **The right edge of a picture is the picture, not the next segment.**
     ///
     /// The tone changes into the next segment at the end of every scan and the
@@ -2612,6 +2608,9 @@ mod tests {
         );
     }
 
+    /// Free-run: feed the RX the picture audio *after* the VIS header (as if we
+    /// tuned in mid-transmission). With the mode pre-selected it should lock onto
+    /// the sync cadence and decode.
     #[test]
     fn freerun_decodes_without_vis() {
         let rate = 48_000.0;
