@@ -292,6 +292,31 @@ fn block_rank(a: &AdsbAircraft) -> u8 {
     }
 }
 
+/// An airport's symbol: a small aeroplane seen from above, nose up, `s` pixels
+/// from nose to wing tip. Drawn as convex pieces (fuselage, two wings, two
+/// tailplanes) because a filled concave polygon would be triangulated wrongly,
+/// over a faint halo so it stays readable on the dotted land. It replaces the
+/// plain circle, which looked like any other dot on the chart.
+fn draw_airport_symbol(p: &Painter, c: Pos2, s: f32, ink: Color32, halo: Color32) {
+    p.circle_filled(c, s * 1.15, halo);
+    // (x, y) in units of `s`, y down; the left half is the mirror of the right.
+    let piece = |pts: &[(f32, f32)]| -> Vec<Pos2> {
+        pts.iter().map(|&(x, y)| c + vec2(x * s, y * s)).collect()
+    };
+    let mirror = |pts: &[(f32, f32)]| -> Vec<(f32, f32)> {
+        pts.iter().rev().map(|&(x, y)| (-x, y)).collect()
+    };
+    let fuselage = [(0.0, -1.0), (0.14, -0.78), (0.14, 0.88), (0.0, 1.05), (-0.14, 0.88), (-0.14, -0.78)];
+    let wing = [(0.0, -0.22), (1.0, 0.32), (1.0, 0.52), (0.0, 0.26)];
+    let tail = [(0.0, 0.66), (0.42, 0.93), (0.42, 1.04), (0.0, 0.9)];
+    for pts in [&fuselage[..], &wing[..], &tail[..]] {
+        p.add(Shape::convex_polygon(piece(pts), ink, Stroke::NONE));
+    }
+    for pts in [&wing[..], &tail[..]] {
+        p.add(Shape::convex_polygon(piece(&mirror(pts)), ink, Stroke::NONE));
+    }
+}
+
 /// Airports and radio navigation aids, filtered by zoom.
 ///
 /// **The filter is the feature.** The tables hold 11 008 navaids and 5 280
@@ -331,9 +356,11 @@ fn draw_nav_layer(
         }
         let c = project(a.lat, a.lon);
         if let Some(p) = p {
-            p.circle_stroke(c, 2.6, Stroke::new(1.0, alpha(map.border, 150.0)));
+            // A large airport is a bigger, brighter aeroplane than a medium one.
             if a.large {
-                p.circle_filled(c, 1.2, alpha(map.city_label, 200.0));
+                draw_airport_symbol(p, c, 4.6, alpha(map.city_label, 235.0), alpha(map.sea, 140.0));
+            } else {
+                draw_airport_symbol(p, c, 3.4, alpha(map.city_label, 170.0), alpha(map.sea, 110.0));
             }
             if zoom.airport_labels && (a.large || zoom.medium_labels) {
                 let name = if a.iata.is_empty() { a.ident.as_str() } else { a.iata.as_str() };
