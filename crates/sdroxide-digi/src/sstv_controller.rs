@@ -15,21 +15,28 @@ use crate::DigiEngine;
 const OUT_RATE: f64 = 48_000.0;
 
 /// The share of a picture's lines whose sync pulse must be found before it is
-/// kept, whatever its content looks like.
+/// kept **on that alone**, whatever its content looks like.
 ///
-/// Measured on the bench (2026-11-04): a picture that arrived properly has its
-/// pulse where the mode says on almost every line, a frame locked onto noise
-/// on none. A third of the lines is far below a real picture's score and far
-/// above noise's, which leaves room for a picture heard through a fade.
-const SAVE_SYNC_SHARE: f32 = 0.3;
+/// This started at 0.3 on the reasoning that a frame locked onto noise has its
+/// lines placed by the clock alone. The bench said otherwise the same
+/// afternoon: a frame that was pure noise scored **0.70** — the sync detector
+/// finds pulses in noise often enough — while real pictures scored 0.74–0.76
+/// on the same weak signal. So the share cannot be a low bar; it is only worth
+/// believing when nearly every line found its pulse, which a flat picture
+/// heard cleanly manages and noise does not.
+const SAVE_SYNC_SHARE: f32 = 0.85;
 
 /// How much neighbouring rows must agree before a picture is kept, as a
 /// Pearson correlation over the whole frame.
 ///
-/// The second opinion, for a picture whose syncs were lost to a deep fade but
-/// whose content is plainly there. Measured on the same gallery: speckle scores
-/// 0.00–0.20 between rows, real pictures 0.29–0.91 — a threshold in the gap,
-/// and deliberately low, because a weak picture is worth keeping.
+/// The **primary** sign, and the one that does the work: how much neighbouring
+/// rows agree, as a Pearson correlation over the finished frame.
+///
+/// Measured on the bench (2026-11-04): speckle scores 0.00–0.20 between rows,
+/// real pictures 0.38–0.96 — including the ones whose syncs were poor, and
+/// including a picture whose top third arrived before the signal went. A
+/// threshold in the gap, and deliberately low, because a weak picture is worth
+/// keeping.
 const SAVE_ROW_AGREEMENT: f32 = 0.25;
 
 /// Whether a finished frame is a picture worth keeping.
@@ -616,14 +623,25 @@ mod tests {
         assert!(!keep_frame(0.0, noise_rows), "speckle is not kept on its rows");
     }
 
-    /// **The two signs are independent, and either one is enough.** A picture
-    /// heard through a fade loses its syncs but keeps its content; one that
-    /// arrived cleanly keeps its syncs even if it is a flat field.
+    /// **Either sign keeps a picture, and neither of the bench's numbers does
+    /// it alone.**
+    ///
+    /// The sync share started as a low bar and the bench threw it out: a frame
+    /// of pure noise scored **0.70**, because the sync detector finds pulses in
+    /// noise. So the share only counts when nearly every line found its pulse,
+    /// and the row agreement — which put that same noise frame at 0.07 — is
+    /// what keeps a weak picture.
     #[test]
-    fn either_sign_keeps_a_picture() {
+    fn either_sign_keeps_a_picture_but_noise_scores_on_neither() {
         assert!(keep_frame(0.95, 0.0), "clean syncs keep it whatever the content");
         assert!(keep_frame(0.0, 0.6), "plain content keeps it whatever the syncs");
         assert!(!keep_frame(0.1, 0.05), "neither sign: not a picture");
         assert!(!keep_frame(0.0, 0.0), "an empty frame is not a picture");
+        // The bench's own numbers, from the two frames that were noise:
+        assert!(!keep_frame(0.70, 0.07), "a noise frame's sync share must not keep it");
+        assert!(!keep_frame(0.72, 0.10), "nor the second one's");
+        // ...and the pictures that were kept:
+        assert!(keep_frame(0.74, 0.75), "a real picture, weak signal");
+        assert!(keep_frame(0.67, 0.38), "a picture whose top third arrived");
     }
 }
