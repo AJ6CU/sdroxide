@@ -9805,6 +9805,24 @@ fn rec_format_chip(format: RecordingFormat, audio: bool, active: RecordingFormat
 
 #[cfg(test)]
 mod tests {
+    /// **The CW passband follows the pitch.** A click in CW leaves the tone at
+    /// the pitch (see `widgets::spectrum_view`), so the filter has to be centred
+    /// there too or the signal the click just tuned lands at its edge — the
+    /// other half of issue #439's "off frequency".
+    #[test]
+    fn the_cw_passband_is_centred_on_the_pitch() {
+        let (lo, hi) = Mode::Cw.default_filter();
+        for pitch in [400.0, 700.0, 1500.0] {
+            let (flo, fhi) = preset_edges(Mode::Cw, lo, hi, pitch);
+            assert!(
+                ((flo + fhi) * 0.5 - pitch).abs() < 0.5,
+                "a {pitch} Hz pitch gave {flo}..{fhi}"
+            );
+            assert!((fhi - flo - (hi - lo)).abs() < 0.5, "the width must not change");
+        }
+        // Every other mode keeps the edges it was given.
+        assert_eq!(preset_edges(Mode::Usb, -2850.0, -150.0, 700.0), (-2850.0, -150.0));
+    }
 
     /// A mode on the experimental bench must be drawn exactly once: under its
     /// own caption, and not also in the Digital grid. Twice in one popup — once
