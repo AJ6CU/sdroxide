@@ -3,8 +3,10 @@
 Working queue. Rules in AGENTS.md. Last updated 2026-11-04.
 
 State: `main` at crate 2.2.0, PROTO_VERSION 263 (0x53). Latest release
-v2.2.3.6.2_brown (pre-release). Open PRs: 1 (#453 decoded CW over UDP, blocked on
-AJ6CU's round-trip test). Open issues: 6 (re-measured 2026-11-04).
+v2.2.3.6.2_brown (pre-release). Open PRs: 7 (#453 decoded CW over UDP, blocked on
+AJ6CU's round-trip test; #456 the noise blanker's count; #458 the CW click
+grid; #459 CW PTT release; #460 public-SDR tight fuzzy; #461 audio reopen; #463 the CW width over rigctl).
+Open issues: 5 (re-measured 2026-11-04).
 
 ## Task tracking rules
 
@@ -21,8 +23,12 @@ AJ6CU's round-trip test). Open issues: 6 (re-measured 2026-11-04).
 
 ## Now
 
-- **#439 CW click lands 370 Hz low** (added by drdatapi via #439, owned by Claude) — does not reproduce: four clicks on the bench put the dial at pointer − pitch on the 10 Hz grid and the readout on the pointer, the operator confirmed the same on his own screen, and v2.2.3.6.3's code for that path is identical to `main` (diffed). Asked on the issue for the pitch box's value at the moment it happens; that is the only arithmetic that fits.
-- **#421 NB with Kiwi** (added by trainrhd-del, owned by Claude) — the reporter came back: the blanker works on strong noise and not on weak, and its threshold is in samples, so it means something different at 20 kHz than at 768 kHz. A build that counts what it removes was promised.
+- **PR #463 — a CW width over rigctl is centred on the sidetone** (F4NRM's review of #451, owned by Claude): `filter_for` keeps the mode's default low edge, so `M CW 200` at a 700 Hz pitch set 450–650 and put the tone outside the filter; `M CW 500` looked right only because that width reproduces the default. Centred at the rigctl edge, not in the engine, because the engine must obey a deliberate CW edge drag. `RigState` and `RigDigest` gain the pitch (neither on the wire). Test red without the centring.
+- **PR #459 — a PTT release ends a keyed over** (taken from upstream `5f9f1aa3`, owned by Claude): our `set_ptt_hold` was upstream's pre-fix body line for line, so releasing PTT during a keyer over unkeyed the radio while the keyer stayed latched and nothing keyed again until CLEAR — with VOX on 11 m, a carrier that stays up. Test red without the extra condition.
+- **PR #460 — public SDRs fall back only to tight fuzzy matches** (taken from upstream `ee5b7fbf`, owned by Claude): a query nothing carried literally fell back to the whole fuzzy list, and `twente` came back as 181 unrelated receivers. The fallback now needs the letters inside a window a third longer than the term, so a typo still finds its receiver and scattered letters answer nothing.
+- **PR #461 — a microphone whose stream the host broke is reopened** (taken from upstream `eeb6bfc5`, owned by Claude): the stream records a host-reported break as distinct from a glitch, and the controller drops it and reopens every two seconds until it takes, never while an open is in flight. **Needs the bench**: unplug the sound card mid-session and see it come back on its own.
+- **PR #458 — the CW click grid is fine in CW** (added by drdatapi via #439, owned by Claude): a 1000 Hz grid set for SSB made every CW click up to half a kilohertz wrong, with the click, the readout and the arithmetic all blameless. CW now caps the grid at the 10 Hz default, a finer choice is kept, and the setting's hover text says so in eleven languages. The temporary `cw click:` log line that #439 needed is removed with it — it reached `main` by mistake, swept in by #450's `git add -A`. Test verified red with the cap removed.
+- **#421 NB with Kiwi** (added by trainrhd-del, owned by Claude) — the reporter came back: the blanker works on strong noise and not on weak, and his Kiwi's 20 kHz stream behaves differently from the Airspy at 768 kHz. The promised count is built (**PR #456**): the blanker reports, once a second, how many samples it zeroed and how close the strongest came to its 5× bar, with the device rate. A simulation of the shipped rule says the dependence is real and in our code — at the same impulse strength 20.3 kHz blanked 14 of 258 bursts where 768 kHz blanked 207 of 297 — but the reporter's own log lines decide the fix, and he gets them in the next pre-release.
 - **#388 HL2 datagram loss** (added by DK8JV, owned by Claude) — the reporter confirms it gone in v2.2.3.6.1; today's WEFAX findings are posted there. Closes when his fax test comes back clean.
 - **WEFAX bench test — stopped 2026-11-03 21:20 UTC**: propagation went before the night half could run; the DWD 3855 sweep of 2026-11-04 ran 14:20–16:10 UTC and gave five complete charts, and WEFAX is finished from our side. Logs: `/tmp/wefax-dwd3855.log`.
 - SWL users group requests (added by the SWL users group, owned by Roy) — point **4** is still ours: CTR ratchets the span down on keyboard tuning while the user cannot widen it again, exposed by #397's per-rate usable span; needs a `ctr_zoom_sim` case with `usable < rate`. Points 1 and 3 are in (#409, #406); 2 (start in Listening/Operating per radio) is parked.
@@ -40,6 +46,8 @@ Everything else that was in this list has been merged or closed since — see **
 - #132 Wrong frequency display (added by emi83170, owned by Roy).
 
 ## Waiting on other people
+
+- **Two upstream wire commits wait for the counter** (added by dividebysandwich upstream, owned by Claude): `1de045ea` gives a band-plan sub-segment an optional label (CB channels named on the waterfall strip — the fork-shaped half of it), and `ffdefc70` makes Memories CLEAR delete every channel at once. Both change the wire, and `PROTO_VERSION` is one counter between us and F4NRM: #453 takes 264, so these are 265 and 266 and neither goes up until #453 has landed. Each needs its own round-trip test; the label one also needs the eleven languages for its text.
 
 - **PR #453 — decoded CW over UDP** (added by AJ6CU 2026-11-04, owned by Claude) — the wire rule is the only gap left: `WsjtxConfig` rides `Command::SetWsjtxConfig` whole and has no postcard round-trip test. The test is written, verified red by skipping `cw_text` on the wire, and posted in the PR as a paste-ready block; the branch is his fork and a maintainer push is refused (403), so it cannot be merged until it is in. Question to AJ6CU: will you add the test to `brown-cw-text-udp` yourself? The other three (#451, #452, #454) are ready and need nothing from him.
 
@@ -88,6 +96,7 @@ Everything else that was in this list has been merged or closed since — see **
 
 ## Recently done
 
+- 2026-11-04 — #439 closed as user error (added by drdatapi, owned by Claude, the operator's call): the click, the readout and the release's code were all right; his **Click-tune rounding** was set to 1000 Hz for hunting SSB, and in CW that is a one-kilohertz grid, so a click landed up to half of it away. His 1.6.11 comparison is explained by that install still having 10 Hz. Open question left with the operator: should the grid fall to the fine one whenever the CW decoder is in front, so the coarse setting cannot bite there.
 - 2026-11-04 — #132 (wrong frequency display) closed (added by emi83170, owned by Claude, the operator's call): the answer was already in the thread — the Brick2's I/Q polarity (`Settings → Radio → Swap I/Q`) for the mirrored stations, and IARU Region 2 for the 7.200 MHz band edge — and it has been quiet since 28 October. The close asks for a reopen if it is still there, which keeps the videos and the history together.
 - 2026-11-04 — #402 closed as a duplicate of #283 (added by kvenl, owned by Claude, the operator's call): a pointer to a closed issue cannot be worked from; a fresh report with the version and what is actually seen is what gets it looked at. #419 (DRM) answered the same day: not in the queue now, a PR would be reviewed, otherwise F4NRM's to pick up — with a line on what "not working" means asked for so it is actionable.
 - 2026-11-04 — AJ6CU's rigctl set merged (added by AJ6CU, owned by Claude): **#451** a new width in the mode already running sets the filter and leaves the mode alone, with the `PKT` guard so a digital session still ignores WSJT-X's periodic write; **#452** squelch, AGC and NR strength as Hamlib levels, and `U NR 1` now restores the engine and strength last on instead of always the spectral NR at medium; **#454** the front-end gain as `RF`, advertised in `\dump_state` only where a gain stage exists. Checked on a local build before merging: gate silent, `sdroxide-rigctld` 48 tests, and `l RF` moves the same element the top bar's slider moves. **#453** (decoded CW over UDP) is blocked on its `WsjtxConfig` round-trip test — see Waiting on other people.
