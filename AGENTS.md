@@ -273,9 +273,10 @@ are closed/unlicensed (research only). SDRuno look is parked.
 
 - WEFAX is ours now (the operator's call, 2026-11-03) and still goes up as a PR
   for a second pair of eyes. Merged that day: unique chart names, KiwiSDR tuning
-  range, the auto-slant fit, the carrier-gone ending, the schedule links. Open:
-  #435, the carrier rule's corrected trigger — #432 merged one that the bench
-  disproved within hours (1687/1687 windows read "in band" over a real gap).
+  range, the auto-slant fit, the carrier-gone ending, the schedule links, and
+  #435 — #432 merged a carrier rule the bench disproved within hours (1687/1687
+  windows read "in band" over a real gap), so the corrected trigger followed.
+  It has not fired on air yet: propagation went before the night half could run.
 - Dynamic DNS merged (#425, 2026-11-03): the worker lives in the engine, the
   answer travels as `RadioEvent::DyndnsAnswer` / `ServerMsg::DyndnsAnswer`
   (PROTO_VERSION 260 → 262), the address is hidden and the token-in-clear note
