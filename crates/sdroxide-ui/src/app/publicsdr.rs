@@ -1003,6 +1003,10 @@ mod tests {
             );
             let mut text = Vec::new();
             let shapes: Vec<egui::Shape> = output.shapes.iter().map(|c| c.shape.clone()).collect();
+            // The frame's textures are never uploaded here, and a debug build
+            // asserts when a delta is dropped unhandled — which is how this
+            // test passed in release and failed in debug (review, 2026-11-04).
+            output.drop_without_applying_deltas();
             glyphs(&shapes, &mut text);
             assert!(
                 text.iter().any(|t| t.contains(want)),
