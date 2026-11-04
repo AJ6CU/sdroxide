@@ -3821,19 +3821,19 @@ mod tests {
         assert_eq!(pos.y, 20.0, "and to the top edge, which is all the room there is");
     }
 
-    /// **A click on a CW signal puts the tone where the operator listens.**
+    /// **A CW click leaves the tone at the operator's pitch.**
     ///
     /// Reported as "tuning a CW signal by mouse click is off frequency"
-    /// (issue #439). The dial is a sidetone pitch below the signal, so the
-    /// arithmetic is checked here rather than argued about: the tone has to
-    /// land inside the CW passband, and on its centre when the pitch is the
-    /// passband's own centre.
+    /// (issue #439). This pins the arithmetic the click performs — the tone it
+    /// leaves is at the pitch, not a pitch away from it — and nothing more: the
+    /// path from the click to the dial the engine ends up with is one call to
+    /// `cw_click_dial`, and the passband half of the chain (the filter centred
+    /// on the same pitch) is `preset_edges`, tested in `app::top_bar`. Together
+    /// the two say the signal lands in the middle of the filter; separately,
+    /// neither says where a real click ends up, which is why #439 stays open
+    /// until the reporter answers.
     #[test]
-    fn a_cw_click_lands_the_tone_inside_the_passband() {
-        // The passband half of the chain lives in `preset_edges`, which centres
-        // the CW filter on the pitch (`app::top_bar`, tested there). What this
-        // pins is the click: whatever the operator listens at, the tone it
-        // leaves is *at* that pitch and not a pitch away from it.
+    fn a_cw_click_leaves_the_tone_at_the_pitch() {
         let signal = 7_030_000.0;
         for pitch in [400.0, 700.0, 900.0, 1500.0] {
             let dial = cw_click_dial(signal, f64::from(pitch), 10.0);

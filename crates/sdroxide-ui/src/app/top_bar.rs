@@ -9824,7 +9824,6 @@ mod tests {
         assert_eq!(preset_edges(Mode::Usb, -2850.0, -150.0, 700.0), (-2850.0, -150.0));
     }
 
-
     /// A mode on the experimental bench must be drawn exactly once: under its
     /// own caption, and not also in the Digital grid. Twice in one popup — once
     /// trusted, once not — is worse than either, and once nowhere means nobody
