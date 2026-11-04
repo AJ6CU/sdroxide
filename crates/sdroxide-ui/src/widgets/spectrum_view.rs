@@ -1193,6 +1193,18 @@ fn tune_to_net_spot(
     }
 }
 
+/// The dial a CW click asks for: a sidetone pitch below the clicked signal,
+/// on the click-tune grid, so the signal is heard *at* the pitch.
+///
+/// Its own function because the answer can be checked without a receiver: a
+/// dial a pitch below the signal puts the tone at the pitch, and the CW
+/// passband is centred there — which is the whole question a report of "clicked
+/// a CW signal and ended up off frequency" turns on.
+fn cw_click_dial(clicked_hz: f64, pitch: f64, step: f64) -> f64 {
+    let step = if step > 0.0 { step } else { 1.0 };
+    ((clicked_hz - pitch) / step).round() * step
+}
+
 /// Decaying peak-hold trace, reset whenever the frame mapping changes.
 #[derive(Default)]
 pub struct PeakHold {
@@ -2146,7 +2158,7 @@ pub fn show_ext(
                     // you hear, so tuning a signal to the dial is the one place
                     // it is guaranteed not to be audible.
                     let off = cursor_hz.map(f64::from).unwrap_or(0.0);
-                    let hz = ((view.x_to_freq(pos.x, &rect) - off) / step).round() * step;
+                    let hz = cw_click_dial(view.x_to_freq(pos.x, &rect), off, step);
                     cmds.push(Command::TuneInSpan { vfo: state.active_vfo, hz });
                 }
             }
@@ -3807,6 +3819,33 @@ mod tests {
         let pos = label_origin(pos2(300.0, 300.0), bounds, egui::vec2(40.0, 15.0));
         assert_eq!(pos.x, 170.0, "a label that fits across is still placed inside");
         assert_eq!(pos.y, 20.0, "and to the top edge, which is all the room there is");
+    }
+
+    /// **A click on a CW signal puts the tone where the operator listens.**
+    ///
+    /// Reported as "tuning a CW signal by mouse click is off frequency"
+    /// (issue #439). The dial is a sidetone pitch below the signal, so the
+    /// arithmetic is checked here rather than argued about: the tone has to
+    /// land inside the CW passband, and on its centre when the pitch is the
+    /// passband's own centre.
+    #[test]
+    fn a_cw_click_lands_the_tone_inside_the_passband() {
+        // The passband half of the chain lives in `preset_edges`, which centres
+        // the CW filter on the pitch (`app::top_bar`, tested there). What this
+        // pins is the click: whatever the operator listens at, the tone it
+        // leaves is *at* that pitch and not a pitch away from it.
+        let signal = 7_030_000.0;
+        for pitch in [400.0, 700.0, 900.0, 1500.0] {
+            let dial = cw_click_dial(signal, f64::from(pitch), 10.0);
+            let tone = signal - dial;
+            assert!(
+                (tone - f64::from(pitch)).abs() <= 5.0,
+                "a {pitch} Hz pitch left the tone at {tone} Hz"
+            );
+        }
+        // The step grid rounds the dial, not the tone: 10 Hz here, so 5 Hz of
+        // error at worst — the passband is 500 wide.
+        assert_eq!(cw_click_dial(7_030_004.0, 700.0, 10.0), 7_029_300.0);
     }
 
     /// The ordinary case still puts the box inside the corner it was aimed at.
