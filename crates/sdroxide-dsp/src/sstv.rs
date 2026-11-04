@@ -575,7 +575,13 @@ pub enum SstvEvent {
     /// A finished scan line: `rgb` is `3 * width` bytes at row `y`.
     Line { y: u16, rgb: Vec<u8> },
     /// The current image reached its last line.
-    ImageComplete,
+    ///
+    /// `sync_share` is how much of it arrived *as* a picture: the fraction of
+    /// lines whose sync pulse was measured where the mode says it should be.
+    /// A frame the receiver locked onto noise has its lines placed by the clock
+    /// alone and scores near zero — which is what lets the caller keep noise
+    /// out of the gallery without a guess about the picture's content.
+    ImageComplete { sync_share: f32 },
     /// A station identified itself in tones after its picture — the FSK ID
     /// every SSTV program and unattended repeater sends and reads.
     FskId(String),
@@ -666,12 +672,21 @@ pub struct SstvRx {
     used_starts: Vec<(f64, f64)>,
     // Lines in a row whose sync pulse was not found.
     misses: u32,
+    /// Lines placed and lines whose sync pulse was actually measured, for the
+    /// picture's own account of how much of it arrived as a picture. A frame
+    /// locked onto noise has lines placed by the clock alone; a real picture
+    /// has its pulse where the mode says it is on almost every line.
+    sync_lines: u32,
+    sync_hits: u32,
     // The whole picture's frequency track, for the second pass at the end.
     track: FreqTrack,
     // Robot 4:2:0 chroma carried between lines.
     last_cr: Vec<u8>,
     last_cb: Vec<u8>,
 
+    /// How many line gaps a free-run lock must chain before it begins an
+    /// image: `sstv_sync_pulses - 1`, from the operator's setting.
+    freerun_links: u32,
     // Free-run (decode without VIS): lock onto a regular 1200 Hz sync cadence.
     // `expected` = a specific operator-selected mode, or `None` for auto (match
     // the cadence + sync length against every mode).
@@ -811,16 +826,21 @@ const SYNC_SLICE_HZ: f64 = 1400.0;
 const CADENCE_TOL_S: f64 = 0.002;
 const CADENCE_DRIFT: f64 = 0.005;
 
-/// A free-run lock takes a chain of this many line gaps, one pulse to the
-/// next, on the mode's cadence (see `cadence_chain`): four pulses. Three,
-/// which two gaps anywhere in the list was meant to be, let noise lock.
-const FREERUN_LINKS: u32 = 3;
+/// The default evidence a free-run lock asks for, in line gaps between one
+/// pulse and the next (see `cadence_chain`): five gaps, six pulses.
+///
+/// Three — four pulses — let noise lock: a receiver parked on 27 MHz with
+/// nothing but CB QRM on it began an image about once a minute (bench,
+/// 2026-11-04). The operator can ask for four, five or six pulses in the SSTV
+/// panel ([`SstvRx::set_sync_pulses`]); the lock always begins at the newest
+/// pulse, so more of them delays the decision and not the picture.
+const DEFAULT_FREERUN_LINKS: u32 = 5;
 
 /// A pulse's length may be this far off its mode's sync, as a fraction of it.
 const SYNC_LEN_TOL: f64 = 0.4;
 
 /// Recent sync pulses kept for the cadence: enough for a chain of
-/// `FREERUN_LINKS` with a lost pulse or two and some noise between.
+/// [`DEFAULT_FREERUN_LINKS`] with a lost pulse or two and some noise between.
 const SYNC_HIST_LEN: usize = 16;
 
 /// A dip out of sync shorter than this is noise inside a pulse, not the gap
@@ -920,14 +940,32 @@ impl SstvRx {
             fit: LineFit::new(1.0, 0.0),
             used_starts: Vec::new(),
             misses: 0,
+            sync_lines: 0,
+            sync_hits: 0,
             track: FreqTrack::new(),
             last_cr: Vec::new(),
             last_cb: Vec::new(),
             expected: None,
+            freerun_links: DEFAULT_FREERUN_LINKS,
             sync_hist: Vec::new(),
             numbered: false,
             confirmed: false,
         }
+    }
+
+    /// How many sync pulses a free-run lock asks for: 4, 5 or 6, clamped.
+    ///
+    /// The pulses are evidence that a transmission is under way rather than
+    /// noise, and the lock begins at the newest of them — so this trades how
+    /// quickly the receiver joins a picture already in progress against how
+    /// often it starts on noise.
+    pub fn set_sync_pulses(&mut self, pulses: u8) {
+        self.freerun_links = u32::from(pulses.clamp(4, 6)).saturating_sub(1);
+    }
+
+    /// The setting in force, as the operator set it (4, 5 or 6).
+    pub fn sync_pulses(&self) -> u8 {
+        (self.freerun_links + 1).clamp(4, 6) as u8
     }
 
     /// Set the mode used for free-run (no-VIS) decoding, or `None` for auto
@@ -961,6 +999,8 @@ impl SstvRx {
         self.line_samples = 0.0;
         self.used_starts.clear();
         self.misses = 0;
+        self.sync_lines = 0;
+        self.sync_hits = 0;
         self.track.clear();
         self.last_cr.clear();
         self.last_cb.clear();
@@ -1607,13 +1647,13 @@ impl SstvRx {
     /// (Scottie against Martin).
     fn cadence_mode(&self, run: f64, expected: Option<SstvMode>) -> Option<SstvMode> {
         match expected {
-            Some(m) => (self.cadence_chain(m).0 >= FREERUN_LINKS).then_some(m),
+            Some(m) => (self.cadence_chain(m).0 >= self.freerun_links).then_some(m),
             None => SstvMode::ALL
                 .into_iter()
                 .filter_map(|m| {
                     let (links, singles, _) = self.cadence_chain(m);
                     let (_, sdur) = self.sync_span(m, m.dimensions().0, 0);
-                    (links >= FREERUN_LINKS).then_some((m, singles, (run - sdur).abs() / sdur))
+                    (links >= self.freerun_links).then_some((m, singles, (run - sdur).abs() / sdur))
                 })
                 .min_by(|a, b| b.1.cmp(&a.1).then(a.2.total_cmp(&b.2)))
                 .map(|(m, ..)| m),
@@ -1780,7 +1820,12 @@ impl SstvRx {
         self.line += rpl;
         if self.line >= h {
             self.final_pass(out);
-            out.push(SstvEvent::ImageComplete);
+            let share = if self.sync_lines > 0 {
+                self.sync_hits as f32 / self.sync_lines as f32
+            } else {
+                0.0
+            };
+            out.push(SstvEvent::ImageComplete { sync_share: share });
             self.phase = RxPhase::Hunt;
             self.vis_state = VisState::reset(self.sample_idx);
             self.track.clear();
@@ -1871,9 +1916,11 @@ impl SstvRx {
                 .or_else(|| measure(wide)),
             None => measure(wide),
         };
+        self.sync_lines += 1;
         match measured {
             Some(m) => {
                 self.misses = 0;
+                self.sync_hits += 1;
                 self.fit.add(k, m);
             }
             None => self.misses += 1,
@@ -2333,7 +2380,7 @@ mod tests {
                 match e {
                     SstvEvent::ModeDetected(m) => detected = Some(m),
                     SstvEvent::Line { .. } => lines += 1,
-                    SstvEvent::ImageComplete
+                    SstvEvent::ImageComplete { .. }
                     | SstvEvent::FskId(_)
                     | SstvEvent::UnsupportedMode { .. } => {}
                 }
@@ -2612,6 +2659,74 @@ mod tests {
     /// tuned in mid-transmission). With the mode pre-selected it should lock onto
     /// the sync cadence and decode.
     #[test]
+    /// **A picture says how much of it arrived as a picture.**
+    ///
+    /// The share of lines whose sync pulse was found where the mode says is
+    /// what keeps noise out of the gallery (see `sdroxide-digi`'s save gate): a
+    /// clean transmission has its pulse on every line, and a frame locked onto
+    /// noise has lines placed by the clock alone.
+    #[test]
+    fn a_clean_picture_reports_its_sync_share() {
+        let rate = 48_000.0;
+        let mode = SstvMode::Scottie1;
+        let (w, h) = mode.dimensions();
+        let mut rgb = vec![0u8; w as usize * h as usize * 3];
+        for yy in 0..h as usize {
+            for xx in 0..w as usize {
+                let i = (yy * w as usize + xx) * 3;
+                rgb[i] = (xx * 255 / w as usize) as u8;
+            }
+        }
+        let mut tx = SstvTx::new(mode, &rgb, w, h, rate, 0.0);
+        let mut audio = Vec::new();
+        let mut block = vec![0.0f32; 4096];
+        let mut guard = 0;
+        while !tx.done() && guard < 20_000 {
+            let n = tx.next_block(&mut block);
+            audio.extend_from_slice(&block[..n]);
+            guard += 1;
+        }
+        // Half a second of quiet after it: the last line is decoded once its
+        // full period of history exists, which the transmission's own end does
+        // not provide.
+        audio.extend(std::iter::repeat_n(0.0f32, (rate * 0.5) as usize));
+        let mut rx = SstvRx::new(rate);
+        rx.set_expected(None);
+        let mut events = Vec::new();
+        for chunk in audio.chunks(4096) {
+            rx.process(chunk, &mut events);
+        }
+        let share = events
+            .iter()
+            .find_map(|e| match e {
+                SstvEvent::ImageComplete { sync_share } => Some(*sync_share),
+                _ => None,
+            })
+            .expect("the picture should complete");
+        assert!(share > 0.9, "a clean picture reported a sync share of {share}");
+    }
+
+    /// **The lock's evidence is the operator's to set.** Six pulses by
+    /// default (the bench's answer for 27 MHz CB QRM), four where the band is
+    /// quiet and a picture is worth catching early; the setter clamps.
+    #[test]
+    fn the_sync_pulse_setting_reaches_the_lock() {
+        let mut rx = SstvRx::new(48_000.0);
+        assert_eq!(rx.sync_pulses(), 6, "six by default");
+        rx.set_sync_pulses(4);
+        assert_eq!(rx.sync_pulses(), 4);
+        rx.set_sync_pulses(5);
+        assert_eq!(rx.sync_pulses(), 5);
+        rx.set_sync_pulses(9);
+        assert_eq!(rx.sync_pulses(), 6, "clamped to the most evidence there is");
+        rx.set_sync_pulses(1);
+        assert_eq!(rx.sync_pulses(), 4, "and to the least");
+    }
+
+    /// Free-run: feed the RX the picture audio *after* the VIS header (as if we
+    /// tuned in mid-transmission). With the mode pre-selected it should lock onto
+    /// the sync cadence and decode.
+    #[test]
     fn freerun_decodes_without_vis() {
         let rate = 48_000.0;
         let mode = SstvMode::Scottie1;
@@ -2647,7 +2762,7 @@ mod tests {
                 match e {
                     SstvEvent::ModeDetected(m) => detected = Some(m),
                     SstvEvent::Line { .. } => lines += 1,
-                    SstvEvent::ImageComplete
+                    SstvEvent::ImageComplete { .. }
                     | SstvEvent::FskId(_)
                     | SstvEvent::UnsupportedMode { .. } => {}
                 }
@@ -2725,7 +2840,7 @@ mod tests {
             .iter()
             .position(|e| matches!(e, SstvEvent::ModeDetected(SstvMode::Scottie2)))
             .expect("the second header");
-        let first_done = events.iter().position(|e| matches!(e, SstvEvent::ImageComplete));
+        let first_done = events.iter().position(|e| matches!(e, SstvEvent::ImageComplete { .. }));
         assert!(
             first_done.is_none_or(|done| done > second_at),
             "the false picture was completed after the real one had begun"
@@ -2852,7 +2967,7 @@ mod tests {
                         let at = y as usize * wu * 3;
                         got[at..at + row.len()].copy_from_slice(&row);
                     }
-                    SstvEvent::ImageComplete => complete = true,
+                    SstvEvent::ImageComplete { .. } => complete = true,
                     _ => {}
                 }
             }

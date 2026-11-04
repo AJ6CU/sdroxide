@@ -9067,3 +9067,16 @@ publicsdr-mine-empty = Nada marcado ainda — a ☆ em uma linha guarda esse rec
 publicsdr-star-receiver = Guardar este receptor em MEUS
 
 publicsdr-unstar-receiver = Remover este receptor de MEUS
+
+
+sstv-sync-pulses = PULSOS DE SYNC
+
+sstv-sync-pulses-hint = Quantos pulsos de sincronismo o receptor quer antes de desenhar uma imagem sem cabeçalho VIS: mais é mais estável em uma banda ruidosa, menos pega mais cedo uma transmissão em andamento. O travamento sempre começa no pulso mais recente, então a imagem não perde nada.
+
+sstv-not-saved-not-a-picture = Última imagem não salva: era ruído, não uma imagem.
+
+sstv-not-saved-no-picture = Última imagem não salva: o sinal não trazia imagem.
+
+sstv-save-all = SALVAR TUDO
+
+sstv-save-all-hint = Salvar toda imagem concluída, inclusive as que o receptor chamaria de ruído. Desligado por padrão: o filtro mantém o ruído de uma banda silenciosa fora da galeria, e isto é o caminho de volta para uma imagem que quase não está lá.

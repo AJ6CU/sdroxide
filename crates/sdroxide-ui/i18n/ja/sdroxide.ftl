@@ -9015,3 +9015,16 @@ publicsdr-mine-empty = まだ何も登録されていません — 行の☆で�
 publicsdr-star-receiver = この受信機をマイに保存
 
 publicsdr-unstar-receiver = この受信機をマイから外す
+
+
+sstv-sync-pulses = 同期パルス
+
+sstv-sync-pulses-hint = VISヘッダーのない画像を描く前に受信機が要求する同期パルス数。多いほど雑音の多いバンドで安定し、少ないほど進行中の送信を早く捉えます。ロックは常に最新のパルスから始まるため、画像が失われることはありません。
+
+sstv-not-saved-not-a-picture = 最後の画像は保存されていません：画像ではなく雑音でした。
+
+sstv-not-saved-no-picture = 最後の画像は保存されていません：信号に画像が含まれていませんでした。
+
+sstv-save-all = すべて保存
+
+sstv-save-all-hint = 受信機が雑音とみなすものも含め、完成したすべての画像を保存します。既定ではオフ：フィルタは静かなバンドの雑音をギャラリーに入れず、これはかろうじて届いた画像のための戻り道です。

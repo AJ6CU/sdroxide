@@ -9078,3 +9078,16 @@ publicsdr-mine-empty = Rien de marqué — l'☆ d'une ligne garde ce récepteur
 publicsdr-star-receiver = Garder ce récepteur dans LES MIENS
 
 publicsdr-unstar-receiver = Retirer ce récepteur des MIENS
+
+
+sstv-sync-pulses = IMPULSIONS SYNC
+
+sstv-sync-pulses-hint = Combien d'impulsions de synchronisation le récepteur veut avant de dessiner une image sans en-tête VIS : plus est plus stable sur une bande bruitée, moins accroche plus tôt une émission en cours. Le verrouillage commence toujours à l'impulsion la plus récente, l'image n'y perd rien.
+
+sstv-not-saved-not-a-picture = Dernière image non enregistrée : c'était du bruit, pas une image.
+
+sstv-not-saved-no-picture = Dernière image non enregistrée : le signal ne portait aucune image.
+
+sstv-save-all = TOUT ENREGISTRER
+
+sstv-save-all-hint = Enregistrer chaque image terminée, y compris celles que le récepteur appellerait du bruit. Désactivé par défaut : le filtre garde le bruit d'une bande calme hors de la galerie, et ceci est le retour pour une image à peine présente.

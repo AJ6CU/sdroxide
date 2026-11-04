@@ -9067,3 +9067,16 @@ publicsdr-mine-empty = Henüz yıldız yok — bir satırdaki ☆ o alıcıyı b
 publicsdr-star-receiver = Bu alıcıyı BENİM içinde tut
 
 publicsdr-unstar-receiver = Bu alıcıyı BENİM içinden çıkar
+
+
+sstv-sync-pulses = SENK PULSLARI
+
+sstv-sync-pulses-hint = Alıcının VIS başlığı olmayan bir görüntüyü çizmeden önce kaç senkron puls isteyeceği: fazlası gürültülü bantta daha kararlı, azı sürmekte olan bir yayını daha erken yakalar. Kilit her zaman en yeni pulsta başlar, yani görüntü hiçbir şekilde kaybolmaz.
+
+sstv-not-saved-not-a-picture = Son görüntü kaydedilmedi: gürültüydü, görüntü değil.
+
+sstv-not-saved-no-picture = Son görüntü kaydedilmedi: sinyalde görüntü yoktu.
+
+sstv-save-all = TÜMÜNÜ KAYDET
+
+sstv-save-all-hint = Alıcının gürültü sayacağı dahil her tamamlanmış görüntüyü kaydet. Varsayılan olarak kapalı: filtre sessiz bir bandın gürültüsünü galeriden uzak tutar, bu da zar zor gelen bir görüntü için geri dönüş yoludur.
