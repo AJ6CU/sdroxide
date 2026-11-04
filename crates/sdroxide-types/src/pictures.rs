@@ -224,10 +224,20 @@ pub struct ImageListing {
 /// it did not write, and the caller falls back to the modification time.
 pub fn received_at(kind: ImageKind, name: &str) -> Option<i64> {
     match kind {
-        // `sstv-<unix millis>.png`, as the engine writes it.
+        // `sstv-<unix millis>.png`, as the engine writes it — and
+        // `sstv-<unix millis>-2.png` for the second picture two receivers
+        // finished in the same millisecond, which is the same instant and must
+        // read as such rather than fall back to the file's own time (review,
+        // 2026-11-04).
         ImageKind::Sstv => {
             let rest = name.strip_prefix("sstv-")?;
             let digits = rest.strip_suffix(".png").or_else(|| rest.strip_suffix(".PNG"))?;
+            let digits = match digits.rsplit_once('-') {
+                // Only a `-N` counter is dropped: the digits before it are the
+                // timestamp and must be all digits themselves.
+                Some((ms, n)) if !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()) => ms,
+                _ => digits,
+            };
             digits.parse::<i64>().ok().map(|ms| ms / 1000)
         }
         ImageKind::Wefax => crate::WefaxChartMeta::from_file_name(name).map(|m| m.unix),
@@ -312,6 +322,11 @@ mod tests {
     fn a_stored_name_carries_the_time_it_was_received() {
         assert_eq!(received_at(ImageKind::Sstv, "sstv-1753795200000.png"), Some(1_753_795_200));
         assert_eq!(received_at(ImageKind::Sstv, "sstv-1753795200000.PNG"), Some(1_753_795_200));
+        // The counter two receivers' pictures take when they finish in the same
+        // millisecond: the same instant, read from the same place (review,
+        // 2026-11-04).
+        assert_eq!(received_at(ImageKind::Sstv, "sstv-1753795200000-2.png"), Some(1_753_795_200));
+        assert_eq!(received_at(ImageKind::Sstv, "sstv-1753795200000-12.png"), Some(1_753_795_200));
         assert_eq!(
             received_at(ImageKind::Wefax, "wefax-20260729-141530Z-7878.1kHz-DWD.png"),
             Some(crate::ymd_hms_to_unix(2026, 7, 29, 14, 15, 30)),
