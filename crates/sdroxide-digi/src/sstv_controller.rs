@@ -14,6 +14,70 @@ use crate::DigiEngine;
 /// TX audio sample rate (injected as "mic", then USB-modulated).
 const OUT_RATE: f64 = 48_000.0;
 
+/// The share of a picture's lines whose sync pulse must be found before it is
+/// kept **on that alone**, whatever its content looks like.
+///
+/// This started at 0.3 on the reasoning that a frame locked onto noise has its
+/// lines placed by the clock alone. The bench said otherwise the same
+/// afternoon: a frame that was pure noise scored **0.70** — the sync detector
+/// finds pulses in noise often enough — while real pictures scored 0.74–0.76
+/// on the same weak signal. So the share cannot be a low bar; it is only worth
+/// believing when nearly every line found its pulse, which a flat picture
+/// heard cleanly manages and noise does not.
+const SAVE_SYNC_SHARE: f32 = 0.85;
+
+/// The **primary** sign, and the one that does the work: how much neighbouring
+/// rows agree, as a Pearson correlation over the finished frame.
+///
+/// Measured on the bench (2026-11-04): speckle scores 0.00–0.20 between rows,
+/// real pictures 0.38–0.96 — including the ones whose syncs were poor, and
+/// including a picture whose top third arrived before the signal went. A
+/// threshold in the gap, and deliberately low, because a weak picture is worth
+/// keeping.
+const SAVE_ROW_AGREEMENT: f32 = 0.25;
+
+/// Whether a finished frame is a picture worth keeping.
+///
+/// Either sign is enough: a real picture heard through a fade may lose its
+/// syncs and still be plainly there, and one that arrived cleanly has them all
+/// even if its content is a flat grey field.
+fn keep_frame(sync_share: f32, rows: f32) -> bool {
+    sync_share >= SAVE_SYNC_SHARE || rows >= SAVE_ROW_AGREEMENT
+}
+
+/// How much one row of `rgb` agrees with the next, as a Pearson correlation:
+/// 1.0 for a picture that repeats across the frame, 0.0 for speckle, whose
+/// rows have nothing to do with each other.
+///
+/// Cheap enough to run once per picture: two sums over the frame.
+fn row_agreement(rgb: &[u8], w: usize, h: usize) -> f32 {
+    if w == 0 || h < 2 || rgb.len() < w * h * 3 {
+        return 0.0;
+    }
+    let row = |y: usize| &rgb[y * w * 3..(y + 1) * w * 3];
+    let (mut n, mut sa, mut sb, mut saa, mut sbb, mut sab) =
+        (0.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64);
+    for y in 0..h - 1 {
+        for (&a, &b) in row(y).iter().zip(row(y + 1)) {
+            let (a, b) = (f64::from(a), f64::from(b));
+            n += 1.0;
+            sa += a;
+            sb += b;
+            saa += a * a;
+            sbb += b * b;
+            sab += a * b;
+        }
+    }
+    if n < 1.0 {
+        return 0.0;
+    }
+    let cov = sab / n - (sa / n) * (sb / n);
+    let va = saa / n - (sa / n).powi(2);
+    let vb = sbb / n - (sb / n).powi(2);
+    let den = (va * vb).sqrt();
+    if den <= f64::EPSILON { 0.0 } else { (cov / den) as f32 }
+}
+
 pub struct SstvController {
     cfg: DigiConfig,
     dial_hz: f64,
@@ -41,6 +105,8 @@ pub struct SstvController {
     /// The last header for a mode this build cannot draw — see
     /// [`sdroxide_types::SstvStatus::unsupported`].
     unsupported: Option<String>,
+    /// Why the last finished frame was not kept, for the panel to show.
+    not_saved: Option<sdroxide_types::SstvDrop>,
     image_id: u32,
 
     // TX
@@ -73,6 +139,7 @@ impl SstvController {
         let mut rx = SstvRx::new(tap_rate);
         // Default to Auto: the RX auto-detects the mode; TX defaults to Martin 1.
         rx.set_expected(None);
+        rx.set_sync_pulses(cfg.sstv_sync_pulses);
         SstvController {
             cfg,
             dial_hz: 0.0,
@@ -87,6 +154,7 @@ impl SstvController {
             detected: None,
             rx_id: None,
             unsupported: None,
+            not_saved: None,
             image_id: 0,
             tx: None,
             tx_mode: SstvMode::Martin1,
@@ -116,6 +184,7 @@ impl SstvController {
             signal: self.rx.level(),
             unsupported: self.unsupported.clone(),
             rx_id: self.rx_id.clone(),
+            not_saved: self.not_saved.clone(),
         }
     }
 
@@ -239,14 +308,51 @@ impl DigiEngine for SstvController {
                     self.unsupported = Some(label);
                     self.status_dirty = true;
                 }
-                SstvEvent::ImageComplete => {
-                    self.queued.push(DigiAction::SstvImage {
-                        image_id: self.image_id,
-                        mode: self.rx_mode,
-                        w: self.rx_w,
-                        h: self.rx_h,
-                        rgb: std::mem::take(&mut self.rx_image),
-                    });
+                SstvEvent::ImageComplete { sync_share } => {
+                    // **Not everything that decodes is a picture.** A frame the
+                    // receiver locked onto noise draws itself and would be
+                    // saved to the gallery: 9 of the 54 images on the bench were
+                    // speckle, with rows that had nothing to do with each other
+                    // (2026-11-04). Two independent signs say whether this one
+                    // arrived as a picture — the share of lines whose sync pulse
+                    // was found where the mode says, and how much neighbouring
+                    // rows agree — and either is enough to keep it, so a weak
+                    // but real picture is never dropped by a single measure.
+                    let rows =
+                        row_agreement(&self.rx_image, self.rx_w as usize, self.rx_h as usize);
+                    // The operator can have every frame, doubtful ones
+                    // included: the gate's margin is narrow and a near-flat
+                    // picture lives on its sync alone (review, 2026-11-04).
+                    let keep = self.cfg.sstv_save_all || keep_frame(sync_share, rows);
+                    tracing::info!(
+                        "SSTV: {}x{} {:?} complete — sync {:.2}, rows {:.2} → {}",
+                        self.rx_w,
+                        self.rx_h,
+                        self.rx_mode,
+                        sync_share,
+                        rows,
+                        if keep { "kept" } else { "not a picture, not saved" }
+                    );
+                    if keep {
+                        self.not_saved = None;
+                        self.queued.push(DigiAction::SstvImage {
+                            image_id: self.image_id,
+                            mode: self.rx_mode,
+                            w: self.rx_w,
+                            h: self.rx_h,
+                            rgb: std::mem::take(&mut self.rx_image),
+                        });
+                    }
+                    if !keep {
+                        // Syncs everywhere and no picture in the rows is a
+                        // different failure from noise that looked like a
+                        // header, and worth saying apart.
+                        self.not_saved = Some(if sync_share >= SAVE_SYNC_SHARE {
+                            sdroxide_types::SstvDrop::NoPicture
+                        } else {
+                            sdroxide_types::SstvDrop::NotAPicture
+                        });
+                    }
                     self.rx_active = false;
                     self.status_dirty = true;
                 }
@@ -323,6 +429,9 @@ impl DigiEngine for SstvController {
     }
 
     fn set_config(&mut self, cfg: DigiConfig) {
+        // The lock's evidence reaches the receiver, not just the config: it is
+        // the decoder that counts the pulses.
+        self.rx.set_sync_pulses(cfg.sstv_sync_pulses);
         self.cfg = cfg;
         self.status_dirty = true;
     }
@@ -492,5 +601,79 @@ mod tests {
         c.set_sstv_image(SstvMode::Martin1, rgb, w, h);
         c.sstv_restart_rx();
         assert!(c.tx.is_some(), "the transmission was aborted by a receive control");
+    }
+
+    /// **The setting reaches the receiver.** It is the decoder that counts the
+    /// pulses, so a config change that stayed in the config would be a control
+    /// that silently does nothing.
+    #[test]
+    fn the_sync_pulse_setting_reaches_the_receiver() {
+        let mut c = SstvController::new(Mode::Sstv, DigiConfig::default(), 48_000.0);
+        assert_eq!(c.rx.sync_pulses(), 6, "six by default");
+        let mut cfg = DigiConfig::default();
+        cfg.sstv_sync_pulses = 4;
+        c.set_config(cfg);
+        assert_eq!(c.rx.sync_pulses(), 4);
+    }
+
+    /// **Speckle is not a picture, and a picture is.**
+    ///
+    /// Nine of the fifty-four images on the bench were frames the receiver had
+    /// locked onto noise: rows with nothing to do with each other (2026-11-04).
+    /// The row agreement is what tells them apart without looking at content:
+    /// a gradient that repeats down the frame scores high, speckle scores near
+    /// zero.
+    #[test]
+    fn row_agreement_separates_speckle_from_a_picture() {
+        let (w, h) = (64usize, 48usize);
+        // A picture: the same column pattern on every row, so each row agrees
+        // with the next one exactly.
+        let mut picture = vec![0u8; w * h * 3];
+        for y in 0..h {
+            for x in 0..w {
+                let v = ((x * 255) / w) as u8;
+                let i = (y * w + x) * 3;
+                picture[i] = v;
+                picture[i + 1] = v;
+                picture[i + 2] = v;
+            }
+        }
+        // Speckle: a deterministic hash per pixel, unrelated across rows.
+        let mut noise = vec![0u8; w * h * 3];
+        let mut seed = 0x2545_F491_4F6C_DD1Du64;
+        for b in noise.iter_mut() {
+            seed ^= seed << 13;
+            seed ^= seed >> 7;
+            seed ^= seed << 17;
+            *b = (seed >> 40) as u8;
+        }
+        let picture_rows = row_agreement(&picture, w, h);
+        let noise_rows = row_agreement(&noise, w, h);
+        assert!(picture_rows > 0.9, "a picture should agree with itself, got {picture_rows}");
+        assert!(noise_rows < 0.2, "speckle should not agree, got {noise_rows}");
+        assert!(keep_frame(0.0, picture_rows), "a picture is kept on its rows alone");
+        assert!(!keep_frame(0.0, noise_rows), "speckle is not kept on its rows");
+    }
+
+    /// **Either sign keeps a picture, and neither of the bench's numbers does
+    /// it alone.**
+    ///
+    /// The sync share started as a low bar and the bench threw it out: a frame
+    /// of pure noise scored **0.70**, because the sync detector finds pulses in
+    /// noise. So the share only counts when nearly every line found its pulse,
+    /// and the row agreement — which put that same noise frame at 0.07 — is
+    /// what keeps a weak picture.
+    #[test]
+    fn either_sign_keeps_a_picture_but_noise_scores_on_neither() {
+        assert!(keep_frame(0.95, 0.0), "clean syncs keep it whatever the content");
+        assert!(keep_frame(0.0, 0.6), "plain content keeps it whatever the syncs");
+        assert!(!keep_frame(0.1, 0.05), "neither sign: not a picture");
+        assert!(!keep_frame(0.0, 0.0), "an empty frame is not a picture");
+        // The bench's own numbers, from the two frames that were noise:
+        assert!(!keep_frame(0.70, 0.07), "a noise frame's sync share must not keep it");
+        assert!(!keep_frame(0.72, 0.10), "nor the second one's");
+        // ...and the pictures that were kept:
+        assert!(keep_frame(0.74, 0.75), "a real picture, weak signal");
+        assert!(keep_frame(0.67, 0.38), "a picture whose top third arrived");
     }
 }

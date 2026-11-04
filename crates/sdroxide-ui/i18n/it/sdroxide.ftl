@@ -9076,3 +9076,16 @@ publicsdr-mine-empty = Niente di contrassegnato — la ☆ su una riga tiene qui
 publicsdr-star-receiver = Tieni questo ricevitore nei MIEI
 
 publicsdr-unstar-receiver = Togli questo ricevitore dai MIEI
+
+
+sstv-sync-pulses = IMPULSI SYNC
+
+sstv-sync-pulses-hint = Quanti impulsi di sync vuole il ricevitore prima di disegnare un'immagine senza intestazione VIS: di più è più stabile su una banda rumorosa, di meno aggancia prima una trasmissione in corso. L'aggancio parte sempre dall'impulso più recente, quindi l'immagine non perde nulla.
+
+sstv-not-saved-not-a-picture = Ultima immagine non salvata: era rumore, non un'immagine.
+
+sstv-not-saved-no-picture = Ultima immagine non salvata: il segnale non conteneva un'immagine.
+
+sstv-save-all = SALVA TUTTO
+
+sstv-save-all-hint = Salva ogni immagine finita, comprese quelle che il ricevitore chiamerebbe rumore. Disattivato per impostazione predefinita: il filtro tiene il rumore di una banda tranquilla fuori dalla galleria, e questo è il ritorno per un'immagine che c'è appena.
