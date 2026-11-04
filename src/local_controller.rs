@@ -2,12 +2,14 @@
 //! owns the cpal stream handles so audio devices can be swapped at runtime
 //! (the engine only ever holds the ring endpoints).
 
+use std::time::{Duration, Instant};
+
 use sdroxide_radio::crossbeam_channel::{Receiver, Sender};
 use sdroxide_radio::{AudioParams, EngineHandles, EngineSwap, MicParams, triple_buffer};
 use sdroxide_types::{
     AudioDevices, AudioRouting, Command, RadioConfig, RadioController, RadioEvent, SpectrumFrame,
 };
-use tracing::{info, warn};
+use tracing::{debug, info, warn};
 
 pub struct LocalController {
     cmd_tx: Sender<Command>,
@@ -30,6 +32,10 @@ pub struct LocalController {
     /// lands. TX before then carries silence, exactly as it does with no
     /// microphone at all.
     pending_mic: Option<sdroxide_audio::PendingInput>,
+    /// When to try the microphone again after its stream broke, while it stays
+    /// broken. Only a stream that ran and then failed is retried; a device that
+    /// never opened is the operator's to pick again.
+    mic_retry_at: Option<Instant>,
     /// Currently selected device names; `None` = system default.
     out_name: Option<String>,
     in_name: Option<String>,
@@ -59,6 +65,7 @@ impl LocalController {
             audio_out,
             mic_in: None,
             pending_mic,
+            mic_retry_at: None,
             out_name,
             in_name,
             routing,
@@ -69,15 +76,44 @@ impl LocalController {
     /// Give the engine the microphone as soon as its open finishes. Cheap
     /// enough to call every frame: one non-blocking channel poll.
     fn poll_pending_mic(&mut self) {
+        self.reopen_broken_mic();
         let Some(result) = self.pending_mic.as_mut().and_then(|p| p.take()) else { return };
         self.pending_mic = None;
         match result {
             Ok((input, consumer)) => {
                 let rate = input.sample_rate;
                 self.mic_in = Some(input);
+                self.mic_retry_at = None;
                 let _ = self.swap_tx.send(EngineSwap::Input(Some(MicParams { consumer, rate })));
             }
+            Err(e) if self.mic_retry_at.is_some() => {
+                debug!("microphone still unavailable ({e}); trying again shortly");
+            }
             Err(e) => warn!("no microphone ({e}); TX carries silence"),
+        }
+    }
+
+    /// A microphone whose stream the host broke — the audio service restarting,
+    /// a USB codec dropping off — never delivers again, and the rig keys with
+    /// nothing modulating it until the operator picks the input again (#707).
+    /// Reopened here instead, every couple of seconds until it takes.
+    fn reopen_broken_mic(&mut self) {
+        let now = Instant::now();
+        let opening = self.pending_mic.is_some();
+        let has_failed = self.mic_in.as_ref().is_some_and(|m| m.has_failed());
+        match mic_action(has_failed, opening, self.mic_retry_at, now) {
+            MicAction::Nothing => {}
+            MicAction::Reopen => {
+                warn!("microphone stream broke; reopening it");
+                self.mic_in = None;
+                let _ = self.swap_tx.send(EngineSwap::Input(None));
+                self.mic_retry_at = Some(now + MIC_RETRY);
+            }
+            MicAction::Retry => {
+                self.mic_retry_at = Some(now + MIC_RETRY);
+                self.pending_mic =
+                    Some(sdroxide_audio::start_input_background(self.in_name.clone(), 48_000));
+            }
         }
     }
 
@@ -170,6 +206,7 @@ impl RadioController for LocalController {
             // open still in flight, so an earlier pick can never land on top of
             // this one.
             self.mic_in = None;
+            self.mic_retry_at = None;
             let _ = self.swap_tx.send(EngineSwap::Input(None));
             self.pending_mic = Some(sdroxide_audio::start_input_background(name.clone(), 48_000));
             self.in_name = name;
@@ -237,6 +274,7 @@ impl RadioController for LocalController {
         self.audio_out = None;
         info!("shutdown: closing the microphone");
         self.mic_in = None;
+        self.mic_retry_at = None;
         // An open still in flight is abandoned rather than waited for; whatever
         // it opens is closed again as soon as it exists.
         self.pending_mic = None;
@@ -245,5 +283,68 @@ impl RadioController for LocalController {
             let _ = t.join();
             info!("shutdown: engine thread joined");
         }
+    }
+}
+
+/// How long to wait before trying a broken microphone again.
+const MIC_RETRY: Duration = Duration::from_secs(2);
+
+/// What to do about the microphone this frame.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum MicAction {
+    /// Nothing: the stream is fine, or an open is already in flight.
+    Nothing,
+    /// The stream the host broke is dead — drop it and start the clock.
+    Reopen,
+    /// The retry is due — open it again.
+    Retry,
+}
+
+/// The retry policy for a microphone whose stream the host broke, split from
+/// the device so the decision can be tested without one.
+///
+/// A broken stream never delivers again, so it is dropped and reopened every
+/// couple of seconds until it takes — but never while an open is still in
+/// flight, which would pile them up.
+fn mic_action(
+    has_failed: bool,
+    opening: bool,
+    retry_at: Option<Instant>,
+    now: Instant,
+) -> MicAction {
+    if opening {
+        return MicAction::Nothing;
+    }
+    if has_failed {
+        return MicAction::Reopen;
+    }
+    match retry_at {
+        Some(t) if now >= t => MicAction::Retry,
+        _ => MicAction::Nothing,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A broken microphone is dropped and retried, and never while an open is
+    /// in flight — #707: without this the rig keyed with nothing modulating it
+    /// until the operator picked the input again.
+    #[test]
+    fn a_broken_microphone_is_reopened_but_opens_are_never_piled_up() {
+        let now = Instant::now();
+        // A healthy stream: nothing to do.
+        assert_eq!(mic_action(false, false, None, now), MicAction::Nothing);
+        // The host broke it: drop it and start the clock.
+        assert_eq!(mic_action(true, false, None, now), MicAction::Reopen);
+        // An open in flight is left alone whatever the flags say.
+        assert_eq!(mic_action(true, true, None, now), MicAction::Nothing);
+        assert_eq!(mic_action(false, true, Some(now - MIC_RETRY), now), MicAction::Nothing);
+        // Waiting for the retry...
+        assert_eq!(mic_action(false, false, Some(now + MIC_RETRY), now), MicAction::Nothing);
+        // ...and the retry when it is due.
+        assert_eq!(mic_action(false, false, Some(now), now), MicAction::Retry);
+        assert_eq!(mic_action(false, false, Some(now - MIC_RETRY), now), MicAction::Retry);
     }
 }
