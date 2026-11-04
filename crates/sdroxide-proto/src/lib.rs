@@ -3698,6 +3698,39 @@ mod tests {
         assert_eq!(back, m);
     }
 
+    /// The WSJT-X / N1MM / decoded-CW output configuration, both ways.
+    ///
+    /// Worth its own test for `roundtrip_station_config`'s reason. It rides
+    /// `Command::SetWsjtxConfig` **whole**, and v264 appended `cw_text` to it:
+    /// a field the encoder carries but the decoder drops does not fail, it
+    /// silently arrives as its default, and the operator's setting is simply
+    /// never applied.
+    ///
+    /// Filled in rather than defaulted, and every field different from its
+    /// neighbour, so a field-order slip shows instead of hiding behind two
+    /// equal values.
+    #[test]
+    fn roundtrip_wsjtx_config() {
+        use sdroxide_types::{CwTextConfig, N1mmConfig, WsjtxConfig};
+
+        let cfg = WsjtxConfig {
+            enabled: true,
+            host: "192.0.2.7".into(),
+            port: 2238,
+            id: "SDR Oxide Brown".into(),
+            n1mm: N1mmConfig {
+                enabled: true,
+                host: "192.0.2.8".into(),
+                port: 12060,
+                station: "SHACK-2".into(),
+            },
+            cw_text: CwTextConfig { enabled: true, host: "192.0.2.9".into(), port: 9998 },
+        };
+        let cmd = ClientMsg::Command(Command::SetWsjtxConfig(cfg));
+        let back: ClientMsg = decode(&encode(&cmd).unwrap()).unwrap();
+        assert_eq!(back, cmd);
+    }
+
     /// The interface configuration, both ways.
     ///
     /// Worth its own test for `roundtrip_station_config`'s reason: every field
