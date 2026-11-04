@@ -47,6 +47,8 @@ Everything else that was in this list has been merged or closed since — see **
 
 ## Waiting on other people
 
+- **Dream PR #51** (ours, offered 2026-11-03, no reply): `AacCodec::Decode` copies a fixed 960 samples per channel whatever faad2 reports, which is a segfault with faad2 ≥ 2.10. markjfine's `dream-mjf` branch fixes the *return value* (`eDecError` commented out, always `OK`) but the fixed-length copy is still there at line 242, and neither the codec-list nor the FFT-mutex patches are in it; his branch's other work is Qt, Hamlib, Windows and packaging, none of which we build.
+
 - ~~STANAG 4285~~ **finished** (2026-10-29) — Mark confirmed decode with video.
   Coded payload decoding intentionally not implemented (restricted by law in
   several countries). Rust equaliser still does not converge.
