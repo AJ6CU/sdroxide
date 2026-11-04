@@ -1037,7 +1037,10 @@ impl SstvRx {
                 RxPhase::Image => {
                     self.slide_vis_windows();
                     self.check_mode(out);
-                    if self.phase == RxPhase::Image {
+                    // A header mid-picture is the next transmission: read it
+                    // before the line, so the false picture is dropped and the
+                    // real one starts on its own clock (issue #427).
+                    if self.phase == RxPhase::Image && !self.step_vis(out) {
                         self.step_image(out);
                     }
                 }
@@ -1296,6 +1299,31 @@ impl SstvRx {
         self.slide_vis_windows();
         self.step_fsk_id(out);
         self.release_afc();
+        // No VIS? Try to lock onto the sync cadence of the selected mode.
+        if !self.step_vis(out) {
+            self.try_freerun(out);
+        }
+    }
+
+    /// The VIS header, decoded from the windows [`Self::slide_vis_windows`] has
+    /// kept up to date — in the hunt **and while a picture is being drawn**.
+    ///
+    /// A header is the station saying a new picture starts, and a receiver that
+    /// stops listening for one the moment it begins to draw pays for every
+    /// false start with the real picture: voice on the frequency, or a free-run
+    /// lock on noise, puts it in the image phase, the header that follows is
+    /// never read, and the picture is drawn on the false lock's clock and line
+    /// numbering — the delay and the two pictures over each other of issue #427
+    /// (and #343's Scottie 2 colour shift).
+    ///
+    /// The guards are the hunt's own: a leader of 1900 Hz, a fall into 1200 Hz,
+    /// the seven bits and their parity, the stop bit, and every bit below
+    /// 1600 Hz. A picture's own sync pulses are 1200 Hz after a leader that is
+    /// not there, which is what keeps this from cutting pictures.
+    ///
+    /// The caller slides the windows once per sample; this only reads them.
+    /// Returns true when a header was decoded and an image begun.
+    fn step_vis(&mut self, out: &mut Vec<SstvEvent>) -> bool {
         let lead_n = (LEADER_WIN_S * self.rate) as u64 as f64;
         let edge_n = (EDGE_WIN_S * self.rate) as u64;
         let is_leader =
@@ -1417,6 +1445,7 @@ impl SstvRx {
                         }
                         self.retune(off);
                         self.begin_image(mode, first as u64, true, out);
+                        return true;
                     }
                     // A header that checks out for a mode we cannot draw.
                     // Said once per header rather than swallowed — see
@@ -1434,8 +1463,7 @@ impl SstvRx {
             }
         }
 
-        // No VIS yet? Try to lock onto the sync cadence of the selected mode.
-        self.try_freerun(out);
+        false
     }
 
     /// Whether the 20 ms before `start` really is the 1900 Hz leader, tuned
@@ -2563,6 +2591,102 @@ mod tests {
         }
         assert_eq!(detected, Some(mode), "free-run should lock the selected mode");
         assert!(lines > 40, "free-run should decode many lines, got {lines}");
+    }
+
+    /// A whole transmission of `mode` — header, lines and all — as audio.
+    ///
+    /// A grey ramp across the picture, so every line carries the sync pulse and
+    /// a spread of luma rather than a flat field that a decoder could agree
+    /// with for the wrong reason.
+    fn transmission(mode: SstvMode, rate: f64) -> Vec<f32> {
+        let (w, h) = mode.dimensions();
+        let mut rgb = vec![0u8; w as usize * h as usize * 3];
+        for y in 0..h as usize {
+            for x in 0..w as usize {
+                let i = (y * w as usize + x) * 3;
+                let v = (x * 255 / w as usize) as u8;
+                rgb[i] = v;
+                rgb[i + 1] = v;
+                rgb[i + 2] = v;
+            }
+        }
+        let mut tx = SstvTx::new(mode, &rgb, w, h, rate, 0.0);
+        let mut audio = Vec::new();
+        let mut block = vec![0.0f32; 4096];
+        let mut guard = 0;
+        while !tx.done() && guard < 200_000 {
+            let n = tx.next_block(&mut block);
+            audio.extend_from_slice(&block[..n]);
+            guard += 1;
+        }
+        audio
+    }
+
+    /// **A header arriving mid-picture starts the new picture.**
+    ///
+    /// Issue #427: a false start — voice on the frequency, noise, a free-run
+    /// lock — puts the receiver in the image phase, and the header of the real
+    /// transmission that follows was never read: the picture was drawn on the
+    /// false lock's clock and line numbering, which is the delay and the two
+    /// pictures over each other the operator saw.
+    #[test]
+    fn a_vis_header_mid_picture_starts_the_new_one() {
+        let rate = 48_000.0;
+        let (first, second) = (SstvMode::Martin1, SstvMode::Scottie2);
+        let a = transmission(first, rate);
+        let b = transmission(second, rate);
+        let mut rx = SstvRx::new(rate);
+        rx.set_expected(None);
+        let mut events = Vec::new();
+        // The first transmission's header and a few seconds of its picture,
+        // then the next transmission from its own header on.
+        let cut = (rate * 3.0) as usize;
+        for chunk in a[..cut.min(a.len())].chunks(4096) {
+            rx.process(chunk, &mut events);
+        }
+        for chunk in b.chunks(4096) {
+            rx.process(chunk, &mut events);
+        }
+        let detected: Vec<SstvMode> = events
+            .iter()
+            .filter_map(|e| match e {
+                SstvEvent::ModeDetected(m) => Some(*m),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(detected, vec![first, second], "the second header was not read mid-picture");
+        // The first picture was dropped, not finished: the first completion
+        // comes after the second header.
+        let second_at = events
+            .iter()
+            .position(|e| matches!(e, SstvEvent::ModeDetected(SstvMode::Scottie2)))
+            .expect("the second header");
+        let first_done = events.iter().position(|e| matches!(e, SstvEvent::ImageComplete));
+        assert!(
+            first_done.is_none_or(|done| done > second_at),
+            "the false picture was completed after the real one had begun"
+        );
+    }
+
+    /// **A picture's own content is not a header.** Every line of a picture
+    /// carries a 1200 Hz sync pulse; a transmission decoded end to end must be
+    /// detected once and only once, or reading headers while drawing would cut
+    /// pictures instead of saving them.
+    #[test]
+    fn a_picture_is_not_restarted_by_its_own_content() {
+        let rate = 48_000.0;
+        for mode in [SstvMode::Scottie1, SstvMode::Martin1, SstvMode::Robot36] {
+            let audio = transmission(mode, rate);
+            let mut rx = SstvRx::new(rate);
+            rx.set_expected(None);
+            let mut events = Vec::new();
+            for chunk in audio.chunks(4096) {
+                rx.process(chunk, &mut events);
+            }
+            let detected =
+                events.iter().filter(|e| matches!(e, SstvEvent::ModeDetected(_))).count();
+            assert_eq!(detected, 1, "{mode:?} was restarted {detected} times by its own content");
+        }
     }
 
     /// A deterministic noise source, so a noisy test fails the same way twice.
