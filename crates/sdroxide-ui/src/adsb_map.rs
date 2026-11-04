@@ -47,10 +47,14 @@ use crate::widgets::worldmap::{
 pub const MIN_HEIGHT: f32 = 90.0;
 
 /// How close a click has to land, in points.
-const HIT_RADIUS: f32 = 14.0;
+const HIT_RADIUS: f32 = 16.0;
 
 /// Half the side of a target square, in points.
-const TARGET_R: f32 = 3.5;
+const TARGET_R: f32 = 10.5;
+/// Half the side of an airport symbol (large, medium) and of a VOR's, in pixels.
+const AIRPORT_HALF_LARGE: f32 = 7.0;
+const AIRPORT_HALF_MEDIUM: f32 = 5.25;
+const VOR_HALF: f32 = 5.25;
 
 /// Never auto-fit tighter than this longitudinal span. Aircraft are hundreds of
 /// kilometres apart and one overhead must not blow the map up to street level.
@@ -292,31 +296,6 @@ fn block_rank(a: &AdsbAircraft) -> u8 {
     }
 }
 
-/// An airport's symbol: a small aeroplane seen from above, nose up, `s` pixels
-/// from nose to wing tip. Drawn as convex pieces (fuselage, two wings, two
-/// tailplanes) because a filled concave polygon would be triangulated wrongly,
-/// over a faint halo so it stays readable on the dotted land. It replaces the
-/// plain circle, which looked like any other dot on the chart.
-fn draw_airport_symbol(p: &Painter, c: Pos2, s: f32, ink: Color32, halo: Color32) {
-    p.circle_filled(c, s * 1.15, halo);
-    // (x, y) in units of `s`, y down; the left half is the mirror of the right.
-    let piece = |pts: &[(f32, f32)]| -> Vec<Pos2> {
-        pts.iter().map(|&(x, y)| c + vec2(x * s, y * s)).collect()
-    };
-    let mirror = |pts: &[(f32, f32)]| -> Vec<(f32, f32)> {
-        pts.iter().rev().map(|&(x, y)| (-x, y)).collect()
-    };
-    let fuselage = [(0.0, -1.0), (0.14, -0.78), (0.14, 0.88), (0.0, 1.05), (-0.14, 0.88), (-0.14, -0.78)];
-    let wing = [(0.0, -0.22), (1.0, 0.32), (1.0, 0.52), (0.0, 0.26)];
-    let tail = [(0.0, 0.66), (0.42, 0.93), (0.42, 1.04), (0.0, 0.9)];
-    for pts in [&fuselage[..], &wing[..], &tail[..]] {
-        p.add(Shape::convex_polygon(piece(pts), ink, Stroke::NONE));
-    }
-    for pts in [&wing[..], &tail[..]] {
-        p.add(Shape::convex_polygon(piece(&mirror(pts)), ink, Stroke::NONE));
-    }
-}
-
 /// Airports and radio navigation aids, filtered by zoom.
 ///
 /// **The filter is the feature.** The tables hold 11 008 navaids and 5 280
@@ -356,16 +335,16 @@ fn draw_nav_layer(
         }
         let c = project(a.lat, a.lon);
         if let Some(p) = p {
-            // A large airport is a bigger, brighter aeroplane than a medium one.
-            if a.large {
-                draw_airport_symbol(p, c, 4.6, alpha(map.city_label, 235.0), alpha(map.sea, 140.0));
+            let (half, ink) = if a.large {
+                (AIRPORT_HALF_LARGE, alpha(map.city_label, 240.0))
             } else {
-                draw_airport_symbol(p, c, 3.4, alpha(map.city_label, 170.0), alpha(map.sea, 110.0));
-            }
+                (AIRPORT_HALF_MEDIUM, alpha(map.city_label, 175.0))
+            };
+            crate::adsb_icons::airport(p, c, half, ink);
             if zoom.airport_labels && (a.large || zoom.medium_labels) {
                 let name = if a.iata.is_empty() { a.ident.as_str() } else { a.iata.as_str() };
                 p.text(
-                    c + vec2(5.0, 3.0),
+                    c + vec2(if a.large { 8.5 } else { 6.5 }, -4.0),
                     Align2::LEFT_TOP,
                     name,
                     font.clone(),
@@ -404,13 +383,10 @@ fn draw_nav_layer(
         let ink = if n.kind.is_audible_on_mf() { map.home } else { map.river };
         if let Some(p) = p {
             if n.kind.is_audible_on_mf() {
-                p.circle_filled(c, 1.5, alpha(ink, 210.0));
+                p.circle_filled(c, 3.0, alpha(ink, 210.0));
             } else {
-                // The triangle a chart draws for a VOR family aid.
-                p.add(Shape::closed_line(
-                    vec![c + vec2(0.0, -2.8), c + vec2(2.4, 1.7), c + vec2(-2.4, 1.7)],
-                    Stroke::new(1.0, alpha(ink, 210.0)),
-                ));
+                // The tower of a VOR family aid.
+                crate::adsb_icons::vor(p, c, VOR_HALF, alpha(ink, 240.0));
             }
         }
         if let Some(m) = pointer {
@@ -430,7 +406,7 @@ fn draw_nav_layer(
             && !n.ident.is_empty()
         {
             p.text(
-                c + vec2(4.5, 3.0),
+                c + vec2(7.0, -4.0),
                 Align2::LEFT_TOP,
                 &n.ident,
                 font.clone(),
@@ -888,7 +864,7 @@ pub struct MapTune {
 /// How close the pointer has to be to a symbol to name it. Wider than the
 /// aircraft's hit radius: these are small marks on a busy map, and the operator
 /// is asking about a place rather than selecting a target.
-const NAV_HIT_RADIUS: f32 = 9.0;
+const NAV_HIT_RADIUS: f32 = 12.0;
 
 /// What the view's span allows the navigation layer to draw.
 ///
@@ -1193,21 +1169,9 @@ pub fn show(
             }
         }
 
-        // The target: a square, hollow, the same size at every zoom.
-        let r = if top || selected_icao == Some(a.icao) { TARGET_R + 1.0 } else { TARGET_R };
-        // A halo so it stays readable over the dotted land.
-        p.circle_filled(c, r + 2.0, alpha(map.sea, 170.0));
-        p.rect_stroke(
-            Rect::from_center_size(c, vec2(r * 2.0, r * 2.0)),
-            0.0,
-            (1.4, tint),
-            eframe::egui::StrokeKind::Middle,
-        );
-        // On the ground: a dot inside, so a taxiing aircraft is distinguishable
-        // from one at a thousand feet above the same runway.
-        if a.on_ground {
-            p.circle_filled(c, 1.4, tint);
-        }
+        // The target: an aeroplane turned to its track, the same size at every zoom.
+        let r = if top || selected_icao == Some(a.icao) { TARGET_R + 3.0 } else { TARGET_R };
+        crate::adsb_icons::aircraft(&p, c, r, a.track_deg, tint, a.on_ground);
     };
     for (i, a) in live.iter().enumerate() {
         if hover != Some(i) {
@@ -1237,7 +1201,7 @@ pub fn show(
         let tint = tint_for(a, top);
         labels.push(MapLabel {
             at: c,
-            r: if top || selected { TARGET_R + 1.0 } else { TARGET_R },
+            r: if top || selected { TARGET_R + 3.0 } else { TARGET_R },
             tick_from: 0.7,
             tick: alpha(tint, 110.0),
             lines: vec![
@@ -1353,8 +1317,11 @@ pub fn show(
     }
     // A click on an aircraft moves the pin there; a click on empty map closes it
     // (a beginner never looks for the ✕). The credit link is not empty map.
-    state.pinned =
-        pin_after_click(state.pinned, hover.map(|i| live[i].icao), resp.clicked() && !credit_clicked);
+    state.pinned = pin_after_click(
+        state.pinned,
+        hover.map(|i| live[i].icao),
+        resp.clicked() && !credit_clicked,
+    );
     if hover.is_some() && resp.clicked() {
         state.pin_owner = pin_owner_after(state.pin_owner, ui.id(), frame, true);
     }
@@ -1904,74 +1871,138 @@ mod tests {
         sdroxide_types::AirUnits::Aviation.set_current();
     }
 
-    /// Not a check: writes PNGs of the real airports layer over Western Europe at
-    /// three zooms, and the symbol itself magnified, for a person to look at.
-    /// `cargo test -p sdroxide-ui --lib airport_symbol_preview -- --ignored`
+    /// One PNG of what `draw` paints on the map's land colour.
+    fn icon_shot(
+        dir: &str,
+        name: &str,
+        size: eframe::egui::Vec2,
+        ppp: f32,
+        draw: impl Fn(&Painter),
+    ) {
+        use eframe::egui;
+        let ctx = egui::Context::default();
+        let input = egui::RawInput {
+            screen_rect: Some(egui::Rect::from_min_size(egui::Pos2::ZERO, size)),
+            time: Some(1.0),
+            viewports: std::iter::once((
+                egui::ViewportId::ROOT,
+                egui::ViewportInfo { native_pixels_per_point: Some(ppp), ..Default::default() },
+            ))
+            .collect(),
+            ..Default::default()
+        };
+        let mut tex = crate::test_raster::Textures::default();
+        let mut out = None;
+        for _ in 0..2 {
+            let mut full = ctx.run_ui(input.clone(), |ui| {
+                let p = ui.painter().clone();
+                p.rect_filled(
+                    egui::Rect::from_min_size(egui::Pos2::ZERO, size),
+                    0.0,
+                    theme::map().land,
+                );
+                draw(&p);
+            });
+            tex.apply(&full.textures_delta);
+            full.textures_delta.clear();
+            out = Some(full);
+        }
+        let img = crate::test_raster::rasterize(&ctx, out.unwrap(), &tex, size, theme::BG_DEEP());
+        img.save(format!("{dir}/icons_{name}.png")).unwrap();
+    }
+
+    /// Not a check: writes the five PNGs for a person to look at — every symbol
+    /// together, then the real map with the aircraft, the airports, the VORs and
+    /// all three on it.
+    /// `cargo test -p sdroxide-ui --lib icon_previews -- --ignored`
     #[test]
     #[ignore]
-    fn airport_symbol_preview() {
-        use eframe::egui;
+    fn icon_previews() {
+        use crate::adsb_icons as icons;
+        use eframe::egui::{pos2, vec2};
         let dir = std::env::var("PREVIEW_DIR").unwrap_or_else(|_| "../../target/previews".into());
         std::fs::create_dir_all(&dir).unwrap();
         let map = theme::map();
-        // (name, centre lat, centre lon, longitude span in degrees, pixels per point)
-        let views = [
-            ("wide", 50.0, 6.0, 30.0, 1.0_f32),
-            ("region", 51.5, 5.0, 8.0, 1.0),
-            ("close", 52.3, 4.8, 2.0, 1.0),
-            ("symbols", 0.0, 0.0, 0.0, 8.0),
-        ];
-        for (name, clat, clon, lon_span, ppp) in views {
-            let size = if name == "symbols" { egui::vec2(120.0, 50.0) } else { egui::vec2(760.0, 480.0) };
-            let ctx = egui::Context::default();
-            let input = egui::RawInput {
-                screen_rect: Some(egui::Rect::from_min_size(egui::Pos2::ZERO, size)),
-                time: Some(1.0),
-                viewports: std::iter::once((
-                    egui::ViewportId::ROOT,
-                    egui::ViewportInfo { native_pixels_per_point: Some(ppp), ..Default::default() },
-                ))
-                .collect(),
-                ..Default::default()
-            };
-            let mut tex = crate::test_raster::Textures::default();
-            let mut out = None;
-            for _ in 0..2 {
-                let mut full = ctx.run_ui(input.clone(), |ui| {
-                    let p = ui.painter().clone();
-                    let rect = egui::Rect::from_min_size(egui::Pos2::ZERO, size);
-                    p.rect_filled(rect, 0.0, map.land);
-                    if name == "symbols" {
-                        draw_airport_symbol(&p, egui::pos2(30.0, 25.0), 4.6, alpha(map.city_label, 235.0), alpha(map.sea, 140.0));
-                        draw_airport_symbol(&p, egui::pos2(80.0, 25.0), 3.4, alpha(map.city_label, 170.0), alpha(map.sea, 110.0));
-                    } else {
-                        let lat_span = lon_span * f64::from(size.y) / f64::from(size.x);
-                        let project = |lat: f64, lon: f64| {
-                            egui::pos2(
-                                (size.x * 0.5) + ((lon - clon) / lon_span) as f32 * size.x,
-                                (size.y * 0.5) - ((lat - clat) / lat_span) as f32 * size.y,
-                            )
-                        };
-                        draw_nav_layer(
-                            Some(&p),
-                            map,
-                            MapLayers::default(),
-                            clat,
-                            clon,
-                            lon_span,
-                            lat_span,
-                            &project,
-                            None,
-                        );
-                    }
-                });
-                tex.apply(&full.textures_delta);
-                full.textures_delta.clear();
-                out = Some(full);
+        let airport_ink = |large: bool| {
+            if large { alpha(map.city_label, 240.0) } else { alpha(map.city_label, 175.0) }
+        };
+
+        // 1 — every symbol, at the size it has on the map.
+        icon_shot(&dir, "1_all", vec2(330.0, 60.0), 4.0, |p| {
+            icons::airport(p, pos2(25.0, 30.0), AIRPORT_HALF_LARGE, airport_ink(true));
+            icons::airport(p, pos2(50.0, 30.0), AIRPORT_HALF_MEDIUM, airport_ink(false));
+            icons::vor(p, pos2(75.0, 30.0), VOR_HALF, alpha(map.river, 240.0));
+            p.circle_filled(pos2(97.0, 30.0), 3.0, alpha(map.home, 210.0));
+            icons::aircraft(p, pos2(130.0, 30.0), TARGET_R, Some(45.0), map.station, false);
+            icons::aircraft(p, pos2(168.0, 30.0), TARGET_R + 3.0, Some(45.0), map.hover, false);
+            icons::aircraft(p, pos2(208.0, 30.0), TARGET_R + 3.0, Some(45.0), map.dx, false);
+            icons::aircraft(p, pos2(246.0, 30.0), TARGET_R, Some(45.0), map.station, true);
+            icons::aircraft(p, pos2(280.0, 30.0), TARGET_R, None, map.station, false);
+        });
+
+        // The real tables over Western Europe, with a few aircraft.
+        let size = vec2(760.0, 480.0);
+        let (clat, clon, lon_span) = (51.0, 6.0, 12.0);
+        let lat_span = lon_span * f64::from(size.y) / f64::from(size.x);
+        let project = move |lat: f64, lon: f64| {
+            pos2(
+                size.x * 0.5 + ((lon - clon) / lon_span) as f32 * size.x,
+                size.y * 0.5 - ((lat - clat) / lat_span) as f32 * size.y,
+            )
+        };
+        let in_view = move |lat: f64, lon: f64| {
+            (lat - clat).abs() <= lat_span / 2.0 && (lon - clon).abs() <= lon_span / 2.0
+        };
+        let zoom = nav_zoom(lon_span);
+        let airports = |p: &Painter| {
+            for a in crate::airdata::airports() {
+                if (!a.large && !zoom.medium_airports) || !in_view(a.lat, a.lon) {
+                    continue;
+                }
+                let half = if a.large { AIRPORT_HALF_LARGE } else { AIRPORT_HALF_MEDIUM };
+                icons::airport(p, project(a.lat, a.lon), half, airport_ink(a.large));
             }
-            let img = crate::test_raster::rasterize(&ctx, out.unwrap(), &tex, size, theme::BG_DEEP());
-            img.save(format!("{dir}/airport_symbol_{name}.png")).unwrap();
-        }
+        };
+        let vors = |p: &Painter| {
+            for (ni, n) in crate::airdata::navaids().iter().enumerate() {
+                if !in_view(n.lat, n.lon) || crate::airdata::navaid_airport(ni).is_some() {
+                    continue;
+                }
+                let c = project(n.lat, n.lon);
+                if n.kind.is_audible_on_mf() {
+                    p.circle_filled(c, 3.0, alpha(map.home, 210.0));
+                } else {
+                    icons::vor(p, c, VOR_HALF, alpha(map.river, 240.0));
+                }
+            }
+        };
+        // A scatter that is the same every time: position and track from a counter.
+        let aircraft = |p: &Painter| {
+            let mut k = 7_u32;
+            let mut next = |m: u32| {
+                k = k.wrapping_mul(1_103_515_245).wrapping_add(12_345);
+                (k >> 16) % m
+            };
+            for i in 0..26 {
+                let c = pos2(30.0 + next(700) as f32, 30.0 + next(420) as f32);
+                let track = next(360) as f32;
+                let (col, r, ground) = match i {
+                    3 => (map.hover, TARGET_R + 3.0, false),
+                    8 => (map.dx, TARGET_R + 3.0, false),
+                    14 => (map.station, TARGET_R, true),
+                    _ => (map.station, TARGET_R, false),
+                };
+                icons::aircraft(p, c, r, Some(track), col, ground);
+            }
+        };
+        icon_shot(&dir, "2_map_aircraft", size, 2.0, |p| aircraft(p));
+        icon_shot(&dir, "3_map_airports", size, 2.0, |p| airports(p));
+        icon_shot(&dir, "4_map_vor", size, 2.0, |p| vors(p));
+        icon_shot(&dir, "5_map_all", size, 2.0, |p| {
+            airports(p);
+            vors(p);
+            aircraft(p);
+        });
     }
 
     #[test]
