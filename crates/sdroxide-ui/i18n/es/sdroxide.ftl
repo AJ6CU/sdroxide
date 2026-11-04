@@ -9066,3 +9066,5 @@ publicsdr-mine-empty = Nada marcado todavía: la ☆ de una fila guarda ese rece
 publicsdr-star-receiver = Guardar este receptor en MÍOS
 
 publicsdr-unstar-receiver = Quitar este receptor de MÍOS
+
+sstv-not-saved = Última imagen no guardada: { $why }

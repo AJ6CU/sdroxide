@@ -9078,3 +9078,6 @@ publicsdr-star-receiver = Keep this receiver in MINE
 
 # Hover text on the filled star in a public SDR row.
 publicsdr-unstar-receiver = Remove this receiver from MINE
+
+# SSTV panel: a finished frame was not a picture and was not saved. { $why } is a short English reason from the decoder.
+sstv-not-saved = Last frame not saved: { $why }

@@ -9067,3 +9067,5 @@ publicsdr-mine-empty = Henüz yıldız yok — bir satırdaki ☆ o alıcıyı b
 publicsdr-star-receiver = Bu alıcıyı BENİM içinde tut
 
 publicsdr-unstar-receiver = Bu alıcıyı BENİM içinden çıkar
+
+sstv-not-saved = Son görüntü kaydedilmedi: { $why }

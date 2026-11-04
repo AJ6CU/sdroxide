@@ -9075,3 +9075,5 @@ publicsdr-mine-empty = Nog niets gemarkeerd — het ☆ op een rij bewaart die o
 publicsdr-star-receiver = Deze ontvanger in MIJN bewaren
 
 publicsdr-unstar-receiver = Deze ontvanger uit MIJN halen
+
+sstv-not-saved = Laatste beeld niet bewaard: { $why }

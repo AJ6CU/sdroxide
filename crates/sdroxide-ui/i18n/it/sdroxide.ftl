@@ -9076,3 +9076,5 @@ publicsdr-mine-empty = Niente di contrassegnato — la ☆ su una riga tiene qui
 publicsdr-star-receiver = Tieni questo ricevitore nei MIEI
 
 publicsdr-unstar-receiver = Togli questo ricevitore dai MIEI
+
+sstv-not-saved = Ultima immagine non salvata: { $why }

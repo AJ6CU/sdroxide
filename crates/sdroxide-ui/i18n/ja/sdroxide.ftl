@@ -9015,3 +9015,5 @@ publicsdr-mine-empty = まだ何も登録されていません — 行の☆で�
 publicsdr-star-receiver = この受信機をマイに保存
 
 publicsdr-unstar-receiver = この受信機をマイから外す
+
+sstv-not-saved = 最後の画像は保存されていません：{ $why }

@@ -9005,3 +9005,5 @@ publicsdr-mine-empty = 还没有加星——点行上的 ☆ 即可把该接收�
 publicsdr-star-receiver = 将此接收机保存在“我的”中
 
 publicsdr-unstar-receiver = 从“我的”中移除此接收机
+
+sstv-not-saved = 上一幅图像未保存：{ $why }

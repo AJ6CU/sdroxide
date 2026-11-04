@@ -999,6 +999,15 @@ impl SdroxideApp {
                                             .strong()
                                             .color(crate::theme::GREEN()),
                                     );
+                                } else if let Some(why) = st.not_saved.as_deref() {
+                                    // The frame that just ended was not a
+                                    // picture and was not saved. Said rather
+                                    // than left as a silent blank.
+                                    ui.label(
+                                        RichText::new(tr!("sstv-not-saved", why = why))
+                                            .size(10.5)
+                                            .color(crate::theme::YELLOW()),
+                                    );
                                 } else if let Some(bad) = st.unsupported.as_deref() {
                                     // A header came through cleanly for a mode
                                     // this build cannot draw. Without this the

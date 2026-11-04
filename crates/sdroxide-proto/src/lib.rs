@@ -2176,8 +2176,8 @@ use sdroxide_types::{
 /// an English `Notice`; now it carries the reason and the frequency, and the
 /// screen words it in the operator's language. `PROTO_VERSION` 259 → 260,
 /// `VERSION_BYTE` 0x4F → 0x50.
-pub const PROTO_VERSION: u16 = 262;
-const VERSION_BYTE: u8 = 0x52;
+pub const PROTO_VERSION: u16 = 263;
+const VERSION_BYTE: u8 = 0x53;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -3104,6 +3104,10 @@ mod tests {
                 // The FSK ID a station sent after its picture, which travels
                 // as a whole string rather than a code — it is a callsign.
                 rx_id: Some("OE1XYZ".to_string()),
+                // Why the last frame was not kept, which the panel says out
+                // loud — appended to the status rather than its own message
+                // (PROTO_VERSION 262 → 263).
+                not_saved: Some("not a picture".to_string()),
                 ..SstvStatus::default()
             }),
         ];
@@ -3454,7 +3458,7 @@ mod tests {
             ServerMsg::TxRefused(w, hz) => assert_eq!((w, hz), (why, 7_074_000.0)),
             _ => panic!("TxRefused did not round-trip"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (262, 0x52));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (263, 0x53));
     }
 
     /// The dynamic-DNS answer rides last on [`ServerMsg`], and it has to: the
@@ -3485,7 +3489,7 @@ mod tests {
             }
             other => panic!("the answer did not round-trip: {other:?}"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (262, 0x52));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (263, 0x53));
     }
 
     /// postcard is positional: a field inserted mid-struct shifts every byte

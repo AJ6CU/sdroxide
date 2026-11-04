@@ -224,6 +224,16 @@ pub struct SstvStatus {
     /// looks for who sent it.
     #[serde(default)]
     pub rx_id: Option<String>,
+    /// Why the last finished frame was **not** kept, when it was not: "not a
+    /// picture" for a frame the receiver locked onto noise.
+    ///
+    /// The lines of a frame are drawn as they arrive — that is the live view
+    /// the operator wants — so a frame the save gate then drops stays on screen
+    /// unless something says so. On a quiet frequency nothing follows for
+    /// hours, and a panel holding a frame of noise reads as a receiver that has
+    /// hung (bench, 2026-11-04). Cleared when a picture is kept.
+    #[serde(default)]
+    pub not_saved: Option<String>,
 }
 
 impl Default for SstvStatus {
@@ -237,6 +247,7 @@ impl Default for SstvStatus {
             signal: 0.0,
             unsupported: None,
             rx_id: None,
+            not_saved: None,
         }
     }
 }

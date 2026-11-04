@@ -108,6 +108,8 @@ pub struct SstvController {
     /// The last header for a mode this build cannot draw — see
     /// [`sdroxide_types::SstvStatus::unsupported`].
     unsupported: Option<String>,
+    /// Why the last finished frame was not kept, for the panel to show.
+    not_saved: Option<String>,
     image_id: u32,
 
     // TX
@@ -154,6 +156,7 @@ impl SstvController {
             detected: None,
             rx_id: None,
             unsupported: None,
+            not_saved: None,
             image_id: 0,
             tx: None,
             tx_mode: SstvMode::Martin1,
@@ -183,6 +186,7 @@ impl SstvController {
             signal: self.rx.level(),
             unsupported: self.unsupported.clone(),
             rx_id: self.rx_id.clone(),
+            not_saved: self.not_saved.clone(),
         }
     }
 
@@ -329,6 +333,7 @@ impl DigiEngine for SstvController {
                         if keep { "kept" } else { "not a picture, not saved" }
                     );
                     if keep {
+                        self.not_saved = None;
                         self.queued.push(DigiAction::SstvImage {
                             image_id: self.image_id,
                             mode: self.rx_mode,
@@ -336,6 +341,19 @@ impl DigiEngine for SstvController {
                             h: self.rx_h,
                             rgb: std::mem::take(&mut self.rx_image),
                         });
+                    }
+                    if !keep {
+                        // Syncs everywhere and no picture in the rows is a
+                        // different failure from noise that looked like a
+                        // header, and worth saying apart.
+                        self.not_saved = Some(
+                            if sync_share >= SAVE_SYNC_SHARE {
+                                "no picture in the frame"
+                            } else {
+                                "not a picture"
+                            }
+                            .to_string(),
+                        );
                     }
                     self.rx_active = false;
                     self.status_dirty = true;

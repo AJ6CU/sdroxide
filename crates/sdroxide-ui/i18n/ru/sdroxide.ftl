@@ -9082,3 +9082,5 @@ publicsdr-mine-empty = Пока ничего не отмечено — ☆ в с
 publicsdr-star-receiver = Сохранить этот приёмник в МОИ
 
 publicsdr-unstar-receiver = Убрать этот приёмник из МОИ
+
+sstv-not-saved = Последнее изображение не сохранено: { $why }

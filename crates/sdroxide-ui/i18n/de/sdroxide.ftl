@@ -9065,3 +9065,5 @@ publicsdr-mine-empty = Noch nichts markiert — der ☆ in einer Zeile hält die
 publicsdr-star-receiver = Diesen Empfänger in MEINE aufnehmen
 
 publicsdr-unstar-receiver = Diesen Empfänger aus MEINE entfernen
+
+sstv-not-saved = Letztes Bild nicht gespeichert: { $why }
