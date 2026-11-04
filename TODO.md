@@ -4,7 +4,7 @@ Working queue. Rules in AGENTS.md. Last updated 2026-11-04.
 
 State: `main` at crate 2.2.0, PROTO_VERSION 263 (0x53). Latest release
 v2.2.3.6.2_brown (pre-release). Open PRs: 1 (#453 decoded CW over UDP, blocked on
-AJ6CU's round-trip test). Open issues: 7 (re-measured 2026-11-04).
+AJ6CU's round-trip test). Open issues: 6 (re-measured 2026-11-04).
 
 ## Task tracking rules
 
@@ -88,6 +88,7 @@ Everything else that was in this list has been merged or closed since — see **
 
 ## Recently done
 
+- 2026-11-04 — #132 (wrong frequency display) closed (added by emi83170, owned by Claude, the operator's call): the answer was already in the thread — the Brick2's I/Q polarity (`Settings → Radio → Swap I/Q`) for the mirrored stations, and IARU Region 2 for the 7.200 MHz band edge — and it has been quiet since 28 October. The close asks for a reopen if it is still there, which keeps the videos and the history together.
 - 2026-11-04 — #402 closed as a duplicate of #283 (added by kvenl, owned by Claude, the operator's call): a pointer to a closed issue cannot be worked from; a fresh report with the version and what is actually seen is what gets it looked at. #419 (DRM) answered the same day: not in the queue now, a PR would be reviewed, otherwise F4NRM's to pick up — with a line on what "not working" means asked for so it is actionable.
 - 2026-11-04 — AJ6CU's rigctl set merged (added by AJ6CU, owned by Claude): **#451** a new width in the mode already running sets the filter and leaves the mode alone, with the `PKT` guard so a digital session still ignores WSJT-X's periodic write; **#452** squelch, AGC and NR strength as Hamlib levels, and `U NR 1` now restores the engine and strength last on instead of always the spectral NR at medium; **#454** the front-end gain as `RF`, advertised in `\dump_state` only where a gain stage exists. Checked on a local build before merging: gate silent, `sdroxide-rigctld` 48 tests, and `l RF` moves the same element the top bar's slider moves. **#453** (decoded CW over UDP) is blocked on its `WsjtxConfig` round-trip test — see Waiting on other people.
 - 2026-11-04 — SSTV's save gate reads the rows only (added by the operator at the bench, owned by Claude; **merged** #450): four of nine frames kept in one evening were speckle with a sliver of picture at the top, their rows 0.03–0.10, and the sync arm at 0.85 had let them through — so the share is not a discriminator at any threshold, and the rows are. A genuinely flat frame is the casualty and SAVE ALL is the way back. Red verified with the gate off; the reason code `SstvDrop::NoPicture` stays in the type for a peer that sends it.
