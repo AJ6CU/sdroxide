@@ -2,7 +2,7 @@
 //! lock-free ring buffer. The DSP engine owns the producer side.
 
 use std::collections::{HashMap, HashSet};
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -355,6 +355,7 @@ fn spawn_input(
     mut producer: rtrb::Producer<f32>,
     dropped: Arc<AtomicU64>,
     glitches: Arc<AtomicU64>,
+    failed: Arc<AtomicBool>,
     what: &'static str,
     label: String,
     // Whether a hole in this stream costs a decode — see
@@ -401,6 +402,7 @@ fn spawn_input(
                         log.on_glitch(what, &label);
                     } else {
                         warn!("{what}: audio input from \"{label}\" failed: {e}");
+                        failed.store(true, Ordering::Relaxed);
                     }
                 },
                 None,
@@ -540,9 +542,17 @@ pub struct AudioInput {
     pub swap: Option<DeviceSwap>,
     dropped: Arc<AtomicU64>,
     glitches: Arc<AtomicU64>,
+    failed: Arc<AtomicBool>,
 }
 
 impl AudioInput {
+    /// Whether the host reported the stream broken rather than merely glitched
+    /// — the device went away, or the audio service restarted under it. Such a
+    /// stream delivers nothing again, so its owner reopens it (#707).
+    pub fn has_failed(&self) -> bool {
+        self.failed.load(Ordering::Relaxed)
+    }
+
     /// Frames the capture callback had to throw away because the reader had not
     /// emptied the ring — a whole second of samples behind, at any rate.
     ///
@@ -1122,6 +1132,7 @@ fn start_input_mono(
         let (producer, consumer) = rtrb::RingBuffer::<f32>::new(rate as usize);
         let dropped = Arc::new(AtomicU64::new(0));
         let glitches = Arc::new(AtomicU64::new(0));
+        let failed = Arc::new(AtomicBool::new(false));
         let started = Instant::now();
         match spawn_input(
             &device,
@@ -1131,6 +1142,7 @@ fn start_input_mono(
             producer,
             dropped.clone(),
             glitches.clone(),
+            failed.clone(),
             what,
             label.clone(),
             costs_a_decode,
@@ -1145,6 +1157,7 @@ fn start_input_mono(
                         swap,
                         dropped,
                         glitches,
+                        failed,
                     },
                     consumer,
                 ));
@@ -1271,6 +1284,7 @@ pub fn start_input_stereo(
         let (producer, consumer) = rtrb::RingBuffer::<f32>::new(rate as usize * 2);
         let dropped = Arc::new(AtomicU64::new(0));
         let glitches = Arc::new(AtomicU64::new(0));
+        let failed = Arc::new(AtomicBool::new(false));
         let started = Instant::now();
         match spawn_input(
             &device,
@@ -1280,6 +1294,7 @@ pub fn start_input_stereo(
             producer,
             dropped.clone(),
             glitches.clone(),
+            failed.clone(),
             "radio IQ input",
             label.clone(),
             true,
@@ -1306,6 +1321,7 @@ pub fn start_input_stereo(
                         swap,
                         dropped,
                         glitches,
+                        failed,
                     },
                     consumer,
                 ));
