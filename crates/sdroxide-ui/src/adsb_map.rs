@@ -1904,6 +1904,76 @@ mod tests {
         sdroxide_types::AirUnits::Aviation.set_current();
     }
 
+    /// Not a check: writes PNGs of the real airports layer over Western Europe at
+    /// three zooms, and the symbol itself magnified, for a person to look at.
+    /// `cargo test -p sdroxide-ui --lib airport_symbol_preview -- --ignored`
+    #[test]
+    #[ignore]
+    fn airport_symbol_preview() {
+        use eframe::egui;
+        let dir = std::env::var("PREVIEW_DIR").unwrap_or_else(|_| "../../target/previews".into());
+        std::fs::create_dir_all(&dir).unwrap();
+        let map = theme::map();
+        // (name, centre lat, centre lon, longitude span in degrees, pixels per point)
+        let views = [
+            ("wide", 50.0, 6.0, 30.0, 1.0_f32),
+            ("region", 51.5, 5.0, 8.0, 1.0),
+            ("close", 52.3, 4.8, 2.0, 1.0),
+            ("symbols", 0.0, 0.0, 0.0, 8.0),
+        ];
+        for (name, clat, clon, lon_span, ppp) in views {
+            let size = if name == "symbols" { egui::vec2(120.0, 50.0) } else { egui::vec2(760.0, 480.0) };
+            let ctx = egui::Context::default();
+            let input = egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(egui::Pos2::ZERO, size)),
+                time: Some(1.0),
+                viewports: std::iter::once((
+                    egui::ViewportId::ROOT,
+                    egui::ViewportInfo { native_pixels_per_point: Some(ppp), ..Default::default() },
+                ))
+                .collect(),
+                ..Default::default()
+            };
+            let mut tex = crate::test_raster::Textures::default();
+            let mut out = None;
+            for _ in 0..2 {
+                let mut full = ctx.run_ui(input.clone(), |ui| {
+                    let p = ui.painter().clone();
+                    let rect = egui::Rect::from_min_size(egui::Pos2::ZERO, size);
+                    p.rect_filled(rect, 0.0, map.land);
+                    if name == "symbols" {
+                        draw_airport_symbol(&p, egui::pos2(30.0, 25.0), 4.6, alpha(map.city_label, 235.0), alpha(map.sea, 140.0));
+                        draw_airport_symbol(&p, egui::pos2(80.0, 25.0), 3.4, alpha(map.city_label, 170.0), alpha(map.sea, 110.0));
+                    } else {
+                        let lat_span = lon_span * f64::from(size.y) / f64::from(size.x);
+                        let project = |lat: f64, lon: f64| {
+                            egui::pos2(
+                                (size.x * 0.5) + ((lon - clon) / lon_span) as f32 * size.x,
+                                (size.y * 0.5) - ((lat - clat) / lat_span) as f32 * size.y,
+                            )
+                        };
+                        draw_nav_layer(
+                            Some(&p),
+                            map,
+                            MapLayers::default(),
+                            clat,
+                            clon,
+                            lon_span,
+                            lat_span,
+                            &project,
+                            None,
+                        );
+                    }
+                });
+                tex.apply(&full.textures_delta);
+                full.textures_delta.clear();
+                out = Some(full);
+            }
+            let img = crate::test_raster::rasterize(&ctx, out.unwrap(), &tex, size, theme::BG_DEEP());
+            img.save(format!("{dir}/airport_symbol_{name}.png")).unwrap();
+        }
+    }
+
     #[test]
     fn medium_airports_are_named_only_once_the_view_is_a_region() {
         assert!(!nav_zoom(10.0).medium_labels && nav_zoom(10.0).airport_labels);
