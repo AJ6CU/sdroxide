@@ -14,18 +14,6 @@ use crate::DigiEngine;
 /// TX audio sample rate (injected as "mic", then USB-modulated).
 const OUT_RATE: f64 = 48_000.0;
 
-/// The share of a picture's lines whose sync pulse must be found before it is
-/// kept **on that alone**, whatever its content looks like.
-///
-/// This started at 0.3 on the reasoning that a frame locked onto noise has its
-/// lines placed by the clock alone. The bench said otherwise the same
-/// afternoon: a frame that was pure noise scored **0.70** — the sync detector
-/// finds pulses in noise often enough — while real pictures scored 0.74–0.76
-/// on the same weak signal. So the share cannot be a low bar; it is only worth
-/// believing when nearly every line found its pulse, which a flat picture
-/// heard cleanly manages and noise does not.
-const SAVE_SYNC_SHARE: f32 = 0.85;
-
 /// The **primary** sign, and the one that does the work: how much neighbouring
 /// rows agree, as a Pearson correlation over the finished frame.
 ///
@@ -38,11 +26,19 @@ const SAVE_ROW_AGREEMENT: f32 = 0.25;
 
 /// Whether a finished frame is a picture worth keeping.
 ///
-/// Either sign is enough: a real picture heard through a fade may lose its
-/// syncs and still be plainly there, and one that arrived cleanly has them all
-/// even if its content is a flat grey field.
-fn keep_frame(sync_share: f32, rows: f32) -> bool {
-    sync_share >= SAVE_SYNC_SHARE || rows >= SAVE_ROW_AGREEMENT
+/// **One sign, and it is the rows.** The share of lines that found their sync
+/// was the other, and the bench retired it: of nine frames kept in one evening,
+/// four were speckle with a sliver of picture at the top, and their rows scored
+/// 0.03–0.10 while the share had let them through (2026-11-04). A share is high
+/// on noise that happens to put a pulse near where a pulse belongs; a frame
+/// whose rows have nothing to do with each other is not a picture whatever its
+/// syncs did.
+///
+/// The casualty is a genuinely flat frame — a black or uniform picture scores
+/// near zero on the rows too. That is what SAVE ALL is for, and it is why the
+/// gate is a filter with a switch rather than a silent loss.
+fn keep_frame(rows: f32) -> bool {
+    rows >= SAVE_ROW_AGREEMENT
 }
 
 /// How much one row of `rgb` agrees with the next, as a Pearson correlation:
@@ -313,17 +309,15 @@ impl DigiEngine for SstvController {
                     // receiver locked onto noise draws itself and would be
                     // saved to the gallery: 9 of the 54 images on the bench were
                     // speckle, with rows that had nothing to do with each other
-                    // (2026-11-04). Two independent signs say whether this one
-                    // arrived as a picture — the share of lines whose sync pulse
-                    // was found where the mode says, and how much neighbouring
-                    // rows agree — and either is enough to keep it, so a weak
-                    // but real picture is never dropped by a single measure.
+                    // (2026-11-04). The share of lines that found their sync is
+                    // logged beside it because it is still worth reading, but it
+                    // is no longer a bar: noise reaches it too.
                     let rows =
                         row_agreement(&self.rx_image, self.rx_w as usize, self.rx_h as usize);
                     // The operator can have every frame, doubtful ones
                     // included: the gate's margin is narrow and a near-flat
                     // picture lives on its sync alone (review, 2026-11-04).
-                    let keep = self.cfg.sstv_save_all || keep_frame(sync_share, rows);
+                    let keep = self.cfg.sstv_save_all || keep_frame(rows);
                     tracing::info!(
                         "SSTV: {}x{} {:?} complete — sync {:.2}, rows {:.2} → {}",
                         self.rx_w,
@@ -347,11 +341,7 @@ impl DigiEngine for SstvController {
                         // Syncs everywhere and no picture in the rows is a
                         // different failure from noise that looked like a
                         // header, and worth saying apart.
-                        self.not_saved = Some(if sync_share >= SAVE_SYNC_SHARE {
-                            sdroxide_types::SstvDrop::NoPicture
-                        } else {
-                            sdroxide_types::SstvDrop::NotAPicture
-                        });
+                        self.not_saved = Some(sdroxide_types::SstvDrop::NotAPicture);
                     }
                     self.rx_active = false;
                     self.status_dirty = true;
@@ -651,29 +641,27 @@ mod tests {
         let noise_rows = row_agreement(&noise, w, h);
         assert!(picture_rows > 0.9, "a picture should agree with itself, got {picture_rows}");
         assert!(noise_rows < 0.2, "speckle should not agree, got {noise_rows}");
-        assert!(keep_frame(0.0, picture_rows), "a picture is kept on its rows alone");
-        assert!(!keep_frame(0.0, noise_rows), "speckle is not kept on its rows");
+        assert!(keep_frame(picture_rows), "a picture is kept on its rows");
+        assert!(!keep_frame(noise_rows), "speckle is not kept");
     }
 
-    /// **Either sign keeps a picture, and neither of the bench's numbers does
-    /// it alone.**
+    /// **The rows decide, and the bench's own numbers are the test.**
     ///
-    /// The sync share started as a low bar and the bench threw it out: a frame
-    /// of pure noise scored **0.70**, because the sync detector finds pulses in
-    /// noise. So the share only counts when nearly every line found its pulse,
-    /// and the row agreement — which put that same noise frame at 0.07 — is
-    /// what keeps a weak picture.
+    /// The sync share was the second sign and the bench retired it in one
+    /// evening: four frames kept between 17:53 and 18:28 had rows of 0.03–0.10
+    /// — speckle with a sliver of picture at the top — and the share alone had
+    /// let them through. So a share no longer keeps anything, however high.
     #[test]
-    fn either_sign_keeps_a_picture_but_noise_scores_on_neither() {
-        assert!(keep_frame(0.95, 0.0), "clean syncs keep it whatever the content");
-        assert!(keep_frame(0.0, 0.6), "plain content keeps it whatever the syncs");
-        assert!(!keep_frame(0.1, 0.05), "neither sign: not a picture");
-        assert!(!keep_frame(0.0, 0.0), "an empty frame is not a picture");
-        // The bench's own numbers, from the two frames that were noise:
-        assert!(!keep_frame(0.70, 0.07), "a noise frame's sync share must not keep it");
-        assert!(!keep_frame(0.72, 0.10), "nor the second one's");
-        // ...and the pictures that were kept:
-        assert!(keep_frame(0.74, 0.75), "a real picture, weak signal");
-        assert!(keep_frame(0.67, 0.38), "a picture whose top third arrived");
+    fn the_rows_decide_and_a_sync_share_no_longer_keeps_anything() {
+        // The evening's pictures, by their rows:
+        assert!(keep_frame(0.64), "a real picture");
+        assert!(keep_frame(0.36), "a weak one, still a picture");
+        // ...and the four that were speckle:
+        for rows in [0.10, 0.09, 0.03, 0.03] {
+            assert!(!keep_frame(rows), "rows {rows} is not a picture");
+        }
+        assert!(!keep_frame(0.0), "an empty frame is not a picture");
+        // A flat frame scores near zero too, which is what SAVE ALL is for.
+        assert!(!keep_frame(0.05), "a flat frame is dropped unless SAVE ALL is on");
     }
 }
