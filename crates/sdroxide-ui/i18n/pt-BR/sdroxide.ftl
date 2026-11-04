@@ -9080,3 +9080,5 @@ sstv-not-saved-no-picture = Última imagem não salva: o sinal não trazia image
 sstv-save-all = SALVAR TUDO
 
 sstv-save-all-hint = Salvar toda imagem concluída, inclusive as que o receptor chamaria de ruído. Desligado por padrão: o filtro mantém o ruído de uma banda silenciosa fora da galeria, e isto é o caminho de volta para uma imagem que quase não está lá.
+
+settings-controls-cw-keeps-the-fine-grid = Em CW o clique usa a grade de 10 Hz seja qual for este ajuste: um sinal de CW é mais estreito do que uma grade feita para voz consegue acertar.

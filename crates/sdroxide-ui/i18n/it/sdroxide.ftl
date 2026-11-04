@@ -9089,3 +9089,5 @@ sstv-not-saved-no-picture = Ultima immagine non salvata: il segnale non contenev
 sstv-save-all = SALVA TUTTO
 
 sstv-save-all-hint = Salva ogni immagine finita, comprese quelle che il ricevitore chiamerebbe rumore. Disattivato per impostazione predefinita: il filtro tiene il rumore di una banda tranquilla fuori dalla galleria, e questo è il ritorno per un'immagine che c'è appena.
+
+settings-controls-cw-keeps-the-fine-grid = In CW il clic usa la griglia da 10 Hz qualunque sia questo valore: un segnale CW è più stretto di quanto una griglia pensata per la voce possa centrare.

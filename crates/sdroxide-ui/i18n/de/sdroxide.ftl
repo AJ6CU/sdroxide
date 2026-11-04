@@ -9078,3 +9078,5 @@ sstv-not-saved-no-picture = Letztes Bild nicht gespeichert: Das Signal enthielt 
 sstv-save-all = ALLE SPEICHERN
 
 sstv-save-all-hint = Jedes fertige Bild speichern, auch die, die der Empfänger als Rauschen bezeichnen würde. Standardmäßig aus: die Sperre hält das Rauschen eines stillen Bandes aus der Galerie, und dies ist der Rückweg für ein Bild, das kaum da ist.
+
+settings-controls-cw-keeps-the-fine-grid = In CW wird auf dem 10-Hz-Raster geklickt, unabhängig von dieser Einstellung: ein CW-Signal ist schmaler, als ein für Sprache gedachtes Raster treffen kann.

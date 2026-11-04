@@ -9018,3 +9018,5 @@ sstv-not-saved-no-picture = 上一幅图像未保存：信号中没有图像。
 sstv-save-all = 全部保存
 
 sstv-save-all-hint = 保存每一幅完成的图像，包括接收机判定为噪声的那些。默认关闭：过滤器让安静频段的噪声不进画廊，而这是为一幅几乎收不到的图像留的后路。
+
+settings-controls-cw-keeps-the-fine-grid = 在 CW 下无论此项如何设置，点击都按 10 Hz 栅格对齐：CW 信号比面向语音的栅格所能命中的范围更窄。
