@@ -2,11 +2,10 @@
 
 Working queue. Rules in AGENTS.md. Last updated 2026-11-04.
 
-State: `main` at crate 2.2.0, PROTO_VERSION 265 (0x55). Latest release
-v2.2.3.6.4_brown (pre-release). Open PRs: 5 (#472 the band-plan segment labels at
-266, #473 memories CLEAR at 267 built on it, #475 the VDL2 lines in the
-decoded-text feed, #477 one clear chip in SSTV, #474 this mirror). Open issues:
-8 (re-measured 2026-11-05).
+State: `main` at crate 2.2.0, PROTO_VERSION 267 (0x57). Latest release
+v2.2.3.6.4_brown (pre-release). Open PRs: 4 (#475 the VDL2 lines in the
+decoded-text feed, #477 one clear chip in SSTV, #478 the HL2 overload warning,
+#474 this mirror). Open issues: 8 (re-measured 2026-11-05).
 
 ## Task tracking rules
 
@@ -103,6 +102,7 @@ Everything else that was in this list has been merged or closed since — see **
 
 ## Recently done
 
+- 2026-11-05 — #472 and #473 merged by the operator's word (owned by Claude): band-plan sub-segments carry the operator's own label (wire 265 → **266**), and Memories CLEAR deletes every channel at once behind a two-click chip (266 → **267**). Main after both: gate silent, `sdroxide-proto` 23, the band-plan label test, `memory_import` and `i18n` 7 all green.
 - 2026-11-05 — #453 and #464 merged by F4NRM (AJ6CU's): decoded CW over UDP with its `WsjtxConfig` round-trip test, the 9998 note, the manual and three messages in all eleven languages, `PROTO_VERSION` 263 → **264**; and the clamp half of the rigctl CW follow-ups on top of our #463. The two upstream wire commits are unblocked by it and take 265 and 266.
 - 2026-11-04 — Seven of ours merged by F4NRM in one evening (added by madmedicnl, owned by Claude): **#456** the noise blanker's count, **#458** the CW click grid capped at the fine one in CW (plus the removal of the `cw click:` diagnostic that #450's `git add -A` had swept into `main`), **#459** a PTT release ends a keyed over (upstream `5f9f1aa3`), **#460** public SDRs fall back only to tight fuzzy matches (upstream `ee5b7fbf`), **#461** a microphone whose stream the host broke is reopened (upstream `eeb6bfc5`; **still needs the bench** — card out and in mid-session), **#462** the TODO mirror, and **#463** a CW width over rigctl centred on the sidetone (F4NRM's review point on #451). Main after all seven: gate silent, `sdroxide-rigctld` 50, `nb` 5, `fuzzy` 13, `publicsdr` 10, `cw_ptt` 2, `local_controller` 1.
 - 2026-11-04 — #465 merged (AJ6CU's own): the `\dump_state` level-mask test, which was F4NRM's second point on #452.
