@@ -9034,3 +9034,21 @@ windows-clear-sure = 确定?
 windows-clear-hint = 删除所有存储频道。点击两次；文件夹保留。
 
 navtex-copies = 正确 { $direct } · 修复 { $repaired } · 丢失 { $lost }
+
+aircraft-label-selected-altitude = 选定高度
+
+aircraft-label-selected-heading = 选定航向
+
+aircraft-label-qnh = QNH
+
+aircraft-label-airspeed = 空速
+
+aircraft-label-heading = 航向
+
+aircraft-label-autopilot = 自动驾驶
+
+aircraft-label-adsb-version = ADS-B 版本
+
+aircraft-label-accuracy = 精度
+
+aircraft-autopilot-off = 无已接通模式

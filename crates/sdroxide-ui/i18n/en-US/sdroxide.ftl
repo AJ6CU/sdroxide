@@ -9119,3 +9119,21 @@ windows-clear-hint = Delete every memory channel. Click twice; folders stay.
 
 # NAVTEX header row: characters taken straight, repaired from the repeat, and lost. Shown always, so a clean copy reads as a number rather than as a missing counter.
 navtex-copies = { $direct } good · { $repaired } repaired · { $lost } lost
+
+aircraft-label-selected-altitude = Selected altitude
+
+aircraft-label-selected-heading = Selected heading
+
+aircraft-label-qnh = QNH
+
+aircraft-label-airspeed = Airspeed
+
+aircraft-label-heading = Heading
+
+aircraft-label-autopilot = Autopilot
+
+aircraft-label-adsb-version = ADS-B version
+
+aircraft-label-accuracy = Accuracy
+
+aircraft-autopilot-off = no mode engaged

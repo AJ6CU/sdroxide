@@ -9107,3 +9107,21 @@ windows-clear-sure = SÛR ?
 windows-clear-hint = Supprimer tous les canaux mémoire. Cliquer deux fois ; les dossiers restent.
 
 navtex-copies = { $direct } bon(s) · { $repaired } réparé(s) · { $lost } perdu(s)
+
+aircraft-label-selected-altitude = Altitude sélectionnée
+
+aircraft-label-selected-heading = Cap sélectionné
+
+aircraft-label-qnh = QNH
+
+aircraft-label-airspeed = Vitesse air
+
+aircraft-label-heading = Cap
+
+aircraft-label-autopilot = Pilote automatique
+
+aircraft-label-adsb-version = Version ADS-B
+
+aircraft-label-accuracy = Précision
+
+aircraft-autopilot-off = aucun mode engagé

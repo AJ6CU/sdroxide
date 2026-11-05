@@ -9094,3 +9094,21 @@ windows-clear-sure = SICHER?
 windows-clear-hint = Alle Speicherkanäle löschen. Zweimal klicken; Ordner bleiben.
 
 navtex-copies = { $direct } gut · { $repaired } repariert · { $lost } verloren
+
+aircraft-label-selected-altitude = Gewählte Höhe
+
+aircraft-label-selected-heading = Gewählter Kurs
+
+aircraft-label-qnh = QNH
+
+aircraft-label-airspeed = Fluggeschwindigkeit
+
+aircraft-label-heading = Steuerkurs
+
+aircraft-label-autopilot = Autopilot
+
+aircraft-label-adsb-version = ADS-B-Version
+
+aircraft-label-accuracy = Genauigkeit
+
+aircraft-autopilot-off = kein Modus aktiv

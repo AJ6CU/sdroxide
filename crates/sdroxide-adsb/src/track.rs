@@ -228,7 +228,7 @@ fn absorb_es(
                 place(e, lat, lon, history, now, mono_s);
             }
         }
-        Es::Velocity { ground_speed_kt, track_deg, vertical_rate_fpm } => {
+        Es::Velocity { ground_speed_kt, track_deg, vertical_rate_fpm, nac_v } => {
             if ground_speed_kt.is_some() {
                 e.ac.ground_speed_kt = *ground_speed_kt;
             }
@@ -238,6 +238,34 @@ fn absorb_es(
             if let Some(deg) = track_deg {
                 update_track(e, *deg, mono_s);
             }
+            keep(&mut e.ac.nac_v, *nac_v);
+        }
+        // An airspeed and a heading are values of their own: they never stand
+        // in for the ground speed or the track the map is drawn from.
+        Es::Airspeed { heading_deg, airspeed_kt, true_airspeed, nac_v } => {
+            keep(&mut e.ac.heading_deg, *heading_deg);
+            keep(if *true_airspeed { &mut e.ac.tas_kt } else { &mut e.ac.ias_kt }, *airspeed_kt);
+            keep(&mut e.ac.nac_v, *nac_v);
+        }
+        Es::TargetState {
+            selected_altitude_ft,
+            selected_heading_deg,
+            qnh_hpa,
+            nac_p,
+            sil,
+            nav_modes,
+        } => {
+            keep(&mut e.ac.selected_altitude_ft, *selected_altitude_ft);
+            keep(&mut e.ac.selected_heading_deg, *selected_heading_deg);
+            keep(&mut e.ac.qnh_hpa, *qnh_hpa);
+            keep(&mut e.ac.nac_p, *nac_p);
+            keep(&mut e.ac.sil, *sil);
+            keep(&mut e.ac.nav_modes, *nav_modes);
+        }
+        Es::OperationalStatus { version, nac_p, sil } => {
+            e.ac.adsb_version = Some(*version);
+            keep(&mut e.ac.nac_p, *nac_p);
+            keep(&mut e.ac.sil, *sil);
         }
         Es::Status { squawk, emergency } => {
             if squawk.is_some() {
@@ -246,6 +274,14 @@ fn absorb_es(
             e.ac.emergency = emergency.map(|s| s.to_string());
         }
         Es::Other => {}
+    }
+}
+
+/// Take a value a message carried, and keep the last one when a message does
+/// not carry it: a field that is absent this time has not stopped being true.
+fn keep<T>(slot: &mut Option<T>, value: Option<T>) {
+    if value.is_some() {
+        *slot = value;
     }
 }
 
@@ -371,6 +407,50 @@ mod tests {
         let (lat, lon) = (ac.lat.expect("positioned"), ac.lon.expect("positioned"));
         assert!((lat - 52.2658).abs() < 0.001, "latitude {lat}");
         assert!((lon - 3.9389).abs() < 0.001, "longitude {lon}");
+    }
+
+    /// The published target-state message lands on the aircraft's row with
+    /// every field it carried.
+    #[test]
+    fn a_target_state_lands_on_the_row() {
+        let mut t = Tracker::new(AdsbSettings::default());
+        feed(&mut t, "8DA05629EA21485CBF3F8CADAEEB", 1_000, 0.0);
+        let ac = &t.snapshot()[0];
+        assert_eq!(ac.icao, 0xA0_5629);
+        assert_eq!(ac.selected_altitude_ft, Some(16_992));
+        assert!((ac.qnh_hpa.unwrap() - 1012.8).abs() < 0.01);
+        assert!((ac.selected_heading_deg.unwrap() - 66.8).abs() < 0.1);
+        assert_eq!(
+            ac.nav_modes,
+            Some(sdroxide_types::NAV_AUTOPILOT | sdroxide_types::NAV_VNAV | sdroxide_types::NAV_LNAV)
+        );
+        assert_eq!(ac.ias_kt, None, "an autopilot setting is not an airspeed");
+    }
+
+    /// An airspeed is its own value: it fills the airspeed it is of, the
+    /// heading, and leaves the ground speed and the track the map uses alone.
+    #[test]
+    fn an_airspeed_never_stands_in_for_the_ground_speed() {
+        let mut t = Tracker::new(AdsbSettings::default());
+        feed(&mut t, "8DA05F219B06B6AF189400CBC33F", 1_000, 0.0);
+        let ac = &t.snapshot()[0];
+        assert_eq!(ac.tas_kt, Some(375.0));
+        assert_eq!(ac.ias_kt, None);
+        assert!((ac.heading_deg.unwrap() - 243.98).abs() < 0.01);
+        assert_eq!((ac.ground_speed_kt, ac.track_deg), (None, None));
+    }
+
+    /// A message that does not carry a field leaves the last value in place.
+    #[test]
+    fn a_value_is_kept_until_a_message_replaces_it() {
+        let mut t = Tracker::new(AdsbSettings::default());
+        feed(&mut t, "8DA05629EA21485CBF3F8CADAEEB", 1_000, 0.0);
+        // The same aircraft, a different message: a position squitter.
+        let mut ac = t.snapshot().remove(0);
+        keep(&mut ac.qnh_hpa, None);
+        assert!((ac.qnh_hpa.unwrap() - 1012.8).abs() < 0.01);
+        keep(&mut ac.qnh_hpa, Some(1013.2));
+        assert!((ac.qnh_hpa.unwrap() - 1013.2).abs() < 0.01);
     }
 
     /// Once a target has a fix, one frame is enough — which is the whole reason

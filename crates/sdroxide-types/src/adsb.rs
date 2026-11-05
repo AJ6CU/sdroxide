@@ -167,6 +167,56 @@ pub struct AdsbAircraft {
     /// The last accepted frame as hex, for identifying something the decoder
     /// only half understands.
     pub raw_hex: String,
+    // ── What the aircraft says about its own flight. Each field below is
+    // `None` until a message that carries it has been heard, and stays at the
+    // last value after that: not every aircraft sends any of them. They were
+    // appended together (PROTO_VERSION 268), after everything above.
+    /// The altitude set on the autopilot (or in the flight computer), feet.
+    pub selected_altitude_ft: Option<i32>,
+    /// The heading set on the autopilot, degrees.
+    pub selected_heading_deg: Option<f32>,
+    /// The barometric setting the crew has dialled in, hectopascals.
+    pub qnh_hpa: Option<f32>,
+    /// Indicated airspeed, knots, from the airspeed message (type 19, subtypes
+    /// 3 and 4). Rare: most aircraft broadcast ground speed instead.
+    pub ias_kt: Option<f32>,
+    /// True airspeed, knots, from the same message.
+    pub tas_kt: Option<f32>,
+    /// Heading, degrees, from the same message (magnetic, as broadcast).
+    pub heading_deg: Option<f32>,
+    /// The autopilot modes engaged, as the `NAV_*` bits.
+    pub nav_modes: Option<u8>,
+    /// The ADS-B version the transmitter says it follows (0, 1 or 2).
+    pub adsb_version: Option<u8>,
+    /// Position accuracy category, 1–11; `None` is "unknown".
+    pub nac_p: Option<u8>,
+    /// Velocity accuracy category, 1–4; `None` is "unknown".
+    pub nac_v: Option<u8>,
+    /// Source integrity level, 1–3; `None` is "unknown".
+    pub sil: Option<u8>,
+}
+
+/// Bits of [`AdsbAircraft::nav_modes`].
+pub const NAV_AUTOPILOT: u8 = 1;
+pub const NAV_VNAV: u8 = 1 << 1;
+pub const NAV_ALT_HOLD: u8 = 1 << 2;
+pub const NAV_APPROACH: u8 = 1 << 3;
+pub const NAV_LNAV: u8 = 1 << 4;
+
+/// The names of the modes set in `bits`, in a fixed order. They are the
+/// acronyms a pilot uses, so they are the same in every language.
+pub fn nav_mode_names(bits: u8) -> Vec<&'static str> {
+    [
+        (NAV_AUTOPILOT, "AP"),
+        (NAV_VNAV, "VNAV"),
+        (NAV_LNAV, "LNAV"),
+        (NAV_ALT_HOLD, "ALT HOLD"),
+        (NAV_APPROACH, "APP"),
+    ]
+    .into_iter()
+    .filter(|(bit, _)| bits & bit != 0)
+    .map(|(_, name)| name)
+    .collect()
 }
 
 impl AdsbAircraft {
@@ -195,6 +245,17 @@ impl AdsbAircraft {
             last_at: now,
             last_pos_at: 0,
             raw_hex: String::new(),
+            selected_altitude_ft: None,
+            selected_heading_deg: None,
+            qnh_hpa: None,
+            ias_kt: None,
+            tas_kt: None,
+            heading_deg: None,
+            nav_modes: None,
+            adsb_version: None,
+            nac_p: None,
+            nac_v: None,
+            sil: None,
         }
     }
 

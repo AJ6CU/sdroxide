@@ -9044,3 +9044,21 @@ windows-clear-sure = 本当に?
 windows-clear-hint = すべてのメモリーチャンネルを削除します。2 回クリックしてください。フォルダーは残ります。
 
 navtex-copies = 良好 { $direct } · 修復 { $repaired } · 消失 { $lost }
+
+aircraft-label-selected-altitude = 設定高度
+
+aircraft-label-selected-heading = 設定方位
+
+aircraft-label-qnh = QNH
+
+aircraft-label-airspeed = 対気速度
+
+aircraft-label-heading = 機首方位
+
+aircraft-label-autopilot = オートパイロット
+
+aircraft-label-adsb-version = ADS-Bバージョン
+
+aircraft-label-accuracy = 精度
+
+aircraft-autopilot-off = 作動中のモードなし

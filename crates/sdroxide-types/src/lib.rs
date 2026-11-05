@@ -105,7 +105,8 @@ pub use access::{AUTH_BUSY, AUTH_REFUSED, AuthPhase, RemoteAccess, RemoteServer,
 pub use adsb::{
     ADSB_DROP_LIST_S, ADSB_DROP_MAP_S, ADSB_FREQ_HZ, ADSB_GOOD_RATE_HZ, ADSB_HISTORY_POINTS,
     ADSB_MAX_AIRCRAFT, ADSB_MAX_RATE_HZ, ADSB_MIN_RATE_HZ, ADSB_TRACK_MAX, ADSB_VECTOR_MINUTES,
-    AdsbAircraft, AdsbSettings, AdsbSource, AdsbStatus, AirUnits, local_secs_of_day, utc_label,
+    AdsbAircraft, AdsbSettings, AdsbSource, AdsbStatus, AirUnits, NAV_ALT_HOLD, NAV_APPROACH,
+    NAV_AUTOPILOT, NAV_LNAV, NAV_VNAV, local_secs_of_day, nav_mode_names, utc_label,
 };
 pub use ais::{
     AIS_ALL_CHANNELS, AIS_BIT_RATE, AIS_CHANNEL_A_HZ, AIS_CHANNEL_B_HZ, AIS_CHANNEL_SPACING_HZ,

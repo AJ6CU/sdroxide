@@ -9096,3 +9096,21 @@ windows-clear-sure = EMİN MİSİN?
 windows-clear-hint = Tüm hafıza kanallarını sil. İki kez tıkla; klasörler kalır.
 
 navtex-copies = { $direct } doğru · { $repaired } onarılan · { $lost } kayıp
+
+aircraft-label-selected-altitude = Seçilen irtifa
+
+aircraft-label-selected-heading = Seçilen yön
+
+aircraft-label-qnh = QNH
+
+aircraft-label-airspeed = Hava hızı
+
+aircraft-label-heading = Yön
+
+aircraft-label-autopilot = Otopilot
+
+aircraft-label-adsb-version = ADS-B sürümü
+
+aircraft-label-accuracy = Doğruluk
+
+aircraft-autopilot-off = hiçbir mod devrede değil
