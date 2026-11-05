@@ -2191,8 +2191,12 @@ use sdroxide_types::{
 /// every field after it out of step. `#[serde(default)]`, so a `radio.json`
 /// written before this loads unchanged, with Diversity off. `PROTO_VERSION`
 /// 264 → 265, `VERSION_BYTE` 0x54 → 0x55.
-pub const PROTO_VERSION: u16 = 265;
-const VERSION_BYTE: u8 = 0x55;
+///
+/// v266: a band-plan sub-segment carries an optional `label` (the operator's
+/// own name for it on the waterfall strip), so the `band_plan` in
+/// `StationConfig` changes layout and both ends have to agree.
+pub const PROTO_VERSION: u16 = 266;
+const VERSION_BYTE: u8 = 0x56;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -3473,7 +3477,7 @@ mod tests {
             ServerMsg::TxRefused(w, hz) => assert_eq!((w, hz), (why, 7_074_000.0)),
             _ => panic!("TxRefused did not round-trip"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (265, 0x55));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (266, 0x56));
     }
 
     /// The dynamic-DNS answer rides last on [`ServerMsg`], and it has to: the
@@ -3504,7 +3508,7 @@ mod tests {
             }
             other => panic!("the answer did not round-trip: {other:?}"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (265, 0x55));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (266, 0x56));
     }
 
     /// postcard is positional: a field inserted mid-struct shifts every byte
