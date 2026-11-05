@@ -254,7 +254,15 @@ impl<U: Upstream> Relay<U> {
         // The registration the radio heard wins; failing that, the one adsbdb gives.
         let mut registration = registration.and_then(clean_registration);
         let mut info = Info::bare(Status::Unavailable);
-        match self.obtain(now, &req) {
+        let mut got = self.obtain(now, &req);
+        // adsbdb answers 404 "unknown callsign" for a flight it has no route for,
+        // even when it knows the airframe: ask again for the airframe alone.
+        if let (Request::Adsbdb { icao, callsign: Some(_) }, Got::Reply(Reply::Adsbdb(Lookup::NotFound), ..)) =
+            (&req, &got)
+        {
+            got = self.obtain(now, &Request::Adsbdb { icao: *icao, callsign: None });
+        }
+        match got {
             Got::Busy => info.status = Status::Busy,
             Got::Reply(Reply::Adsbdb(lookup), at, cached) => {
                 info.fetched_at = Some(at);
@@ -342,6 +350,7 @@ mod tests {
     use std::sync::{Arc, mpsc};
 
     use super::*;
+    use crate::Adsbdb;
     use crate::parse::{fixtures, parse_adsbdb, parse_photo};
 
     const NOW: i64 = 1_800_000_000;
@@ -499,6 +508,33 @@ mod tests {
         assert!(info.aircraft.is_none() && info.photo.is_none());
         r.lookup(NOW + 10, 0x1, None, None);
         assert_eq!(up.count(), 1);
+    }
+
+    #[test]
+    fn a_callsign_adsbdb_does_not_know_still_gives_the_airframe() {
+        let up = Fake::new(|r| match r {
+            Request::Adsbdb { callsign: Some(_), .. } => Reply::Adsbdb(Lookup::NotFound),
+            Request::Adsbdb { callsign: None, .. } => Reply::Adsbdb(Lookup::Found(Adsbdb {
+                aircraft: Some(AircraftInfo { type_name: Some("R44".into()), ..Default::default() }),
+                route: None,
+            })),
+            Request::Photo { .. } => Reply::Photo(Lookup::NotFound),
+        });
+        let r = relay(&up);
+        let info = r.lookup(NOW, 0x484006, Some("ZZZ9999"), None);
+        assert_eq!(info.status, Status::Ok);
+        assert_eq!(info.aircraft.unwrap().type_name.as_deref(), Some("R44"));
+        assert!(info.route.is_none());
+        assert_eq!(up.count(), 2, "the flight, then the airframe alone");
+        r.lookup(NOW + 5, 0x484006, Some("ZZZ9999"), None);
+        assert_eq!(up.count(), 2, "both answers are cached");
+    }
+
+    #[test]
+    fn an_aircraft_unknown_with_and_without_its_callsign_is_unknown() {
+        let up = Fake::new(|_| Reply::Adsbdb(Lookup::NotFound));
+        let info = relay(&up).lookup(NOW, 0x1, Some("ZZZ9999"), None);
+        assert_eq!(info.status, Status::Unknown);
     }
 
     #[test]
