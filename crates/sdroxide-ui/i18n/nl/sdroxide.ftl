@@ -9104,3 +9104,21 @@ windows-clear-sure = ZEKER?
 windows-clear-hint = Alle geheugenkanalen wissen. Twee keer klikken; mappen blijven.
 
 navtex-copies = { $direct } goed · { $repaired } hersteld · { $lost } verloren
+
+aircraft-label-selected-altitude = Geselecteerde hoogte
+
+aircraft-label-selected-heading = Geselecteerde koers
+
+aircraft-label-qnh = QNH
+
+aircraft-label-airspeed = Luchtsnelheid
+
+aircraft-label-heading = Koers
+
+aircraft-label-autopilot = Automatische piloot
+
+aircraft-label-adsb-version = ADS-B-versie
+
+aircraft-label-accuracy = Nauwkeurigheid
+
+aircraft-autopilot-off = geen modus actief

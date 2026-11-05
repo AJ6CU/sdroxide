@@ -9096,3 +9096,21 @@ windows-clear-sure = CERTO?
 windows-clear-hint = Apagar todos os canais de memória. Clique duas vezes; as pastas ficam.
 
 navtex-copies = { $direct } bons · { $repaired } reparados · { $lost } perdidos
+
+aircraft-label-selected-altitude = Altitude selecionada
+
+aircraft-label-selected-heading = Rumo selecionado
+
+aircraft-label-qnh = QNH
+
+aircraft-label-airspeed = Velocidade no ar
+
+aircraft-label-heading = Rumo
+
+aircraft-label-autopilot = Piloto automático
+
+aircraft-label-adsb-version = Versão ADS-B
+
+aircraft-label-accuracy = Precisão
+
+aircraft-autopilot-off = nenhum modo engajado

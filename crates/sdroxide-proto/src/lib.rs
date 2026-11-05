@@ -2198,8 +2198,16 @@ use sdroxide_types::{
 ///
 /// v267: [`sdroxide_types::Command`] gains `ClearMemories`, appended; a v266
 /// peer has no variant to decode it into.
-pub const PROTO_VERSION: u16 = 267;
-const VERSION_BYTE: u8 = 0x57;
+///
+/// v268: **what an aircraft says about its own flight.**
+/// [`sdroxide_types::AdsbAircraft`] gains, at its tail, `selected_altitude_ft`,
+/// `selected_heading_deg`, `qnh_hpa`, `ias_kt`, `tas_kt`, `heading_deg`,
+/// `nav_modes`, `adsb_version`, `nac_p`, `nac_v` and `sil`, read from the
+/// target-state, operational-status and airspeed squitters. The struct rides in
+/// the aircraft table every half second, so a v267 peer reads the table out of
+/// step. `PROTO_VERSION` 267 → 268, `VERSION_BYTE` 0x57 → 0x58.
+pub const PROTO_VERSION: u16 = 268;
+const VERSION_BYTE: u8 = 0x58;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -3480,7 +3488,7 @@ mod tests {
             ServerMsg::TxRefused(w, hz) => assert_eq!((w, hz), (why, 7_074_000.0)),
             _ => panic!("TxRefused did not round-trip"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (267, 0x57));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (268, 0x58));
     }
 
     /// The dynamic-DNS answer rides last on [`ServerMsg`], and it has to: the
@@ -3511,7 +3519,35 @@ mod tests {
             }
             other => panic!("the answer did not round-trip: {other:?}"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (267, 0x57));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (268, 0x58));
+    }
+
+    /// What an aircraft says about its own flight crosses the wire with the
+    /// aircraft table, and a table with none of it still reads back.
+    #[test]
+    fn an_aircraft_with_its_own_flight_data_round_trips() {
+        let mut full = sdroxide_types::AdsbAircraft::new(0xA05629, 1_000);
+        full.selected_altitude_ft = Some(16_992);
+        full.selected_heading_deg = Some(66.8);
+        full.qnh_hpa = Some(1012.8);
+        full.ias_kt = Some(250.0);
+        full.tas_kt = Some(375.0);
+        full.heading_deg = Some(243.98);
+        full.nav_modes = Some(sdroxide_types::NAV_AUTOPILOT | sdroxide_types::NAV_LNAV);
+        full.adsb_version = Some(2);
+        full.nac_p = Some(10);
+        full.nac_v = Some(2);
+        full.sil = Some(3);
+        let bare = sdroxide_types::AdsbAircraft::new(0x484006, 1_000);
+        let status = sdroxide_types::AdsbStatus {
+            aircraft: vec![full.clone(), bare.clone()],
+            ..Default::default()
+        };
+        let bytes = encode(&ServerMsg::AdsbStatus(Box::new(status))).unwrap();
+        match decode::<ServerMsg>(&bytes).unwrap() {
+            ServerMsg::AdsbStatus(s) => assert_eq!(s.aircraft, vec![full, bare]),
+            other => panic!("the table did not round-trip: {other:?}"),
+        }
     }
 
     /// postcard is positional: a field inserted mid-struct shifts every byte

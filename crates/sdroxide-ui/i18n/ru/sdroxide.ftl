@@ -9111,3 +9111,21 @@ windows-clear-sure = ТОЧНО?
 windows-clear-hint = Удалить все каналы памяти. Нажмите дважды; папки остаются.
 
 navtex-copies = { $direct } принято · { $repaired } исправлено · { $lost } потеряно
+
+aircraft-label-selected-altitude = Заданная высота
+
+aircraft-label-selected-heading = Заданный курс
+
+aircraft-label-qnh = QNH
+
+aircraft-label-airspeed = Воздушная скорость
+
+aircraft-label-heading = Курс
+
+aircraft-label-autopilot = Автопилот
+
+aircraft-label-adsb-version = Версия ADS-B
+
+aircraft-label-accuracy = Точность
+
+aircraft-autopilot-off = ни один режим не включён

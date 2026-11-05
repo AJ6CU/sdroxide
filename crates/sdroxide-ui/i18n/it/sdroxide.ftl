@@ -9105,3 +9105,21 @@ windows-clear-sure = SICURO?
 windows-clear-hint = Cancella tutti i canali di memoria. Clicca due volte; le cartelle restano.
 
 navtex-copies = { $direct } buoni · { $repaired } riparati · { $lost } persi
+
+aircraft-label-selected-altitude = Quota selezionata
+
+aircraft-label-selected-heading = Prua selezionata
+
+aircraft-label-qnh = QNH
+
+aircraft-label-airspeed = Velocità aria
+
+aircraft-label-heading = Prua
+
+aircraft-label-autopilot = Pilota automatico
+
+aircraft-label-adsb-version = Versione ADS-B
+
+aircraft-label-accuracy = Precisione
+
+aircraft-autopilot-off = nessuna modalità inserita

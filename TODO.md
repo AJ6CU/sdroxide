@@ -2,7 +2,7 @@
 
 Working queue. Rules in AGENTS.md. Last updated 2026-11-04.
 
-State: `main` at crate 2.2.0, PROTO_VERSION 267 (0x57). Latest release
+State: `main` at crate 2.2.0, PROTO_VERSION 268 (0x58) on this branch. Latest release
 v2.2.3.6.4_brown (pre-release). Open PRs: 1 (#477 one clear chip in SSTV, held
 for F4NRM because the SSTV panel is his). Open issues: 7 (re-measured
 2026-11-05).
@@ -22,7 +22,7 @@ for F4NRM because the SSTV panel is his). Open issues: 7 (re-measured
 
 ## Now
 
-- **PR #484 — Aircraft online read: an unknown callsign no longer hides a known airframe** (added by the operator, owned by Claude): adsbdb answers 404 "unknown callsign" for a flight it has no route for even when it knows the airframe; the relay read it as an unknown aircraft, cached it 24 h and the card said "no answer — retry in 300 s". The relay now asks for the airframe alone when the question with a callsign comes back unknown (`relay.rs`, two tests). Wacht op review.
+- **ADS-B: what an aircraft says about its own flight** (added by the operator, owned by Claude): the decoder now reads the target-state (TC 29, DO-260B), operational-status (TC 31) and airspeed (TC 19, subtypes 3 and 4) squitters — selected altitude and heading, QNH, autopilot modes, IAS/TAS, heading, ADS-B version, NACp/NACv/SIL — and the AIRCRAFT card shows each with its source and age, only once heard. Comm-B registers (BDS 5,0 / 6,0: Mach, roll, wind) are not read: they are told apart by guessing. Eleven new fields at the tail of `AdsbAircraft`: PROTO_VERSION 267 → **268** (`0x58`). Eight messages, eleven languages. Tests on the published example squitters. Branch `feat/adsb-extended-telemetry`, PR to open. Not seen on a live signal here.
 - **PR #472 — a band-plan sub-segment carries the operator's own name** (taken from upstream `1de045ea`, owned by Claude): `"label": "CH19"` in `bandplan.json` names a block on the waterfall strip instead of the kind's short label, which still sets the colour; blank counts as none and postcard always sees the field. Wire 264 → **265** (`0x55`), postcard round trip with a labelled segment, red verified by dropping the label on the way in. The strip itself was not rendered here — no display — so the drawing side is worth one look on screen.
 - **PR #473 — Memories CLEAR deletes every channel at once** (taken from upstream `ffdefc70`, owned by Claude): a CLEAR chip that arms on the first click and clears on the second, folders stay, three messages in eleven languages and a manual paragraph. Wire 265 → **266** (`0x56`), so it is built on #472 and merges after it. Red verified with the engine's arm made a no-op.
 - **PR #470 — a WEFAX page says what the line-clock trim was fitted over** (added by madmedicnl, owned by Claude): the trim is invisible in the picture, and the auto-slant's two floors (25 ppm from twenty phasing lines, 10 from fifty) mean "it acted" and "it never had enough signal" differ by a number nothing shows. The bench's five charts left −11.5 to +12.3 ppm over, just above the fine floor, so the fit was probably starved — but the operator's own charts come in straight, so the number has to come from DK8JV and F4NRM. Asked on #444 for one evening's charts plus the log lines.
@@ -104,6 +104,7 @@ Everything else that was in this list has been merged or closed since — see **
 
 ## Recently done
 
+- 2026-11-05 — #484 merged (added by the operator, owned by Claude): an unknown callsign no longer hides a known airframe — adsbdb answers 404 "unknown callsign" for a flight it has no route for, the relay read it as an unknown aircraft and the card said "retry in 300 s"; the relay now asks for the airframe alone. Station-side: restart it, and an "unknown" cached before stays 24 h.
 - 2026-11-05 — #479 merged by the operator's word (owned by Claude): the sampled span as Hamlib's `SPECTRUM_SPAN`, so a client's waterfall-width slider works. The span is the decimation, not the displayed zoom; advertised only where there is a decimation, and an audio-mode rig refuses instead of pretending. `RigState` gains the span, the device rate and whether it can decimate — none of it on the wire. Red verified with the setter removed. The operator's ruling on the waterfall stands: its look and behaviour change for nobody's single request; letting a client move the span was accepted because it is the same class as `L RF` moving the gain slider.
 - 2026-11-05 — #476 closed (added by DK8JV, owned by Claude): the HL2 overload warning is fixed by #478 and lands in the next build; reopened if it still flickers, with the protection setting that decides which case it is.
 - 2026-11-05 — #475 and #478 merged by the operator's word (owned by Claude): the VDL2 lines in the decoded-text feed (a new `kind`, no new socket, no wire change) and the HL2 overload warning standing down while the protection loop works, with the loop's floor still reported. Main after both: gate silent, the VDL2 take-test and the overload-warning test green.
