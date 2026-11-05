@@ -3,9 +3,10 @@
 Working queue. Rules in AGENTS.md. Last updated 2026-11-04.
 
 State: `main` at crate 2.2.0, PROTO_VERSION 265 (0x55). Latest release
-v2.2.3.6.2_brown (pre-release). Open PRs: 2 (#470 ours — the WEFAX page says what
-the trim was fitted over; #467 F4NRM's HPSDR Protocol 2 diversity, conflicting
-and his to rebase). Open issues: 5 (re-measured 2026-11-05).
+v2.2.3.6.4_brown (pre-release). Open PRs: 5 (#472 the band-plan segment labels at
+266, #473 memories CLEAR at 267 built on it, #475 the VDL2 lines in the
+decoded-text feed, #477 one clear chip in SSTV, #474 this mirror). Open issues:
+8 (re-measured 2026-11-05).
 
 ## Task tracking rules
 
@@ -22,6 +23,8 @@ and his to rebase). Open issues: 5 (re-measured 2026-11-05).
 
 ## Now
 
+- **PR #472 — a band-plan sub-segment carries the operator's own name** (taken from upstream `1de045ea`, owned by Claude): `"label": "CH19"` in `bandplan.json` names a block on the waterfall strip instead of the kind's short label, which still sets the colour; blank counts as none and postcard always sees the field. Wire 264 → **265** (`0x55`), postcard round trip with a labelled segment, red verified by dropping the label on the way in. The strip itself was not rendered here — no display — so the drawing side is worth one look on screen.
+- **PR #473 — Memories CLEAR deletes every channel at once** (taken from upstream `ffdefc70`, owned by Claude): a CLEAR chip that arms on the first click and clears on the second, folders stay, three messages in eleven languages and a manual paragraph. Wire 265 → **266** (`0x56`), so it is built on #472 and merges after it. Red verified with the engine's arm made a no-op.
 - **PR #470 — a WEFAX page says what the line-clock trim was fitted over** (added by madmedicnl, owned by Claude): the trim is invisible in the picture, and the auto-slant's two floors (25 ppm from twenty phasing lines, 10 from fifty) mean "it acted" and "it never had enough signal" differ by a number nothing shows. The bench's five charts left −11.5 to +12.3 ppm over, just above the fine floor, so the fit was probably starved — but the operator's own charts come in straight, so the number has to come from DK8JV and F4NRM. Asked on #444 for one evening's charts plus the log lines.
 - **#421 NB with Kiwi** (added by trainrhd-del, owned by Claude) — the promised count is in (**#456** merged): while the blanker is on it writes one line a second with how many samples it zeroed, how close the strongest came to the 5× bar, and the device rate. A simulation of the shipped rule says the dependence is real and in our code — at the same impulse strength 20.3 kHz blanked 14 of 258 bursts where 768 kHz blanked 207 of 297 — but the reporter's own log lines decide the fix, and he gets them in the next pre-release.
 - **#388 HL2 datagram loss** (added by DK8JV, owned by Claude) — the reporter confirms it gone in v2.2.3.6.1; today's WEFAX findings are posted there. Closes when his fax test comes back clean.
@@ -36,6 +39,9 @@ Everything else that was in this list has been merged or closed since — see **
 
 - #388 HL2 (HPSDR P1) datagram loss every ~2 s (added by DK8JV, owned by Roy).
 - #340 S-meter (added by F4NRM, owned by Roy) — measurement disagrees with the report; the measurement is the first suspect.
+- #476 HL2 ADC overload warning shown while automatic overload protection is on (added by DK8JV, owned by Claude) — a nuisance, not a fault: the message is useful only when protection is off. Small, ours.
+- #469 rigctl SPECTRUM_SPAN mapped to the decimation (added by AJ6CU, owned by Claude) — a feature request, and a good fit: `SetDecimation` already rounds and clamps.
+- #468 CW receive peak filter (APF), and Hamlib's APF over rigctl (added by AJ6CU, owned by Claude) — a feature request; the peaking biquad already exists in `sdroxide-dsp/src/eq.rs`.
 - #331 Long labels in the tab strip (added by F4NRM, owned by Roy).
 - #264 Public SDR stuck fetching the list in a web session (added by F4NRM, owned by Roy).
 - #263 Zoom (added by F4NRM, owned by Roy).
