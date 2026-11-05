@@ -21,6 +21,7 @@ v2.2.3.5_brown (pre-release). Open PRs: 0. Open issues: 7 (re-measured
 
 ## Now
 
+- HPSDR P2 diversity / noise cancel on the TRX-DUO (added by F4NRM, owned by Claude) — branch `f4nrm/magical-gauss-nnkmwm`: ask the v0.7.0 firmware for a synced DDC pair (DDC0 only enabled, DDC1 → ADC1, sync byte 1363 = 0x02), split the interleaved stream (119 × [DDC0 I,Q][DDC1 I,Q] per 1444-byte packet) into main + aux and feed `sdroxide_dsp::Diversity` as in `fobos_source.rs`. Format read from `fventuri/red-pitaya-notes` tag v0.7.0 (`sdr-receiver-hpsdr2.c`). Step 1+2 (protocol) first; config, UI in eleven languages and manual after. **Not tested on a real TRX-DUO**: needs v0.7.0 on the board.
 - PR #417 — #413: a service decoder (ACARS, DSC, NAVTEX, WEFAX, SSTV, ADS-B, VDL2, AIS, HFDL, DAB, HD Radio, DRM…) falls back to the band's own mode on a band change; a mode you carry (SSB/FM/CW, FT8/FT4/JS8, PSK, RTTY, Olivia…) keeps following. `Mode::belongs_to_a_service`, test verified red (reported by drdatapi, owned by Claude). Wacht op F4NRM's review.
 - #388 HL2/HPSDR P1 loses 2-10 datagrams per 2 s (reported by DK8JV, owned by Claude) — the two seconds is our own reporting interval, so the loss is continuous; his build is v2.2.3.5, from before #396's 4 MB receive buffer. Asked him to try v2.2.3.6.1 and send the `UDP receive buffer … bytes` line. **Be careful here: at the bench an identical symptom was the operator's OS update, not our code.**
 

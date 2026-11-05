@@ -198,6 +198,58 @@ pub fn ddc_command_packet(seq: u32, rate_khz: u16, ddcs: &[u8]) -> [u8; DDC_COMM
     b
 }
 
+/// Offset of the Diversity sync register in the DDC command packet: bit *n*
+/// set means "DDC *n* is synced into DDC 0" (openHPSDR Protocol 2, DDC-specific
+/// packet byte 1363).
+pub const DIVERSITY_SYNC_OFFSET: usize = 1363;
+
+/// Build the DDC command packet that asks for **Diversity**: two ADCs streamed
+/// as one synced DDC pair, DDC 0 on ADC0 and DDC 1 on ADC1, at the same
+/// frequency and rate.
+///
+/// This is what piHPSDR and Thetis send, and what the TRX-DUO firmware
+/// (v0.7.0, `sdr-receiver-hpsdr2.c`) answers to: **only DDC 0 is in the enable
+/// mask**, DDC 1's descriptor points at ADC1, and bit 1 of the sync register
+/// folds DDC 1 into DDC 0's stream. Enabling DDC 1 as well would make the
+/// board stream it on its own and not interleave anything.
+pub fn ddc_command_packet_diversity(seq: u32, rate_khz: u16) -> [u8; DDC_COMMAND_LEN] {
+    let mut b = ddc_command_packet(seq, rate_khz, &[0]);
+    // DDC 1's descriptor, stride 6 from offset 17: ADC1, same rate, 24 bits.
+    // The firmware takes the shared rate from the last descriptor it reads, so
+    // leaving DDC 1's at zero would be safe there but is not worth relying on.
+    let off = 17 + 6;
+    b[off] = 1; // ADC1
+    b[off + 1] = (rate_khz >> 8) as u8;
+    b[off + 2] = (rate_khz & 0xff) as u8;
+    b[off + 5] = 24;
+    b[DIVERSITY_SYNC_OFFSET] = 0b0000_0010; // DDC 1 synced into DDC 0
+    b
+}
+
+/// Split a Diversity stream into its two aerials.
+///
+/// A synced pair arrives interleaved in DDC 0's datagrams, instant by instant:
+/// `[DDC0 I,Q][DDC1 I,Q][DDC0 I,Q]…`, so as complex samples the even ones are
+/// the main aerial (ADC0) and the odd ones the second (ADC1). `interleaved` is
+/// the I,Q floats [`decode_ddc_iq`] produced; both outputs are appended to and
+/// receive the same number of complex samples. A trailing unpaired sample is
+/// dropped, never carried: a datagram holds whole instants, so one means a
+/// truncated packet. Returns how many instants (pairs) were split.
+pub fn split_diversity_pairs(
+    interleaved: &[f32],
+    main: &mut Vec<f32>,
+    aux: &mut Vec<f32>,
+) -> usize {
+    let instants = interleaved.len() / 4;
+    main.reserve(instants * 2);
+    aux.reserve(instants * 2);
+    for chunk in interleaved.chunks_exact(4) {
+        main.extend_from_slice(&chunk[0..2]);
+        aux.extend_from_slice(&chunk[2..4]);
+    }
+    instants
+}
+
 /// Build the DUC command packet (dest port 1026). Minimal linear-SSB config.
 ///
 /// Byte 4 is the number of DACs the host is driving, and it is **one**. It used
@@ -1352,5 +1404,56 @@ mod tests {
         // An out-of-range index is ignored, not a corrupted write.
         let b = ddc_command_packet(0, 384, &[9]);
         assert_eq!(b[7], 0, "no DDC enabled");
+    }
+
+    #[test]
+    fn diversity_command_syncs_ddc1_into_ddc0_and_enables_only_ddc0() {
+        let b = ddc_command_packet_diversity(7, 1536);
+        assert_eq!(u32::from_be_bytes([b[0], b[1], b[2], b[3]]), 7);
+        assert_eq!(b[7], 0b0000_0001, "only DDC0 is enabled; DDC1 arrives folded into it");
+        assert_eq!(b[17], 0, "DDC0 on ADC0");
+        assert_eq!(u16::from_be_bytes([b[18], b[19]]), 1536);
+        assert_eq!(b[23], 1, "DDC1 on ADC1");
+        assert_eq!(u16::from_be_bytes([b[24], b[25]]), 1536);
+        assert_eq!(b[28], 24);
+        assert_eq!(b[DIVERSITY_SYNC_OFFSET], 0b0000_0010, "sync register: DDC1 into DDC0");
+        // A plain command never carries a sync bit.
+        assert_eq!(ddc_command_packet(0, 1536, &[0, 1])[DIVERSITY_SYNC_OFFSET], 0);
+    }
+
+    #[test]
+    fn a_diversity_datagram_splits_into_two_aerials_of_equal_length() {
+        // The firmware's layout: 119 instants of [DDC0 I,Q][DDC1 I,Q], header
+        // declaring 238 samples, 1444 bytes in all.
+        let mut pkt = vec![0u8; DDC_IQ_HEADER_LEN + 238 * 6];
+        pkt[13] = 24;
+        pkt[14..16].copy_from_slice(&238u16.to_be_bytes());
+        for k in 0..238usize {
+            // Even samples = main, value k; odd = aux, value -k (as 24-bit BE).
+            let v: i32 = if k % 2 == 0 { k as i32 } else { -(k as i32) };
+            let be = (v << 8 >> 8).to_be_bytes();
+            let off = DDC_IQ_HEADER_LEN + k * 6;
+            pkt[off..off + 3].copy_from_slice(&be[1..4]);
+            pkt[off + 3..off + 6].copy_from_slice(&be[1..4]);
+        }
+        assert_eq!(pkt.len(), 1444);
+        let mut iq = Vec::new();
+        assert_eq!(decode_ddc_iq(&pkt, &mut iq), Some(238));
+        let (mut main, mut aux) = (Vec::new(), Vec::new());
+        assert_eq!(split_diversity_pairs(&iq, &mut main, &mut aux), 119);
+        assert_eq!((main.len(), aux.len()), (238, 238));
+        // Main got the even samples (positive), aux the odd ones (negative).
+        assert!(main.chunks_exact(2).all(|c| c[0] >= 0.0));
+        assert!(aux.chunks_exact(2).all(|c| c[0] <= 0.0));
+        assert!(main[2] > 0.0 && aux[0] < 0.0, "instant 0 is [DDC0 sample 0][DDC1 sample 1]");
+    }
+
+    #[test]
+    fn a_truncated_diversity_stream_drops_the_unpaired_tail() {
+        let iq = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0]; // 1.5 instants
+        let (mut main, mut aux) = (Vec::new(), Vec::new());
+        assert_eq!(split_diversity_pairs(&iq, &mut main, &mut aux), 1);
+        assert_eq!(main, vec![1.0, 2.0]);
+        assert_eq!(aux, vec![3.0, 4.0]);
     }
 }
