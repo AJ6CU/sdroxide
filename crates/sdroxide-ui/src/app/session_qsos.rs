@@ -169,24 +169,38 @@ impl SdroxideApp {
             if desc { cmp.reverse() } else { cmp }
         });
 
-        // Header row.
+        // One width per column, shared by the header chips and the rows so a
+        // value always sits under its title (an empty cell keeps its place).
+        const GAP: f32 = 3.0;
+        const HEAD_H: f32 = 22.0;
+        // #, time, call, grid, band, mode, RST S, RST R, country, CQ, dist.
+        const WIDTHS: [f32; 11] = [36.0, 120.0, 90.0, 64.0, 56.0, 60.0, 58.0, 58.0, 130.0, 46.0, 62.0];
+        // Right-aligned columns (numbers), same order as WIDTHS plus Final.
+        const RIGHT: [bool; 12] = [true, false, false, false, false, false, true, true, false, true, true, false];
+        let keys = [
+            SessionQsoSort::Time,
+            SessionQsoSort::Call,
+            SessionQsoSort::Grid,
+            SessionQsoSort::Band,
+            SessionQsoSort::Mode,
+            SessionQsoSort::RstSent,
+            SessionQsoSort::RstRcvd,
+            SessionQsoSort::Country,
+            SessionQsoSort::CqZone,
+            SessionQsoSort::Distance,
+            SessionQsoSort::Final,
+        ];
+        let fixed: f32 = WIDTHS.iter().sum();
+        let final_w = (ui.available_width() - fixed).max(150.0);
+        let mut widths = WIDTHS.to_vec();
+        widths.push(final_w);
+
+        // Header row: the "#" cell, then one sort chip per column.
         ui.horizontal(|ui| {
-            for (i, key) in [
-                SessionQsoSort::Time,
-                SessionQsoSort::Call,
-                SessionQsoSort::Grid,
-                SessionQsoSort::Band,
-                SessionQsoSort::Mode,
-                SessionQsoSort::RstSent,
-                SessionQsoSort::RstRcvd,
-                SessionQsoSort::Country,
-                SessionQsoSort::CqZone,
-                SessionQsoSort::Distance,
-                SessionQsoSort::Final,
-            ]
-            .iter()
-            .enumerate()
-            {
+            ui.spacing_mut().item_spacing.x = 0.0;
+            ui.allocate_exact_size(egui::vec2(widths[0], HEAD_H), egui::Sense::hover());
+            for (i, key) in keys.iter().enumerate() {
+                let w = widths[i + 1];
                 let active = sort == *key;
                 let arrow = if active {
                     if desc { " v" } else { " ^" }
@@ -194,7 +208,8 @@ impl SdroxideApp {
                     ""
                 };
                 let label = format!("{}{}", key.label(), arrow);
-                if ui.button(RichText::new(label).size(11.0).strong()).clicked() {
+                let btn = egui::Button::new(RichText::new(label).size(11.0).strong());
+                if ui.add_sized([w - GAP, HEAD_H], btn).clicked() {
                     if active {
                         self.ui_settings.session_qso_sort_desc = !self.ui_settings.session_qso_sort_desc;
                     } else {
@@ -203,35 +218,75 @@ impl SdroxideApp {
                     }
                     crate::app::persist::persist_ui_settings(&self.ui_settings);
                 }
-                if i < 10 {
-                    ui.add_space(4.0);
-                }
+                ui.add_space(GAP);
             }
         });
         ui.separator();
 
-        // Rows.
+        // Rows: each one is a single rectangle cut into the same columns.
         let row_h = 18.0f32;
+        let ink = ui.visuals().text_color();
+        let line = ui.visuals().widgets.noninteractive.bg_stroke.color.gamma_multiply(0.6);
+        ui.spacing_mut().item_spacing.y = 0.0;
         egui::ScrollArea::vertical()
             .auto_shrink([false, false])
             .show_rows(ui, row_h, rows.len(), |ui, range| {
-                for r in &rows[range] {
-                    ui.horizontal(|ui| {
-                        ui.label(RichText::new(format_time(r.start_utc)).size(11.0));
-                        ui.label(RichText::new(&r.call).size(11.0));
-                        ui.label(RichText::new(r.grid.clone().unwrap_or_default()).size(11.0));
-                        ui.label(RichText::new(&r.band).size(11.0));
-                        ui.label(RichText::new(&r.mode).size(11.0));
-                        ui.label(RichText::new(r.rst_sent.map(|v| v.to_string()).unwrap_or_default()).size(11.0));
-                        ui.label(RichText::new(r.rst_rcvd.map(|v| v.to_string()).unwrap_or_default()).size(11.0));
-                        ui.label(RichText::new(&r.country).size(11.0));
-                        ui.label(RichText::new(r.cq_zone.map(|v| v.to_string()).unwrap_or_default()).size(11.0));
-                        let dist = sdroxide_types::grid_distance_km(&my_grid, r.grid.as_deref().unwrap_or(""))
-                            .map(|v| format!("{:.0}", v))
-                            .unwrap_or_default();
-                        ui.label(RichText::new(dist).size(11.0));
-                        ui.label(RichText::new(if r.final_msg.is_empty() { "—".into() } else { r.final_msg.clone() }).size(11.0));
-                    });
+                let row_w: f32 = widths.iter().sum();
+                for (n, r) in rows[range.clone()].iter().enumerate() {
+                    let idx = range.start + n;
+                    let (rect, _) = ui.allocate_exact_size(egui::vec2(row_w, row_h), egui::Sense::hover());
+                    let painter = ui.painter_at(rect);
+                    if idx % 2 == 1 {
+                        painter.rect_filled(rect, 0.0, ink.gamma_multiply(0.05));
+                    }
+                    let dist = sdroxide_types::grid_distance_km(&my_grid, r.grid.as_deref().unwrap_or(""))
+                        .map(|v| format!("{:.0}", v))
+                        .unwrap_or_default();
+                    let cells: [String; 12] = [
+                        (idx + 1).to_string(),
+                        format_time(r.start_utc),
+                        r.call.clone(),
+                        r.grid.clone().unwrap_or_default(),
+                        r.band.clone(),
+                        r.mode.clone(),
+                        r.rst_sent.map(|v| v.to_string()).unwrap_or_default(),
+                        r.rst_rcvd.map(|v| v.to_string()).unwrap_or_default(),
+                        r.country.clone(),
+                        r.cq_zone.map(|v| v.to_string()).unwrap_or_default(),
+                        dist,
+                        if r.final_msg.is_empty() { "—".into() } else { r.final_msg.clone() },
+                    ];
+                    let mut x = rect.left();
+                    for (i, text) in cells.iter().enumerate() {
+                        let cell = egui::Rect::from_min_size(egui::pos2(x, rect.top()), egui::vec2(widths[i], row_h));
+                        let clip = painter.with_clip_rect(cell);
+                        let font = if i == 1 || i == 2 {
+                            egui::FontId::monospace(11.0)
+                        } else {
+                            egui::FontId::proportional(11.0)
+                        };
+                        if RIGHT[i] {
+                            clip.text(
+                                cell.right_center() - egui::vec2(8.0, 0.0),
+                                egui::Align2::RIGHT_CENTER,
+                                text,
+                                font,
+                                ink,
+                            );
+                        } else {
+                            clip.text(
+                                cell.left_center() + egui::vec2(6.0, 0.0),
+                                egui::Align2::LEFT_CENTER,
+                                text,
+                                font,
+                                ink,
+                            );
+                        }
+                        x += widths[i];
+                        if i + 1 < cells.len() {
+                            painter.vline(x, rect.y_range(), egui::Stroke::new(1.0, line));
+                        }
+                    }
                 }
             });
 
