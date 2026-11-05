@@ -9052,3 +9052,8 @@ aircraft-label-adsb-version = ADS-B 版本
 aircraft-label-accuracy = 精度
 
 aircraft-autopilot-off = 无已接通模式
+aircraft-track-kml = 保存航迹 (KML)
+
+aircraft-track-kml-hover = 将电台为该飞机保存的位置保存为带时间和高度的 Google Earth KML 航迹。长时间无信号会使线条断开。
+
+aircraft-track-kml-saved = 已保存 { $name }。

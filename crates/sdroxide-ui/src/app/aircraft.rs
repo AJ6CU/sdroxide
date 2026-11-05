@@ -768,6 +768,7 @@ impl super::SdroxideApp {
         }
         let mut picked = None;
         let mut history_pressed = None;
+        let mut kml_saved: Option<String> = None;
         let has_station = peer.is_some();
         ui.horizontal_top(|ui| {
             ui.allocate_ui_with_layout(
@@ -851,6 +852,21 @@ impl super::SdroxideApp {
                                     "aircraft_card_history",
                                     aircraft_history::rows(j, now),
                                 );
+                                // The kept positions as a track for Google Earth.
+                                if let Some(kml) = sdroxide_aircraft_history::kml::track(j) {
+                                    ui.add_space(4.0);
+                                    if ui
+                                        .small_button(tr!("aircraft-track-kml"))
+                                        .on_hover_text(tr!("aircraft-track-kml-hover"))
+                                        .clicked()
+                                    {
+                                        let name =
+                                            sdroxide_aircraft_history::kml::file_name(j, now);
+                                        crate::download::save(&name, kml.as_bytes());
+                                        kml_saved =
+                                            Some(tr!("aircraft-track-kml-saved", name = name));
+                                    }
+                                }
                             }
                             HistoryState::Unavailable(r) => {
                                 ui.label(RichText::new(r.note()).size(10.5).weak());
@@ -873,6 +889,9 @@ impl super::SdroxideApp {
         });
         if let Some(i) = history_pressed {
             self.aircraft_online.history.toggle(i);
+        }
+        if let Some(note) = kml_saved {
+            self.aircraft_online.export.set_notice(note, now);
         }
         if picked.is_some() {
             self.aircraft_card_sel = picked;

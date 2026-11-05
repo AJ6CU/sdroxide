@@ -9062,3 +9062,8 @@ aircraft-label-adsb-version = ADS-Bバージョン
 aircraft-label-accuracy = 精度
 
 aircraft-autopilot-off = 作動中のモードなし
+aircraft-track-kml = 航跡を保存 (KML)
+
+aircraft-track-kml-hover = 局が保存したこの機体の位置を、時刻と高度付きの Google Earth 用 KML 航跡として保存します。長い無信号で線は途切れます。
+
+aircraft-track-kml-saved = { $name } を保存しました。

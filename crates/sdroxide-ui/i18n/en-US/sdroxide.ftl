@@ -9137,3 +9137,8 @@ aircraft-label-adsb-version = ADS-B version
 aircraft-label-accuracy = Accuracy
 
 aircraft-autopilot-off = no mode engaged
+aircraft-track-kml = Save track (KML)
+
+aircraft-track-kml-hover = Save the positions the station kept for this aircraft as a KML track for Google Earth, with time and altitude. A long silence cuts the line.
+
+aircraft-track-kml-saved = Saved { $name }.
