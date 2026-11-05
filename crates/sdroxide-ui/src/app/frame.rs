@@ -1565,6 +1565,14 @@ impl eframe::App for SdroxideApp {
                 (dial - half, dial + half)
             } else if mode.is_rf_paint() {
                 (dial + 150.0, dial + 3450.0)
+            } else if mode == Mode::Navtex {
+                // NAVTEX sits ~1.7 kHz above the dial (USB), so a narrow
+                // carrier-centred-style window puts it at the far right edge
+                // with the CTR chip on. Widen the default span so the signal
+                // and a little context either side of it are visible instead
+                // of hugging the edge. (Per-decoder remembered zoom is a
+                // separate, larger feature — see the PR notes.)
+                (dial - 4000.0, dial + 4000.0)
             } else if mode.is_lower_sideband_at(dial) {
                 // Mirrored, because the mode is: SSTV and RADE keep phone
                 // practice and ride the lower sideband on 160/80/40 m, so their
