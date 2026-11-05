@@ -2,11 +2,10 @@
 
 Working queue. Rules in AGENTS.md. Last updated 2026-11-04.
 
-State: `main` at crate 2.2.0, PROTO_VERSION 263 (0x53). Latest release
-v2.2.3.6.2_brown (pre-release). Open PRs: 2 (#453 decoded CW over UDP — AJ6CU's, blocked on its
-round-trip test and now on a rebase; #464 — AJ6CU's, the same CW centring we
-merged, conflicts and wants rebasing down to its clamp half).
-Open issues: 5 (re-measured 2026-11-04).
+State: `main` at crate 2.2.0, PROTO_VERSION 264 (0x54). Latest release
+v2.2.3.6.2_brown (pre-release). Open PRs: 2 (#470 ours — the WEFAX page says what
+the trim was fitted over; #467 F4NRM's HPSDR Protocol 2 diversity, conflicting
+and his to rebase). Open issues: 5 (re-measured 2026-11-05).
 
 ## Task tracking rules
 
@@ -23,6 +22,7 @@ Open issues: 5 (re-measured 2026-11-04).
 
 ## Now
 
+- **PR #470 — a WEFAX page says what the line-clock trim was fitted over** (added by madmedicnl, owned by Claude): the trim is invisible in the picture, and the auto-slant's two floors (25 ppm from twenty phasing lines, 10 from fifty) mean "it acted" and "it never had enough signal" differ by a number nothing shows. The bench's five charts left −11.5 to +12.3 ppm over, just above the fine floor, so the fit was probably starved — but the operator's own charts come in straight, so the number has to come from DK8JV and F4NRM. Asked on #444 for one evening's charts plus the log lines.
 - **#421 NB with Kiwi** (added by trainrhd-del, owned by Claude) — the promised count is in (**#456** merged): while the blanker is on it writes one line a second with how many samples it zeroed, how close the strongest came to the 5× bar, and the device rate. A simulation of the shipped rule says the dependence is real and in our code — at the same impulse strength 20.3 kHz blanked 14 of 258 bursts where 768 kHz blanked 207 of 297 — but the reporter's own log lines decide the fix, and he gets them in the next pre-release.
 - **#388 HL2 datagram loss** (added by DK8JV, owned by Claude) — the reporter confirms it gone in v2.2.3.6.1; today's WEFAX findings are posted there. Closes when his fax test comes back clean.
 - **#427 SSTV starts on voice** (added by F4NRM, owned by Claude) — fixed by #441 (merged); F4NRM said he would confirm it on air once a release carries it, and asked that it not be closed until then.
@@ -45,8 +45,6 @@ Everything else that was in this list has been merged or closed since — see **
 
 - **PR #453 — decoded CW over UDP** (AJ6CU, 2026-11-04; owned by Claude) — the port of upstream `1dd977f9` + `d6fb61a4`. Two things stand between it and a merge: the `WsjtxConfig` postcard round-trip test (written, verified red, pasted in the PR — a maintainer push to his fork is refused with 403), and a rebase, because today's seven merges moved `engine.rs` and `proto.rs` under it.
 - **PR #464 — CW centring, AJ6CU's version** (AJ6CU, 2026-11-04; owned by Claude) — the same diagnosis and the same fix as our #463, which went in first, so it conflicts. The half still worth having is the clamped-width comparison and `a_width_past_the_maximum_is_sent_once`; the comment asks him to rebase down to that, or to let us add it.
-- **Two upstream wire commits wait for the counter** (added by dividebysandwich upstream, owned by Claude): `1de045ea` gives a band-plan sub-segment an optional label (CB channels named on the waterfall strip — the fork-shaped half of it), and `ffdefc70` makes Memories CLEAR delete every channel at once. Both change the wire, and `PROTO_VERSION` is one counter between us and F4NRM: #453 takes 264, so these are 265 and 266 and neither goes up until #453 has landed. Each needs its own round-trip test; the label one also needs the eleven languages for its text.
-
 - **PR #453 — decoded CW over UDP** (added by AJ6CU 2026-11-04, owned by Claude) — the wire rule is the only gap left: `WsjtxConfig` rides `Command::SetWsjtxConfig` whole and has no postcard round-trip test. The test is written, verified red by skipping `cw_text` on the wire, and posted in the PR as a paste-ready block; the branch is his fork and a maintainer push is refused (403), so it cannot be merged until it is in. Question to AJ6CU: will you add the test to `brown-cw-text-udp` yourself? The other three (#451, #452, #454) are ready and need nothing from him.
 
 - **Dream PR #51** (ours, offered 2026-11-03, no reply): `AacCodec::Decode` copies a fixed 960 samples per channel whatever faad2 reports, which is a segfault with faad2 ≥ 2.10. markjfine's `dream-mjf` branch fixes the *return value* (`eDecError` commented out, always `OK`) but the fixed-length copy is still there at line 242, and neither the codec-list nor the FFT-mutex patches are in it; his branch's other work is Qt, Hamlib, Windows and packaging, none of which we build.
@@ -96,6 +94,7 @@ Everything else that was in this list has been merged or closed since — see **
 
 ## Recently done
 
+- 2026-11-05 — #453 and #464 merged by F4NRM (AJ6CU's): decoded CW over UDP with its `WsjtxConfig` round-trip test, the 9998 note, the manual and three messages in all eleven languages, `PROTO_VERSION` 263 → **264**; and the clamp half of the rigctl CW follow-ups on top of our #463. The two upstream wire commits are unblocked by it and take 265 and 266.
 - 2026-11-04 — Seven of ours merged by F4NRM in one evening (added by madmedicnl, owned by Claude): **#456** the noise blanker's count, **#458** the CW click grid capped at the fine one in CW (plus the removal of the `cw click:` diagnostic that #450's `git add -A` had swept into `main`), **#459** a PTT release ends a keyed over (upstream `5f9f1aa3`), **#460** public SDRs fall back only to tight fuzzy matches (upstream `ee5b7fbf`), **#461** a microphone whose stream the host broke is reopened (upstream `eeb6bfc5`; **still needs the bench** — card out and in mid-session), **#462** the TODO mirror, and **#463** a CW width over rigctl centred on the sidetone (F4NRM's review point on #451). Main after all seven: gate silent, `sdroxide-rigctld` 50, `nb` 5, `fuzzy` 13, `publicsdr` 10, `cw_ptt` 2, `local_controller` 1.
 - 2026-11-04 — #465 merged (AJ6CU's own): the `\dump_state` level-mask test, which was F4NRM's second point on #452.
 - 2026-11-04 — #439 closed as user error (added by drdatapi, owned by Claude, the operator's call): the click, the readout and the release's code were all right; his **Click-tune rounding** was set to 1000 Hz for hunting SSB, and in CW that is a one-kilohertz grid, so a click landed up to half of it away. His 1.6.11 comparison is explained by that install still having 10 Hz. Open question left with the operator: should the grid fall to the fine one whenever the CW decoder is in front, so the coarse setting cannot bite there.
