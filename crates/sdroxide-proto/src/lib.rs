@@ -2176,8 +2176,17 @@ use sdroxide_types::{
 /// an English `Notice`; now it carries the reason and the frequency, and the
 /// screen words it in the operator's language. `PROTO_VERSION` 259 → 260,
 /// `VERSION_BYTE` 0x4F → 0x50.
-pub const PROTO_VERSION: u16 = 260;
-const VERSION_BYTE: u8 = 0x50;
+/// v261: **an HPSDR board's second ADC as a second aerial.**
+/// [`sdroxide_types::HpsdrConfig`] gains `diversity`, `div_mode`, `div_taps`,
+/// `div_rate` and `div_frozen` at its tail, for a Protocol 2 board that streams its two ADCs as a
+/// synced DDC pair (the TRX-DUO firmware v0.7.0, piHPSDR, Thetis). The struct
+/// rides inside `RadioConfig`, which crosses the link whole in
+/// `ServerMsg::RadioConfig` and `Command::SetRadioConfig`, so a v260 peer reads
+/// every field after it out of step. `#[serde(default)]`, so a `radio.json`
+/// written before this loads unchanged, with Diversity off. `PROTO_VERSION`
+/// 260 → 261, `VERSION_BYTE` 0x50 → 0x51.
+pub const PROTO_VERSION: u16 = 261;
+const VERSION_BYTE: u8 = 0x51;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -3441,7 +3450,7 @@ mod tests {
             ServerMsg::TxRefused(w, hz) => assert_eq!((w, hz), (why, 7_074_000.0)),
             _ => panic!("TxRefused did not round-trip"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (260, 0x50));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (261, 0x51));
     }
 
     /// postcard is positional: a field inserted mid-struct shifts every byte

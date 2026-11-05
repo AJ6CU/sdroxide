@@ -980,6 +980,7 @@ impl SdroxideApp {
             MenuChip::Div => self.radio_cfg.as_ref().is_some_and(|c| match c.backend {
                 sdroxide_types::Backend::Lime => c.lime.aux.mode == DiversityMode::Combine,
                 sdroxide_types::Backend::SdrPlay => c.sdrplay.duo.mode == DiversityMode::Combine,
+                sdroxide_types::Backend::Hpsdr => c.hpsdr.div_mode == DiversityMode::Combine,
                 _ => false,
             }),
             MenuChip::Sub => true,
@@ -5126,6 +5127,11 @@ impl SdroxideApp {
             sdroxide_types::Backend::Fobos => {
                 Some((cfg.fobos.div_mode, cfg.fobos.div_rate, cfg.fobos.div_frozen))
             }
+            // An HPSDR Protocol 2 board's second ADC, when Diversity is on;
+            // `caps.diversity` keeps the box off screen otherwise.
+            sdroxide_types::Backend::Hpsdr => {
+                Some((cfg.hpsdr.div_mode, cfg.hpsdr.div_rate, cfg.hpsdr.div_frozen))
+            }
             // Every other interface with a second receiver keeps them apart.
             _ => None,
         }
@@ -5155,6 +5161,9 @@ impl SdroxideApp {
             }
             sdroxide_types::Backend::Fobos => {
                 (&mut cfg.fobos.div_mode, &mut cfg.fobos.div_rate, &mut cfg.fobos.div_frozen)
+            }
+            sdroxide_types::Backend::Hpsdr => {
+                (&mut cfg.hpsdr.div_mode, &mut cfg.hpsdr.div_rate, &mut cfg.hpsdr.div_frozen)
             }
             _ => return,
         };

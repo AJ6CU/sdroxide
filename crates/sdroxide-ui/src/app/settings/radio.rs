@@ -1058,6 +1058,41 @@ pub(in crate::app) fn settings_hpsdr_tab(
                 );
             ui.end_row();
 
+            // Diversity: the board's second ADC as a second aerial. Protocol 2
+            // and DDC 1 only — the board folds DDC 2 into DDC 1's stream. Mode,
+            // rate and hold are on the main window's DIV strip; the filter
+            // length is the one control that stays here, as on every other
+            // diversity-capable backend. Takes effect on Apply.
+            if proto == 2 && cfg.hpsdr.ddc == 0 {
+                ui.label("");
+                crate::chrome::checkbox(
+                    ui,
+                    &mut cfg.hpsdr.diversity,
+                    tr!("settings-radio-hpsdr-diversity"),
+                )
+                .on_hover_text(tr!("settings-radio-hpsdr-diversity-hint"));
+                ui.end_row();
+                if cfg.hpsdr.diversity {
+                    ui.label(tr!("settings-radio-diversity-taps"));
+                    if ui
+                        .add(
+                            DragValue::new(&mut cfg.hpsdr.div_taps)
+                                .speed(1.0)
+                                .range(1..=sdroxide_types::DIVERSITY_MAX_TAPS),
+                        )
+                        .on_hover_text(tr!("settings-radio-one-tap-gain-phase-null-2"))
+                        .changed()
+                    {
+                        cmds.push(Command::SetGain {
+                            dir: Direction::Rx,
+                            element: sdroxide_types::DIV_TAPS_ELEMENT.to_string(),
+                            db: f64::from(cfg.hpsdr.div_taps),
+                        });
+                    }
+                    ui.end_row();
+                }
+            }
+
             ui.label(tr!("settings-radio-lna-gain")).on_hover_text(
                 tr!("settings-radio-front-end-gain-hermes-lite"),
             );

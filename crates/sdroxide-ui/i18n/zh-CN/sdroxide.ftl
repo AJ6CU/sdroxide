@@ -8973,3 +8973,7 @@ wefax-schedule-hint = 在浏览器中打开 { $station } 发布的时刻表，�
 tx-bands-check-again = 重新确认
 
 tx-bands-check-again-hint = 撤回确认以便重新检查列表。更改任何频段都会自动这样做。
+
+settings-radio-hpsdr-diversity = ADC 2 上的第二天线（分集）
+
+settings-radio-hpsdr-diversity-hint = 将板上的两个 ADC 作为一对同步数据流传输：第一根天线接 ADC 1，第二根接 ADC 2。Cancel 可消除本地噪声源，Combine 可弥补衰落。需要固件支持 Diversity 的 Protocol 2 板卡（例如 v0.7.0 起的 TRX-DUO）和 DDC 1。此时 DDC 2 作为第二天线，不能再作为独立电台。点击 Apply 后生效。

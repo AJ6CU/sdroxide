@@ -8983,3 +8983,7 @@ wefax-schedule-hint = { $station } が公開しているスケジュール（図
 tx-bands-check-again = 再確認
 
 tx-bands-check-again-hint = 確認を取り消してリストを見直します。バンドを変更すると自動的にそうなります。
+
+settings-radio-hpsdr-diversity = ADC 2 の第2アンテナ（ダイバーシティ）
+
+settings-radio-hpsdr-diversity-hint = ボードの2つの ADC を同期したペアとして送ります。第1アンテナは ADC 1、第2アンテナは ADC 2 です。Cancel は局所的なノイズ源を打ち消し、Combine はフェージングを補います。Diversity に対応した Protocol 2 ボード（例: v0.7.0 以降の TRX-DUO）と DDC 1 が必要です。DDC 2 は第2アンテナになり、独立した無線機にはできません。Apply で反映されます。

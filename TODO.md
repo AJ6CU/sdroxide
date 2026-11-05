@@ -2,7 +2,7 @@
 
 Working queue. Rules in AGENTS.md. Last updated 2026-11-02.
 
-State: `main` at crate 2.2.0, PROTO_VERSION 260 (0x50). Latest release
+State: `main` at crate 2.2.0, PROTO_VERSION 261 (0x51). Latest release
 v2.2.3.5_brown (pre-release). Open PRs: 0. Open issues: 7 (re-measured
 2026-11-02).
 

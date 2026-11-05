@@ -9034,3 +9034,7 @@ wefax-schedule-hint = Abre en un navegador el horario que publica { $station }, 
 tx-bands-check-again = REVISAR
 
 tx-bands-check-again-hint = Retira la confirmación para revisar la lista. Cambiar cualquier banda ya lo hace solo.
+
+settings-radio-hpsdr-diversity = Segunda antena en el ADC 2 (diversidad)
+
+settings-radio-hpsdr-diversity-hint = Envía los dos ADC de la placa como un par sincronizado: la primera antena en el ADC 1 y una segunda en el ADC 2. Cancel anula una fuente de ruido local, Combine rellena los desvanecimientos. Requiere una placa Protocol 2 cuyo firmware ofrezca Diversity (el TRX-DUO desde la v0.7.0, por ejemplo) y el DDC 1. El DDC 2 pasa a ser la segunda antena y no puede ser una radio aparte. Se aplica con Apply.

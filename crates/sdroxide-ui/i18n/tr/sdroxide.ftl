@@ -9035,3 +9035,7 @@ wefax-schedule-hint = Tarayıcıda { $station } istasyonunun yayımladığı pro
 tx-bands-check-again = YENİDEN
 
 tx-bands-check-again-hint = Onayı geri alır, liste yeniden kontrol edilebilir. Bir bandı değiştirmek bunu kendiliğinden yapar.
+
+settings-radio-hpsdr-diversity = ADC 2'de ikinci anten (diversity)
+
+settings-radio-hpsdr-diversity-hint = Kartın iki ADC'sini eşzamanlı bir çift olarak aktarır: ilk anten ADC 1'de, ikinci anten ADC 2'de. Cancel yerel bir gürültü kaynağını söndürür, Combine sönümlenmeleri doldurur. Yazılımı Diversity sunan bir Protocol 2 kartı (örneğin v0.7.0'dan itibaren TRX-DUO) ve DDC 1 gerekir. DDC 2 bu durumda ikinci antendir ve ayrı bir telsiz olamaz. Apply ile geçerli olur.
