@@ -9106,3 +9106,9 @@ settings-servers-decoded-cw-udp = Декодированный CW по UDP
 settings-servers-decoded-cw-udp-host-hint = 127.0.0.1 — программы на этом компьютере; адрес в локальной сети или широковещательный адрес этой подсети — другие компьютеры.
 
 settings-servers-decoded-cw-udp-port-hint = По умолчанию 9998
+
+windows-clear = ОЧИСТИТЬ
+
+windows-clear-sure = ТОЧНО?
+
+windows-clear-hint = Удалить все каналы памяти. Нажмите дважды; папки остаются.

@@ -1418,6 +1418,14 @@ pub enum Command {
     ///
     /// Appended for the usual reason — postcard numbers variants by position.
     WantAudioLevel,
+
+    /// Delete every memory channel at once (issue #755). Folders stay.
+    ///
+    /// One command rather than a [`Command::DeleteMemory`] per channel, which
+    /// would rewrite the file and republish the list once for each.
+    ///
+    /// Appended for the usual reason — postcard numbers variants by position.
+    ClearMemories,
 }
 
 /// What a [`Command::GetKnownCalls`] was answered with.

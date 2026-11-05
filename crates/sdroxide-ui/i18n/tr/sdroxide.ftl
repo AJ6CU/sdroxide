@@ -9091,3 +9091,9 @@ settings-servers-decoded-cw-udp = UDP üzerinden çözülmüş CW
 settings-servers-decoded-cw-udp-host-hint = 127.0.0.1 bu makinedeki programlara ulaşır; bir yerel ağ adresi veya bu alt ağın yayın adresi diğerlerine ulaşır.
 
 settings-servers-decoded-cw-udp-port-hint = Varsayılan 9998
+
+windows-clear = TEMİZLE
+
+windows-clear-sure = EMİN MİSİN?
+
+windows-clear-hint = Tüm hafıza kanallarını sil. İki kez tıkla; klasörler kalır.

@@ -9099,3 +9099,9 @@ settings-servers-decoded-cw-udp = Gedecodeerde CW via UDP
 settings-servers-decoded-cw-udp-host-hint = 127.0.0.1 bereikt programma's op deze computer; een LAN-adres of het broadcastadres van dit subnet bereikt andere.
 
 settings-servers-decoded-cw-udp-port-hint = Standaard 9998
+
+windows-clear = WISSEN
+
+windows-clear-sure = ZEKER?
+
+windows-clear-hint = Alle geheugenkanalen wissen. Twee keer klikken; mappen blijven.

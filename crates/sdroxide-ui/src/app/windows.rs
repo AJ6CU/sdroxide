@@ -593,6 +593,30 @@ impl SdroxideApp {
                     let csv = sdroxide_types::memories_to_chirp_csv(&self.memories);
                     crate::download::save("sdroxide-memories.csv", csv.as_bytes());
                 }
+                // Every channel at once, for a list imported by the hundred
+                // (issue #755). Two clicks: the first only arms it, and moving
+                // off the chip disarms it again.
+                let armed = self.mem_clear_armed;
+                let resp = if armed {
+                    crate::chrome::chip_accent(
+                        ui,
+                        true,
+                        tr!("windows-clear-sure"),
+                        crate::theme::PINK(),
+                        Color32::WHITE,
+                    )
+                } else {
+                    crate::chrome::chip(ui, false, tr!("windows-clear"))
+                }
+                .on_hover_text(tr!("windows-clear-hint"));
+                if resp.clicked() {
+                    if armed {
+                        cmds.push(Command::ClearMemories);
+                    }
+                    self.mem_clear_armed = !armed;
+                } else if armed && !resp.hovered() {
+                    self.mem_clear_armed = false;
+                }
             });
             ui.label(
                 RichText::new(tr!("windows-n-channels", n = self.memories.len()))

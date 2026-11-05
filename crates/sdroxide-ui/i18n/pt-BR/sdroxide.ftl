@@ -9091,3 +9091,9 @@ settings-servers-decoded-cw-udp = CW decodificado via UDP
 settings-servers-decoded-cw-udp-host-hint = 127.0.0.1 alcança os programas desta máquina; um endereço da rede local ou o endereço de broadcast desta sub-rede alcança os outros.
 
 settings-servers-decoded-cw-udp-port-hint = 9998 por padrão
+
+windows-clear = LIMPAR
+
+windows-clear-sure = CERTO?
+
+windows-clear-hint = Apagar todos os canais de memória. Clique duas vezes; as pastas ficam.

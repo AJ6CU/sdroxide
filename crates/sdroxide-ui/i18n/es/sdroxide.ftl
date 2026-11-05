@@ -9090,3 +9090,9 @@ settings-servers-decoded-cw-udp = CW decodificado por UDP
 settings-servers-decoded-cw-udp-host-hint = 127.0.0.1 llega a los programas de este equipo; una dirección de la red local o la dirección de difusión de esta subred llega a los demás.
 
 settings-servers-decoded-cw-udp-port-hint = 9998 por defecto
+
+windows-clear = BORRAR
+
+windows-clear-sure = ¿SEGURO?
+
+windows-clear-hint = Borrar todos los canales de memoria. Haz clic dos veces; las carpetas se quedan.
