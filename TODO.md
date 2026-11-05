@@ -49,6 +49,7 @@ Everything else that was in this list has been merged or closed since — see **
 - #132 Wrong frequency display (added by emi83170, owned by Roy).
 
 ## Waiting on other people
+- **Per-decoder remembered zoom (b)** (added by madmedicnl, owned by Claude) — waits on F4NRM's reaction to PR #486 (wider NAVTEX default span). If that is not enough, scope (b) properly: per-mode view save/restore, CTR invariants, tests. Large feature, not to be rushed.
 
 - **PR #453 — decoded CW over UDP** (AJ6CU, 2026-11-04; owned by Claude) — the port of upstream `1dd977f9` + `d6fb61a4`. Two things stand between it and a merge: the `WsjtxConfig` postcard round-trip test (written, verified red, pasted in the PR — a maintainer push to his fork is refused with 403), and a rebase, because today's seven merges moved `engine.rs` and `proto.rs` under it.
 - **PR #464 — CW centring, AJ6CU's version** (AJ6CU, 2026-11-04; owned by Claude) — the same diagnosis and the same fix as our #463, which went in first, so it conflicts. The half still worth having is the clamped-width comparison and `a_width_past_the_maximum_is_sent_once`; the comment asks him to rebase down to that, or to let us add it.
