@@ -198,6 +198,58 @@ pub fn ddc_command_packet(seq: u32, rate_khz: u16, ddcs: &[u8]) -> [u8; DDC_COMM
     b
 }
 
+/// Offset of the Diversity sync register in the DDC command packet: bit *n*
+/// set means "DDC *n* is synced into DDC 0" (openHPSDR Protocol 2, DDC-specific
+/// packet byte 1363).
+pub const DIVERSITY_SYNC_OFFSET: usize = 1363;
+
+/// Build the DDC command packet that asks for **Diversity**: two ADCs streamed
+/// as one synced DDC pair, DDC 0 on ADC0 and DDC 1 on ADC1, at the same
+/// frequency and rate.
+///
+/// This is what piHPSDR and Thetis send, and what the TRX-DUO firmware
+/// (v0.7.0, `sdr-receiver-hpsdr2.c`) answers to: **only DDC 0 is in the enable
+/// mask**, DDC 1's descriptor points at ADC1, and bit 1 of the sync register
+/// folds DDC 1 into DDC 0's stream. Enabling DDC 1 as well would make the
+/// board stream it on its own and not interleave anything.
+pub fn ddc_command_packet_diversity(seq: u32, rate_khz: u16) -> [u8; DDC_COMMAND_LEN] {
+    let mut b = ddc_command_packet(seq, rate_khz, &[0]);
+    // DDC 1's descriptor, stride 6 from offset 17: ADC1, same rate, 24 bits.
+    // The firmware takes the shared rate from the last descriptor it reads, so
+    // leaving DDC 1's at zero would be safe there but is not worth relying on.
+    let off = 17 + 6;
+    b[off] = 1; // ADC1
+    b[off + 1] = (rate_khz >> 8) as u8;
+    b[off + 2] = (rate_khz & 0xff) as u8;
+    b[off + 5] = 24;
+    b[DIVERSITY_SYNC_OFFSET] = 0b0000_0010; // DDC 1 synced into DDC 0
+    b
+}
+
+/// Split a Diversity stream into its two aerials.
+///
+/// A synced pair arrives interleaved in DDC 0's datagrams, instant by instant:
+/// `[DDC0 I,Q][DDC1 I,Q][DDC0 I,Q]…`, so as complex samples the even ones are
+/// the main aerial (ADC0) and the odd ones the second (ADC1). `interleaved` is
+/// the I,Q floats [`decode_ddc_iq`] produced; both outputs are appended to and
+/// receive the same number of complex samples. A trailing unpaired sample is
+/// dropped, never carried: a datagram holds whole instants, so one means a
+/// truncated packet. Returns how many instants (pairs) were split.
+pub fn split_diversity_pairs(
+    interleaved: &[f32],
+    main: &mut Vec<f32>,
+    aux: &mut Vec<f32>,
+) -> usize {
+    let instants = interleaved.len() / 4;
+    main.reserve(instants * 2);
+    aux.reserve(instants * 2);
+    for chunk in interleaved.chunks_exact(4) {
+        main.extend_from_slice(&chunk[0..2]);
+        aux.extend_from_slice(&chunk[2..4]);
+    }
+    instants
+}
+
 /// Build the DUC command packet (dest port 1026). Minimal linear-SSB config.
 ///
 /// Byte 4 is the number of DACs the host is driving, and it is **one**. It used
@@ -588,6 +640,10 @@ pub(crate) fn run(ctx: ThreadCtx) {
 /// gaps whenever the streams interleave.
 struct P2Slot {
     ring: Producer<f32>,
+    /// Diversity (DDC 0 only): the second aerial's ring. Its presence is the
+    /// request for a synced DDC pair, and every datagram on this stream is
+    /// then split between `ring` and this one.
+    aux_ring: Option<Producer<f32>>,
     last_rx_ms: crate::net::RxClock,
     freq_hz: f64,
     seq_in: SeqTracker,
@@ -642,6 +698,11 @@ impl P2Thread {
         SocketAddr::new(self.radio, p)
     }
 
+    /// Whether DDC 0 was attached as a Diversity stream.
+    fn diversity(&self) -> bool {
+        self.slots.get(&0).is_some_and(|s| s.aux_ring.is_some())
+    }
+
     /// Send the high-priority packet with the run bit set — the packet that
     /// keeps the radio streaming, and the one that starts it.
     fn send_high_priority(&mut self) {
@@ -653,6 +714,12 @@ impl P2Thread {
         let mut phases = [0u32; MAX_DDCS as usize];
         for (&ddc, slot) in &self.slots {
             phases[ddc as usize] = phase_word(slot.freq_hz, CLOCK_HZ);
+        }
+        // Diversity: the board folds DDC 1 into DDC 0's stream but tunes it
+        // from its own phase word, so the second aerial has to be on the same
+        // frequency or the pair is two different bands.
+        if self.diversity() {
+            phases[1] = phases[0];
         }
         let tx = phase_word(self.tx_freq, CLOCK_HZ);
         let drive = if self.ptt { TX_DRIVE } else { 0 };
@@ -707,7 +774,11 @@ impl P2Thread {
         let seq = next_seq(&mut self.seq.ddc);
         let mut ddcs: Vec<u8> = self.slots.keys().copied().collect();
         ddcs.sort_unstable();
-        let pkt = ddc_command_packet(seq, self.rate_khz, &ddcs);
+        let pkt = if self.diversity() {
+            ddc_command_packet_diversity(seq, self.rate_khz)
+        } else {
+            ddc_command_packet(seq, self.rate_khz, &ddcs)
+        };
         tracing::debug!(
             "HPSDR P2: DDC command seq {seq}: DDCs {ddcs:?} enabled, {} kHz, 24-bit, ADC0 -> \
              port {}",
@@ -842,6 +913,9 @@ impl P2Thread {
 
         let mut last_watchdog = Instant::now();
         let mut rx_scratch: Vec<f32> = Vec::with_capacity(512);
+        // Diversity: the two aerials of one datagram, split.
+        let mut diversity_scratch: (Vec<f32>, Vec<f32>) =
+            (Vec::with_capacity(512), Vec::with_capacity(512));
         let mut tx_scratch: Vec<f32> = Vec::with_capacity(DUC_SAMPLES_PER_PKT * 2);
         let mut next_duc = Instant::now();
         let mut buf = [0u8; 2048];
@@ -858,11 +932,12 @@ impl P2Thread {
             let mut freq_changed = false;
             while let Ok(msg) = self.ctrl.try_recv() {
                 match msg {
-                    Ctrl::Attach { ddc, ring, last_rx_ms, rx_paused } => {
+                    Ctrl::Attach { ddc, ring, last_rx_ms, rx_paused, aux_ring } => {
                         self.slots.insert(
                             ddc,
                             P2Slot {
                                 ring,
+                                aux_ring,
                                 last_rx_ms,
                                 freq_hz: 7_100_000.0,
                                 seq_in: SeqTracker::new(),
@@ -968,10 +1043,15 @@ impl P2Thread {
                     let ptt = self.ptt && ddc == Some(0);
                     if let Some(slot) = ddc.and_then(|d| self.slots.get_mut(&(d as u8))) {
                         rx_scratch.clear();
-                        if let Some(pairs) = decode_ddc_iq(&buf[..n], &mut rx_scratch) {
+                        if let Some(decoded) = decode_ddc_iq(&buf[..n], &mut rx_scratch) {
                             if self.invert_spectrum {
                                 crate::protocol1::conjugate(&mut rx_scratch);
                             }
+                            // Diversity: a datagram holds `decoded / 2` instants
+                            // of two aerials each; count instants, as an
+                            // ordinary stream counts its samples.
+                            let pairs =
+                                if slot.aux_ring.is_some() { decoded / 2 } else { decoded };
                             stats.on_iq(pairs);
                             slot.last_rx_ms.store(
                                 self.opened_at.elapsed().as_millis() as u64,
@@ -1000,8 +1080,29 @@ impl P2Thread {
                             }
                             let keyed =
                                 ptt || slot.rx_paused.load(Ordering::Relaxed) || slot.tx_backlog;
-                            slot.tx_backlog =
-                                !push_iq(&mut slot.ring, &rx_scratch, &mut stats, keyed) && keyed;
+                            slot.tx_backlog = if let Some(aux_ring) = slot.aux_ring.as_mut() {
+                                diversity_scratch.0.clear();
+                                diversity_scratch.1.clear();
+                                split_diversity_pairs(
+                                    &rx_scratch,
+                                    &mut diversity_scratch.0,
+                                    &mut diversity_scratch.1,
+                                );
+                                // Both rings or neither: a pair that lost one
+                                // half would shift the second aerial against
+                                // the first for good.
+                                let room = slot.ring.slots().min(aux_ring.slots());
+                                if room >= diversity_scratch.0.len() {
+                                    push_iq(&mut slot.ring, &diversity_scratch.0, &mut stats, keyed);
+                                    push_iq(aux_ring, &diversity_scratch.1, &mut stats, keyed);
+                                    false
+                                } else {
+                                    stats.on_dropped(diversity_scratch.0.len() / 2);
+                                    keyed
+                                }
+                            } else {
+                                !push_iq(&mut slot.ring, &rx_scratch, &mut stats, keyed) && keyed
+                            };
                         } else {
                             stats.on_other();
                             tracing::trace!(
@@ -1352,5 +1453,56 @@ mod tests {
         // An out-of-range index is ignored, not a corrupted write.
         let b = ddc_command_packet(0, 384, &[9]);
         assert_eq!(b[7], 0, "no DDC enabled");
+    }
+
+    #[test]
+    fn diversity_command_syncs_ddc1_into_ddc0_and_enables_only_ddc0() {
+        let b = ddc_command_packet_diversity(7, 1536);
+        assert_eq!(u32::from_be_bytes([b[0], b[1], b[2], b[3]]), 7);
+        assert_eq!(b[7], 0b0000_0001, "only DDC0 is enabled; DDC1 arrives folded into it");
+        assert_eq!(b[17], 0, "DDC0 on ADC0");
+        assert_eq!(u16::from_be_bytes([b[18], b[19]]), 1536);
+        assert_eq!(b[23], 1, "DDC1 on ADC1");
+        assert_eq!(u16::from_be_bytes([b[24], b[25]]), 1536);
+        assert_eq!(b[28], 24);
+        assert_eq!(b[DIVERSITY_SYNC_OFFSET], 0b0000_0010, "sync register: DDC1 into DDC0");
+        // A plain command never carries a sync bit.
+        assert_eq!(ddc_command_packet(0, 1536, &[0, 1])[DIVERSITY_SYNC_OFFSET], 0);
+    }
+
+    #[test]
+    fn a_diversity_datagram_splits_into_two_aerials_of_equal_length() {
+        // The firmware's layout: 119 instants of [DDC0 I,Q][DDC1 I,Q], header
+        // declaring 238 samples, 1444 bytes in all.
+        let mut pkt = vec![0u8; DDC_IQ_HEADER_LEN + 238 * 6];
+        pkt[13] = 24;
+        pkt[14..16].copy_from_slice(&238u16.to_be_bytes());
+        for k in 0..238usize {
+            // Even samples = main, value k; odd = aux, value -k (as 24-bit BE).
+            let v: i32 = if k % 2 == 0 { k as i32 } else { -(k as i32) };
+            let be = (v << 8 >> 8).to_be_bytes();
+            let off = DDC_IQ_HEADER_LEN + k * 6;
+            pkt[off..off + 3].copy_from_slice(&be[1..4]);
+            pkt[off + 3..off + 6].copy_from_slice(&be[1..4]);
+        }
+        assert_eq!(pkt.len(), 1444);
+        let mut iq = Vec::new();
+        assert_eq!(decode_ddc_iq(&pkt, &mut iq), Some(238));
+        let (mut main, mut aux) = (Vec::new(), Vec::new());
+        assert_eq!(split_diversity_pairs(&iq, &mut main, &mut aux), 119);
+        assert_eq!((main.len(), aux.len()), (238, 238));
+        // Main got the even samples (positive), aux the odd ones (negative).
+        assert!(main.chunks_exact(2).all(|c| c[0] >= 0.0));
+        assert!(aux.chunks_exact(2).all(|c| c[0] <= 0.0));
+        assert!(main[2] > 0.0 && aux[0] < 0.0, "instant 0 is [DDC0 sample 0][DDC1 sample 1]");
+    }
+
+    #[test]
+    fn a_truncated_diversity_stream_drops_the_unpaired_tail() {
+        let iq = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0]; // 1.5 instants
+        let (mut main, mut aux) = (Vec::new(), Vec::new());
+        assert_eq!(split_diversity_pairs(&iq, &mut main, &mut aux), 1);
+        assert_eq!(main, vec![1.0, 2.0]);
+        assert_eq!(aux, vec![3.0, 4.0]);
     }
 }

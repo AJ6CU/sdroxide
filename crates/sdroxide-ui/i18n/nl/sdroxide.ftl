@@ -9044,6 +9044,9 @@ tx-bands-check-again = OPNIEUW
 
 tx-bands-check-again-hint = Trekt de bevestiging in om de lijst opnieuw te bekijken. Een band wijzigen doet dat al vanzelf.
 
+settings-radio-hpsdr-diversity = Tweede antenne op ADC 2 (diversity)
+
+settings-radio-hpsdr-diversity-hint = Stuurt de twee ADC's van de kaart als een gesynchroniseerd paar: de eerste antenne op ADC 1, een tweede op ADC 2. Cancel onderdrukt een lokale stoorbron, Combine vult fading op. Vereist een Protocol 2-kaart waarvan de firmware Diversity biedt (bijvoorbeeld de TRX-DUO vanaf v0.7.0) en DDC 1. DDC 2 is dan de tweede antenne en kan geen eigen radio zijn. Werkt na Apply.
 topbar-bw-hint-title = Filter instellen en opslaan
 
 topbar-bw-hint-body = Klik om de filterinstellingen te openen. Rechtsklik op een preset om die te wijzigen, of klik op M+ om de huidige doorlaatband in je eigen geheugen op te slaan.

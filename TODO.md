@@ -2,7 +2,7 @@
 
 Working queue. Rules in AGENTS.md. Last updated 2026-11-04.
 
-State: `main` at crate 2.2.0, PROTO_VERSION 264 (0x54). Latest release
+State: `main` at crate 2.2.0, PROTO_VERSION 265 (0x55). Latest release
 v2.2.3.6.2_brown (pre-release). Open PRs: 2 (#470 ours — the WEFAX page says what
 the trim was fitted over; #467 F4NRM's HPSDR Protocol 2 diversity, conflicting
 and his to rebase). Open issues: 5 (re-measured 2026-11-05).
@@ -29,6 +29,7 @@ and his to rebase). Open issues: 5 (re-measured 2026-11-05).
 - **WEFAX bench test — stopped 2026-11-03 21:20 UTC**: propagation went before the night half could run; the DWD 3855 sweep of 2026-11-04 ran 14:20–16:10 UTC and gave five complete charts, and WEFAX is finished from our side. Logs: `/tmp/wefax-dwd3855.log`.
 - SWL users group requests (added by the SWL users group, owned by Roy) — point **4** is still ours: CTR ratchets the span down on keyboard tuning while the user cannot widen it again, exposed by #397's per-rate usable span; needs a `ctr_zoom_sim` case with `usable < rate`. Points 1 and 3 are in (#409, #406); 2 (start in Listening/Operating per radio) is parked.
 Everything else that was in this list has been merged or closed since — see **Recently done** and the PR list on the board.
+- HPSDR P2 diversity / noise cancel on the TRX-DUO (added by F4NRM, owned by Claude) — branch `f4nrm/magical-gauss-nnkmwm`: ask the v0.7.0 firmware for a synced DDC pair (DDC0 only enabled, DDC1 → ADC1, sync byte 1363 = 0x02), split the interleaved stream (119 × [DDC0 I,Q][DDC1 I,Q] per 1444-byte packet) into main + aux and feed `sdroxide_dsp::Diversity` as in `fobos_source.rs`. Format read from `fventuri/red-pitaya-notes` tag v0.7.0 (`sdr-receiver-hpsdr2.c`). PR #467 open: protocol, network, source, DIV strip, settings in eleven languages, manual. **Not tested on a real TRX-DUO**: needs v0.7.0 on the board. Wacht op F4NRM's review.
 
 ## Backlog — our open issues (board: Todo)
 

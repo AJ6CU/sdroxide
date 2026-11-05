@@ -9041,6 +9041,9 @@ tx-bands-check-again = CHECK AGAIN
 # Hover on the CHECK AGAIN chip over the transmit band list.
 tx-bands-check-again-hint = Withdraw the confirmation and check the list again. Changing any band does this by itself.
 
+settings-radio-hpsdr-diversity = Second aerial on ADC 2 (diversity)
+
+settings-radio-hpsdr-diversity-hint = Streams the board's two ADCs as one synced pair: the first aerial on ADC 1, a second one on ADC 2. Cancel nulls a local noise source, Combine fills in fades. Needs a Protocol 2 board whose firmware offers Diversity (the TRX-DUO from v0.7.0, for example) and DDC 1. DDC 2 is then the second aerial and cannot be a radio of its own. Takes effect on Apply.
 topbar-bw-hint-title = Adjust and memorise the filter
 
 topbar-bw-hint-body = Click to open the filter settings. Right-click a preset chip to change it, or click M+ to store the current passband in your own memory.

@@ -9034,6 +9034,9 @@ tx-bands-check-again = PRÜFEN
 
 tx-bands-check-again-hint = Nimmt die Bestätigung zurück, damit die Liste erneut geprüft werden kann. Das Ändern eines Bandes tut das von selbst.
 
+settings-radio-hpsdr-diversity = Zweite Antenne am ADC 2 (Diversity)
+
+settings-radio-hpsdr-diversity-hint = Überträgt die beiden ADCs der Platine als synchronisiertes Paar: die erste Antenne am ADC 1, eine zweite am ADC 2. Cancel löscht eine lokale Störquelle, Combine füllt Schwund aus. Benötigt eine Protocol-2-Platine, deren Firmware Diversity anbietet (z. B. das TRX-DUO ab v0.7.0), und DDC 1. DDC 2 ist dann die zweite Antenne und kann kein eigenes Radio sein. Wirkt nach Apply.
 topbar-bw-hint-title = Filter einstellen und speichern
 
 topbar-bw-hint-body = Klicken, um die Filtereinstellungen zu öffnen. Rechtsklick auf eine Voreinstellung zum Ändern, oder auf M+ klicken, um den aktuellen Durchlassbereich im eigenen Speicher abzulegen.

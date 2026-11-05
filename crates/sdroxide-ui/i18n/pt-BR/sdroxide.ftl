@@ -9036,6 +9036,9 @@ tx-bands-check-again = REVER
 
 tx-bands-check-again-hint = Retira a confirmação para rever a lista. Alterar qualquer banda já faz isso sozinho.
 
+settings-radio-hpsdr-diversity = Segunda antena no ADC 2 (diversidade)
+
+settings-radio-hpsdr-diversity-hint = Envia os dois ADCs da placa como um par sincronizado: a primeira antena no ADC 1 e uma segunda no ADC 2. Cancel anula uma fonte de ruído local, Combine preenche os desvanecimentos. Requer uma placa Protocol 2 cujo firmware ofereça Diversity (o TRX-DUO a partir da v0.7.0, por exemplo) e o DDC 1. O DDC 2 passa a ser a segunda antena e não pode ser um rádio separado. Vale após Apply.
 topbar-bw-hint-title = Ajustar e memorizar o filtro
 
 topbar-bw-hint-body = Clique para abrir os ajustes do filtro. Clique com o botão direito em uma predefinição para alterá-la, ou clique em M+ para guardar a banda passante atual na sua memória.

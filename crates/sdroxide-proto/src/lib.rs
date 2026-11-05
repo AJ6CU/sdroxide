@@ -2182,8 +2182,17 @@ use sdroxide_types::{
 /// peer handed one reads the extra bytes as the start of the next message. The
 /// same change as upstream's v171. `PROTO_VERSION` 263 → 264, `VERSION_BYTE`
 /// 0x53 → 0x54.
-pub const PROTO_VERSION: u16 = 264;
-const VERSION_BYTE: u8 = 0x54;
+/// v265: **an HPSDR board's second ADC as a second aerial.**
+/// [`sdroxide_types::HpsdrConfig`] gains `diversity`, `div_mode`, `div_taps`,
+/// `div_rate` and `div_frozen` at its tail, for a Protocol 2 board that streams its two ADCs as a
+/// synced DDC pair (the TRX-DUO firmware v0.7.0, piHPSDR, Thetis). The struct
+/// rides inside `RadioConfig`, which crosses the link whole in
+/// `ServerMsg::RadioConfig` and `Command::SetRadioConfig`, so a v264 peer reads
+/// every field after it out of step. `#[serde(default)]`, so a `radio.json`
+/// written before this loads unchanged, with Diversity off. `PROTO_VERSION`
+/// 264 → 265, `VERSION_BYTE` 0x54 → 0x55.
+pub const PROTO_VERSION: u16 = 265;
+const VERSION_BYTE: u8 = 0x55;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -3464,7 +3473,7 @@ mod tests {
             ServerMsg::TxRefused(w, hz) => assert_eq!((w, hz), (why, 7_074_000.0)),
             _ => panic!("TxRefused did not round-trip"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (264, 0x54));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (265, 0x55));
     }
 
     /// The dynamic-DNS answer rides last on [`ServerMsg`], and it has to: the
@@ -3495,7 +3504,7 @@ mod tests {
             }
             other => panic!("the answer did not round-trip: {other:?}"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (264, 0x54));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (265, 0x55));
     }
 
     /// postcard is positional: a field inserted mid-struct shifts every byte
@@ -3524,9 +3533,13 @@ mod tests {
             (481, 5_599_147_536_364_706_919),
             "DigiConfig's wire layout shifted — append fields, never insert them"
         );
+        // 897 since `HpsdrConfig` gained its five Diversity fields (a bool, a
+        // mode, the taps, the rate and the hold: 8 bytes) at its own tail
+        // (PROTO_VERSION 264 → 265). `HpsdrConfig` sits inside `RadioConfig`,
+        // so this moves what follows it: that is what the bump is for.
         assert_eq!(
             (radio.len(), fnv1a(&radio)),
-            (889, 17_500_317_737_597_158_402),
+            (897, 1_396_573_632_080_966_650),
             "RadioConfig's wire layout shifted — append fields, never insert them"
         );
         // 316 since the two Dynamic DNS fields were appended at the end

@@ -482,6 +482,11 @@ pub(crate) enum Ctrl {
         /// keying at a different time, and one of them being on the air says
         /// nothing about whether the other's ring is being drained.
         rx_paused: Arc<AtomicBool>,
+        /// Diversity (Protocol 2, DDC 0 only): the ring the second aerial's
+        /// samples go into. `Some` is also the request itself — the network
+        /// thread asks the board for a synced DDC pair when it is there, and
+        /// splits DDC 0's interleaved datagrams between the two rings.
+        aux_ring: Option<Producer<f32>>,
     },
     /// A DDC stream going away (its radio tab closed, or its source is being
     /// rebuilt).
@@ -1074,6 +1079,24 @@ impl HpsdrBoard {
     /// receiver — and for a DDC that already has a live stream: two engines
     /// draining one ring would each get half the samples.
     pub fn rx(&self, ddc: u8) -> Result<HpsdrRx, HpsdrError> {
+        self.rx_with(ddc, false)
+    }
+
+    /// [`Self::rx`], optionally as a **Diversity** stream: DDC 0 on ADC0 and
+    /// the second aerial on ADC1, delivered as a synced pair and read back
+    /// through [`HpsdrRx::rx_read_aux`]. Protocol 2 only, and only on DDC 0:
+    /// the board folds DDC 1 into DDC 0's stream, so DDC 1 is reserved for as
+    /// long as this stream lives and cannot be a radio of its own.
+    pub fn rx_with(&self, ddc: u8, diversity: bool) -> Result<HpsdrRx, HpsdrError> {
+        if diversity && (self.inner.protocol != 2 || ddc != 0) {
+            return Err(HpsdrError::Msg(format!(
+                "Diversity needs a Protocol 2 board and DDC 1 (this is {} on Protocol {}, \
+                 DDC {})",
+                self.inner.board,
+                self.inner.protocol,
+                ddc + 1
+            )));
+        }
         if ddc >= self.ddc_count() {
             return Err(HpsdrError::Msg(format!(
                 "DDC {} does not exist: {} (Protocol {}) has {} receiver(s) here",
@@ -1091,11 +1114,26 @@ impl HpsdrBoard {
                     ddc + 1
                 )));
             }
+            // Diversity takes DDC 2 with it: it is the second aerial.
+            if diversity && !attached.insert(1) {
+                attached.remove(&ddc);
+                return Err(HpsdrError::Msg(
+                    "Diversity needs DDC 2 for the second aerial, and DDC 2 is already running \
+                     as another radio"
+                        .to_string(),
+                ));
+            }
         }
         // RX ring ~0.5 s at the RX rate.
         let rx_cap =
             ((self.inner.sample_rate_hz * 2.0 * 0.5) as usize).next_power_of_two().max(1 << 16);
         let (ring_prod, ring_cons) = RingBuffer::<f32>::new(rx_cap);
+        let (aux_prod, aux_cons) = if diversity {
+            let (p, c) = RingBuffer::<f32>::new(rx_cap);
+            (Some(p), Some(c))
+        } else {
+            (None, None)
+        };
         // The liveness clock starts at "data seen now": a stream attached to a
         // long-running connection must age from its attach, not from the
         // connection's epoch, or it would count as silent before its first
@@ -1111,11 +1149,13 @@ impl HpsdrBoard {
             ring: ring_prod,
             last_rx_ms: last_rx_ms.clone(),
             rx_paused: Arc::clone(&rx_paused),
+            aux_ring: aux_prod,
         });
         Ok(HpsdrRx {
             dev: Arc::clone(&self.inner),
             ddc,
             ring: ring_cons,
+            aux_ring: aux_cons,
             tx,
             last_rx_ms,
             rx_paused,
@@ -1130,6 +1170,10 @@ pub struct HpsdrRx {
     dev: Arc<DevInner>,
     ddc: u8,
     ring: Consumer<f32>,
+    /// Diversity: the second aerial's samples, paired instant for instant with
+    /// [`Self::ring`] because the network thread fills both from the same
+    /// datagram or neither. `None` on an ordinary stream.
+    aux_ring: Option<Consumer<f32>>,
     /// TX I/Q into the network thread — DDC 0 only.
     tx: Option<Producer<f32>>,
     /// This stream's liveness clock (ms since the connection opened at the
@@ -1150,7 +1194,13 @@ impl std::fmt::Debug for HpsdrRx {
 
 impl Drop for HpsdrRx {
     fn drop(&mut self) {
-        self.dev.attached.lock().expect("attached lock").remove(&self.ddc);
+        {
+            let mut attached = self.dev.attached.lock().expect("attached lock");
+            attached.remove(&self.ddc);
+            if self.aux_ring.is_some() {
+                attached.remove(&1); // the second aerial's DDC, reserved in `rx_with`
+            }
+        }
         // Hand the TX feed back so a rebuilt DDC-0 stream (Settings → Apply)
         // can claim it again on the same connection.
         if let Some(tx) = self.tx.take() {
@@ -1420,6 +1470,38 @@ impl HpsdrRx {
     /// replay a stale backlog after `tx_end`.
     pub fn discard_pending_rx(&mut self) {
         while self.ring.pop().is_ok() {}
+        if let Some(aux) = self.aux_ring.as_mut() {
+            while aux.pop().is_ok() {}
+        }
+    }
+
+    /// Whether this stream carries a second aerial (Diversity).
+    pub fn has_aux(&self) -> bool {
+        self.aux_ring.is_some()
+    }
+
+    /// Drain both aerials at once: `main` and `aux` get the same number of
+    /// interleaved I,Q floats, instant for instant. Reading them through two
+    /// separate calls could hand out different counts when a datagram lands in
+    /// between, and a canceller fed a pair that is off by even one sample fits
+    /// a delay that is not there — so the count is taken as the smaller of
+    /// what both rings hold, and the same number is popped from each. Always
+    /// even; 0 on a stream without Diversity.
+    pub fn rx_read_pair(&mut self, main: &mut [f32], aux: &mut [f32]) -> usize {
+        let Some(aux_ring) = self.aux_ring.as_mut() else { return 0 };
+        let take = self.ring.slots().min(aux_ring.slots()).min(main.len()).min(aux.len()) & !1;
+        for k in 0..take {
+            match (self.ring.pop(), aux_ring.pop()) {
+                (Ok(m), Ok(a)) => {
+                    main[k] = m;
+                    aux[k] = a;
+                }
+                // Cannot happen: `take` was bounded by both rings and only
+                // this end pops. Stop on the instant boundary all the same.
+                _ => return k & !1,
+            }
+        }
+        take
     }
 
     /// Tell the network thread that the engine has stopped reading this stream

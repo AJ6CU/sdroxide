@@ -1827,6 +1827,9 @@ fn open_hpsdr_source(
         caps.antennas_rx =
             sdroxide_types::HpsdrIoRxInput::ALL.iter().map(|i| i.label().to_string()).collect();
     }
+    // A synced DDC pair is two aerials arriving as one span: what puts the
+    // filter's controls on the main window's DIV strip.
+    caps.diversity = src.diversity_active();
     Ok((Box::new(src), caps))
 }
 

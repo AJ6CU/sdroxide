@@ -9791,6 +9791,26 @@ involved:
   jack makes no power at all, and the relay is deliberately held in receive so
   the antenna connector stays on the receiver. Ignored on boards other than a
   Hermes Lite.
+- **Second aerial on ADC 2 (diversity)** — streams the board's two ADCs as one
+  synced pair: the first aerial on ADC 1, a second one on ADC 2, both on the
+  same frequency and the same instant. **Protocol 2 only, on DDC 1, and only on
+  a board whose firmware offers Diversity** — the TRX-DUO from firmware v0.7.0
+  (the Red Pitaya clone with two 16-bit ADCs), piHPSDR and Thetis use the same
+  request. DDC 2 is then the second aerial and cannot be a radio of its own.
+  Takes effect on **Apply**, because the board is told how to stream when the
+  DDC is attached. Asked for on any other board, the radio opens without it
+  and the log says why.
+
+  **Diversity taps** sets the length of the adaptive filter (one tap is a gain
+  and a phase; each further tap equalises one sample period of the difference
+  between the two aerials). The main window's **DIV** strip then appears with
+  **Cancel** (null a local noise source such as a switched-mode supply or a
+  neighbour's inverter — the second aerial wants to hear the noise and as little
+  of the band as possible) or **Combine** (add the two in the phase that makes
+  them reinforce, filling in HF fades), the adaptation rate, hold and restart,
+  as on a LimeSDR or an RSPduo
+  ([§6.2.17](#6217-limesdr-family--limerfe-limesuite)). Set the two aerials to
+  about the same noise floor. *Not yet verified on a real TRX-DUO.*
 - **Invert spectrum (Swap I/Q)** — mirrors the board's spectrum about the tuned
   frequency, on transmit as well as receive. **On by default**, because a
   Hermes Lite 2 needs it. Turn it *off* only if signals appear on the wrong side
