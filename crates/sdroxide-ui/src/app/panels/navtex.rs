@@ -58,15 +58,21 @@ pub(super) fn navtex_list_header(
                 .on_hover_text(tr!("navtex-hunting-hint"));
         }
         // What the time diversity actually did, which is the only quality
-        // figure a mode with no checksum has.
-        if st.repaired > 0 || st.lost > 0 {
-            ui.label(
-                RichText::new(tr!("navtex-repaired-lost", repaired = st.repaired, lost = st.lost))
-                    .size(10.0)
-                    .color(if st.lost > 0 { theme::YELLOW() } else { theme::CYAN_DIM() }),
-            )
-            .on_hover_text(tr!("navtex-characters-whose-first-copy-was"));
-        }
+        // figure a mode with no checksum has. All three counts, always: the
+        // good ones are the number an operator judges the band by, and a
+        // figure that only appears once something has gone wrong reads as a
+        // broken counter rather than as a clean copy (F4NRM, #481).
+        ui.label(
+            RichText::new(tr!(
+                "navtex-copies",
+                direct = st.direct,
+                repaired = st.repaired,
+                lost = st.lost
+            ))
+            .size(10.0)
+            .color(if st.lost > 0 { theme::YELLOW() } else { theme::CYAN_DIM() }),
+        )
+        .on_hover_text(tr!("navtex-characters-whose-first-copy-was"));
     });
     flip
 }

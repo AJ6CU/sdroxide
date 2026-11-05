@@ -4024,7 +4024,7 @@ navtex-character-phase-locked-signal-being = Karakter fazı kilitli — bir siny
 navtex-characters-whose-first-copy-was = İlk kopyası bozuk olan ve beş yuva sonra tekrardan alınan karakterler ve ikisi de bozuk olanlar. Bir NAVTEX karakteri iki kez gönderilir; hata düzeltmesinin tamamı budur.
 navtex-swap-mark-space-tones-signal = Diğer yan bantta alınan bir sinyal için işaret ve boşluk tonlarını değiştirin. Kapalıysa kanal frekansında üst yan banttır; hizmet için yayımlanmış her ayar talimatının dediği budur.
 navtex-starting-navtex-receiver = NAVTEX alıcısı başlatılıyor…
-navtex-nothing-yet-station-transmits-ten = Henüz hiçbir şey yok — bir istasyon dört saatte bir on dakika yayın yapar
+navtex-nothing-yet-station-transmits-ten = Henüz hiçbir şey yok — istasyonlar belirli zaman dilimlerinde yayın yapar, bazıları bir uyarı olduğunda
 navtex-cut-short = kısaltıldı
 navtex-message = İLETİ
 navtex-time-day-stated-message-utc = İletide belirtilen günün saati (UTC): yalnızca gösterim
@@ -4624,7 +4624,6 @@ macros-most = { $value } en fazlası
 
 ## navtex: messages with values (src/app/panels/navtex.rs)
 
-navtex-repaired-lost = { $repaired } onarıldı · { $lost } kayıp
 navtex-characters-lost = { $lost } karakter kayıp
 
 ## packet: messages with values (src/app/panels/packet.rs)
@@ -9095,3 +9094,5 @@ windows-clear = TEMİZLE
 windows-clear-sure = EMİN MİSİN?
 
 windows-clear-hint = Tüm hafıza kanallarını sil. İki kez tıkla; klasörler kalır.
+
+navtex-copies = { $direct } doğru · { $repaired } onarılan · { $lost } kayıp

@@ -4022,7 +4022,7 @@ navtex-character-phase-locked-signal-being = De tekenfase is vergrendeld — een
 navtex-characters-whose-first-copy-was = Tekens waarvan de eerste kopie beschadigd was en die uit de herhaling vijf slots later zijn genomen, en die waarbij beide slecht waren. Een NAVTEX-teken wordt twee keer verzonden; dat is de hele foutcorrectie.
 navtex-swap-mark-space-tones-signal = Wissel de mark- en spacetonen om, voor een signaal dat op de andere zijband is ontvangen. Uit is bovenzijband op de kanaalfrequentie, wat elke gepubliceerde afstemaanwijzing voor de dienst zegt.
 navtex-starting-navtex-receiver = de NAVTEX-ontvanger wordt gestart…
-navtex-nothing-yet-station-transmits-ten = nog niets — een station zendt elke vier uur tien minuten
+navtex-nothing-yet-station-transmits-ten = nog niets — stations zenden in vaste tijdvakken, en sommige wanneer ze een waarschuwing hebben
 navtex-cut-short = afgebroken
 navtex-message = BERICHT
 navtex-time-day-stated-message-utc = Tijdstip van de dag volgens het bericht (UTC): alleen ter weergave
@@ -4622,7 +4622,6 @@ macros-most = { $value } is het meest
 
 ## navtex: messages with values (src/app/panels/navtex.rs)
 
-navtex-repaired-lost = { $repaired } hersteld · { $lost } verloren
 navtex-characters-lost = { $lost } tekens verloren
 
 ## packet: messages with values (src/app/panels/packet.rs)
@@ -9103,3 +9102,5 @@ windows-clear = WISSEN
 windows-clear-sure = ZEKER?
 
 windows-clear-hint = Alle geheugenkanalen wissen. Twee keer klikken; mappen blijven.
+
+navtex-copies = { $direct } goed · { $repaired } hersteld · { $lost } verloren

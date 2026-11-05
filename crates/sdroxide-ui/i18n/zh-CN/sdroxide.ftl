@@ -3996,7 +3996,7 @@ navtex-character-phase-locked-signal-being = 字符相位已锁定——正在�
 navtex-characters-whose-first-copy-was = 首次副本已损坏、取自五个时隙之后的重复副本的字符，以及两份副本都已损坏的字符。NAVTEX 的每个字符都会发送两次；这就是它全部的纠错手段。
 navtex-swap-mark-space-tones-signal = 交换标记音和空号音，适用于在另一个边带上接收到的信号。关闭即为信道频率上的上边带，这也是该服务所有已发布的调谐说明所采用的方式。
 navtex-starting-navtex-receiver = 正在启动 NAVTEX 接收机……
-navtex-nothing-yet-station-transmits-ten = 尚无内容——电台每四小时发射十分钟
+navtex-nothing-yet-station-transmits-ten = 尚无内容——电台在预定时段发射，部分电台在有警报时随时发射
 navtex-cut-short = 被提前切断
 navtex-message = 消息
 navtex-time-day-stated-message-utc = 消息中所述的时刻（UTC）：仅供显示
@@ -4583,7 +4583,6 @@ macros-most = { $value } 为最多
 
 ## navtex: messages with values (src/app/panels/navtex.rs)
 
-navtex-repaired-lost = 已修复 { $repaired } · 丢失 { $lost }
 navtex-characters-lost = 丢失 { $lost } 个字符
 
 ## packet: messages with values (src/app/panels/packet.rs)
@@ -9033,3 +9032,5 @@ windows-clear = 清空
 windows-clear-sure = 确定?
 
 windows-clear-hint = 删除所有存储频道。点击两次；文件夹保留。
+
+navtex-copies = 正确 { $direct } · 修复 { $repaired } · 丢失 { $lost }

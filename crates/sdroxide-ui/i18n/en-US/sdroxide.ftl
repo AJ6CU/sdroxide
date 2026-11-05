@@ -4024,7 +4024,7 @@ navtex-character-phase-locked-signal-being = The character phase is locked — a
 navtex-characters-whose-first-copy-was = Characters whose first copy was corrupt and were taken from the repeat five slots later, and those where both were bad. A NAVTEX character is sent twice; that is the whole of its error correction.
 navtex-swap-mark-space-tones-signal = Swap the mark and space tones, for a signal received on the other sideband. Off is upper sideband on the channel frequency, which is what every published tuning instruction for the service says.
 navtex-starting-navtex-receiver = starting the NAVTEX receiver…
-navtex-nothing-yet-station-transmits-ten = nothing yet — a station transmits for ten minutes every four hours
+navtex-nothing-yet-station-transmits-ten = nothing yet — stations transmit in scheduled slots, and some send whenever they have a warning
 navtex-cut-short = cut short
 navtex-message = MESSAGE
 navtex-time-day-stated-message-utc = Time of day stated in the message (UTC): display only
@@ -4624,7 +4624,6 @@ macros-most = { $value } is the most
 
 ## navtex: messages with values (src/app/panels/navtex.rs)
 
-navtex-repaired-lost = { $repaired } repaired · { $lost } lost
 navtex-characters-lost = { $lost } characters lost
 
 ## packet: messages with values (src/app/panels/packet.rs)
@@ -9117,3 +9116,6 @@ windows-clear-sure = SURE?
 
 # Hover text under the CLEAR chip in the Memories window.
 windows-clear-hint = Delete every memory channel. Click twice; folders stay.
+
+# NAVTEX header row: characters taken straight, repaired from the repeat, and lost. Shown always, so a clean copy reads as a number rather than as a missing counter.
+navtex-copies = { $direct } good · { $repaired } repaired · { $lost } lost
