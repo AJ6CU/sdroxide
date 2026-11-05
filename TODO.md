@@ -4,7 +4,7 @@ Working queue. Rules in AGENTS.md. Last updated 2026-11-04.
 
 State: `main` at crate 2.2.0, PROTO_VERSION 267 (0x57). Latest release
 v2.2.3.6.4_brown (pre-release). Open PRs: 1 (#477 one clear chip in SSTV, held
-for F4NRM because the SSTV panel is his). Open issues: 8 (re-measured
+for F4NRM because the SSTV panel is his). Open issues: 7 (re-measured
 2026-11-05).
 
 ## Task tracking rules
@@ -102,6 +102,8 @@ Everything else that was in this list has been merged or closed since — see **
 
 ## Recently done
 
+- 2026-11-05 — #479 merged by the operator's word (owned by Claude): the sampled span as Hamlib's `SPECTRUM_SPAN`, so a client's waterfall-width slider works. The span is the decimation, not the displayed zoom; advertised only where there is a decimation, and an audio-mode rig refuses instead of pretending. `RigState` gains the span, the device rate and whether it can decimate — none of it on the wire. Red verified with the setter removed. The operator's ruling on the waterfall stands: its look and behaviour change for nobody's single request; letting a client move the span was accepted because it is the same class as `L RF` moving the gain slider.
+- 2026-11-05 — #476 closed (added by DK8JV, owned by Claude): the HL2 overload warning is fixed by #478 and lands in the next build; reopened if it still flickers, with the protection setting that decides which case it is.
 - 2026-11-05 — #475 and #478 merged by the operator's word (owned by Claude): the VDL2 lines in the decoded-text feed (a new `kind`, no new socket, no wire change) and the HL2 overload warning standing down while the protection loop works, with the loop's floor still reported. Main after both: gate silent, the VDL2 take-test and the overload-warning test green.
 - 2026-11-05 — #472 and #473 merged by the operator's word (owned by Claude): band-plan sub-segments carry the operator's own label (wire 265 → **266**), and Memories CLEAR deletes every channel at once behind a two-click chip (266 → **267**). Main after both: gate silent, `sdroxide-proto` 23, the band-plan label test, `memory_import` and `i18n` 7 all green.
 - 2026-11-05 — #453 and #464 merged by F4NRM (AJ6CU's): decoded CW over UDP with its `WsjtxConfig` round-trip test, the 9998 note, the manual and three messages in all eleven languages, `PROTO_VERSION` 263 → **264**; and the clamp half of the rigctl CW follow-ups on top of our #463. The two upstream wire commits are unblocked by it and take 265 and 266.
