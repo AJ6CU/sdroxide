@@ -9029,3 +9029,9 @@ settings-servers-decoded-cw-udp = 通过 UDP 发送 CW 解码文本
 settings-servers-decoded-cw-udp-host-hint = 127.0.0.1 发送给本机上的程序；局域网地址或本子网的广播地址发送给其他机器。
 
 settings-servers-decoded-cw-udp-port-hint = 默认为 9998
+
+windows-clear = 清空
+
+windows-clear-sure = 确定?
+
+windows-clear-hint = 删除所有存储频道。点击两次；文件夹保留。

@@ -1891,6 +1891,10 @@ place for a folder, an RTTY modem setup or an antenna socket, and its `Mode`
 column is the *modulation*, so a channel stored in a digital mode exports as the
 sideband it rides on. The frequency, the name, the shift and the tone all do.
 
+**CLEAR** deletes every channel at once, for a list imported by the hundred. It
+asks first: the chip turns into **SURE?**, and only a second click there clears
+the list. Folders stay.
+
 The **Sort** row above the list says what order it is drawn in — **Stored** (as
 stored, the historic order), **Name** (ignoring case), **Freq**, or **Band**
 (each band's channels together, general coverage last, by frequency inside

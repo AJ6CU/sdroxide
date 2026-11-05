@@ -10396,6 +10396,10 @@ impl Engine {
                 self.memories.retain(|m| m.id != id);
                 self.save_memories();
             }
+            ClearMemories => {
+                self.memories.clear();
+                self.save_memories();
+            }
             EditMemory { id, name, freq_hz, mode, repeater, antenna } => {
                 // A dial that is not a number would be stored, scanned and
                 // tuned to; refuse it here rather than in each of those.

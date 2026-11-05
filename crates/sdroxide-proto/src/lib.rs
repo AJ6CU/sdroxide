@@ -2195,8 +2195,11 @@ use sdroxide_types::{
 /// v266: a band-plan sub-segment carries an optional `label` (the operator's
 /// own name for it on the waterfall strip), so the `band_plan` in
 /// `StationConfig` changes layout and both ends have to agree.
-pub const PROTO_VERSION: u16 = 266;
-const VERSION_BYTE: u8 = 0x56;
+///
+/// v267: [`sdroxide_types::Command`] gains `ClearMemories`, appended; a v266
+/// peer has no variant to decode it into.
+pub const PROTO_VERSION: u16 = 267;
+const VERSION_BYTE: u8 = 0x57;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -3477,7 +3480,7 @@ mod tests {
             ServerMsg::TxRefused(w, hz) => assert_eq!((w, hz), (why, 7_074_000.0)),
             _ => panic!("TxRefused did not round-trip"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (266, 0x56));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (267, 0x57));
     }
 
     /// The dynamic-DNS answer rides last on [`ServerMsg`], and it has to: the
@@ -3508,7 +3511,7 @@ mod tests {
             }
             other => panic!("the answer did not round-trip: {other:?}"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (266, 0x56));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (267, 0x57));
     }
 
     /// postcard is positional: a field inserted mid-struct shifts every byte

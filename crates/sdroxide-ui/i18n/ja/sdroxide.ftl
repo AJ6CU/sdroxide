@@ -9039,3 +9039,9 @@ settings-servers-decoded-cw-udp = UDPでCWデコード文を送信
 settings-servers-decoded-cw-udp-host-hint = 127.0.0.1 はこのマシン上のプログラムに届きます。LAN のアドレスやこのサブネットのブロードキャストアドレスなら他のマシンに届きます。
 
 settings-servers-decoded-cw-udp-port-hint = 既定値は 9998
+
+windows-clear = クリア
+
+windows-clear-sure = 本当に?
+
+windows-clear-hint = すべてのメモリーチャンネルを削除します。2 回クリックしてください。フォルダーは残ります。

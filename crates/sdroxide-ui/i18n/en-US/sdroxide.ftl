@@ -9110,3 +9110,12 @@ settings-servers-decoded-cw-udp = Decoded CW over UDP
 settings-servers-decoded-cw-udp-host-hint = 127.0.0.1 reaches programs on this machine; a LAN address or this subnet's broadcast address reaches others.
 
 settings-servers-decoded-cw-udp-port-hint = 9998 by default
+
+# Memories toolbar chip that deletes every channel at once (issue #755).
+windows-clear = CLEAR
+
+# The CLEAR chip's second state: click again to delete every memory channel.
+windows-clear-sure = SURE?
+
+# Hover text under the CLEAR chip in the Memories window.
+windows-clear-hint = Delete every memory channel. Click twice; folders stay.
