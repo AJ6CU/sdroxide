@@ -9114,3 +9114,8 @@ aircraft-label-adsb-version = ADS-B sürümü
 aircraft-label-accuracy = Doğruluk
 
 aircraft-autopilot-off = hiçbir mod devrede değil
+aircraft-track-kml = İzi kaydet (KML)
+
+aircraft-track-kml-hover = İstasyonun bu uçak için sakladığı konumları, zaman ve irtifa ile Google Earth için KML izi olarak kaydeder. Uzun bir sessizlik çizgiyi keser.
+
+aircraft-track-kml-saved = { $name } kaydedildi.

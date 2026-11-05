@@ -9114,3 +9114,8 @@ aircraft-label-adsb-version = Versão ADS-B
 aircraft-label-accuracy = Precisão
 
 aircraft-autopilot-off = nenhum modo engajado
+aircraft-track-kml = Salvar trajeto (KML)
+
+aircraft-track-kml-hover = Salva as posições que a estação guardou desta aeronave como trajeto KML para o Google Earth, com hora e altitude. Um longo silêncio corta a linha.
+
+aircraft-track-kml-saved = { $name } salvo.

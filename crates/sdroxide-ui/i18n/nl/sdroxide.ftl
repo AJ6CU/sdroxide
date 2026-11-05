@@ -9122,3 +9122,8 @@ aircraft-label-adsb-version = ADS-B-versie
 aircraft-label-accuracy = Nauwkeurigheid
 
 aircraft-autopilot-off = geen modus actief
+aircraft-track-kml = Spoor opslaan (KML)
+
+aircraft-track-kml-hover = Slaat de posities op die het station van dit vliegtuig bewaarde als KML-spoor voor Google Earth, met tijd en hoogte. Een lange stilte onderbreekt de lijn.
+
+aircraft-track-kml-saved = { $name } opgeslagen.

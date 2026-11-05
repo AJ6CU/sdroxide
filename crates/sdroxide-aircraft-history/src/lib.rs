@@ -11,6 +11,7 @@
 //! frames, a picture, or anything about who was looking.
 
 pub mod export;
+pub mod kml;
 #[cfg(feature = "gzip")]
 pub mod gz;
 pub mod watch;
