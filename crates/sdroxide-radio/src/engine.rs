@@ -1672,6 +1672,21 @@ impl FeedLine<'_> {
     }
 }
 
+/// How many of the newest VDL2 messages a feed should send now, and the frame
+/// count to remember.
+///
+/// `last` is `None` on the first status after the feed opens: that call sends
+/// nothing and only takes the mark, so switching the feed on does not dump what
+/// was decoded before it existed. A log that has rolled over carries fewer
+/// messages than arrived, and the newer ones are the ones still there — the
+/// alternative, sending the whole log, would repeat messages a consumer has
+/// already had.
+fn vdl2_take(len: usize, frames: u64, last: Option<u64>) -> (usize, u64) {
+    let Some(last) = last else { return (0, frames) };
+    let new = frames.saturating_sub(last) as usize;
+    (new.min(len), frames)
+}
+
 /// The complete lines that are new in `text`, given the last buffer seen — and
 /// what to remember as seen.
 ///
@@ -3593,6 +3608,10 @@ struct Engine {
     /// is a rolling window, so a line is what is new since this — see
     /// [`Engine::new_text_lines`].
     text_feed_seen: String,
+    /// Frames the VDL2 feed has already sent. `None` until the first status
+    /// arrives after the feed is opened, so switching it on does not dump the
+    /// log that was decoded before it existed.
+    vdl2_fed: Option<u64>,
     /// The band the last tick saw, so a crossing into another one can be told
     /// from the tuning about inside a band that goes on all session. See
     /// [`Engine::poll_band_change`].
@@ -5132,6 +5151,7 @@ fn engine_thread(
         decode_feed: None,
         decode_udp: String::new(),
         text_feed_seen: String::new(),
+        vdl2_fed: None,
         rigctld: None,
         rigctld_cfg: RigctldConfig::default(),
         rigctld_err: None,
@@ -7925,6 +7945,7 @@ impl Engine {
         // Clocks and buffers belong to the old socket: a new consumer must not
         // inherit half a line from the one before it.
         self.text_feed_seen.clear();
+        self.vdl2_fed = None;
     }
 
     fn send_feed(&self, line: FeedLine<'_>) {
@@ -7952,6 +7973,39 @@ impl Engine {
                 snr_db: Some(f64::from(d.snr_db)),
                 dt: Some(d.dt),
                 text: &d.message,
+            });
+        }
+    }
+
+    /// One line per VDL2 message, from the log the panel shows.
+    ///
+    /// The status carries the whole bounded log rather than the new messages,
+    /// so what goes out is the newest `frames - last` of it — and never more
+    /// than the log still holds, which is what stops a slow consumer from being
+    /// handed the same message twice when the log has rolled over.
+    ///
+    /// The channel a message arrived on is absolute, not an offset from the
+    /// dial: an aircraft's burst is on a fixed frequency whatever this receiver
+    /// is tuned to, so `freq_hz` is reported on its own and `audio_hz` is not
+    /// sent.
+    fn feed_vdl2(&mut self, st: &sdroxide_types::Vdl2Status, dial: f64) {
+        if self.decode_feed.is_none() {
+            return;
+        }
+        let (take, last) = vdl2_take(st.messages.len(), st.frames, self.vdl2_fed);
+        self.vdl2_fed = Some(last);
+        for m in &st.messages[st.messages.len() - take..] {
+            let text = m.summary();
+            self.send_feed(FeedLine {
+                unix: m.at,
+                kind: "vdl2",
+                mode: "VDL2",
+                dial_hz: dial,
+                freq_hz: m.freq_hz,
+                audio_hz: None,
+                snr_db: Some(f64::from(m.snr_db)),
+                dt: None,
+                text: &text,
             });
         }
     }
@@ -13298,6 +13352,8 @@ impl Engine {
             st.degraded = degraded.clone();
             st.suggest_center_hz = (unavailable.is_some() || degraded.is_some())
                 .then_some(sdroxide_types::VDL2_PLAN_CENTER_HZ);
+            let dial = self.state.rx_freq_hz();
+            self.feed_vdl2(&st, dial);
             let _ = self.event_tx.send(RadioEvent::Vdl2Status(st));
         }
     }
@@ -23566,6 +23622,26 @@ mod decode_feed_tests {
             dt: Some(0.2),
             text: "CQ DL1ABC JO31",
         }
+    }
+
+    /// The VDL2 feed sends what is new and no more: the first status after the
+    /// feed opens only takes the mark, a log that has rolled over hands over the
+    /// messages still there, and a decoder that restarts does not replay the log
+    /// backwards.
+    #[test]
+    fn the_vdl2_feed_takes_only_the_newest_messages() {
+        // Opening the feed: nothing is sent, the mark is taken.
+        assert_eq!(vdl2_take(10, 5, None), (0, 5));
+        // Three frames since the mark, all still in the log.
+        assert_eq!(vdl2_take(10, 8, Some(5)), (3, 8));
+        // Nothing new.
+        assert_eq!(vdl2_take(10, 8, Some(8)), (0, 8));
+        // The log rolled over: fewer messages than arrived, and the newest are
+        // the ones still there — never the whole log again.
+        assert_eq!(vdl2_take(2, 40, Some(5)), (2, 40));
+        // A restarted decoder counts from zero; the feed follows it down rather
+        // than asking for a negative run of messages.
+        assert_eq!(vdl2_take(10, 1, Some(5)), (0, 1));
     }
 
     /// The shape a consumer parses, pinned exactly — a field renamed or a
