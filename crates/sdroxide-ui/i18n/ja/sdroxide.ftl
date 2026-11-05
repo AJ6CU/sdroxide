@@ -2818,8 +2818,6 @@ sstv-auto = 自動
 sstv-signal = 信号
 sstv-station-sending-mode-sdroxide-does = 局が sdroxide にないモードで送信しています。信号と同調は問題ありません。このモードのデコーダーがないだけです。あなた側で直すものはありません。
 sstv-listening = 聞いています…
-sstv-restart-rx = 受信を再開
-sstv-abandon-picture-being-received-listen = 受信中の画像を中止し、次のヘッダーを待ちます。誤ったモードでデコードを始めた送信用です。そうでなければ、受信機はそのモードが終わるまで拘束されたままです。
 sstv-callsign-last-station-sent-fsk = 最後の局が画像の後に FSK ID として送ったコールサインです。
 sstv-tx-slant = 送信のスラント
 sstv-transmit-clock-trim-ppm-remove = 相手側のデコーダーのスラントを取り除くための送信クロックのトリム（ppm）
@@ -7846,7 +7844,7 @@ sstv-keep-dial-off-hint = オフ：SSTVを選ぶと、SSTV周波数から3 kHz�
 
 sstv-clear-rx = 受信をクリア
 
-sstv-clear-rx-hint = LIVEビューに現在表示されている画像をクリアします。デコーダは動作し続けます。受信途中の画像を破棄して次のヘッダーを待つには、受信を再開を使ってください。
+sstv-clear-rx-hint = 画像を破棄します。完成した画像も描画途中の画像も同様で、次のヘッダーを待ちます。
 
 sstv-audio-present-no-header = 音声あり · SSTVヘッダーはまだなし
 

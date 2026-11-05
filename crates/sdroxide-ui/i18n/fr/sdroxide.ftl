@@ -2837,8 +2837,6 @@ sstv-auto = Auto
 sstv-signal = Signal
 sstv-station-sending-mode-sdroxide-does = Une station émet dans un mode que sdroxide ne connaît pas. Le signal et l'accord sont corrects — il n'existe simplement aucun décodeur pour celui-ci. Rien à corriger de votre côté.
 sstv-listening = écoute…
-sstv-restart-rx = Relancer la RX
-sstv-abandon-picture-being-received-listen = Abandonner l'image en cours de réception et écouter l'en-tête suivant. Pour une émission qui a commencé à se décoder dans le mauvais mode — le récepteur reste sinon engagé jusqu'à la fin de ce mode.
 sstv-callsign-last-station-sent-fsk = L'indicatif que la dernière station a envoyé en identification FSK après son image.
 sstv-tx-slant = Inclinaison en émission
 sstv-transmit-clock-trim-ppm-remove = Réglage de l'horloge d'émission (ppm) pour supprimer l'inclinaison sur le décodeur distant
@@ -7907,7 +7905,7 @@ sstv-keep-dial-off-hint = Désactivé : choisir SSTV déplace le cadran sur la f
 
 sstv-clear-rx = Effacer Rx
 
-sstv-clear-rx-hint = Efface l'image actuellement affichée dans la vue LIVE. Le décodeur continue de tourner — utilisez Redémarrer RX pour abandonner une image en cours et attendre le prochain en-tête.
+sstv-clear-rx-hint = Jette l'image — aussi bien une image terminée qu'une image à moitié dessinée — et écoute l'en-tête suivant.
 
 sstv-audio-present-no-header = audio présent · pas encore d'en-tête SSTV
 
