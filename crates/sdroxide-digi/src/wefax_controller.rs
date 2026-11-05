@@ -276,8 +276,15 @@ impl DigiEngine for WefaxController {
                     // A chart is about 1440 lines at 120 LPM; a good deal fewer
                     // is a fragment, a good deal more is a page that ran past
                     // its transmission.
+                    // ...and the trim in force, with the evidence behind it: a
+                    // page that leaned and a page corrected to the same tilt
+                    // look alike in the picture, and the two floors mean "it
+                    // acted" and "it never had enough phasing" differ by a
+                    // number nothing else shows (#444).
+                    let (slant_ppm, phasing_lines) = self.rx.slant_correction();
                     tracing::info!(
-                        "wefax: page finished — {lines} lines, ended by {}",
+                        "wefax: page finished — {lines} lines, ended by {}, slant {slant_ppm:+.1} \
+                         ppm from {phasing_lines} phasing lines",
                         if by_tone {
                             "the stop tone"
                         } else {
