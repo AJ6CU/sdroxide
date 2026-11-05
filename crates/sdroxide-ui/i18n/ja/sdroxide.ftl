@@ -4000,7 +4000,7 @@ navtex-character-phase-locked-signal-being = 文字の位相がロックされ�
 navtex-characters-whose-first-copy-was = 最初の受信が壊れていて、5 スロット後の繰り返しから取られた文字と、両方が不良だった文字です。NAVTEX の文字は 2 回送られます。それがその誤り訂正のすべてです。
 navtex-swap-mark-space-tones-signal = 反対の側波帯で受信された信号のために、マークとスペースのトーンを入れ替えます。オフは、チャンネル周波数の上側波帯です。これは、このサービスについて公開されているすべての同調の手順が示すものです。
 navtex-starting-navtex-receiver = NAVTEX 受信機を開始中…
-navtex-nothing-yet-station-transmits-ten = まだ何もありません。局は 4 時間ごとに 10 分間送信します
+navtex-nothing-yet-station-transmits-ten = まだ何もありません。局は決められた時間帯に送信し、一部は警報があるときに随時送信します
 navtex-cut-short = 途中で打ち切られた
 navtex-message = メッセージ
 navtex-time-day-stated-message-utc = メッセージ内に記載された時刻（UTC）。表示のみです
@@ -4587,7 +4587,6 @@ macros-most = { $value } が上限です
 
 ## navtex: messages with values (src/app/panels/navtex.rs)
 
-navtex-repaired-lost = 修復 { $repaired } · 失われた { $lost }
 navtex-characters-lost = { $lost } 文字が失われました
 
 ## packet: messages with values (src/app/panels/packet.rs)
@@ -9043,3 +9042,5 @@ windows-clear = クリア
 windows-clear-sure = 本当に?
 
 windows-clear-hint = すべてのメモリーチャンネルを削除します。2 回クリックしてください。フォルダーは残ります。
+
+navtex-copies = 良好 { $direct } · 修復 { $repaired } · 消失 { $lost }

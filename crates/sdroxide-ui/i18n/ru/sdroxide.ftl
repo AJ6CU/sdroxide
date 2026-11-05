@@ -4032,7 +4032,7 @@ navtex-character-phase-locked-signal-being = Фаза знаков захвач�
 navtex-characters-whose-first-copy-was = Знаки, первая копия которых была повреждена и взяты из повтора пятью слотами позже, а также те, где оба были плохими. Знак NAVTEX посылается дважды; в этом вся его коррекция ошибок.
 navtex-swap-mark-space-tones-signal = Поменять местами тоны метки и пробела для сигнала, принятого на другой боковой полосе. Выключено — верхняя боковая на частоте канала, как и говорит каждая опубликованная инструкция по настройке этой службы.
 navtex-starting-navtex-receiver = запуск приёмника NAVTEX…
-navtex-nothing-yet-station-transmits-ten = пока ничего — станция передаёт десять минут каждые четыре часа
+navtex-nothing-yet-station-transmits-ten = пока ничего — станции передают в отведённые интервалы, а некоторые — при появлении предупреждения
 navtex-cut-short = обрезано
 navtex-message = СООБЩЕНИЕ
 navtex-time-day-stated-message-utc = Время суток, указанное в сообщении (UTC): только для отображения
@@ -4632,7 +4632,6 @@ macros-most = { $value } — максимум
 
 ## navtex: messages with values (src/app/panels/navtex.rs)
 
-navtex-repaired-lost = исправлено: { $repaired } · потеряно: { $lost }
 navtex-characters-lost = потеряно знаков: { $lost }
 
 ## packet: messages with values (src/app/panels/packet.rs)
@@ -9110,3 +9109,5 @@ windows-clear = ОЧИСТИТЬ
 windows-clear-sure = ТОЧНО?
 
 windows-clear-hint = Удалить все каналы памяти. Нажмите дважды; папки остаются.
+
+navtex-copies = { $direct } принято · { $repaired } исправлено · { $lost } потеряно

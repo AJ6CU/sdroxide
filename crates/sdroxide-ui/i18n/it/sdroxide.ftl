@@ -4033,7 +4033,7 @@ navtex-character-phase-locked-signal-being = La fase dei caratteri è agganciata
 navtex-characters-whose-first-copy-was = Caratteri la cui prima copia era corrotta e sono stati presi dalla ripetizione cinque slot dopo, e quelli in cui entrambe erano errate. Un carattere NAVTEX è inviato due volte; questa è tutta la sua correzione d'errore.
 navtex-swap-mark-space-tones-signal = Scambia i toni di marcatura e spazio, per un segnale ricevuto sull'altra banda laterale. Disattivato è la banda laterale superiore sulla frequenza del canale, che è ciò che indica ogni istruzione di sintonia pubblicata per il servizio.
 navtex-starting-navtex-receiver = avvio del ricevitore NAVTEX…
-navtex-nothing-yet-station-transmits-ten = ancora nulla — una stazione trasmette per dieci minuti ogni quattro ore
+navtex-nothing-yet-station-transmits-ten = ancora nulla — le stazioni trasmettono in fasce programmate, e alcune ogni volta che hanno un avviso
 navtex-cut-short = interrotto
 navtex-message = MESSAGGIO
 navtex-time-day-stated-message-utc = Ora del giorno indicata nel messaggio (UTC): solo visualizzazione
@@ -4633,7 +4633,6 @@ macros-most = { $value } è il massimo
 
 ## navtex: messages with values (src/app/panels/navtex.rs)
 
-navtex-repaired-lost = { $repaired } riparati · { $lost } persi
 navtex-characters-lost = { $lost } caratteri persi
 
 ## packet: messages with values (src/app/panels/packet.rs)
@@ -9104,3 +9103,5 @@ windows-clear = CANCELLA
 windows-clear-sure = SICURO?
 
 windows-clear-hint = Cancella tutti i canali di memoria. Clicca due volte; le cartelle restano.
+
+navtex-copies = { $direct } buoni · { $repaired } riparati · { $lost } persi
