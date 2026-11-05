@@ -640,6 +640,10 @@ pub(crate) fn run(ctx: ThreadCtx) {
 /// gaps whenever the streams interleave.
 struct P2Slot {
     ring: Producer<f32>,
+    /// Diversity (DDC 0 only): the second aerial's ring. Its presence is the
+    /// request for a synced DDC pair, and every datagram on this stream is
+    /// then split between `ring` and this one.
+    aux_ring: Option<Producer<f32>>,
     last_rx_ms: crate::net::RxClock,
     freq_hz: f64,
     seq_in: SeqTracker,
@@ -694,6 +698,11 @@ impl P2Thread {
         SocketAddr::new(self.radio, p)
     }
 
+    /// Whether DDC 0 was attached as a Diversity stream.
+    fn diversity(&self) -> bool {
+        self.slots.get(&0).is_some_and(|s| s.aux_ring.is_some())
+    }
+
     /// Send the high-priority packet with the run bit set — the packet that
     /// keeps the radio streaming, and the one that starts it.
     fn send_high_priority(&mut self) {
@@ -705,6 +714,12 @@ impl P2Thread {
         let mut phases = [0u32; MAX_DDCS as usize];
         for (&ddc, slot) in &self.slots {
             phases[ddc as usize] = phase_word(slot.freq_hz, CLOCK_HZ);
+        }
+        // Diversity: the board folds DDC 1 into DDC 0's stream but tunes it
+        // from its own phase word, so the second aerial has to be on the same
+        // frequency or the pair is two different bands.
+        if self.diversity() {
+            phases[1] = phases[0];
         }
         let tx = phase_word(self.tx_freq, CLOCK_HZ);
         let drive = if self.ptt { TX_DRIVE } else { 0 };
@@ -759,7 +774,11 @@ impl P2Thread {
         let seq = next_seq(&mut self.seq.ddc);
         let mut ddcs: Vec<u8> = self.slots.keys().copied().collect();
         ddcs.sort_unstable();
-        let pkt = ddc_command_packet(seq, self.rate_khz, &ddcs);
+        let pkt = if self.diversity() {
+            ddc_command_packet_diversity(seq, self.rate_khz)
+        } else {
+            ddc_command_packet(seq, self.rate_khz, &ddcs)
+        };
         tracing::debug!(
             "HPSDR P2: DDC command seq {seq}: DDCs {ddcs:?} enabled, {} kHz, 24-bit, ADC0 -> \
              port {}",
@@ -894,6 +913,9 @@ impl P2Thread {
 
         let mut last_watchdog = Instant::now();
         let mut rx_scratch: Vec<f32> = Vec::with_capacity(512);
+        // Diversity: the two aerials of one datagram, split.
+        let mut diversity_scratch: (Vec<f32>, Vec<f32>) =
+            (Vec::with_capacity(512), Vec::with_capacity(512));
         let mut tx_scratch: Vec<f32> = Vec::with_capacity(DUC_SAMPLES_PER_PKT * 2);
         let mut next_duc = Instant::now();
         let mut buf = [0u8; 2048];
@@ -910,11 +932,12 @@ impl P2Thread {
             let mut freq_changed = false;
             while let Ok(msg) = self.ctrl.try_recv() {
                 match msg {
-                    Ctrl::Attach { ddc, ring, last_rx_ms, rx_paused } => {
+                    Ctrl::Attach { ddc, ring, last_rx_ms, rx_paused, aux_ring } => {
                         self.slots.insert(
                             ddc,
                             P2Slot {
                                 ring,
+                                aux_ring,
                                 last_rx_ms,
                                 freq_hz: 7_100_000.0,
                                 seq_in: SeqTracker::new(),
@@ -1020,10 +1043,15 @@ impl P2Thread {
                     let ptt = self.ptt && ddc == Some(0);
                     if let Some(slot) = ddc.and_then(|d| self.slots.get_mut(&(d as u8))) {
                         rx_scratch.clear();
-                        if let Some(pairs) = decode_ddc_iq(&buf[..n], &mut rx_scratch) {
+                        if let Some(decoded) = decode_ddc_iq(&buf[..n], &mut rx_scratch) {
                             if self.invert_spectrum {
                                 crate::protocol1::conjugate(&mut rx_scratch);
                             }
+                            // Diversity: a datagram holds `decoded / 2` instants
+                            // of two aerials each; count instants, as an
+                            // ordinary stream counts its samples.
+                            let pairs =
+                                if slot.aux_ring.is_some() { decoded / 2 } else { decoded };
                             stats.on_iq(pairs);
                             slot.last_rx_ms.store(
                                 self.opened_at.elapsed().as_millis() as u64,
@@ -1052,8 +1080,29 @@ impl P2Thread {
                             }
                             let keyed =
                                 ptt || slot.rx_paused.load(Ordering::Relaxed) || slot.tx_backlog;
-                            slot.tx_backlog =
-                                !push_iq(&mut slot.ring, &rx_scratch, &mut stats, keyed) && keyed;
+                            slot.tx_backlog = if let Some(aux_ring) = slot.aux_ring.as_mut() {
+                                diversity_scratch.0.clear();
+                                diversity_scratch.1.clear();
+                                split_diversity_pairs(
+                                    &rx_scratch,
+                                    &mut diversity_scratch.0,
+                                    &mut diversity_scratch.1,
+                                );
+                                // Both rings or neither: a pair that lost one
+                                // half would shift the second aerial against
+                                // the first for good.
+                                let room = slot.ring.slots().min(aux_ring.slots());
+                                if room >= diversity_scratch.0.len() {
+                                    push_iq(&mut slot.ring, &diversity_scratch.0, &mut stats, keyed);
+                                    push_iq(aux_ring, &diversity_scratch.1, &mut stats, keyed);
+                                    false
+                                } else {
+                                    stats.on_dropped(diversity_scratch.0.len() / 2);
+                                    keyed
+                                }
+                            } else {
+                                !push_iq(&mut slot.ring, &rx_scratch, &mut stats, keyed) && keyed
+                            };
                         } else {
                             stats.on_other();
                             tracing::trace!(
