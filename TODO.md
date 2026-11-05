@@ -168,3 +168,5 @@ Everything else that was in this list has been merged or closed since — see **
 - 2026-10-27 — Aircraft window clean-up (10 PRs)
 - 2026-10-27 — #283 settings question resolved (da78715b)
 - 2026-10-31 — Airport card (PR 3 of 4): the pinned card shows the airport's Wikipedia thumbnail, asked of the station (`/airport-photo?lang=&title=`, hosts fixed to `*.wikipedia.org` and `upload.wikimedia.org`), held in memory for the open card only and dropped when it closes, credit links to the article; `PhotoStore` is now generic on its key (added by madmedicnl, owned by Roy)
+
+- **PR #486 — navtex: wider default view span** (added by madmedicnl, owned by Claude): NAVTEX default 3.7 -> 8 kHz so the signal no longer hugs the right edge with CTR on. Small safe half of #481 zoom points; per-decoder remembered zoom is a separate larger feature.
