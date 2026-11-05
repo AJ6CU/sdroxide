@@ -1672,6 +1672,21 @@ impl FeedLine<'_> {
     }
 }
 
+/// How many of the newest VDL2 messages a feed should send now, and the frame
+/// count to remember.
+///
+/// `last` is `None` on the first status after the feed opens: that call sends
+/// nothing and only takes the mark, so switching the feed on does not dump what
+/// was decoded before it existed. A log that has rolled over carries fewer
+/// messages than arrived, and the newer ones are the ones still there — the
+/// alternative, sending the whole log, would repeat messages a consumer has
+/// already had.
+fn vdl2_take(len: usize, frames: u64, last: Option<u64>) -> (usize, u64) {
+    let Some(last) = last else { return (0, frames) };
+    let new = frames.saturating_sub(last) as usize;
+    (new.min(len), frames)
+}
+
 /// The complete lines that are new in `text`, given the last buffer seen — and
 /// what to remember as seen.
 ///
@@ -3198,6 +3213,10 @@ struct Engine {
     /// band plan is only consulted when the dial has actually moved.
     auto_shift_dial: Option<f64>,
     nb: NoiseBlanker,
+    /// When the blanker's count was last reported. Once a second while it is
+    /// on, because a blanker that blanks nothing and one that never fires look
+    /// identical from the outside — see [`NoiseBlanker::read`] and #421.
+    nb_report_at: Instant,
     /// Converter headroom, read straight off the samples the device handed
     /// over. Fed before the blanker and before decimation — see
     /// [`sdroxide_dsp::AdcMeter`], which records why either of those would
@@ -3574,6 +3593,8 @@ struct Engine {
     wsjtx: Option<sdroxide_wsjtx::WsjtxUdp>,
     /// The N1MM contactinfo broadcast, if switched on — see [`Engine::sync_n1mm`].
     n1mm: Option<sdroxide_wsjtx::N1mmUdp>,
+    /// The decoded-CW UDP output, if switched on — see [`Engine::sync_cw_text`].
+    cw_text: Option<sdroxide_wsjtx::CwTextUdp>,
     wsjtx_cfg: sdroxide_types::WsjtxConfig,
     /// When the last WSJT-X heartbeat went out (clients time a station out
     /// without one).
@@ -3587,6 +3608,10 @@ struct Engine {
     /// is a rolling window, so a line is what is new since this — see
     /// [`Engine::new_text_lines`].
     text_feed_seen: String,
+    /// Frames the VDL2 feed has already sent. `None` until the first status
+    /// arrives after the feed is opened, so switching it on does not dump the
+    /// log that was decoded before it existed.
+    vdl2_fed: Option<u64>,
     /// The band the last tick saw, so a crossing into another one can be told
     /// from the tuning about inside a band that goes on all session. See
     /// [`Engine::poll_band_change`].
@@ -5002,6 +5027,7 @@ fn engine_thread(
         burst_unkeys: false,
         auto_shift_dial: None,
         nb: NoiseBlanker::new(),
+        nb_report_at: Instant::now(),
         adc: AdcMeter::new(),
         audio_notch: AutoNotch::new(),
         audio_notch_on: false,
@@ -5119,11 +5145,13 @@ fn engine_thread(
         ext_voice_armed: false,
         wsjtx: None,
         n1mm: None,
+        cw_text: None,
         wsjtx_cfg: sdroxide_types::WsjtxConfig::default(),
         wsjtx_beat: Instant::now(),
         decode_feed: None,
         decode_udp: String::new(),
         text_feed_seen: String::new(),
+        vdl2_fed: None,
         rigctld: None,
         rigctld_cfg: RigctldConfig::default(),
         rigctld_err: None,
@@ -5628,6 +5656,28 @@ fn engine_thread(
                     // nothing left for the blanker to recognise.
                     if engine.state.noise_blanker {
                         engine.nb.process(&mut buf[..n]);
+                        // Once a second: what it removed, and how close the
+                        // strongest sample came to the bar. On a receiver whose
+                        // stream arrives already filtered (a Kiwi's 20 kHz) this
+                        // is what says whether the blanker is finding nothing or
+                        // finding nothing it recognises (#421).
+                        if engine.nb_report_at.elapsed() >= Duration::from_secs(1) {
+                            engine.nb_report_at = Instant::now();
+                            let r = engine.nb.read();
+                            if r.offered > 0 {
+                                info!(
+                                    "noise blanker: {} of {} samples blanked ({:.2}%), strongest \
+                                     {:.1}x the mean, mean {:.4}, bar {:.0}x, at {:.1} kHz",
+                                    r.blanked,
+                                    r.offered,
+                                    r.share() * 100.0,
+                                    r.peak_ratio,
+                                    r.mean,
+                                    NoiseBlanker::bar(),
+                                    engine.radio_fs / 1000.0
+                                );
+                            }
+                        }
                     }
                     let iq = decimate(engine.decim.as_mut(), &buf[..n], &mut dbuf);
                     engine.process_block(iq, pool.as_ref());
@@ -6042,6 +6092,19 @@ struct RigDigest {
     noise_blanker: bool,
     noise_reduction: bool,
     auto_notch: bool,
+    nr_level: sdroxide_types::NrLevel,
+    squelch: u32,
+    agc: sdroxide_types::AgcMode,
+    /// The CW sidetone pitch, by bit pattern — a client's CW filter is centred
+    /// on it, so a change has to reach the protocol layer.
+    cw_pitch: u32,
+    /// The sampled span and the rate it is divided from, by bit pattern, plus
+    /// whether there is a decimation at all — `SPECTRUM_SPAN` over rigctl.
+    span: u64,
+    device_rate: u64,
+    can_decimate: bool,
+    /// The front-end gain's setting and range, by bit pattern.
+    rf_gain: Option<(u64, u64, u64)>,
     ranges: (usize, usize),
 }
 
@@ -6068,6 +6131,17 @@ impl RigDigest {
             noise_blanker: s.noise_blanker,
             noise_reduction: s.noise_reduction,
             auto_notch: s.auto_notch,
+            nr_level: s.nr_level,
+            squelch: s.squelch_db.to_bits(),
+            agc: s.agc,
+            cw_pitch: s.cw_pitch_hz.to_bits(),
+            span: s.span_hz.to_bits(),
+            device_rate: s.device_rate_hz.to_bits(),
+            can_decimate: s.can_decimate,
+            rf_gain: s
+                .rf_gain
+                .as_ref()
+                .map(|g| (g.value.to_bits(), g.min.to_bits(), g.max.to_bits())),
             ranges: (s.rx_ranges.len(), s.tx_ranges.len()),
         }
     }
@@ -7687,12 +7761,38 @@ impl Engine {
         }
     }
 
+    /// Start, retarget or stop the decoded-CW UDP output to match its config.
+    /// Its own destination and its own switch, like the N1MM broadcast's.
+    fn sync_cw_text(&mut self) {
+        let cfg = &self.wsjtx_cfg.cw_text;
+        let want = cfg.enabled;
+        if want && self.cw_text.as_ref().is_some_and(|c| c.addr() == cfg.addr()) {
+            return;
+        }
+        let had = self.cw_text.take().is_some();
+        if !want {
+            if had {
+                info!("decoded CW UDP output stopped");
+            }
+            return;
+        }
+        match sdroxide_wsjtx::CwTextUdp::start(cfg) {
+            Ok(c) => self.cw_text = Some(c),
+            Err(e) => {
+                warn!("decoded CW UDP output: {e}");
+                let _ =
+                    self.event_tx.send(RadioEvent::NetStatus(Some(format!("CW text UDP: {e}"))));
+            }
+        }
+    }
+
     /// Start, retarget or stop the WSJT-X UDP broadcast to match its config.
     fn sync_wsjtx(&mut self) {
         // The N1MM broadcast rides the same configuration and the same call
         // sites, so it is kept in step here rather than at a second set of
-        // them that could be forgotten.
+        // them that could be forgotten. The decoded-CW output likewise.
         self.sync_n1mm();
+        self.sync_cw_text();
         let want = self.wsjtx_cfg.enabled;
         let same = self
             .wsjtx
@@ -7853,6 +7953,7 @@ impl Engine {
         // Clocks and buffers belong to the old socket: a new consumer must not
         // inherit half a line from the one before it.
         self.text_feed_seen.clear();
+        self.vdl2_fed = None;
     }
 
     fn send_feed(&self, line: FeedLine<'_>) {
@@ -7880,6 +7981,39 @@ impl Engine {
                 snr_db: Some(f64::from(d.snr_db)),
                 dt: Some(d.dt),
                 text: &d.message,
+            });
+        }
+    }
+
+    /// One line per VDL2 message, from the log the panel shows.
+    ///
+    /// The status carries the whole bounded log rather than the new messages,
+    /// so what goes out is the newest `frames - last` of it — and never more
+    /// than the log still holds, which is what stops a slow consumer from being
+    /// handed the same message twice when the log has rolled over.
+    ///
+    /// The channel a message arrived on is absolute, not an offset from the
+    /// dial: an aircraft's burst is on a fixed frequency whatever this receiver
+    /// is tuned to, so `freq_hz` is reported on its own and `audio_hz` is not
+    /// sent.
+    fn feed_vdl2(&mut self, st: &sdroxide_types::Vdl2Status, dial: f64) {
+        if self.decode_feed.is_none() {
+            return;
+        }
+        let (take, last) = vdl2_take(st.messages.len(), st.frames, self.vdl2_fed);
+        self.vdl2_fed = Some(last);
+        for m in &st.messages[st.messages.len() - take..] {
+            let text = m.summary();
+            self.send_feed(FeedLine {
+                unix: m.at,
+                kind: "vdl2",
+                mode: "VDL2",
+                dial_hz: dial,
+                freq_hz: m.freq_hz,
+                audio_hz: None,
+                snr_db: Some(f64::from(m.snr_db)),
+                dt: None,
+                text: &text,
             });
         }
     }
@@ -8245,6 +8379,11 @@ impl Engine {
                         // is about to put on the air at full power.
                         self.lead_tr_switch();
                         self.source.send_cw(&text);
+                    }
+                }
+                DigiAction::CwText(text) => {
+                    if let Some(out) = self.cw_text.as_ref() {
+                        out.send(&text);
                     }
                 }
                 DigiAction::AbortCw => {
@@ -10317,6 +10456,10 @@ impl Engine {
             }
             DeleteMemory(id) => {
                 self.memories.retain(|m| m.id != id);
+                self.save_memories();
+            }
+            ClearMemories => {
+                self.memories.clear();
                 self.save_memories();
             }
             EditMemory { id, name, freq_hz, mode, repeater, antenna } => {
@@ -13217,6 +13360,8 @@ impl Engine {
             st.degraded = degraded.clone();
             st.suggest_center_hz = (unavailable.is_some() || degraded.is_some())
                 .then_some(sdroxide_types::VDL2_PLAN_CENTER_HZ);
+            let dial = self.state.rx_freq_hz();
+            self.feed_vdl2(&st, dial);
             let _ = self.event_tx.send(RadioEvent::Vdl2Status(st));
         }
     }
@@ -13840,7 +13985,21 @@ impl Engine {
             strength_dbm: self.last_s_dbm.round() as i32,
             noise_blanker: self.state.noise_blanker,
             noise_reduction: rx.noise_reduction.is_on(),
+            nr_level: rx.noise_reduction,
             auto_notch: rx.auto_notch,
+            squelch_db: rx.squelch_db,
+            agc: rx.agc,
+            cw_pitch_hz: self.cw_pitch_hz(),
+            span_hz: self.state.sample_rate,
+            device_rate_hz: self.radio_fs,
+            can_decimate: !self.audio_mode,
+            rf_gain: self.rigctld_rf_gain().map(|(g, value)| sdroxide_rigctld::RfGain {
+                element: g.name.clone(),
+                min: g.min_db,
+                max: g.max_db,
+                step: g.step_db,
+                value,
+            }),
             can_tx: self.caps.is_transmit_capable(),
             rx_ranges: self.caps.freq_ranges_rx.clone(),
             tx_ranges: self.caps.freq_ranges_tx.clone(),
@@ -13901,8 +14060,33 @@ impl Engine {
             noise_blanker: self.state.noise_blanker,
             noise_reduction: rx.noise_reduction.is_on(),
             auto_notch: rx.auto_notch,
+            nr_level: rx.noise_reduction,
+            squelch: rx.squelch_db.to_bits(),
+            agc: rx.agc,
+            cw_pitch: self.cw_pitch_hz().to_bits(),
+            span: self.state.sample_rate.to_bits(),
+            device_rate: self.radio_fs.to_bits(),
+            can_decimate: !self.audio_mode,
+            rf_gain: self
+                .rigctld_rf_gain()
+                .map(|(g, value)| (value.to_bits(), g.min_db.to_bits(), g.max_db.to_bits())),
             ranges: (self.caps.freq_ranges_rx.len(), self.caps.freq_ranges_tx.len()),
         }
+    }
+
+    /// The RX gain stage rigctl's `RF` level drives, and where it is set: the
+    /// device's first, the one the top bar's Gain slider moves, read the same
+    /// way (its minimum until the engine has recorded a setting).
+    fn rigctld_rf_gain(&self) -> Option<(&sdroxide_types::GainElement, f64)> {
+        let g = self.caps.gains.iter().find(|g| g.direction == sdroxide_types::Direction::Rx)?;
+        let value = self
+            .state
+            .gains
+            .iter()
+            .find(|(n, _)| *n == g.name)
+            .map(|(_, v)| *v)
+            .unwrap_or(g.min_db);
+        Some((g, value))
     }
 
     /// Start, stop or rebind the built-in TCI server to match `tci_cfg`.
@@ -23452,6 +23636,26 @@ mod decode_feed_tests {
             dt: Some(0.2),
             text: "CQ DL1ABC JO31",
         }
+    }
+
+    /// The VDL2 feed sends what is new and no more: the first status after the
+    /// feed opens only takes the mark, a log that has rolled over hands over the
+    /// messages still there, and a decoder that restarts does not replay the log
+    /// backwards.
+    #[test]
+    fn the_vdl2_feed_takes_only_the_newest_messages() {
+        // Opening the feed: nothing is sent, the mark is taken.
+        assert_eq!(vdl2_take(10, 5, None), (0, 5));
+        // Three frames since the mark, all still in the log.
+        assert_eq!(vdl2_take(10, 8, Some(5)), (3, 8));
+        // Nothing new.
+        assert_eq!(vdl2_take(10, 8, Some(8)), (0, 8));
+        // The log rolled over: fewer messages than arrived, and the newest are
+        // the ones still there — never the whole log again.
+        assert_eq!(vdl2_take(2, 40, Some(5)), (2, 40));
+        // A restarted decoder counts from zero; the feed follows it down rather
+        // than asking for a negative run of messages.
+        assert_eq!(vdl2_take(10, 1, Some(5)), (0, 1));
     }
 
     /// The shape a consumer parses, pinned exactly — a field renamed or a

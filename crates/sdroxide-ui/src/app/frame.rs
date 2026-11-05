@@ -1565,6 +1565,14 @@ impl eframe::App for SdroxideApp {
                 (dial - half, dial + half)
             } else if mode.is_rf_paint() {
                 (dial + 150.0, dial + 3450.0)
+            } else if mode == Mode::Navtex {
+                // NAVTEX sits ~1.7 kHz above the dial (USB), so a narrow
+                // carrier-centred-style window puts it at the far right edge
+                // with the CTR chip on. Widen the default span so the signal
+                // and a little context either side of it are visible instead
+                // of hugging the edge. (Per-decoder remembered zoom is a
+                // separate, larger feature — see the PR notes.)
+                (dial - 4000.0, dial + 4000.0)
             } else if mode.is_lower_sideband_at(dial) {
                 // Mirrored, because the mode is: SSTV and RADE keep phone
                 // practice and ride the lower sideband on 160/80/40 m, so their
@@ -4471,6 +4479,15 @@ impl SdroxideApp {
                             self.sstv.preview_dirty = true;
                         }
                         self.sstv.last_detected = s.detected;
+                    }
+                    // **A frame the save gate dropped is wiped, not left on
+                    // screen.** Its lines were drawn as they arrived, and on a
+                    // quiet frequency nothing follows for hours: a panel holding
+                    // a frame of noise reads as a receiver that has hung (bench,
+                    // 2026-11-04). The panel says why instead.
+                    if s.not_saved.is_some() && !s.rx_active {
+                        self.sstv.rx_color = None;
+                        self.sstv.rx_tex = None;
                     }
                     self.sstv.status = s;
                 }

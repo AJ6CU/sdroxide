@@ -344,7 +344,8 @@ pub(in crate::app) fn settings_controls_tab(
                     .speed(1.0)
                     .range(1.0..=10_000.0)
                     .suffix(" Hz"),
-            );
+            )
+            .on_hover_text(tr!("settings-controls-cw-keeps-the-fine-grid"));
             ui.end_row();
         });
     ui.add_space(4.0);

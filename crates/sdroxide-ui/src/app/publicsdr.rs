@@ -318,20 +318,27 @@ fn confirm_panel(ui: &mut egui::Ui, blurb: &str) -> Option<Confirm> {
 /// are dropped; the fuzzy matches are what is left when nothing does, which is
 /// where they earn their keep — a half-remembered name or a typo still finds
 /// the receiver.
+///
+/// The fallback keeps only *tight* fuzzy matches ([`crate::fuzzy::tight_terms`]).
+/// A loose subsequence over this long a haystack is an accident, not a near
+/// miss: `twente`, which no directory lists, came back as 181 unrelated
+/// receivers. A query that nothing carries literally or nearly now answers
+/// "no match", which is the truth.
 fn ranked<'a>(visible: &[&'a PublicSdrEntry], query: &str) -> Vec<(&'a PublicSdrEntry, i32)> {
-    let scored: Vec<(&PublicSdrEntry, i32, bool)> = visible
+    let scored: Vec<(&PublicSdrEntry, i32, bool, bool)> = visible
         .iter()
         .filter_map(|e| {
             let hay = e.haystack();
             let literal = crate::fuzzy::contains_terms(&hay, query);
-            crate::fuzzy::score_terms(&hay, query).map(|s| (*e, s, literal))
+            let near = literal || crate::fuzzy::tight_terms(&hay, query);
+            crate::fuzzy::score_terms(&hay, query).map(|s| (*e, s, literal, near))
         })
         .collect();
-    let any_literal = scored.iter().any(|&(_, _, literal)| literal);
+    let any_literal = scored.iter().any(|&(_, _, literal, _)| literal);
     let mut rows: Vec<(&PublicSdrEntry, i32)> = scored
         .into_iter()
-        .filter(|&(_, _, literal)| literal || !any_literal)
-        .map(|(e, score, _)| (e, score))
+        .filter(|&(_, _, literal, near)| if any_literal { literal } else { near })
+        .map(|(e, score, _, _)| (e, score))
         .collect();
     if !query.is_empty() {
         rows.sort_by_key(|r| std::cmp::Reverse(r.1));
@@ -871,6 +878,17 @@ mod tests {
         let rows = ranked(&visible, "r7kjg");
         assert_eq!(rows.len(), 1, "one literal match means one row");
         assert_eq!(rows[0].0.name, "R7KJG SDR");
+    }
+
+    /// ...and a query that nothing carries literally or nearly answers nothing:
+    /// letters that merely fall in order across a long description are not a
+    /// near miss (`twente`, a WebSDR no directory lists, returned 181 rows).
+    #[test]
+    fn a_query_only_scattered_letters_match_answers_nothing() {
+        let entries =
+            [entry("0-30 MHz SDR", "South Wenatchee, WA"), entry("80m Dipole", "Chichester UK")];
+        let visible: Vec<&PublicSdrEntry> = entries.iter().collect();
+        assert!(ranked(&visible, "twente").is_empty());
     }
 
     /// ...but a query nothing carries literally still gets the fuzzy list

@@ -818,7 +818,7 @@ settings-servers-t-127-0-0-1-reaches-2 = 127.0.0.1 はこのマシン上のク�
 settings-servers-t-12060-port-n1mm-s-documentation = 12060 は、N1MM のドキュメントが推奨するポートです
 settings-servers-station-name = ステーション名
 settings-servers-what-n1mm-calls-stationname-name = N1MM が StationName と呼ぶもの：パケットを送ったコンピューターの名前です。ロガーは、どの運用席かを区別するためにこれを表示します。
-settings-servers-cw-panel-s-copy-plain = CW パネルの受信文字を、確定するたびに 1 件の UDP データグラムずつ平文で送信します。ステーションのコントローラー、ロガーの CW ウィンドウ、スクリプト向けです。独自のプロトコルはなく、受信側は届いたものを追記するだけです（nc -ul 9999 などで試せます）。確定したテキストのみを送り、デコーダーがまだ書き直している末尾は送りません。無線機ごとに独自のスイッチがあります。
+settings-servers-cw-panel-s-copy-plain = CW パネルの受信文字を、確定するたびに 1 件の UDP データグラムずつ平文で送信します。ステーションのコントローラー、ロガーの CW ウィンドウ、スクリプト向けです。独自のプロトコルはなく、受信側は届いたものを追記するだけです（nc -ul 9998 などで試せます）。確定したテキストのみを送り、デコーダーがまだ書き直している末尾は送りません。無線機ごとに独自のスイッチがあります。
 settings-servers-apply = {" "}適用{" "}
 settings-servers-persist-re-open-broadcast-sockets = 保存して（再）オープン、ブロードキャストソケット
 settings-servers-hamlib-rigctld-server = Hamlib rigctld サーバー
@@ -2818,8 +2818,6 @@ sstv-auto = 自動
 sstv-signal = 信号
 sstv-station-sending-mode-sdroxide-does = 局が sdroxide にないモードで送信しています。信号と同調は問題ありません。このモードのデコーダーがないだけです。あなた側で直すものはありません。
 sstv-listening = 聞いています…
-sstv-restart-rx = 受信を再開
-sstv-abandon-picture-being-received-listen = 受信中の画像を中止し、次のヘッダーを待ちます。誤ったモードでデコードを始めた送信用です。そうでなければ、受信機はそのモードが終わるまで拘束されたままです。
 sstv-callsign-last-station-sent-fsk = 最後の局が画像の後に FSK ID として送ったコールサインです。
 sstv-tx-slant = 送信のスラント
 sstv-transmit-clock-trim-ppm-remove = 相手側のデコーダーのスラントを取り除くための送信クロックのトリム（ppm）
@@ -4002,7 +4000,7 @@ navtex-character-phase-locked-signal-being = 文字の位相がロックされ�
 navtex-characters-whose-first-copy-was = 最初の受信が壊れていて、5 スロット後の繰り返しから取られた文字と、両方が不良だった文字です。NAVTEX の文字は 2 回送られます。それがその誤り訂正のすべてです。
 navtex-swap-mark-space-tones-signal = 反対の側波帯で受信された信号のために、マークとスペースのトーンを入れ替えます。オフは、チャンネル周波数の上側波帯です。これは、このサービスについて公開されているすべての同調の手順が示すものです。
 navtex-starting-navtex-receiver = NAVTEX 受信機を開始中…
-navtex-nothing-yet-station-transmits-ten = まだ何もありません。局は 4 時間ごとに 10 分間送信します
+navtex-nothing-yet-station-transmits-ten = まだ何もありません。局は決められた時間帯に送信し、一部は警報があるときに随時送信します
 navtex-cut-short = 途中で打ち切られた
 navtex-message = メッセージ
 navtex-time-day-stated-message-utc = メッセージ内に記載された時刻（UTC）。表示のみです
@@ -4589,7 +4587,6 @@ macros-most = { $value } が上限です
 
 ## navtex: messages with values (src/app/panels/navtex.rs)
 
-navtex-repaired-lost = 修復 { $repaired } · 失われた { $lost }
 navtex-characters-lost = { $lost } 文字が失われました
 
 ## packet: messages with values (src/app/panels/packet.rs)
@@ -7846,7 +7843,7 @@ sstv-keep-dial-off-hint = オフ：SSTVを選ぶと、SSTV周波数から3 kHz�
 
 sstv-clear-rx = 受信をクリア
 
-sstv-clear-rx-hint = LIVEビューに現在表示されている画像をクリアします。デコーダは動作し続けます。受信途中の画像を破棄して次のヘッダーを待つには、受信を再開を使ってください。
+sstv-clear-rx-hint = 画像を破棄します。完成した画像も描画途中の画像も同様で、次のヘッダーを待ちます。
 
 sstv-audio-present-no-header = 音声あり · SSTVヘッダーはまだなし
 
@@ -8984,6 +8981,9 @@ tx-bands-check-again = 再確認
 
 tx-bands-check-again-hint = 確認を取り消してリストを見直します。バンドを変更すると自動的にそうなります。
 
+settings-radio-hpsdr-diversity = ADC 2 の第2アンテナ（ダイバーシティ）
+
+settings-radio-hpsdr-diversity-hint = ボードの2つの ADC を同期したペアとして送ります。第1アンテナは ADC 1、第2アンテナは ADC 2 です。Cancel は局所的なノイズ源を打ち消し、Combine はフェージングを補います。Diversity に対応した Protocol 2 ボード（例: v0.7.0 以降の TRX-DUO）と DDC 1 が必要です。DDC 2 は第2アンテナになり、独立した無線機にはできません。Apply で反映されます。
 topbar-bw-hint-title = フィルターの調整と記憶
 
 topbar-bw-hint-body = クリックでフィルター設定を開きます。プリセットを右クリックすると変更でき、M+ をクリックすると現在の通過帯域を自分のメモリーに保存します。
@@ -9015,3 +9015,55 @@ publicsdr-mine-empty = まだ何も登録されていません — 行の☆で�
 publicsdr-star-receiver = この受信機をマイに保存
 
 publicsdr-unstar-receiver = この受信機をマイから外す
+
+
+sstv-sync-pulses = 同期パルス
+
+sstv-sync-pulses-hint = VISヘッダーのない画像を描く前に受信機が要求する同期パルス数。多いほど雑音の多いバンドで安定し、少ないほど進行中の送信を早く捉えます。ロックは常に最新のパルスから始まるため、画像が失われることはありません。
+
+sstv-not-saved-not-a-picture = 最後の画像は保存されていません：画像ではなく雑音でした。
+
+sstv-not-saved-no-picture = 最後の画像は保存されていません：信号に画像が含まれていませんでした。
+
+sstv-save-all = すべて保存
+
+sstv-save-all-hint = 受信機が雑音とみなすものも含め、完成したすべての画像を保存します。既定ではオフ：フィルタは静かなバンドの雑音をギャラリーに入れず、これはかろうじて届いた画像のための戻り道です。
+
+settings-controls-cw-keeps-the-fine-grid = CW ではこの設定にかかわらず 10 Hz の刻みでクリックします。CW の信号は、音声向けの刻みでは捉えられないほど狭いためです。
+
+settings-servers-decoded-cw-udp = UDPでCWデコード文を送信
+
+settings-servers-decoded-cw-udp-host-hint = 127.0.0.1 はこのマシン上のプログラムに届きます。LAN のアドレスやこのサブネットのブロードキャストアドレスなら他のマシンに届きます。
+
+settings-servers-decoded-cw-udp-port-hint = 既定値は 9998
+
+windows-clear = クリア
+
+windows-clear-sure = 本当に?
+
+windows-clear-hint = すべてのメモリーチャンネルを削除します。2 回クリックしてください。フォルダーは残ります。
+
+navtex-copies = 良好 { $direct } · 修復 { $repaired } · 消失 { $lost }
+
+aircraft-label-selected-altitude = 設定高度
+
+aircraft-label-selected-heading = 設定方位
+
+aircraft-label-qnh = QNH
+
+aircraft-label-airspeed = 対気速度
+
+aircraft-label-heading = 機首方位
+
+aircraft-label-autopilot = オートパイロット
+
+aircraft-label-adsb-version = ADS-Bバージョン
+
+aircraft-label-accuracy = 精度
+
+aircraft-autopilot-off = 作動中のモードなし
+aircraft-track-kml = 航跡を保存 (KML)
+
+aircraft-track-kml-hover = 局が保存したこの機体の位置を、時刻と高度付きの Google Earth 用 KML 航跡として保存します。長い無信号で線は途切れます。
+
+aircraft-track-kml-saved = { $name } を保存しました。

@@ -816,7 +816,7 @@ settings-servers-t-127-0-0-1-reaches-2 = 127.0.0.1 atteint les clients de cette 
 settings-servers-t-12060-port-n1mm-s-documentation = 12060 est le port recommandé par la documentation de N1MM
 settings-servers-station-name = Nom de la station
 settings-servers-what-n1mm-calls-stationname-name = Ce que N1MM appelle StationName : le nom de l'ordinateur qui a envoyé le paquet. Les logiciels de journal l'affichent pour distinguer un poste opérateur d'un autre.
-settings-servers-cw-panel-s-copy-plain = La copie du panneau CW en texte brut, un datagramme UDP par morceau dès qu'il est stabilisé — pour un contrôleur de station, la fenêtre CW d'un logiciel de journal ou un script. Pas de protocole : un écouteur ajoute simplement ce qui arrive (essayez nc -ul 9999). Seul le texte stabilisé est envoyé, jamais la queue que le décodeur révise encore. Chaque radio a son propre commutateur.
+settings-servers-cw-panel-s-copy-plain = La copie du panneau CW en texte brut, un datagramme UDP par morceau dès qu'il est stabilisé — pour un contrôleur de station, la fenêtre CW d'un logiciel de journal ou un script. Pas de protocole : un écouteur ajoute simplement ce qui arrive (essayez nc -ul 9998). Seul le texte stabilisé est envoyé, jamais la queue que le décodeur révise encore. Chaque radio a son propre commutateur.
 settings-servers-apply = {" "}APPLIQUER{" "}
 settings-servers-persist-re-open-broadcast-sockets = Enregistrer et (ré)ouvrir les sockets de diffusion
 settings-servers-hamlib-rigctld-server = Serveur rigctld Hamlib
@@ -2837,8 +2837,6 @@ sstv-auto = Auto
 sstv-signal = Signal
 sstv-station-sending-mode-sdroxide-does = Une station émet dans un mode que sdroxide ne connaît pas. Le signal et l'accord sont corrects — il n'existe simplement aucun décodeur pour celui-ci. Rien à corriger de votre côté.
 sstv-listening = écoute…
-sstv-restart-rx = Relancer la RX
-sstv-abandon-picture-being-received-listen = Abandonner l'image en cours de réception et écouter l'en-tête suivant. Pour une émission qui a commencé à se décoder dans le mauvais mode — le récepteur reste sinon engagé jusqu'à la fin de ce mode.
 sstv-callsign-last-station-sent-fsk = L'indicatif que la dernière station a envoyé en identification FSK après son image.
 sstv-tx-slant = Inclinaison en émission
 sstv-transmit-clock-trim-ppm-remove = Réglage de l'horloge d'émission (ppm) pour supprimer l'inclinaison sur le décodeur distant
@@ -4024,7 +4022,7 @@ navtex-character-phase-locked-signal-being = La phase des caractères est verrou
 navtex-characters-whose-first-copy-was = Caractères dont la première copie était corrompue et ont été pris sur la répétition cinq créneaux plus tard, et ceux où les deux étaient mauvaises. Un caractère NAVTEX est envoyé deux fois ; c'est toute sa correction d'erreurs.
 navtex-swap-mark-space-tones-signal = Inverser les tonalités de marque et d'espace, pour un signal reçu sur l'autre bande latérale. Désactivé, c'est la bande latérale supérieure sur la fréquence du canal, ce que disent toutes les consignes de réglage publiées pour le service.
 navtex-starting-navtex-receiver = démarrage du récepteur NAVTEX…
-navtex-nothing-yet-station-transmits-ten = rien pour l'instant — une station émet pendant dix minutes toutes les quatre heures
+navtex-nothing-yet-station-transmits-ten = rien pour l'instant — les stations émettent dans des créneaux prévus, et certaines à tout moment en cas d'avertissement
 navtex-cut-short = interrompu
 navtex-message = MESSAGE
 navtex-time-day-stated-message-utc = Heure du jour indiquée dans le message (UTC) : affichage seulement
@@ -4623,7 +4621,6 @@ macros-most = { $value } est le maximum
 
 ## navtex: messages with values (src/app/panels/navtex.rs)
 
-navtex-repaired-lost = { $repaired } réparés · { $lost } perdus
 navtex-characters-lost = { $lost } caractères perdus
 
 ## packet: messages with values (src/app/panels/packet.rs)
@@ -7907,7 +7904,7 @@ sstv-keep-dial-off-hint = Désactivé : choisir SSTV déplace le cadran sur la f
 
 sstv-clear-rx = Effacer Rx
 
-sstv-clear-rx-hint = Efface l'image actuellement affichée dans la vue LIVE. Le décodeur continue de tourner — utilisez Redémarrer RX pour abandonner une image en cours et attendre le prochain en-tête.
+sstv-clear-rx-hint = Jette l'image — aussi bien une image terminée qu'une image à moitié dessinée — et écoute l'en-tête suivant.
 
 sstv-audio-present-no-header = audio présent · pas encore d'en-tête SSTV
 
@@ -9047,6 +9044,9 @@ tx-bands-check-again = VÉRIFIER
 
 tx-bands-check-again-hint = Retire la confirmation pour revoir la liste. Changer une bande le fait déjà tout seul.
 
+settings-radio-hpsdr-diversity = Seconde antenne sur l'ADC 2 (diversity)
+
+settings-radio-hpsdr-diversity-hint = Envoie les deux ADC de la carte comme une paire synchronisée : la première antenne sur l'ADC 1, une seconde sur l'ADC 2. Cancel annule une source de bruit locale, Combine comble les évanouissements. Demande une carte Protocol 2 dont le firmware propose le Diversity (le TRX-DUO à partir de la v0.7.0, par exemple) et le DDC 1. Le DDC 2 devient alors la seconde antenne et ne peut plus être une radio à part. Pris en compte à Apply.
 topbar-bw-hint-title = Régler et mémoriser le filtre
 
 topbar-bw-hint-body = Cliquez pour ouvrir les réglages du filtre. Clic droit sur un préréglage pour le modifier, ou cliquez sur M+ pour stocker la bande passante actuelle dans votre mémoire.
@@ -9078,3 +9078,55 @@ publicsdr-mine-empty = Rien de marqué — l'☆ d'une ligne garde ce récepteur
 publicsdr-star-receiver = Garder ce récepteur dans LES MIENS
 
 publicsdr-unstar-receiver = Retirer ce récepteur des MIENS
+
+
+sstv-sync-pulses = IMPULSIONS SYNC
+
+sstv-sync-pulses-hint = Combien d'impulsions de synchronisation le récepteur veut avant de dessiner une image sans en-tête VIS : plus est plus stable sur une bande bruitée, moins accroche plus tôt une émission en cours. Le verrouillage commence toujours à l'impulsion la plus récente, l'image n'y perd rien.
+
+sstv-not-saved-not-a-picture = Dernière image non enregistrée : c'était du bruit, pas une image.
+
+sstv-not-saved-no-picture = Dernière image non enregistrée : le signal ne portait aucune image.
+
+sstv-save-all = TOUT ENREGISTRER
+
+sstv-save-all-hint = Enregistrer chaque image terminée, y compris celles que le récepteur appellerait du bruit. Désactivé par défaut : le filtre garde le bruit d'une bande calme hors de la galerie, et ceci est le retour pour une image à peine présente.
+
+settings-controls-cw-keeps-the-fine-grid = En CW, le clic se fait sur la grille de 10 Hz quel que soit ce réglage : un signal CW est plus étroit qu'une grille prévue pour la parole ne peut le viser.
+
+settings-servers-decoded-cw-udp = CW décodé par UDP
+
+settings-servers-decoded-cw-udp-host-hint = 127.0.0.1 atteint les programmes de cette machine ; une adresse du réseau local ou l'adresse de diffusion de ce sous-réseau atteint les autres.
+
+settings-servers-decoded-cw-udp-port-hint = 9998 par défaut
+
+windows-clear = VIDER
+
+windows-clear-sure = SÛR ?
+
+windows-clear-hint = Supprimer tous les canaux mémoire. Cliquer deux fois ; les dossiers restent.
+
+navtex-copies = { $direct } bon(s) · { $repaired } réparé(s) · { $lost } perdu(s)
+
+aircraft-label-selected-altitude = Altitude sélectionnée
+
+aircraft-label-selected-heading = Cap sélectionné
+
+aircraft-label-qnh = QNH
+
+aircraft-label-airspeed = Vitesse air
+
+aircraft-label-heading = Cap
+
+aircraft-label-autopilot = Pilote automatique
+
+aircraft-label-adsb-version = Version ADS-B
+
+aircraft-label-accuracy = Précision
+
+aircraft-autopilot-off = aucun mode engagé
+aircraft-track-kml = Enregistrer la trace (KML)
+
+aircraft-track-kml-hover = Enregistre les positions que la station a gardées pour cet aéronef sous forme de trace KML pour Google Earth, avec l'heure et l'altitude. Un long silence coupe la ligne.
+
+aircraft-track-kml-saved = { $name } enregistré.

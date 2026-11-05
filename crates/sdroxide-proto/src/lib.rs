@@ -2176,8 +2176,38 @@ use sdroxide_types::{
 /// an English `Notice`; now it carries the reason and the frequency, and the
 /// screen words it in the operator's language. `PROTO_VERSION` 259 → 260,
 /// `VERSION_BYTE` 0x4F → 0x50.
-pub const PROTO_VERSION: u16 = 262;
-const VERSION_BYTE: u8 = 0x52;
+/// v264: decoded CW over UDP. [`sdroxide_types::WsjtxConfig`] gains `cw_text`
+/// ([`sdroxide_types::CwTextConfig`]) on its tail, beside the N1MM broadcast it
+/// sits with. `WsjtxConfig` rides `Command::SetWsjtxConfig` whole, so a v263
+/// peer handed one reads the extra bytes as the start of the next message. The
+/// same change as upstream's v171. `PROTO_VERSION` 263 → 264, `VERSION_BYTE`
+/// 0x53 → 0x54.
+/// v265: **an HPSDR board's second ADC as a second aerial.**
+/// [`sdroxide_types::HpsdrConfig`] gains `diversity`, `div_mode`, `div_taps`,
+/// `div_rate` and `div_frozen` at its tail, for a Protocol 2 board that streams its two ADCs as a
+/// synced DDC pair (the TRX-DUO firmware v0.7.0, piHPSDR, Thetis). The struct
+/// rides inside `RadioConfig`, which crosses the link whole in
+/// `ServerMsg::RadioConfig` and `Command::SetRadioConfig`, so a v264 peer reads
+/// every field after it out of step. `#[serde(default)]`, so a `radio.json`
+/// written before this loads unchanged, with Diversity off. `PROTO_VERSION`
+/// 264 → 265, `VERSION_BYTE` 0x54 → 0x55.
+///
+/// v266: a band-plan sub-segment carries an optional `label` (the operator's
+/// own name for it on the waterfall strip), so the `band_plan` in
+/// `StationConfig` changes layout and both ends have to agree.
+///
+/// v267: [`sdroxide_types::Command`] gains `ClearMemories`, appended; a v266
+/// peer has no variant to decode it into.
+///
+/// v268: **what an aircraft says about its own flight.**
+/// [`sdroxide_types::AdsbAircraft`] gains, at its tail, `selected_altitude_ft`,
+/// `selected_heading_deg`, `qnh_hpa`, `ias_kt`, `tas_kt`, `heading_deg`,
+/// `nav_modes`, `adsb_version`, `nac_p`, `nac_v` and `sil`, read from the
+/// target-state, operational-status and airspeed squitters. The struct rides in
+/// the aircraft table every half second, so a v267 peer reads the table out of
+/// step. `PROTO_VERSION` 267 → 268, `VERSION_BYTE` 0x57 → 0x58.
+pub const PROTO_VERSION: u16 = 268;
+const VERSION_BYTE: u8 = 0x58;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -3104,6 +3134,10 @@ mod tests {
                 // The FSK ID a station sent after its picture, which travels
                 // as a whole string rather than a code — it is a callsign.
                 rx_id: Some("OE1XYZ".to_string()),
+                // Why the last frame was not kept, which the panel says out
+                // loud — appended to the status rather than its own message
+                // (PROTO_VERSION 262 → 263).
+                not_saved: Some(sdroxide_types::SstvDrop::NotAPicture),
                 ..SstvStatus::default()
             }),
         ];
@@ -3454,7 +3488,7 @@ mod tests {
             ServerMsg::TxRefused(w, hz) => assert_eq!((w, hz), (why, 7_074_000.0)),
             _ => panic!("TxRefused did not round-trip"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (262, 0x52));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (268, 0x58));
     }
 
     /// The dynamic-DNS answer rides last on [`ServerMsg`], and it has to: the
@@ -3485,7 +3519,35 @@ mod tests {
             }
             other => panic!("the answer did not round-trip: {other:?}"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (262, 0x52));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (268, 0x58));
+    }
+
+    /// What an aircraft says about its own flight crosses the wire with the
+    /// aircraft table, and a table with none of it still reads back.
+    #[test]
+    fn an_aircraft_with_its_own_flight_data_round_trips() {
+        let mut full = sdroxide_types::AdsbAircraft::new(0xA05629, 1_000);
+        full.selected_altitude_ft = Some(16_992);
+        full.selected_heading_deg = Some(66.8);
+        full.qnh_hpa = Some(1012.8);
+        full.ias_kt = Some(250.0);
+        full.tas_kt = Some(375.0);
+        full.heading_deg = Some(243.98);
+        full.nav_modes = Some(sdroxide_types::NAV_AUTOPILOT | sdroxide_types::NAV_LNAV);
+        full.adsb_version = Some(2);
+        full.nac_p = Some(10);
+        full.nac_v = Some(2);
+        full.sil = Some(3);
+        let bare = sdroxide_types::AdsbAircraft::new(0x484006, 1_000);
+        let status = sdroxide_types::AdsbStatus {
+            aircraft: vec![full.clone(), bare.clone()],
+            ..Default::default()
+        };
+        let bytes = encode(&ServerMsg::AdsbStatus(Box::new(status))).unwrap();
+        match decode::<ServerMsg>(&bytes).unwrap() {
+            ServerMsg::AdsbStatus(s) => assert_eq!(s.aircraft, vec![full, bare]),
+            other => panic!("the table did not round-trip: {other:?}"),
+        }
     }
 
     /// postcard is positional: a field inserted mid-struct shifts every byte
@@ -3505,14 +3567,22 @@ mod tests {
         let digi = postcard::to_allocvec(&sdroxide_types::DigiConfig::default()).unwrap();
         let radio = postcard::to_allocvec(&sdroxide_types::RadioConfig::default()).unwrap();
         let net = postcard::to_allocvec(&sdroxide_types::NetworkConfig::default()).unwrap();
+        // 481 since SSTV's sync-pulse setting and its save-everything switch
+        // were appended at the tail (PROTO_VERSION 262 → 263). Appended, so an
+        // older peer reads the struct it knows and the new bytes are simply not
+        // there.
         assert_eq!(
             (digi.len(), fnv1a(&digi)),
-            (479, 221_087_630_763_656_457),
+            (481, 5_599_147_536_364_706_919),
             "DigiConfig's wire layout shifted — append fields, never insert them"
         );
+        // 897 since `HpsdrConfig` gained its five Diversity fields (a bool, a
+        // mode, the taps, the rate and the hold: 8 bytes) at its own tail
+        // (PROTO_VERSION 264 → 265). `HpsdrConfig` sits inside `RadioConfig`,
+        // so this moves what follows it: that is what the bump is for.
         assert_eq!(
             (radio.len(), fnv1a(&radio)),
-            (889, 17_500_317_737_597_158_402),
+            (897, 1_396_573_632_080_966_650),
             "RadioConfig's wire layout shifted — append fields, never insert them"
         );
         // 316 since the two Dynamic DNS fields were appended at the end
@@ -3682,6 +3752,39 @@ mod tests {
         let m = ServerMsg::StationConfig(Box::new(StationConfig { relay, ..no_station() }));
         let back: ServerMsg = decode(&encode(&m).unwrap()).unwrap();
         assert_eq!(back, m);
+    }
+
+    /// The WSJT-X / N1MM / decoded-CW output configuration, both ways.
+    ///
+    /// Worth its own test for `roundtrip_station_config`'s reason. It rides
+    /// `Command::SetWsjtxConfig` **whole**, and v264 appended `cw_text` to it:
+    /// a field the encoder carries but the decoder drops does not fail, it
+    /// silently arrives as its default, and the operator's setting is simply
+    /// never applied.
+    ///
+    /// Filled in rather than defaulted, and every field different from its
+    /// neighbour, so a field-order slip shows instead of hiding behind two
+    /// equal values.
+    #[test]
+    fn roundtrip_wsjtx_config() {
+        use sdroxide_types::{CwTextConfig, N1mmConfig, WsjtxConfig};
+
+        let cfg = WsjtxConfig {
+            enabled: true,
+            host: "192.0.2.7".into(),
+            port: 2238,
+            id: "SDR Oxide Brown".into(),
+            n1mm: N1mmConfig {
+                enabled: true,
+                host: "192.0.2.8".into(),
+                port: 12060,
+                station: "SHACK-2".into(),
+            },
+            cw_text: CwTextConfig { enabled: true, host: "192.0.2.9".into(), port: 9998 },
+        };
+        let cmd = ClientMsg::Command(Command::SetWsjtxConfig(cfg));
+        let back: ClientMsg = decode(&encode(&cmd).unwrap()).unwrap();
+        assert_eq!(back, cmd);
     }
 
     /// The interface configuration, both ways.

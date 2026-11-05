@@ -3255,6 +3255,33 @@ pub struct DigiConfig {
     /// for a continuous run: it stops whether or not contacts are being made.
     #[serde(default)]
     pub auto_session_min: u16,
+    /// SSTV: how many sync pulses the receiver wants before it starts drawing a
+    /// picture it has no VIS header for (4, 5 or 6; six by default).
+    ///
+    /// The pulses are *evidence* that a transmission is under way rather than
+    /// noise, and the lock always begins at the newest of them — so this trades
+    /// how quickly the receiver joins a picture already in progress against how
+    /// often it starts on noise. Six on a CB band, four where the band is quiet
+    /// and a picture is worth catching early. Appended at the tail, so this is a
+    /// wire change (`PROTO_VERSION` 262 → 263).
+    #[serde(default = "sstv_default_sync_pulses")]
+    pub sstv_sync_pulses: u8,
+    /// SSTV: save every finished frame, including the ones the gate would call
+    /// noise. Off by default.
+    ///
+    /// The way back. The gate's two signs separate the bench's speckle from its
+    /// pictures by a margin, not a gulf, and a near-flat picture lives on its
+    /// sync alone — so an operator who would rather have a doubtful frame than
+    /// miss one turns this on and nothing is discarded (review, 2026-11-04).
+    /// Appended at the tail, so this is a wire change.
+    #[serde(default)]
+    pub sstv_save_all: bool,
+}
+
+/// Six: the value the bench chose for a 27 MHz band full of CB QRM, where four
+/// started an image about once a minute.
+fn sstv_default_sync_pulses() -> u8 {
+    6
 }
 
 fn cw_default_tx_idle_s() -> f32 {
@@ -3545,6 +3572,8 @@ impl Default for DigiConfig {
             sstv_rx_auto: true,
             wefax_rx_sensitivity: 0,
             wefax_rx_auto: true,
+            sstv_sync_pulses: sstv_default_sync_pulses(),
+            sstv_save_all: false,
         }
     }
 }

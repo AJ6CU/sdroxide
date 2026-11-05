@@ -816,7 +816,7 @@ settings-servers-t-127-0-0-1-reaches-2 = 127.0.0.1 bereikt clients op deze machi
 settings-servers-t-12060-port-n1mm-s-documentation = 12060 is de poort die de documentatie van N1MM aanbeveelt
 settings-servers-station-name = Stationsnaam
 settings-servers-what-n1mm-calls-stationname-name = Wat N1MM de StationName noemt: de naam van de computer die het pakket verstuurde. Loggers tonen die om de ene operatorpositie van de andere te onderscheiden.
-settings-servers-cw-panel-s-copy-plain = De kopie van het CW-paneel als platte tekst, één UDP-datagram per stuk zodra het vaststaat — voor een stationscontroller, het CW-venster van een logger of een script. Geen protocol: een luisteraar voegt gewoon toe wat binnenkomt (probeer nc -ul 9999). Alleen vaststaande tekst wordt verzonden, nooit de staart die de decoder nog herziet. Elke radio heeft zijn eigen schakelaar.
+settings-servers-cw-panel-s-copy-plain = De kopie van het CW-paneel als platte tekst, één UDP-datagram per stuk zodra het vaststaat — voor een stationscontroller, het CW-venster van een logger of een script. Geen protocol: een luisteraar voegt gewoon toe wat binnenkomt (probeer nc -ul 9998). Alleen vaststaande tekst wordt verzonden, nooit de staart die de decoder nog herziet. Elke radio heeft zijn eigen schakelaar.
 settings-servers-apply = {" "}TOEPASSEN{" "}
 settings-servers-persist-re-open-broadcast-sockets = Opslaan en de broadcastsockets (opnieuw) openen
 settings-servers-hamlib-rigctld-server = Hamlib rigctld-server
@@ -2837,8 +2837,6 @@ sstv-auto = Auto
 sstv-signal = Signaal
 sstv-station-sending-mode-sdroxide-does = Een station zendt in een modus die sdroxide niet heeft. Het signaal en de afstemming zijn in orde — er is gewoon geen decoder voor deze. Aan jouw kant hoeft niets te worden aangepast.
 sstv-listening = luisteren…
-sstv-restart-rx = RX herstarten
-sstv-abandon-picture-being-received-listen = Laat het beeld dat wordt ontvangen vallen en luister naar de volgende header. Voor een uitzending die in de verkeerde modus is gaan decoderen — de ontvanger zit anders vast totdat die modus afloopt.
 sstv-callsign-last-station-sent-fsk = De roepletters die het laatste station na zijn beeld als FSK-ID heeft verzonden.
 sstv-tx-slant = TX-scheefstand
 sstv-transmit-clock-trim-ppm-remove = Trimming van de zendklok (ppm) om scheefstand op de decoder aan de andere kant te verwijderen
@@ -4024,7 +4022,7 @@ navtex-character-phase-locked-signal-being = De tekenfase is vergrendeld — een
 navtex-characters-whose-first-copy-was = Tekens waarvan de eerste kopie beschadigd was en die uit de herhaling vijf slots later zijn genomen, en die waarbij beide slecht waren. Een NAVTEX-teken wordt twee keer verzonden; dat is de hele foutcorrectie.
 navtex-swap-mark-space-tones-signal = Wissel de mark- en spacetonen om, voor een signaal dat op de andere zijband is ontvangen. Uit is bovenzijband op de kanaalfrequentie, wat elke gepubliceerde afstemaanwijzing voor de dienst zegt.
 navtex-starting-navtex-receiver = de NAVTEX-ontvanger wordt gestart…
-navtex-nothing-yet-station-transmits-ten = nog niets — een station zendt elke vier uur tien minuten
+navtex-nothing-yet-station-transmits-ten = nog niets — stations zenden in vaste tijdvakken, en sommige wanneer ze een waarschuwing hebben
 navtex-cut-short = afgebroken
 navtex-message = BERICHT
 navtex-time-day-stated-message-utc = Tijdstip van de dag volgens het bericht (UTC): alleen ter weergave
@@ -4624,7 +4622,6 @@ macros-most = { $value } is het meest
 
 ## navtex: messages with values (src/app/panels/navtex.rs)
 
-navtex-repaired-lost = { $repaired } hersteld · { $lost } verloren
 navtex-characters-lost = { $lost } tekens verloren
 
 ## packet: messages with values (src/app/panels/packet.rs)
@@ -7904,7 +7901,7 @@ sstv-keep-dial-off-hint = Uit: SSTV kiezen verplaatst de draaiknop naar de SSTV-
 
 sstv-clear-rx = RX wissen
 
-sstv-clear-rx-hint = Wis de afbeelding die nu in de LIVE-weergave staat. De decoder blijft draaien — gebruik RX herstarten om een afbeelding in uitvoering te laten varen en op de volgende header te luisteren.
+sstv-clear-rx-hint = Gooit het beeld weg — een afgemaakt en een half getekend beeld — en luistert naar de volgende header.
 
 sstv-audio-present-no-header = audio aanwezig · nog geen SSTV-header
 
@@ -9044,6 +9041,9 @@ tx-bands-check-again = OPNIEUW
 
 tx-bands-check-again-hint = Trekt de bevestiging in om de lijst opnieuw te bekijken. Een band wijzigen doet dat al vanzelf.
 
+settings-radio-hpsdr-diversity = Tweede antenne op ADC 2 (diversity)
+
+settings-radio-hpsdr-diversity-hint = Stuurt de twee ADC's van de kaart als een gesynchroniseerd paar: de eerste antenne op ADC 1, een tweede op ADC 2. Cancel onderdrukt een lokale stoorbron, Combine vult fading op. Vereist een Protocol 2-kaart waarvan de firmware Diversity biedt (bijvoorbeeld de TRX-DUO vanaf v0.7.0) en DDC 1. DDC 2 is dan de tweede antenne en kan geen eigen radio zijn. Werkt na Apply.
 topbar-bw-hint-title = Filter instellen en opslaan
 
 topbar-bw-hint-body = Klik om de filterinstellingen te openen. Rechtsklik op een preset om die te wijzigen, of klik op M+ om de huidige doorlaatband in je eigen geheugen op te slaan.
@@ -9075,3 +9075,55 @@ publicsdr-mine-empty = Nog niets gemarkeerd — het ☆ op een rij bewaart die o
 publicsdr-star-receiver = Deze ontvanger in MIJN bewaren
 
 publicsdr-unstar-receiver = Deze ontvanger uit MIJN halen
+
+
+sstv-sync-pulses = SYNCPULSEN
+
+sstv-sync-pulses-hint = Hoeveel syncpulsen de ontvanger wil voordat hij een beeld tekent zonder VIS-header: meer is rustiger op een rumoerige band, minder pikt een lopende uitzending eerder op. De lock begint altijd op de nieuwste puls, dus een foto verliest hoe dan ook niets.
+
+sstv-not-saved-not-a-picture = Laatste beeld niet bewaard: het was ruis, geen foto.
+
+sstv-not-saved-no-picture = Laatste beeld niet bewaard: het signaal bevatte geen foto.
+
+sstv-save-all = ALLES BEWAREN
+
+sstv-save-all-hint = Bewaar elk afgemaakt beeld, ook wat de ontvanger ruis zou noemen. Standaard uit: de poort houdt de ruis van een stille band uit de galerij, en dit is de terugweg voor een foto die er nauwelijks is.
+
+settings-controls-cw-keeps-the-fine-grid = In CW klikt het op het 10 Hz-raster wat hier ook staat: een CW-signaal is smaller dan een raster voor spraak kan raken.
+
+settings-servers-decoded-cw-udp = Gedecodeerde CW via UDP
+
+settings-servers-decoded-cw-udp-host-hint = 127.0.0.1 bereikt programma's op deze computer; een LAN-adres of het broadcastadres van dit subnet bereikt andere.
+
+settings-servers-decoded-cw-udp-port-hint = Standaard 9998
+
+windows-clear = WISSEN
+
+windows-clear-sure = ZEKER?
+
+windows-clear-hint = Alle geheugenkanalen wissen. Twee keer klikken; mappen blijven.
+
+navtex-copies = { $direct } goed · { $repaired } hersteld · { $lost } verloren
+
+aircraft-label-selected-altitude = Geselecteerde hoogte
+
+aircraft-label-selected-heading = Geselecteerde koers
+
+aircraft-label-qnh = QNH
+
+aircraft-label-airspeed = Luchtsnelheid
+
+aircraft-label-heading = Koers
+
+aircraft-label-autopilot = Automatische piloot
+
+aircraft-label-adsb-version = ADS-B-versie
+
+aircraft-label-accuracy = Nauwkeurigheid
+
+aircraft-autopilot-off = geen modus actief
+aircraft-track-kml = Spoor opslaan (KML)
+
+aircraft-track-kml-hover = Slaat de posities op die het station van dit vliegtuig bewaarde als KML-spoor voor Google Earth, met tijd en hoogte. Een lange stilte onderbreekt de lijn.
+
+aircraft-track-kml-saved = { $name } opgeslagen.

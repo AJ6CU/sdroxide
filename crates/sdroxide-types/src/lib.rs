@@ -105,7 +105,8 @@ pub use access::{AUTH_BUSY, AUTH_REFUSED, AuthPhase, RemoteAccess, RemoteServer,
 pub use adsb::{
     ADSB_DROP_LIST_S, ADSB_DROP_MAP_S, ADSB_FREQ_HZ, ADSB_GOOD_RATE_HZ, ADSB_HISTORY_POINTS,
     ADSB_MAX_AIRCRAFT, ADSB_MAX_RATE_HZ, ADSB_MIN_RATE_HZ, ADSB_TRACK_MAX, ADSB_VECTOR_MINUTES,
-    AdsbAircraft, AdsbSettings, AdsbSource, AdsbStatus, AirUnits, local_secs_of_day, utc_label,
+    AdsbAircraft, AdsbSettings, AdsbSource, AdsbStatus, AirUnits, NAV_ALT_HOLD, NAV_APPROACH,
+    NAV_AUTOPILOT, NAV_LNAV, NAV_VNAV, local_secs_of_day, nav_mode_names, utc_label,
 };
 pub use ais::{
     AIS_ALL_CHANNELS, AIS_BIT_RATE, AIS_CHANNEL_A_HZ, AIS_CHANNEL_B_HZ, AIS_CHANNEL_SPACING_HZ,
@@ -347,7 +348,7 @@ pub use speech::{
     Verbosity,
 };
 pub use spot::{Spot, SpotKind, spots_to_kml};
-pub use sstv::{SstvMode, SstvStatus};
+pub use sstv::{SstvDrop, SstvMode, SstvStatus};
 pub use state::{
     CESSB_MAX_DB, MAX_DECIMATION, MAX_MANUAL_GAIN_DB, MIN_DECIMATED_RATE_HZ, OffsetState,
     RadioState, RxId, RxState, SQUELCH_CLOSED_DB, SQUELCH_OPEN_DB, SWR_LIMIT_MAX, SWR_LIMIT_MIN,
@@ -391,7 +392,7 @@ pub use winlink::{
     DEFAULT_CMS_ADDRESS, MAIL_PAGE_MAX, MailAttachment, MailDraft, MailEntry, MailFolder,
     MailListing, MailMessage, WinlinkConfig, WinlinkGateway, WinlinkLane, WinlinkStatus,
 };
-pub use wsjtx::{N1mmConfig, WsjtxConfig};
+pub use wsjtx::{CwTextConfig, N1mmConfig, WsjtxConfig};
 pub use wspr::{
     BURST_S as WSPR_BURST_S, DEFAULT_TX_HZ as WSPR_DEFAULT_TX_HZ, POWERS_DBM as WSPR_POWERS_DBM,
     POWERS_W as WSPR_POWERS_W, SLOT_S as WSPR_SLOT_S, TX_OFFSET_S as WSPR_TX_OFFSET_S,

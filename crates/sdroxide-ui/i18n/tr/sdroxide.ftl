@@ -821,7 +821,7 @@ settings-servers-t-127-0-0-1-reaches-2 = 127.0.0.1 bu makinedeki istemcilere ula
 settings-servers-t-12060-port-n1mm-s-documentation = 12060, N1MM'nin belgelerinin önerdiği bağlantı noktasıdır
 settings-servers-station-name = İstasyon adı
 settings-servers-what-n1mm-calls-stationname-name = N1MM'nin StationName dediği şey: paketi gönderen bilgisayarın adı. Günlükleyiciler, bir işletim konumunu diğerinden ayırt etmek için bunu gösterir.
-settings-servers-cw-panel-s-copy-plain = CW panelinin kopyası düz metin olarak, oturduğu her parça için bir UDP datagramı — bir istasyon denetleyicisi, bir günlükleyicinin CW penceresi ya da bir betik için. Protokol yoktur: bir dinleyici, gelenleri sadece ekler (nc -ul 9999 deneyin). Yalnızca oturmuş metin gönderilir; çözücünün hâlâ düzeltmekte olduğu kuyruk asla gönderilmez. Her radyonun kendi anahtarı vardır.
+settings-servers-cw-panel-s-copy-plain = CW panelinin kopyası düz metin olarak, oturduğu her parça için bir UDP datagramı — bir istasyon denetleyicisi, bir günlükleyicinin CW penceresi ya da bir betik için. Protokol yoktur: bir dinleyici, gelenleri sadece ekler (nc -ul 9998 deneyin). Yalnızca oturmuş metin gönderilir; çözücünün hâlâ düzeltmekte olduğu kuyruk asla gönderilmez. Her radyonun kendi anahtarı vardır.
 settings-servers-apply = {" "}UYGULA{" "}
 settings-servers-persist-re-open-broadcast-sockets = Kaydet ve yayın soketlerini (yeniden) aç
 settings-servers-hamlib-rigctld-server = Hamlib rigctld sunucusu
@@ -2839,8 +2839,6 @@ sstv-auto = Otomatik
 sstv-signal = Sinyal
 sstv-station-sending-mode-sdroxide-does = Bir istasyon, sdroxide'ın sahip olmadığı bir modda yayın yapıyor. Sinyal ve ayar iyi — bunun için yalnızca bir çözücü yok. Sizin tarafınızda düzeltilecek bir şey yok.
 sstv-listening = dinleniyor…
-sstv-restart-rx = Alımı yeniden başlat
-sstv-abandon-picture-being-received-listen = Alınmakta olan resmi bırakın ve bir sonraki başlığı dinleyin. Yanlış modda çözülmeye başlayan bir yayın için — aksi halde alıcı, o mod bitene dek bağlı kalır.
 sstv-callsign-last-station-sent-fsk = Son istasyonun resminden sonra bir FSK kimliği olarak gönderdiği çağrı işareti.
 sstv-tx-slant = YAYIN eğimi
 sstv-transmit-clock-trim-ppm-remove = Uzak uçtaki çözücüdeki eğimi gidermek için yayın saat ayarı (ppm)
@@ -4026,7 +4024,7 @@ navtex-character-phase-locked-signal-being = Karakter fazı kilitli — bir siny
 navtex-characters-whose-first-copy-was = İlk kopyası bozuk olan ve beş yuva sonra tekrardan alınan karakterler ve ikisi de bozuk olanlar. Bir NAVTEX karakteri iki kez gönderilir; hata düzeltmesinin tamamı budur.
 navtex-swap-mark-space-tones-signal = Diğer yan bantta alınan bir sinyal için işaret ve boşluk tonlarını değiştirin. Kapalıysa kanal frekansında üst yan banttır; hizmet için yayımlanmış her ayar talimatının dediği budur.
 navtex-starting-navtex-receiver = NAVTEX alıcısı başlatılıyor…
-navtex-nothing-yet-station-transmits-ten = Henüz hiçbir şey yok — bir istasyon dört saatte bir on dakika yayın yapar
+navtex-nothing-yet-station-transmits-ten = Henüz hiçbir şey yok — istasyonlar belirli zaman dilimlerinde yayın yapar, bazıları bir uyarı olduğunda
 navtex-cut-short = kısaltıldı
 navtex-message = İLETİ
 navtex-time-day-stated-message-utc = İletide belirtilen günün saati (UTC): yalnızca gösterim
@@ -4626,7 +4624,6 @@ macros-most = { $value } en fazlası
 
 ## navtex: messages with values (src/app/panels/navtex.rs)
 
-navtex-repaired-lost = { $repaired } onarıldı · { $lost } kayıp
 navtex-characters-lost = { $lost } karakter kayıp
 
 ## packet: messages with values (src/app/panels/packet.rs)
@@ -7898,7 +7895,7 @@ sstv-keep-dial-off-hint = Kapalı: SSTV seçmek, bir tanesinden 3 kHz'den fazla 
 
 sstv-clear-rx = Rx'i temizle
 
-sstv-clear-rx-hint = CANLI görünümde o an gösterilen resmi temizler. Çözücü çalışmaya devam eder — süren bir resmi bırakıp bir sonraki başlığı dinlemek için RX'i Yeniden Başlat'ı kullanın.
+sstv-clear-rx-hint = Resmi atar — ister tamamlanmış ister yarım çizilmiş olsun — ve bir sonraki başlığı bekler.
 
 sstv-audio-present-no-header = ses var · henüz SSTV başlığı yok
 
@@ -9036,6 +9033,9 @@ tx-bands-check-again = YENİDEN
 
 tx-bands-check-again-hint = Onayı geri alır, liste yeniden kontrol edilebilir. Bir bandı değiştirmek bunu kendiliğinden yapar.
 
+settings-radio-hpsdr-diversity = ADC 2'de ikinci anten (diversity)
+
+settings-radio-hpsdr-diversity-hint = Kartın iki ADC'sini eşzamanlı bir çift olarak aktarır: ilk anten ADC 1'de, ikinci anten ADC 2'de. Cancel yerel bir gürültü kaynağını söndürür, Combine sönümlenmeleri doldurur. Yazılımı Diversity sunan bir Protocol 2 kartı (örneğin v0.7.0'dan itibaren TRX-DUO) ve DDC 1 gerekir. DDC 2 bu durumda ikinci antendir ve ayrı bir telsiz olamaz. Apply ile geçerli olur.
 topbar-bw-hint-title = Filtreyi ayarla ve kaydet
 
 topbar-bw-hint-body = Filtre ayarlarını açmak için tıklayın. Bir ön ayarı değiştirmek için sağ tıklayın; geçerli geçirme bandını kendi belleğinize kaydetmek için M+ düğmesine tıklayın.
@@ -9067,3 +9067,55 @@ publicsdr-mine-empty = Henüz yıldız yok — bir satırdaki ☆ o alıcıyı b
 publicsdr-star-receiver = Bu alıcıyı BENİM içinde tut
 
 publicsdr-unstar-receiver = Bu alıcıyı BENİM içinden çıkar
+
+
+sstv-sync-pulses = SENK PULSLARI
+
+sstv-sync-pulses-hint = Alıcının VIS başlığı olmayan bir görüntüyü çizmeden önce kaç senkron puls isteyeceği: fazlası gürültülü bantta daha kararlı, azı sürmekte olan bir yayını daha erken yakalar. Kilit her zaman en yeni pulsta başlar, yani görüntü hiçbir şekilde kaybolmaz.
+
+sstv-not-saved-not-a-picture = Son görüntü kaydedilmedi: gürültüydü, görüntü değil.
+
+sstv-not-saved-no-picture = Son görüntü kaydedilmedi: sinyalde görüntü yoktu.
+
+sstv-save-all = TÜMÜNÜ KAYDET
+
+sstv-save-all-hint = Alıcının gürültü sayacağı dahil her tamamlanmış görüntüyü kaydet. Varsayılan olarak kapalı: filtre sessiz bir bandın gürültüsünü galeriden uzak tutar, bu da zar zor gelen bir görüntü için geri dönüş yoludur.
+
+settings-controls-cw-keeps-the-fine-grid = CW'de bu ayar ne olursa olsun tıklama 10 Hz ızgarasına oturur: bir CW sinyali, ses için yapılmış bir ızgaranın isabet edebileceğinden dardır.
+
+settings-servers-decoded-cw-udp = UDP üzerinden çözülmüş CW
+
+settings-servers-decoded-cw-udp-host-hint = 127.0.0.1 bu makinedeki programlara ulaşır; bir yerel ağ adresi veya bu alt ağın yayın adresi diğerlerine ulaşır.
+
+settings-servers-decoded-cw-udp-port-hint = Varsayılan 9998
+
+windows-clear = TEMİZLE
+
+windows-clear-sure = EMİN MİSİN?
+
+windows-clear-hint = Tüm hafıza kanallarını sil. İki kez tıkla; klasörler kalır.
+
+navtex-copies = { $direct } doğru · { $repaired } onarılan · { $lost } kayıp
+
+aircraft-label-selected-altitude = Seçilen irtifa
+
+aircraft-label-selected-heading = Seçilen yön
+
+aircraft-label-qnh = QNH
+
+aircraft-label-airspeed = Hava hızı
+
+aircraft-label-heading = Yön
+
+aircraft-label-autopilot = Otopilot
+
+aircraft-label-adsb-version = ADS-B sürümü
+
+aircraft-label-accuracy = Doğruluk
+
+aircraft-autopilot-off = hiçbir mod devrede değil
+aircraft-track-kml = İzi kaydet (KML)
+
+aircraft-track-kml-hover = İstasyonun bu uçak için sakladığı konumları, zaman ve irtifa ile Google Earth için KML izi olarak kaydeder. Uzun bir sessizlik çizgiyi keser.
+
+aircraft-track-kml-saved = { $name } kaydedildi.

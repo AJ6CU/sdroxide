@@ -1891,6 +1891,10 @@ place for a folder, an RTTY modem setup or an antenna socket, and its `Mode`
 column is the *modulation*, so a channel stored in a digital mode exports as the
 sideband it rides on. The frequency, the name, the shift and the tone all do.
 
+**CLEAR** deletes every channel at once, for a list imported by the hundred. It
+asks first: the chip turns into **SURE?**, and only a second click there clears
+the list. Folders stay.
+
 The **Sort** row above the list says what order it is drawn in — **Stored** (as
 stored, the historic order), **Name** (ignoring case), **Freq**, or **Band**
 (each band's channels together, general coverage last, by frequency inside
@@ -8251,7 +8255,7 @@ The file is one row per line, in **megahertz**, and it explains itself in a
 | List | What it sets |
 | --- | --- |
 | `bands` | The allocations. `band` is one of `Lw` `Mw` `M160` `M80` `M60` `M40` `M30` `M20` `M17` `M15` `M12` `M10` `M11` `M6` `M4` `Fm` `M2` `M125` `M70` `Cm33` `Cm23` `Cm13` `Cm9` `Cm6` `Cm3` — metres up to 2 m, then the band's own name, `Cm` from 33 cm up because `M6` was already 6 m, and `Lw`, `Mw`, `Sw`, `Fm` for the broadcast services (see the bullet above for what `Sw` deliberately overlapping the amateur bands does). Leave a band out and the region does not have it — with one exception, below. |
-| `segments` | The CW / data / phone / beacon / all-modes blocks on the waterfall strip. `kind` is `Cw`, `Digi`, `Phone`, `Beacon` or `All`. |
+| `segments` | The CW / data / phone / beacon / all-modes blocks on the waterfall strip. `kind` is `Cw`, `Digi`, `Phone`, `Beacon` or `All`; an optional `label` (`"label": "CONTEST"`) names the block on the strip instead of the kind, which still sets its colour. |
 | `psk_windows` | Where the PSK31 skimmer listens. |
 | `rtty_windows` | Where the RTTY skimmer listens. |
 
@@ -9791,6 +9795,26 @@ involved:
   jack makes no power at all, and the relay is deliberately held in receive so
   the antenna connector stays on the receiver. Ignored on boards other than a
   Hermes Lite.
+- **Second aerial on ADC 2 (diversity)** — streams the board's two ADCs as one
+  synced pair: the first aerial on ADC 1, a second one on ADC 2, both on the
+  same frequency and the same instant. **Protocol 2 only, on DDC 1, and only on
+  a board whose firmware offers Diversity** — the TRX-DUO from firmware v0.7.0
+  (the Red Pitaya clone with two 16-bit ADCs), piHPSDR and Thetis use the same
+  request. DDC 2 is then the second aerial and cannot be a radio of its own.
+  Takes effect on **Apply**, because the board is told how to stream when the
+  DDC is attached. Asked for on any other board, the radio opens without it
+  and the log says why.
+
+  **Diversity taps** sets the length of the adaptive filter (one tap is a gain
+  and a phase; each further tap equalises one sample period of the difference
+  between the two aerials). The main window's **DIV** strip then appears with
+  **Cancel** (null a local noise source such as a switched-mode supply or a
+  neighbour's inverter — the second aerial wants to hear the noise and as little
+  of the band as possible) or **Combine** (add the two in the phase that makes
+  them reinforce, filling in HF fades), the adaptation rate, hold and restart,
+  as on a LimeSDR or an RSPduo
+  ([§6.2.17](#6217-limesdr-family--limerfe-limesuite)). Set the two aerials to
+  about the same noise floor. *Not yet verified on a real TRX-DUO.*
 - **Invert spectrum (Swap I/Q)** — mirrors the board's spectrum about the tuned
   frequency, on transmit as well as receive. **On by default**, because a
   Hermes Lite 2 needs it. Turn it *off* only if signals appear on the wrong side
@@ -13921,11 +13945,22 @@ fails on 4532, the usual cause is a real `rigctld` already running.
 
 Supported: frequency, mode and passband, PTT, VFO A/B and split (including split
 frequency and mode), RIT and XIT, the `RFPOWER` / `AF` / `MICGAIN` / `STRENGTH`
-levels, the `NB` / `NR` / `ANF` / `MUTE` functions, the `XCHG` / `CPY` /
-`TOGGLE` / `BAND_UP` / `BAND_DOWN` / `TUNE` VFO operations, and the voice keyer
+/ `RF` / `SQL` / `AGC` / `NR` levels, the `NB` / `NR` / `ANF` / `MUTE` functions, the
+`XCHG` / `CPY` / `TOGGLE` / `BAND_UP` / `BAND_DOWN` / `TUNE` VFO operations, and
+the voice keyer
 (`send_voice_mem 1`…`10`, `stop_voice_mem` — see
 [2.11](#211-voice-keyer)). The voice keyer obeys **Allow clients to transmit**
 like PTT does.
+
+`RF` is the receiver's front-end gain — the stage the top bar's **Gain** slider
+moves — as 0 to 1 across that stage's range, landing on its own steps. A radio
+with no RX gain the software can set has no `RF` level and does not advertise
+one. On a PlutoSDR whose own AGC is running, the part ignores the setting, as
+it ignores the slider. `SQL` is the squelch threshold, 0 open to 1 closed. `AGC` is Hamlib's
+`RIG_AGC_*` number: 0 off, 2 fast, 5 medium, 3 slow. The `NR` level is the
+strength (a third, two thirds, 1 for low, medium, high) of the engine chosen in
+the NR panel, which it leaves alone; `U NR 1` brings back the engine and
+strength last on.
 
 Setting up clients:
 
@@ -14066,6 +14101,25 @@ For the modes no logger speaks — RTTY, PSK, Olivia, THOR, MFSK, DominoEX, Hell
 CW and WSPR — there is a plainer feed beside these two: see
 [§6.8.4](#684-decoded-text-over-udp).
 
+**Decoded CW over UDP**, also on this page with its own switch, sends the CW
+panel's copy ([2.14](#214-cw-decoding-and-keyboard-sending)) as plain UTF-8
+text, a datagram at a time as it settles — for a station controller, a
+logger's CW window or a script. There is no protocol: a listener appends what
+arrives, and `nc -ul 9998` shows it as it comes. Only settled text goes out,
+never the last word or two the neural decoder is still revising, so nothing
+sent is ever taken back. Each radio has its own switch and sends only its own
+copy; two radios sending to one port arrive interleaved. It is not the JSON
+feed of [§6.8.4](#684-decoded-text-over-udp), which sends a keyboard mode's
+lines only once they are complete, and the CW copy has no line ends.
+
+- **Send to** — `127.0.0.1` for this machine; a LAN address, or this subnet's
+  broadcast address, for others.
+- **Port** — 9998. Not 9999, which the JSON feed's box suggests: a listener
+  waiting for one would otherwise be handed the other's datagrams.
+
+It sends only while the radio is in CW with the panel decoding; the skimmer's
+spots are not part of it.
+
 #### 6.8.4 Decoded text over UDP
 
 The WSJT-X broadcast above speaks a logger's protocol, and it has a message only
@@ -14084,7 +14138,7 @@ pipe-based consumer can read it as lines:
 - **time** and **unix** — UTC, and the same instant in seconds. For a slotted
   mode this is the start of the slot the message was decoded from.
 - **kind** — `decode` (a slotted mode's message), `text` (a keyboard mode's
-  line) or `wspr`.
+  line), `wspr`, or `vdl2` (a message from the VDL2 window's log).
 - **mode** — the mode in force, as the program names it.
 - **dial_hz** — the receive frequency the decode was heard on; **freq_hz** —
   the signal itself, which is the dial plus **audio_hz** where an audio offset
@@ -14093,7 +14147,14 @@ pipe-based consumer can read it as lines:
 - **snr_db** and **dt** — present where the decoder measures them (the FT8
   family and WSPR).
 - **text** — the message, or the decoded line with its trailing newline
-  removed. Only **complete** lines are sent: a half-decoded word waits.
+  removed. Only **complete** lines are sent: a half-decoded word waits. A
+  `vdl2` line carries the message as its window shows it.
+
+A `vdl2` line is the one kind whose **freq_hz** is not the dial plus an audio
+offset: an aircraft's burst is on a fixed channel whatever this receiver is
+tuned to, so the channel is reported on its own and no `audio_hz` is sent. Only
+messages that arrive after the feed is switched on are sent, never the log that
+was decoded before it.
 
 A quick check from a shell on the same machine:
 
@@ -14102,8 +14163,8 @@ A quick check from a shell on the same machine:
 Everything is **output only** — nothing is read from this socket, so no program
 on it can tune or key the radio — and an address that cannot be resolved is said
 so in the log and leaves the feed off rather than failing silently. The wideband
-decoders (ACARS, VDL2, HFDL, DSC, NAVTEX, AIS, APRS) keep their own windows and
-are not part of this feed yet.
+decoders (ACARS, HFDL, DSC, NAVTEX, AIS, APRS) keep their own windows and are
+not part of this feed yet; VDL2 is.
 
 ### 6.10 TLE: satellites and their frequencies
 

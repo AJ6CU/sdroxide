@@ -821,7 +821,7 @@ settings-servers-t-127-0-0-1-reaches-2 = 127.0.0.1 reaches clients on this machi
 settings-servers-t-12060-port-n1mm-s-documentation = 12060 is the port N1MM's documentation recommends
 settings-servers-station-name = Station name
 settings-servers-what-n1mm-calls-stationname-name = What N1MM calls the StationName: the name of the computer that sent the packet. Loggers show it to tell one operating position from another.
-settings-servers-cw-panel-s-copy-plain = The CW panel's copy as plain text, one UDP datagram per piece as it settles — for a station controller, a logger's CW window or a script. No protocol: a listener just appends what arrives (try nc -ul 9999). Only settled text is sent, never the tail the decoder is still revising. Each radio has its own switch.
+settings-servers-cw-panel-s-copy-plain = The CW panel's copy as plain text, one UDP datagram per piece as it settles — for a station controller, a logger's CW window or a script. No protocol: a listener just appends what arrives (try nc -ul 9998). Only settled text is sent, never the tail the decoder is still revising. Each radio has its own switch.
 settings-servers-apply = {" "}APPLY{" "}
 settings-servers-persist-re-open-broadcast-sockets = Persist and (re)open the broadcast sockets
 settings-servers-hamlib-rigctld-server = Hamlib rigctld server
@@ -2839,8 +2839,6 @@ sstv-auto = Auto
 sstv-signal = Signal
 sstv-station-sending-mode-sdroxide-does = A station is sending in a mode sdroxide does not have. The signal and the tuning are fine — there is simply no decoder for this one. Nothing to fix at your end.
 sstv-listening = listening…
-sstv-restart-rx = Restart RX
-sstv-abandon-picture-being-received-listen = Abandon the picture being received and listen for the next header. For a transmission that started decoding in the wrong mode — the receiver is otherwise committed until that mode runs out.
 sstv-callsign-last-station-sent-fsk = The callsign the last station sent as an FSK ID after its picture.
 sstv-tx-slant = TX slant
 sstv-transmit-clock-trim-ppm-remove = Transmit clock trim (ppm) to remove slant on the far-end decoder
@@ -4026,7 +4024,7 @@ navtex-character-phase-locked-signal-being = The character phase is locked — a
 navtex-characters-whose-first-copy-was = Characters whose first copy was corrupt and were taken from the repeat five slots later, and those where both were bad. A NAVTEX character is sent twice; that is the whole of its error correction.
 navtex-swap-mark-space-tones-signal = Swap the mark and space tones, for a signal received on the other sideband. Off is upper sideband on the channel frequency, which is what every published tuning instruction for the service says.
 navtex-starting-navtex-receiver = starting the NAVTEX receiver…
-navtex-nothing-yet-station-transmits-ten = nothing yet — a station transmits for ten minutes every four hours
+navtex-nothing-yet-station-transmits-ten = nothing yet — stations transmit in scheduled slots, and some send whenever they have a warning
 navtex-cut-short = cut short
 navtex-message = MESSAGE
 navtex-time-day-stated-message-utc = Time of day stated in the message (UTC): display only
@@ -4626,7 +4624,6 @@ macros-most = { $value } is the most
 
 ## navtex: messages with values (src/app/panels/navtex.rs)
 
-navtex-repaired-lost = { $repaired } repaired · { $lost } lost
 navtex-characters-lost = { $lost } characters lost
 
 ## packet: messages with values (src/app/panels/packet.rs)
@@ -7899,7 +7896,7 @@ sstv-keep-dial-off-hint = Off: choosing SSTV moves the dial onto the band's SSTV
 
 sstv-clear-rx = Clear Rx
 
-sstv-clear-rx-hint = Clear the picture currently shown in the LIVE view. The decoder keeps running — use Restart RX to abandon an in-progress picture and listen for the next header.
+sstv-clear-rx-hint = Throw the picture away — a finished one and a half-drawn one alike — and listen for the next header.
 
 sstv-audio-present-no-header = audio present · no SSTV header yet
 
@@ -9041,6 +9038,9 @@ tx-bands-check-again = CHECK AGAIN
 # Hover on the CHECK AGAIN chip over the transmit band list.
 tx-bands-check-again-hint = Withdraw the confirmation and check the list again. Changing any band does this by itself.
 
+settings-radio-hpsdr-diversity = Second aerial on ADC 2 (diversity)
+
+settings-radio-hpsdr-diversity-hint = Streams the board's two ADCs as one synced pair: the first aerial on ADC 1, a second one on ADC 2. Cancel nulls a local noise source, Combine fills in fades. Needs a Protocol 2 board whose firmware offers Diversity (the TRX-DUO from v0.7.0, for example) and DDC 1. DDC 2 is then the second aerial and cannot be a radio of its own. Takes effect on Apply.
 topbar-bw-hint-title = Adjust and memorise the filter
 
 topbar-bw-hint-body = Click to open the filter settings. Right-click a preset chip to change it, or click M+ to store the current passband in your own memory.
@@ -9078,3 +9078,67 @@ publicsdr-star-receiver = Keep this receiver in MINE
 
 # Hover text on the filled star in a public SDR row.
 publicsdr-unstar-receiver = Remove this receiver from MINE
+
+# SSTV panel: a finished frame was not a picture and was not saved. { $why } is a short English reason from the decoder.
+
+# SSTV panel: how many sync pulses the receiver wants before it starts drawing a picture with no VIS header.
+sstv-sync-pulses = SYNC PULSES
+
+# Hover text for the SSTV sync-pulse chips (4, 5, 6).
+sstv-sync-pulses-hint = How many sync pulses the receiver wants before it draws a picture that has no VIS header: more is steadier on a noisy band, fewer catches a picture already under way sooner. The lock always starts at the newest pulse, so a picture loses nothing either way.
+
+# SSTV panel: the last finished frame was noise and was not saved.
+sstv-not-saved-not-a-picture = Last frame not saved: it was noise, not a picture.
+
+# SSTV panel: the frame's syncs were there but its content was not a picture.
+sstv-not-saved-no-picture = Last frame not saved: the signal carried no picture.
+
+# SSTV panel chip: keep every finished frame, including ones the noise gate would drop.
+sstv-save-all = SAVE ALL
+
+# Hover text for the SAVE ALL chip in the SSTV panel.
+sstv-save-all-hint = Keep every finished frame, including the ones the receiver would call noise. On by default is off: the gate is what keeps a quiet band's noise out of the gallery, and this is the way back for a picture that is barely there.
+
+# Hover text under Settings > Controls > Click-tune rounding.
+settings-controls-cw-keeps-the-fine-grid = CW clicks on the 10 Hz grid whatever is set here: a CW signal is narrower than a grid built for voice can land on.
+
+settings-servers-decoded-cw-udp = Decoded CW over UDP
+
+settings-servers-decoded-cw-udp-host-hint = 127.0.0.1 reaches programs on this machine; a LAN address or this subnet's broadcast address reaches others.
+
+settings-servers-decoded-cw-udp-port-hint = 9998 by default
+
+# Memories toolbar chip that deletes every channel at once (issue #755).
+windows-clear = CLEAR
+
+# The CLEAR chip's second state: click again to delete every memory channel.
+windows-clear-sure = SURE?
+
+# Hover text under the CLEAR chip in the Memories window.
+windows-clear-hint = Delete every memory channel. Click twice; folders stay.
+
+# NAVTEX header row: characters taken straight, repaired from the repeat, and lost. Shown always, so a clean copy reads as a number rather than as a missing counter.
+navtex-copies = { $direct } good · { $repaired } repaired · { $lost } lost
+
+aircraft-label-selected-altitude = Selected altitude
+
+aircraft-label-selected-heading = Selected heading
+
+aircraft-label-qnh = QNH
+
+aircraft-label-airspeed = Airspeed
+
+aircraft-label-heading = Heading
+
+aircraft-label-autopilot = Autopilot
+
+aircraft-label-adsb-version = ADS-B version
+
+aircraft-label-accuracy = Accuracy
+
+aircraft-autopilot-off = no mode engaged
+aircraft-track-kml = Save track (KML)
+
+aircraft-track-kml-hover = Save the positions the station kept for this aircraft as a KML track for Google Earth, with time and altitude. A long silence cuts the line.
+
+aircraft-track-kml-saved = Saved { $name }.

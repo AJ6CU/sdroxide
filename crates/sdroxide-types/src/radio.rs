@@ -1965,6 +1965,30 @@ pub struct HpsdrConfig {
     /// asserts nothing, which is what a fresh table is made of.
     #[serde(default)]
     pub oc_table: Vec<HpsdrOcRow>,
+    // ── Diversity: the board's second ADC as a second aerial ──────────────
+    /// Use the second ADC as a second aerial — null a local noise source, or
+    /// combine the pair for diversity reception. **Protocol 2 only, and DDC 1
+    /// only** (this radio's DDC, in the operator's counting): the board has to
+    /// stream the two ADCs as one synced DDC pair, which the TRX-DUO firmware
+    /// (v0.7.0) and piHPSDR / Thetis call Diversity. DDC 2 is then the second
+    /// aerial and cannot be a radio of its own.
+    ///
+    /// Off by default. Takes effect on Apply, because the board is told how to
+    /// stream when the DDC is attached.
+    #[serde(default)]
+    pub diversity: bool,
+    /// What to do with the second aerial. See [`DiversityMode`].
+    #[serde(default)]
+    pub div_mode: DiversityMode,
+    /// How many taps the adaptive filter has, 1 to [`DIVERSITY_MAX_TAPS`].
+    #[serde(default = "HpsdrConfig::default_div_taps")]
+    pub div_taps: u8,
+    /// How fast the filter adapts, 0 to 1.
+    #[serde(default = "HpsdrConfig::default_div_rate")]
+    pub div_rate: f32,
+    /// Hold the filter where it is.
+    #[serde(default)]
+    pub div_frozen: bool,
 }
 
 impl Default for HpsdrConfig {
@@ -1992,6 +2016,11 @@ impl Default for HpsdrConfig {
             auto_gain_min_db: Self::default_auto_gain_min_db(),
             auto_gain_max_db: Self::default_auto_gain_max_db(),
             oc_table: Vec::new(),
+            diversity: false,
+            div_mode: DiversityMode::default(),
+            div_taps: Self::default_div_taps(),
+            div_rate: Self::default_div_rate(),
+            div_frozen: false,
         }
     }
 }
@@ -2077,6 +2106,17 @@ impl HpsdrConfig {
     /// See [`Self::auto_gain_max_db`]. The board's own ceiling.
     pub fn default_auto_gain_max_db() -> f64 {
         Self::LNA_GAIN_MAX_DB
+    }
+
+    /// See [`Self::div_taps`]: the figure the other diversity-capable
+    /// backends start at.
+    pub fn default_div_taps() -> u8 {
+        8
+    }
+
+    /// See [`Self::div_rate`].
+    pub fn default_div_rate() -> f32 {
+        0.7
     }
 
     /// The loop's bounds, in the order the gain register takes them and with

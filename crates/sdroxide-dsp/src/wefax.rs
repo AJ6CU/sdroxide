@@ -548,6 +548,16 @@ pub struct WefaxRx {
     /// Phasing lines seen so far, to index the fit without trusting
     /// `phase_samples` (the line length changes as the trim does).
     phasing_lines: u32,
+    /// The correction that put the trim where it is, in parts per million, and
+    /// the number of phasing lines the fit behind it covered. Zero lines means
+    /// no correction was ever applied and the trim is the operator's own.
+    ///
+    /// Kept because the trim is otherwise invisible: a page that leaned and a
+    /// page that was corrected to the same tilt look identical in the picture,
+    /// and the two floors (25 ppm from twenty lines, 10 from fifty) mean the
+    /// difference between "it acted" and "it never had enough signal to act" is
+    /// a number nobody could see. Reported with each page (#444).
+    last_slant: (f64, u32),
 
     phase: Phase,
     /// Demodulated brightness of the line being built, one entry per input
@@ -937,6 +947,7 @@ impl WefaxRx {
             slant_ppm: 0.0,
             slant_fit: SlantFit::default(),
             phasing_lines: 0,
+            last_slant: (0.0, 0),
             phase: Phase::Idle,
             line_buf: Vec::new(),
             line_start: 0.0,
@@ -1022,6 +1033,13 @@ impl WefaxRx {
 
     pub fn slant_ppm(&self) -> f32 {
         self.slant_ppm as f32
+    }
+
+    /// The correction that put [`Self::slant_ppm`] where it is: the parts per
+    /// million applied, and the phasing lines the fit behind it covered. Zero
+    /// lines means nothing was applied.
+    pub fn slant_correction(&self) -> (f32, u32) {
+        (self.last_slant.0 as f32, self.last_slant.1)
     }
 
     /// The subcarrier band's power against where it has been: 1.0 is a carrier
@@ -1509,6 +1527,7 @@ impl WefaxRx {
         if (floor..=SLANT_MAX_PPM).contains(&ppm.abs()) {
             // Clamped as well as filtered: a handful of small mis-measures in a
             // row must not walk the clock away from the signal either.
+            self.last_slant = (ppm, self.slant_fit.n as u32);
             self.slant_ppm = (self.slant_ppm + ppm).clamp(-SLANT_MAX_PPM, SLANT_MAX_PPM);
             // The clock has just moved, so every walk measured so far was
             // measured against the old one: the next window starts here.
@@ -2182,6 +2201,11 @@ mod tests {
                 slant,
                 rx.slant_ppm()
             );
+            // ...and the page can say what the trim was fitted over, which is
+            // what a report of a leaning chart needs to be diagnosed from.
+            let (ppm, lines) = rx.slant_correction();
+            assert!((ppm as f64 - slant).abs() < 80.0, "reported {ppm} for {slant}");
+            assert!(lines > 0, "the correction must say how many lines it used");
         }
     }
 

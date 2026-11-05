@@ -818,7 +818,7 @@ settings-servers-t-127-0-0-1-reaches-2 = 127.0.0.1 可到达本机上的客户�
 settings-servers-t-12060-port-n1mm-s-documentation = 12060 是 N1MM 文档推荐的端口
 settings-servers-station-name = 电台站点名称
 settings-servers-what-n1mm-calls-stationname-name = N1MM 所称的 StationName：发送该数据包的计算机名称。日志软件借此区分不同的操作位置。
-settings-servers-cw-panel-s-copy-plain = 将 CW 面板的文字以纯文本形式发送，每段稳定后作为一个 UDP 数据报发送——用于电台站点控制器、日志软件的 CW 窗口或脚本。没有协议：监听方只需追加接收到的内容（可尝试 nc -ul 9999）。只发送已确定的文字，从不发送解码器仍在修正的尾部。每台电台有各自的开关。
+settings-servers-cw-panel-s-copy-plain = 将 CW 面板的文字以纯文本形式发送，每段稳定后作为一个 UDP 数据报发送——用于电台站点控制器、日志软件的 CW 窗口或脚本。没有协议：监听方只需追加接收到的内容（可尝试 nc -ul 9998）。只发送已确定的文字，从不发送解码器仍在修正的尾部。每台电台有各自的开关。
 settings-servers-apply = {" "}应用{" "}
 settings-servers-persist-re-open-broadcast-sockets = 保存并（重新）打开广播套接字
 settings-servers-hamlib-rigctld-server = Hamlib rigctld 服务器
@@ -2817,8 +2817,6 @@ sstv-auto = 自动
 sstv-signal = 信号
 sstv-station-sending-mode-sdroxide-does = 有电台正在发送一种 sdroxide 不支持的模式。信号和调谐都正常——只是没有针对此模式的解码器。你这一端无需做任何处理。
 sstv-listening = 正在收听……
-sstv-restart-rx = 重新开始接收
-sstv-abandon-picture-being-received-listen = 放弃正在接收的图片，并收听下一个帧头。适用于以错误模式开始解码的发射——否则接收机会一直锁定在该模式上，直到它结束。
 sstv-callsign-last-station-sent-fsk = 上一个电台在图片之后以 FSK ID 发送的呼号。
 sstv-tx-slant = 发射倾斜
 sstv-transmit-clock-trim-ppm-remove = 发射时钟微调（ppm），用于消除对方解码器上的倾斜
@@ -3998,7 +3996,7 @@ navtex-character-phase-locked-signal-being = 字符相位已锁定——正在�
 navtex-characters-whose-first-copy-was = 首次副本已损坏、取自五个时隙之后的重复副本的字符，以及两份副本都已损坏的字符。NAVTEX 的每个字符都会发送两次；这就是它全部的纠错手段。
 navtex-swap-mark-space-tones-signal = 交换标记音和空号音，适用于在另一个边带上接收到的信号。关闭即为信道频率上的上边带，这也是该服务所有已发布的调谐说明所采用的方式。
 navtex-starting-navtex-receiver = 正在启动 NAVTEX 接收机……
-navtex-nothing-yet-station-transmits-ten = 尚无内容——电台每四小时发射十分钟
+navtex-nothing-yet-station-transmits-ten = 尚无内容——电台在预定时段发射，部分电台在有警报时随时发射
 navtex-cut-short = 被提前切断
 navtex-message = 消息
 navtex-time-day-stated-message-utc = 消息中所述的时刻（UTC）：仅供显示
@@ -4585,7 +4583,6 @@ macros-most = { $value } 为最多
 
 ## navtex: messages with values (src/app/panels/navtex.rs)
 
-navtex-repaired-lost = 已修复 { $repaired } · 丢失 { $lost }
 navtex-characters-lost = 丢失 { $lost } 个字符
 
 ## packet: messages with values (src/app/panels/packet.rs)
@@ -7836,7 +7833,7 @@ sstv-keep-dial-off-hint = 关：选择 SSTV 时，若你距离任一 SSTV 频率
 
 sstv-clear-rx = 清除接收
 
-sstv-clear-rx-hint = 清除“实时”视图中当前显示的图片。解码器继续运行；要放弃正在接收的图片并等待下一个帧头，请使用“重启接收”。
+sstv-clear-rx-hint = 丢弃图片——已完成的与画到一半的都一样——并等待下一个帧头。
 
 sstv-audio-present-no-header = 有音频 · 尚无 SSTV 帧头
 
@@ -8974,6 +8971,9 @@ tx-bands-check-again = 重新确认
 
 tx-bands-check-again-hint = 撤回确认以便重新检查列表。更改任何频段都会自动这样做。
 
+settings-radio-hpsdr-diversity = ADC 2 上的第二天线（分集）
+
+settings-radio-hpsdr-diversity-hint = 将板上的两个 ADC 作为一对同步数据流传输：第一根天线接 ADC 1，第二根接 ADC 2。Cancel 可消除本地噪声源，Combine 可弥补衰落。需要固件支持 Diversity 的 Protocol 2 板卡（例如 v0.7.0 起的 TRX-DUO）和 DDC 1。此时 DDC 2 作为第二天线，不能再作为独立电台。点击 Apply 后生效。
 topbar-bw-hint-title = 调整并记忆滤波器
 
 topbar-bw-hint-body = 单击打开滤波器设置。右键单击预设可修改，单击 M+ 可将当前通带存入您自己的存储。
@@ -9005,3 +9005,55 @@ publicsdr-mine-empty = 还没有加星——点行上的 ☆ 即可把该接收�
 publicsdr-star-receiver = 将此接收机保存在“我的”中
 
 publicsdr-unstar-receiver = 从“我的”中移除此接收机
+
+
+sstv-sync-pulses = 同步脉冲
+
+sstv-sync-pulses-hint = 接收机在没有 VIS 头的情况下开始绘制图像前所需的同步脉冲数：多一些在噪声大的频段更稳，少一些能更早接上正在进行的发射。锁定总是从最新的脉冲开始，因此图像不会因此丢失。
+
+sstv-not-saved-not-a-picture = 上一幅图像未保存：那是噪声，不是图像。
+
+sstv-not-saved-no-picture = 上一幅图像未保存：信号中没有图像。
+
+sstv-save-all = 全部保存
+
+sstv-save-all-hint = 保存每一幅完成的图像，包括接收机判定为噪声的那些。默认关闭：过滤器让安静频段的噪声不进画廊，而这是为一幅几乎收不到的图像留的后路。
+
+settings-controls-cw-keeps-the-fine-grid = 在 CW 下无论此项如何设置，点击都按 10 Hz 栅格对齐：CW 信号比面向语音的栅格所能命中的范围更窄。
+
+settings-servers-decoded-cw-udp = 通过 UDP 发送 CW 解码文本
+
+settings-servers-decoded-cw-udp-host-hint = 127.0.0.1 发送给本机上的程序；局域网地址或本子网的广播地址发送给其他机器。
+
+settings-servers-decoded-cw-udp-port-hint = 默认为 9998
+
+windows-clear = 清空
+
+windows-clear-sure = 确定?
+
+windows-clear-hint = 删除所有存储频道。点击两次；文件夹保留。
+
+navtex-copies = 正确 { $direct } · 修复 { $repaired } · 丢失 { $lost }
+
+aircraft-label-selected-altitude = 选定高度
+
+aircraft-label-selected-heading = 选定航向
+
+aircraft-label-qnh = QNH
+
+aircraft-label-airspeed = 空速
+
+aircraft-label-heading = 航向
+
+aircraft-label-autopilot = 自动驾驶
+
+aircraft-label-adsb-version = ADS-B 版本
+
+aircraft-label-accuracy = 精度
+
+aircraft-autopilot-off = 无已接通模式
+aircraft-track-kml = 保存航迹 (KML)
+
+aircraft-track-kml-hover = 将电台为该飞机保存的位置保存为带时间和高度的 Google Earth KML 航迹。长时间无信号会使线条断开。
+
+aircraft-track-kml-saved = 已保存 { $name }。

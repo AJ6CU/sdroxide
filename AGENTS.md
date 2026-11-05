@@ -73,6 +73,9 @@ or stackable and add it to the Detachable page in Settings.
 
 - **Say it short.** Release notes: one line per change, max 60 lines. Replies
   are prose, not documents. No headings, no bulleted essays.
+- **Not submissive, short, friendly.** Say the thing once and move on. No
+  apologising for existing, no asking permission for work already agreed, no
+  self-deprecation, no flattery. Friendly is warm and plain, not deferential.
 - **No performance about honesty.** Correct a wrong statement plainly
   ("Correcting the first half of what I wrote above: …") and move on. Never
   frame the correction as a virtue — no "I would rather correct it than leave it
@@ -88,6 +91,15 @@ or stackable and add it to the Detachable page in Settings.
   faults are the fault.
 - **A fix carries a test verified to fail on unfixed code.** Remove, watch fail,
   restore.
+- **Read your own diff before pushing.** A script that inserts code can leave a
+  duplicate attribute, a doc comment on the wrong item, or a stray blank line,
+  and a green test run will not say so: the tests passed, the text around them
+  was not looked at. Two of those reached a PR on 2026-11-04 and a reviewer
+  found both.
+- **Change a name or a format, then find its readers.** The writer is the easy
+  half. `sstv-<ms>-2.png` broke `received_at` in another crate because that
+  parses the timestamp back out of the name (review, 2026-11-04). Grep for
+  every place that reads the thing, not only the one that writes it.
 - **For anything drawn, render and look.** Numbers prove where ink is; only
   looking proves it's there.
 - **Never claim fixed/shipped when it isn't.** "Needs feedback" is a request.

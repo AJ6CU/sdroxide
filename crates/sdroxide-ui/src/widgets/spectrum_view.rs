@@ -1205,6 +1205,20 @@ fn cw_click_dial(clicked_hz: f64, pitch: f64, step: f64) -> f64 {
     ((clicked_hz - pitch) / step).round() * step
 }
 
+/// The click-tune grid for a mode.
+///
+/// CW keeps the fine grid whatever the operator set for voice. A CW signal is a
+/// few hundred hertz wide and the passband narrower still, so a grid built for
+/// hunting SSB cannot land on one — and the setting is a single number for
+/// every mode, which made that a trap with nothing on screen to warn about it:
+/// 1000 Hz set for SSB, every CW click up to half a kilohertz away, and the
+/// click, the readout and the arithmetic all blameless (issue #439). A finer
+/// choice than the default is kept — the cap only takes the coarse ones away.
+fn click_grid(mode: Mode, step_hz: f64) -> f64 {
+    let set = if step_hz > 0.0 { step_hz } else { CLICK_TUNE_STEP };
+    if mode == Mode::Cw { set.min(CLICK_TUNE_STEP) } else { set }
+}
+
 /// Decaying peak-hold trace, reset whenever the frame mapping changes.
 #[derive(Default)]
 pub struct PeakHold {
@@ -2036,11 +2050,7 @@ pub fn show_ext(
         }
         if resp.clicked() && !stop_click {
             if let Some(pos) = resp.interact_pointer_pos() {
-                let step = if wheel.click_tune_step_hz > 0.0 {
-                    wheel.click_tune_step_hz
-                } else {
-                    CLICK_TUNE_STEP
-                };
+                let step = click_grid(state.rx[0].mode, wheel.click_tune_step_hz);
                 if ui.input(|i| i.modifiers.shift) {
                     // Shift-click places the *second* receiver: the sub when it
                     // is running, VFO B otherwise — what this gesture meant
@@ -2158,7 +2168,8 @@ pub fn show_ext(
                     // you hear, so tuning a signal to the dial is the one place
                     // it is guaranteed not to be audible.
                     let off = cursor_hz.map(f64::from).unwrap_or(0.0);
-                    let hz = cw_click_dial(view.x_to_freq(pos.x, &rect), off, step);
+                    let clicked = view.x_to_freq(pos.x, &rect);
+                    let hz = cw_click_dial(clicked, off, step);
                     cmds.push(Command::TuneInSpan { vfo: state.active_vfo, hz });
                 }
             }
@@ -3846,6 +3857,18 @@ mod tests {
         // The step grid rounds the dial, not the tone: 10 Hz here, so 5 Hz of
         // error at worst — the passband is 500 wide.
         assert_eq!(cw_click_dial(7_030_004.0, 700.0, 10.0), 7_029_300.0);
+    }
+
+    /// A coarse grid set for voice must not reach CW. This is #439: 1000 Hz
+    /// chosen for SSB made every CW click up to half a kilohertz wrong, and
+    /// nothing on screen said the two modes shared the number.
+    #[test]
+    fn the_click_grid_is_fine_in_cw_whatever_is_set() {
+        assert_eq!(click_grid(Mode::Cw, 1000.0), CLICK_TUNE_STEP, "a voice grid must not reach CW");
+        assert_eq!(click_grid(Mode::Cw, 0.0), CLICK_TUNE_STEP, "unset is the default");
+        assert_eq!(click_grid(Mode::Cw, 5.0), 5.0, "a finer choice is kept");
+        assert_eq!(click_grid(Mode::Usb, 1000.0), 1000.0, "voice keeps what was set");
+        assert_eq!(click_grid(Mode::Lsb, 0.0), CLICK_TUNE_STEP, "unset is the default everywhere");
     }
 
     /// The ordinary case still puts the box inside the corner it was aimed at.

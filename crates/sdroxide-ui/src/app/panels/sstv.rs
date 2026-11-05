@@ -999,6 +999,25 @@ impl SdroxideApp {
                                             .strong()
                                             .color(crate::theme::GREEN()),
                                     );
+                                } else if let Some(why) = st.not_saved {
+                                    // The frame that just ended was not a
+                                    // picture and was not saved. Said in the
+                                    // operator's own language rather than in
+                                    // the decoder's English (review,
+                                    // 2026-11-04).
+                                    let msg = match why {
+                                        sdroxide_types::SstvDrop::NotAPicture => {
+                                            tr!("sstv-not-saved-not-a-picture")
+                                        }
+                                        sdroxide_types::SstvDrop::NoPicture => {
+                                            tr!("sstv-not-saved-no-picture")
+                                        }
+                                    };
+                                    ui.label(
+                                        RichText::new(msg)
+                                            .size(10.5)
+                                            .color(crate::theme::YELLOW()),
+                                    );
                                 } else if let Some(bad) = st.unsupported.as_deref() {
                                     // A header came through cleanly for a mode
                                     // this build cannot draw. Without this the
@@ -1159,8 +1178,21 @@ impl SdroxideApp {
                             // whole panel over the dock (#643). One row for the
                             // pair keeps them together and wraps.
                             ui.horizontal_wrapped(|ui| {
-                                if crate::chrome::chip(ui, false, tr!("sstv-restart-rx"))
-                                    .on_hover_text(tr!("sstv-abandon-picture-being-received-listen"))
+                                // **One chip, not two.** This used to be CLEAR
+                                // (wipe what is shown, leave the decoder running)
+                                // beside RESTART (abandon the picture and hunt
+                                // again), and from the operator's side the
+                                // difference was invisible: an operator holding a
+                                // half-drawn picture pressed CLEAR, saw the panel
+                                // empty, and the decoder went on drawing into the
+                                // frame he had just cleared — F4NRM's report on
+                                // #427. Clearing a picture now means what it says
+                                // in both cases: a finished frame is wiped so the
+                                // next one can be seen arriving, and one still
+                                // being drawn is abandoned and the receiver goes
+                                // back to hunting for a header.
+                                if crate::chrome::chip(ui, false, tr!("sstv-clear-rx"))
+                                    .on_hover_text(tr!("sstv-clear-rx-hint"))
                                     .clicked()
                                 {
                                     cmds.push(Command::SstvRestartRx);
@@ -1168,17 +1200,48 @@ impl SdroxideApp {
                                     self.sstv.rx_tex = None;
                                 }
 
-                                // Clear the picture currently shown in LIVE without
-                                // touching the decoder: a completed frame that is
-                                // still on screen is wiped so the next one can be
-                                // seen arriving, and an in-progress decode keeps
-                                // running (use Restart RX to abandon it).
-                                if crate::chrome::chip(ui, false, tr!("sstv-clear-rx"))
-                                    .on_hover_text(tr!("sstv-clear-rx-hint"))
-                                    .clicked()
+                                // **How much evidence the decoder asks for.**
+                                // A picture with no VIS header is joined on a
+                                // run of sync pulses; more of them means fewer
+                                // false starts on a noisy band, fewer means a
+                                // picture already under way is caught sooner.
+                                // Six by default (the bench's answer for 27 MHz
+                                // CB QRM), four for a quiet band.
+                                ui.add_space(8.0);
+                                ui.label(
+                                    RichText::new(tr!("sstv-sync-pulses"))
+                                        .size(9.5)
+                                        .color(crate::theme::CYAN_DIM())
+                                        .strong(),
+                                );
+                                for n in 4..=6u8 {
+                                    let on = self.digi_cfg_edit.sstv_sync_pulses == n;
+                                    if crate::chrome::chip(ui, on, n.to_string())
+                                        .on_hover_text(tr!("sstv-sync-pulses-hint"))
+                                        .clicked()
+                                    {
+                                        self.digi_cfg_edit.sstv_sync_pulses = n;
+                                        cmds.push(Command::SetDigiConfig(
+                                            self.digi_cfg_edit.clone(),
+                                        ));
+                                    }
+                                }
+                                // The way back from the save gate: every
+                                // finished frame kept, doubtful ones included.
+                                ui.add_space(6.0);
+                                if crate::chrome::chip(
+                                    ui,
+                                    self.digi_cfg_edit.sstv_save_all,
+                                    tr!("sstv-save-all"),
+                                )
+                                .on_hover_text(tr!("sstv-save-all-hint"))
+                                .clicked()
                                 {
-                                    self.sstv.rx_color = None;
-                                    self.sstv.rx_tex = None;
+                                    self.digi_cfg_edit.sstv_save_all =
+                                        !self.digi_cfg_edit.sstv_save_all;
+                                    cmds.push(Command::SetDigiConfig(
+                                        self.digi_cfg_edit.clone(),
+                                    ));
                                 }
 
                             });

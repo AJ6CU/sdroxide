@@ -655,7 +655,7 @@ pub(crate) fn run(ctx: ThreadCtx) {
         // 1) Control messages.
         while let Ok(msg) = ctrl.try_recv() {
             match msg {
-                Ctrl::Attach { ddc, ring, last_rx_ms, rx_paused } => {
+                Ctrl::Attach { ddc, ring, last_rx_ms, rx_paused, .. } => {
                     // The device refuses any DDC but 0 on a Protocol 1 board;
                     // this arm is belt and braces.
                     if ddc == 0 {

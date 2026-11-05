@@ -13,7 +13,7 @@
 use std::net::Ipv4Addr;
 use std::time::{Duration, Instant};
 
-use sdroxide_dsp::{Decimator, PureSignal};
+use sdroxide_dsp::{Decimator, Diversity, PureSignal};
 use sdroxide_hpsdr::{HpsdrBoard, HpsdrRx, LNA_GAIN_ELEMENT};
 use sdroxide_radio::{Complex32, ControlUpdate, IqSource, Result};
 
@@ -38,6 +38,17 @@ const SILENCE_BEFORE_REOPEN: Duration = Duration::from_secs(5);
 /// been sitting at unity all evening", so it goes out often enough to be seen
 /// on a short transmission.
 const PS_LOG_INTERVAL: Duration = Duration::from_secs(5);
+
+/// How often the diversity filter's achieved null depth reaches the log — the
+/// same interval the other diversity-capable backends use.
+const DIV_LOG_INTERVAL: Duration = Duration::from_secs(10);
+
+fn dsp_div_mode(mode: sdroxide_types::DiversityMode) -> sdroxide_dsp::DiversityMode {
+    match mode {
+        sdroxide_types::DiversityMode::Cancel => sdroxide_dsp::DiversityMode::Cancel,
+        sdroxide_types::DiversityMode::Combine => sdroxide_dsp::DiversityMode::Combine,
+    }
+}
 
 pub struct HpsdrSource {
     /// The shared connection and this source's stream on it. `None` after
@@ -92,6 +103,15 @@ pub struct HpsdrSource {
     /// as the receive antenna — see [`HpsdrSource::io_inputs_offered`]. `None`
     /// on every other board and configuration.
     io_rx_input: Option<sdroxide_types::HpsdrIoRxInput>,
+
+    // ── Diversity ──
+    /// The combiner, present exactly when the board was asked for a synced DDC
+    /// pair and agreed. Both aerials come out of [`HpsdrRx::rx_read_pair`]
+    /// instant for instant, which is what an adaptive filter needs.
+    diversity: Option<Diversity>,
+    aux_scratch: Vec<f32>,
+    aux_buf: Vec<Complex32>,
+    div_log_at: Instant,
 }
 
 impl HpsdrSource {
@@ -131,7 +151,44 @@ impl HpsdrSource {
                 .map_err(|e| e.to_string())
             })
             .map_err(anyhow::Error::msg)?;
-        let rx = board.rx(cfg.ddc).map_err(|e| anyhow::Error::msg(e.to_string()))?;
+        // Diversity is a Protocol 2, DDC 1 feature. Asked for anywhere else it is
+        // refused with a line in the log and the radio opens as an ordinary one:
+        // a stale setting must not leave the operator with no radio at all.
+        let want_diversity = cfg.diversity && board.protocol() == 2 && cfg.ddc == 0;
+        if cfg.diversity && !want_diversity {
+            tracing::warn!(
+                "HPSDR: Diversity needs a Protocol 2 board and DDC 1 (this is Protocol {}, \
+                 DDC {}) — opening without it",
+                board.protocol(),
+                cfg.ddc + 1
+            );
+        }
+        let (rx, diversity_on) = if want_diversity {
+            match board.rx_with(cfg.ddc, true) {
+                Ok(rx) => (rx, true),
+                Err(e) => {
+                    tracing::warn!("HPSDR: Diversity not started — {e}; opening without it");
+                    (board.rx(cfg.ddc).map_err(|e| anyhow::Error::msg(e.to_string()))?, false)
+                }
+            }
+        } else {
+            (board.rx(cfg.ddc).map_err(|e| anyhow::Error::msg(e.to_string()))?, false)
+        };
+        let diversity = diversity_on.then(|| {
+            tracing::info!(
+                "HPSDR: Diversity on — second aerial on ADC1, {} filter, {} taps",
+                match cfg.div_mode {
+                    sdroxide_types::DiversityMode::Cancel => "cancelling",
+                    sdroxide_types::DiversityMode::Combine => "combining",
+                },
+                cfg.div_taps
+            );
+            Diversity::new(
+                dsp_div_mode(cfg.div_mode),
+                usize::from(cfg.div_taps.clamp(1, sdroxide_types::DIVERSITY_MAX_TAPS)),
+                cfg.div_rate.clamp(0.0, 1.0),
+            )
+        });
         rx.set_rx_freq(sdroxide_types::HpsdrConfig::apply_ppm(center_hz, cfg.ppm));
         let label = if cfg.ddc == 0 {
             format!("HPSDR {} @ {ip} ({:.3} Msps)", board.board(), board.sample_rate_hz() / 1e6)
@@ -257,8 +314,18 @@ impl HpsdrSource {
             ps_log_at: Instant::now(),
             ps_warned_offset: false,
             io_rx_input,
+            diversity,
+            aux_scratch: Vec::new(),
+            aux_buf: Vec::new(),
+            div_log_at: Instant::now(),
         })
     }
+    /// Whether a second aerial is being combined — what puts the DIV strip on
+    /// the main window (`DeviceCaps::diversity`).
+    pub fn diversity_active(&self) -> bool {
+        self.diversity.is_some()
+    }
+
 
     /// Whether the HL2IOBoard's receive inputs are offered as receive antennas,
     /// so the band memory keeps one per band (issue #292).
@@ -410,7 +477,14 @@ impl IqSource for HpsdrSource {
         if self.rx_scratch.len() < need {
             self.rx_scratch.resize(need, 0.0);
         }
-        let n = rx.rx_read(&mut self.rx_scratch[..need]);
+        let n = if self.diversity.is_some() {
+            if self.aux_scratch.len() < need {
+                self.aux_scratch.resize(need, 0.0);
+            }
+            rx.rx_read_pair(&mut self.rx_scratch[..need], &mut self.aux_scratch[..need])
+        } else {
+            rx.rx_read(&mut self.rx_scratch[..need])
+        };
         let pairs = n / 2;
         if pairs == 0 {
             // No samples yet — brief nap so the DSP loop doesn't spin hot.
@@ -419,6 +493,25 @@ impl IqSource for HpsdrSource {
         }
         for p in 0..pairs {
             buf[p] = Complex32::new(self.rx_scratch[2 * p], self.rx_scratch[2 * p + 1]);
+        }
+        if let Some(diversity) = self.diversity.as_mut() {
+            if self.aux_buf.len() < pairs {
+                self.aux_buf.resize(pairs, Complex32::new(0.0, 0.0));
+            }
+            for p in 0..pairs {
+                self.aux_buf[p] =
+                    Complex32::new(self.aux_scratch[2 * p], self.aux_scratch[2 * p + 1]);
+            }
+            diversity.process(&mut buf[..pairs], &self.aux_buf[..pairs]);
+            if self.div_log_at.elapsed() >= DIV_LOG_INTERVAL {
+                self.div_log_at = Instant::now();
+                if let Some(db) = diversity.depth_db() {
+                    tracing::info!(
+                        "HPSDR diversity: {db:.1} dB of the main channel's signal is being \
+                         cancelled"
+                    );
+                }
+            }
         }
         Ok(pairs)
     }
@@ -501,6 +594,29 @@ impl IqSource for HpsdrSource {
             self.ppm = db;
             if let Some(rx) = self.rx.as_ref() {
                 rx.set_rx_freq(sdroxide_types::HpsdrConfig::apply_ppm(self.center, self.ppm));
+            }
+        } else if let Some(d) = self.diversity.as_mut() {
+            // The main window's DIV strip, shared by every diversity-capable
+            // backend (`sdroxide_types::DIV_MODE_ELEMENT`'s own doc comment).
+            match name {
+                sdroxide_types::DIV_MODE_ELEMENT => d.set_mode(if db >= 0.5 {
+                    sdroxide_dsp::DiversityMode::Combine
+                } else {
+                    sdroxide_dsp::DiversityMode::Cancel
+                }),
+                sdroxide_types::DIV_RATE_ELEMENT => d.set_rate(db as f32),
+                sdroxide_types::DIV_TAPS_ELEMENT => d.set_taps(usize::from(
+                    db.round().clamp(1.0, f64::from(sdroxide_types::DIVERSITY_MAX_TAPS)) as u8,
+                )),
+                sdroxide_types::DIV_FREEZE_ELEMENT => d.set_frozen(db >= 0.5),
+                sdroxide_types::DIV_RESET_ELEMENT if db >= 0.5 => {
+                    // RESTART means "zero the filter and find the null again":
+                    // adaptation has to resume too, or a held filter stays
+                    // parked at zero (the Fobos backend found this on hardware).
+                    d.reset();
+                    d.set_frozen(false);
+                }
+                _ => {}
             }
         }
         Ok(())
