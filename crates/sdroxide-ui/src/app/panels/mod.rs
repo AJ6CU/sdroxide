@@ -1185,6 +1185,14 @@ impl SdroxideApp {
 
     /// Warn, where the operator is looking, that the front end is overloading.
     ///
+    /// With the automatic protection **off**, the warning is the only thing
+    /// that says why nothing decodes, so it is drawn whenever the converter is
+    /// overloading. With it **on**, the loop is already the answer: a line that
+    /// appears and vanishes while the loop works only pushes the panel's
+    /// contents up and down, which is what DK8JV reported on a Hermes-Lite 2
+    /// (#476). The exception is the loop's own floor — there it can do nothing
+    /// more, and the operator is the only one who can.
+    ///
     /// A receiver driven into its rails does not decode: the audio is loud and
     /// sounds like a signal, but the modulation is gone, so every panel says
     /// "hunting" and nothing explains why. The S-meter's small `OVL` tag is not
@@ -1195,7 +1203,21 @@ impl SdroxideApp {
     /// own hysteretic overload test (`Meters::adc_overloaded`), so it does not
     /// flicker. Returns whether it drew, for callers that want to reserve room.
     pub(in crate::app) fn front_end_overload_warning(&self, ui: &mut egui::Ui) -> bool {
-        if !self.meters.is_some_and(|m| m.adc_overloaded()) {
+        let overloaded = self.meters.is_some_and(|m| m.adc_overloaded());
+        let protection = self.radio_cfg.as_ref().map(|c| &c.hpsdr);
+        let protection_on = protection.is_some_and(|h| h.auto_gain);
+        // The loop can only wind the gain down to its own floor, and the
+        // operator is the only one who can go further — so at the floor the
+        // warning is still the truth, and above it the loop is already doing
+        // the job the warning would ask for (#476).
+        let at_floor = protection.is_some_and(|h| {
+            self.state
+                .gains
+                .iter()
+                .find(|(n, _)| n == sdroxide_types::HpsdrConfig::LNA_GAIN_ELEMENT)
+                .is_some_and(|(_, v)| *v <= h.auto_gain_min_db + 0.5)
+        });
+        if !overload_warning_wanted(overloaded, protection_on, at_floor) {
             return false;
         }
         ui.label(
@@ -1783,5 +1805,31 @@ mod tests {
         // A mode with no such pane falls back to its first, rather than to an
         // index that is not there.
         assert_eq!(pane_index(Mode::Psk, "QSO"), 0);
+    }
+}
+
+/// Whether the front-end overload warning belongs on screen.
+///
+/// One line, in a function of its own because the decision is the whole of it —
+/// [`SdroxideApp::front_end_overload_warning`] asks this and draws or does not.
+fn overload_warning_wanted(overloaded: bool, protection_on: bool, at_floor: bool) -> bool {
+    overloaded && (!protection_on || at_floor)
+}
+
+#[cfg(test)]
+mod overload_warning_tests {
+    use super::*;
+
+    /// The warning is the only thing that explains a silent receiver when
+    /// nothing is protecting the converter, and it is noise while the loop is
+    /// working — but the loop's own floor is where it becomes true again, since
+    /// there nobody else can act (#476).
+    #[test]
+    fn the_warning_is_silent_while_the_protection_loop_works() {
+        assert!(overload_warning_wanted(true, false, false), "protection off: always warn");
+        assert!(!overload_warning_wanted(true, true, false), "protection on: the loop is the answer");
+        assert!(overload_warning_wanted(true, true, true), "on at its floor: nothing more it can do");
+        assert!(!overload_warning_wanted(false, false, false), "not overloading, not a warning");
+        assert!(!overload_warning_wanted(false, true, true), "nor at the floor when it is fine");
     }
 }
