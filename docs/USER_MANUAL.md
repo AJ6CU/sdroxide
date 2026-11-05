@@ -14138,7 +14138,7 @@ pipe-based consumer can read it as lines:
 - **time** and **unix** — UTC, and the same instant in seconds. For a slotted
   mode this is the start of the slot the message was decoded from.
 - **kind** — `decode` (a slotted mode's message), `text` (a keyboard mode's
-  line) or `wspr`.
+  line), `wspr`, or `vdl2` (a message from the VDL2 window's log).
 - **mode** — the mode in force, as the program names it.
 - **dial_hz** — the receive frequency the decode was heard on; **freq_hz** —
   the signal itself, which is the dial plus **audio_hz** where an audio offset
@@ -14147,7 +14147,14 @@ pipe-based consumer can read it as lines:
 - **snr_db** and **dt** — present where the decoder measures them (the FT8
   family and WSPR).
 - **text** — the message, or the decoded line with its trailing newline
-  removed. Only **complete** lines are sent: a half-decoded word waits.
+  removed. Only **complete** lines are sent: a half-decoded word waits. A
+  `vdl2` line carries the message as its window shows it.
+
+A `vdl2` line is the one kind whose **freq_hz** is not the dial plus an audio
+offset: an aircraft's burst is on a fixed channel whatever this receiver is
+tuned to, so the channel is reported on its own and no `audio_hz` is sent. Only
+messages that arrive after the feed is switched on are sent, never the log that
+was decoded before it.
 
 A quick check from a shell on the same machine:
 
@@ -14156,8 +14163,8 @@ A quick check from a shell on the same machine:
 Everything is **output only** — nothing is read from this socket, so no program
 on it can tune or key the radio — and an address that cannot be resolved is said
 so in the log and leaves the feed off rather than failing silently. The wideband
-decoders (ACARS, VDL2, HFDL, DSC, NAVTEX, AIS, APRS) keep their own windows and
-are not part of this feed yet.
+decoders (ACARS, HFDL, DSC, NAVTEX, AIS, APRS) keep their own windows and are
+not part of this feed yet; VDL2 is.
 
 ### 6.10 TLE: satellites and their frequencies
 
