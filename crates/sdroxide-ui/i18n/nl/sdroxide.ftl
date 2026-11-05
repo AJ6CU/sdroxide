@@ -2837,8 +2837,6 @@ sstv-auto = Auto
 sstv-signal = Signaal
 sstv-station-sending-mode-sdroxide-does = Een station zendt in een modus die sdroxide niet heeft. Het signaal en de afstemming zijn in orde — er is gewoon geen decoder voor deze. Aan jouw kant hoeft niets te worden aangepast.
 sstv-listening = luisteren…
-sstv-restart-rx = RX herstarten
-sstv-abandon-picture-being-received-listen = Laat het beeld dat wordt ontvangen vallen en luister naar de volgende header. Voor een uitzending die in de verkeerde modus is gaan decoderen — de ontvanger zit anders vast totdat die modus afloopt.
 sstv-callsign-last-station-sent-fsk = De roepletters die het laatste station na zijn beeld als FSK-ID heeft verzonden.
 sstv-tx-slant = TX-scheefstand
 sstv-transmit-clock-trim-ppm-remove = Trimming van de zendklok (ppm) om scheefstand op de decoder aan de andere kant te verwijderen
@@ -7904,7 +7902,7 @@ sstv-keep-dial-off-hint = Uit: SSTV kiezen verplaatst de draaiknop naar de SSTV-
 
 sstv-clear-rx = RX wissen
 
-sstv-clear-rx-hint = Wis de afbeelding die nu in de LIVE-weergave staat. De decoder blijft draaien — gebruik RX herstarten om een afbeelding in uitvoering te laten varen en op de volgende header te luisteren.
+sstv-clear-rx-hint = Gooit het beeld weg — een afgemaakt en een half getekend beeld — en luistert naar de volgende header.
 
 sstv-audio-present-no-header = audio aanwezig · nog geen SSTV-header
 

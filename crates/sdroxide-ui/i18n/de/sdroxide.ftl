@@ -2832,8 +2832,6 @@ sstv-auto = Auto
 sstv-signal = Signal
 sstv-station-sending-mode-sdroxide-does = Eine Station sendet in einer Betriebsart, die sdroxide nicht hat. Signal und Abstimmung sind in Ordnung — es gibt schlicht keinen Decoder dafür. Auf Ihrer Seite ist nichts zu beheben.
 sstv-listening = höre…
-sstv-restart-rx = Empfang neu starten
-sstv-abandon-picture-being-received-listen = Das gerade empfangene Bild aufgeben und auf den nächsten Kopf warten. Für eine Aussendung, die in der falschen Betriebsart zu dekodieren begann — der Empfänger ist sonst daran gebunden, bis diese Betriebsart abläuft.
 sstv-callsign-last-station-sent-fsk = Das Rufzeichen, das die letzte Station nach ihrem Bild als FSK-ID gesendet hat.
 sstv-tx-slant = Senden-Schräglage
 sstv-transmit-clock-trim-ppm-remove = Trimm des Sendetakts (ppm), um die Schräglage beim Decoder am anderen Ende zu entfernen
@@ -7894,7 +7892,7 @@ sstv-keep-dial-off-hint = Aus: Die Wahl von SSTV verschiebt die Frequenz auf die
 
 sstv-clear-rx = Rx löschen
 
-sstv-clear-rx-hint = Löscht das aktuell in der LIVE-Ansicht gezeigte Bild. Der Decoder läuft weiter — mit RX neu starten verwerfen Sie ein laufendes Bild und warten auf den nächsten Header.
+sstv-clear-rx-hint = Verwirft das Bild — ein fertiges wie ein halb gezeichnetes — und wartet auf den nächsten Kopf.
 
 sstv-audio-present-no-header = Audio vorhanden · noch kein SSTV-Header
 

@@ -2848,8 +2848,6 @@ sstv-auto = Auto
 sstv-signal = Segnale
 sstv-station-sending-mode-sdroxide-does = Una stazione sta trasmettendo in un modo che sdroxide non ha. Il segnale e la sintonia vanno bene — semplicemente non esiste un decodificatore per questo. Nulla da correggere dalla tua parte.
 sstv-listening = in ascolto…
-sstv-restart-rx = Riavvia RX
-sstv-abandon-picture-being-received-listen = Abbandona l'immagine in ricezione e resta in ascolto della successiva intestazione. Per una trasmissione che ha iniziato a decodificarsi nel modo sbagliato — altrimenti il ricevitore resta impegnato finché quel modo non finisce.
 sstv-callsign-last-station-sent-fsk = Il nominativo che l'ultima stazione ha inviato come FSK ID dopo la sua immagine.
 sstv-tx-slant = Inclinazione TX
 sstv-transmit-clock-trim-ppm-remove = Correzione del clock di trasmissione (ppm) per eliminare l'inclinazione sul decodificatore dell'altro capo
@@ -7907,7 +7905,7 @@ sstv-keep-dial-off-hint = Off: scegliendo SSTV il dial si sposta sulla frequenza
 
 sstv-clear-rx = Cancella Rx
 
-sstv-clear-rx-hint = Cancella l'immagine attualmente mostrata nella vista LIVE. Il decodificatore continua a funzionare: usa Riavvia RX per abbandonare un'immagine in corso e attendere la prossima intestazione.
+sstv-clear-rx-hint = Scarta l'immagine — sia una finita sia una disegnata a metà — e attende la prossima intestazione.
 
 sstv-audio-present-no-header = audio presente · ancora nessuna intestazione SSTV
 

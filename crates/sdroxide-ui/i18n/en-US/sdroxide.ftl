@@ -2839,8 +2839,6 @@ sstv-auto = Auto
 sstv-signal = Signal
 sstv-station-sending-mode-sdroxide-does = A station is sending in a mode sdroxide does not have. The signal and the tuning are fine — there is simply no decoder for this one. Nothing to fix at your end.
 sstv-listening = listening…
-sstv-restart-rx = Restart RX
-sstv-abandon-picture-being-received-listen = Abandon the picture being received and listen for the next header. For a transmission that started decoding in the wrong mode — the receiver is otherwise committed until that mode runs out.
 sstv-callsign-last-station-sent-fsk = The callsign the last station sent as an FSK ID after its picture.
 sstv-tx-slant = TX slant
 sstv-transmit-clock-trim-ppm-remove = Transmit clock trim (ppm) to remove slant on the far-end decoder
@@ -7899,7 +7897,7 @@ sstv-keep-dial-off-hint = Off: choosing SSTV moves the dial onto the band's SSTV
 
 sstv-clear-rx = Clear Rx
 
-sstv-clear-rx-hint = Clear the picture currently shown in the LIVE view. The decoder keeps running — use Restart RX to abandon an in-progress picture and listen for the next header.
+sstv-clear-rx-hint = Throw the picture away — a finished one and a half-drawn one alike — and listen for the next header.
 
 sstv-audio-present-no-header = audio present · no SSTV header yet
 

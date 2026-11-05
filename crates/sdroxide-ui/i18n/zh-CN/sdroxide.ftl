@@ -2817,8 +2817,6 @@ sstv-auto = 自动
 sstv-signal = 信号
 sstv-station-sending-mode-sdroxide-does = 有电台正在发送一种 sdroxide 不支持的模式。信号和调谐都正常——只是没有针对此模式的解码器。你这一端无需做任何处理。
 sstv-listening = 正在收听……
-sstv-restart-rx = 重新开始接收
-sstv-abandon-picture-being-received-listen = 放弃正在接收的图片，并收听下一个帧头。适用于以错误模式开始解码的发射——否则接收机会一直锁定在该模式上，直到它结束。
 sstv-callsign-last-station-sent-fsk = 上一个电台在图片之后以 FSK ID 发送的呼号。
 sstv-tx-slant = 发射倾斜
 sstv-transmit-clock-trim-ppm-remove = 发射时钟微调（ppm），用于消除对方解码器上的倾斜
@@ -7836,7 +7834,7 @@ sstv-keep-dial-off-hint = 关：选择 SSTV 时，若你距离任一 SSTV 频率
 
 sstv-clear-rx = 清除接收
 
-sstv-clear-rx-hint = 清除“实时”视图中当前显示的图片。解码器继续运行；要放弃正在接收的图片并等待下一个帧头，请使用“重启接收”。
+sstv-clear-rx-hint = 丢弃图片——已完成的与画到一半的都一样——并等待下一个帧头。
 
 sstv-audio-present-no-header = 有音频 · 尚无 SSTV 帧头
 

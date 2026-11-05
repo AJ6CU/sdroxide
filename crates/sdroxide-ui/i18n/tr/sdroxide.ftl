@@ -2839,8 +2839,6 @@ sstv-auto = Otomatik
 sstv-signal = Sinyal
 sstv-station-sending-mode-sdroxide-does = Bir istasyon, sdroxide'ın sahip olmadığı bir modda yayın yapıyor. Sinyal ve ayar iyi — bunun için yalnızca bir çözücü yok. Sizin tarafınızda düzeltilecek bir şey yok.
 sstv-listening = dinleniyor…
-sstv-restart-rx = Alımı yeniden başlat
-sstv-abandon-picture-being-received-listen = Alınmakta olan resmi bırakın ve bir sonraki başlığı dinleyin. Yanlış modda çözülmeye başlayan bir yayın için — aksi halde alıcı, o mod bitene dek bağlı kalır.
 sstv-callsign-last-station-sent-fsk = Son istasyonun resminden sonra bir FSK kimliği olarak gönderdiği çağrı işareti.
 sstv-tx-slant = YAYIN eğimi
 sstv-transmit-clock-trim-ppm-remove = Uzak uçtaki çözücüdeki eğimi gidermek için yayın saat ayarı (ppm)
@@ -7898,7 +7896,7 @@ sstv-keep-dial-off-hint = Kapalı: SSTV seçmek, bir tanesinden 3 kHz'den fazla 
 
 sstv-clear-rx = Rx'i temizle
 
-sstv-clear-rx-hint = CANLI görünümde o an gösterilen resmi temizler. Çözücü çalışmaya devam eder — süren bir resmi bırakıp bir sonraki başlığı dinlemek için RX'i Yeniden Başlat'ı kullanın.
+sstv-clear-rx-hint = Resmi atar — ister tamamlanmış ister yarım çizilmiş olsun — ve bir sonraki başlığı bekler.
 
 sstv-audio-present-no-header = ses var · henüz SSTV başlığı yok
 

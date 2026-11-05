@@ -1178,24 +1178,24 @@ impl SdroxideApp {
                             // whole panel over the dock (#643). One row for the
                             // pair keeps them together and wraps.
                             ui.horizontal_wrapped(|ui| {
-                                if crate::chrome::chip(ui, false, tr!("sstv-restart-rx"))
-                                    .on_hover_text(tr!("sstv-abandon-picture-being-received-listen"))
-                                    .clicked()
-                                {
-                                    cmds.push(Command::SstvRestartRx);
-                                    self.sstv.rx_color = None;
-                                    self.sstv.rx_tex = None;
-                                }
-
-                                // Clear the picture currently shown in LIVE without
-                                // touching the decoder: a completed frame that is
-                                // still on screen is wiped so the next one can be
-                                // seen arriving, and an in-progress decode keeps
-                                // running (use Restart RX to abandon it).
+                                // **One chip, not two.** This used to be CLEAR
+                                // (wipe what is shown, leave the decoder running)
+                                // beside RESTART (abandon the picture and hunt
+                                // again), and from the operator's side the
+                                // difference was invisible: an operator holding a
+                                // half-drawn picture pressed CLEAR, saw the panel
+                                // empty, and the decoder went on drawing into the
+                                // frame he had just cleared — F4NRM's report on
+                                // #427. Clearing a picture now means what it says
+                                // in both cases: a finished frame is wiped so the
+                                // next one can be seen arriving, and one still
+                                // being drawn is abandoned and the receiver goes
+                                // back to hunting for a header.
                                 if crate::chrome::chip(ui, false, tr!("sstv-clear-rx"))
                                     .on_hover_text(tr!("sstv-clear-rx-hint"))
                                     .clicked()
                                 {
+                                    cmds.push(Command::SstvRestartRx);
                                     self.sstv.rx_color = None;
                                     self.sstv.rx_tex = None;
                                 }
