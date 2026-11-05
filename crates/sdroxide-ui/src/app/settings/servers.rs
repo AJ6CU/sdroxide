@@ -152,8 +152,6 @@ pub(in crate::app) fn settings_wsjtx_tab(
         ui,
         &tr!("settings-servers-decoded-text-udp-note"),
     );
-    ui.add_space(4.0);
-    ui.label(RichText::new(tr!("settings-servers-cw-panel-s-copy-plain")).weak());
     ui.add_space(6.0);
     if super::net_seeded_note(ui, net_seeded) {
         egui::Grid::new("decode-udp-grid")
@@ -180,6 +178,40 @@ pub(in crate::app) fn settings_wsjtx_tab(
             &tr!("settings-servers-decoded-text-udp-format", example = "{\"time\":…,\"unix\":…,\"kind\":\"text\",\"mode\":\"RTTY\",\"dial_hz\":…,\"freq_hz\":…,\"text\":\"…\"}"),
         );
     }
+
+    // ── Decoded CW, as plain text ──
+    ui.add_space(10.0);
+    ui.separator();
+    ui.add_space(6.0);
+    ui.label(
+        RichText::new(tr!("settings-servers-decoded-cw-udp"))
+            .size(13.0)
+            .strong()
+            .color(crate::theme::CYAN()),
+    );
+    ui.add_space(4.0);
+    ui.label(RichText::new(tr!("settings-servers-cw-panel-s-copy-plain")).weak());
+    ui.add_space(6.0);
+    crate::chrome::checkbox(ui, &mut cfg.cw_text.enabled, tr!("settings-servers-enable"));
+    ui.add_space(6.0);
+    ui.add_enabled_ui(cfg.cw_text.enabled, |ui| {
+        egui::Grid::new("cw-text-grid").num_columns(2).spacing([12.0, 6.0]).show(ui, |ui| {
+            ui.label(tr!("settings-servers-send"));
+            crate::chrome::field(
+                ui,
+                egui::TextEdit::singleline(&mut cfg.cw_text.host)
+                    .desired_width(160.0)
+                    .hint_text("127.0.0.1"),
+            )
+            .on_hover_text(tr!("settings-servers-decoded-cw-udp-host-hint"));
+            ui.end_row();
+
+            ui.label(tr!("settings-servers-port"));
+            ui.add(egui::DragValue::new(&mut cfg.cw_text.port).range(1..=65535))
+                .on_hover_text(tr!("settings-servers-decoded-cw-udp-port-hint"));
+            ui.end_row();
+        });
+    });
 
     ui.add_space(8.0);
     if crate::chrome::chip_accent(

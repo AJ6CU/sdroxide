@@ -97,16 +97,20 @@ impl KiwiSdrSource {
         })
     }
 
-    /// The band this receiver covers, from its own opening burst rather than
-    /// from the directory listing — a private Kiwi is in no listing at all.
+    /// What this receiver can be **tuned** to: the KiwiSDR family's own range.
+    ///
+    /// Not the opening burst's centre ± its width. That burst describes the
+    /// *window* the receiver happened to open on — about 12 kHz of it — and
+    /// using it as the tuning range refused every other frequency: opening on
+    /// 1395 kHz made 3.853 MHz "unreachable", and the engine fell back to the
+    /// frequency it had last been on instead of the one it was asked for
+    /// (bench, 2026-11-03, the WEFAX scan on DWD 3855).
+    ///
+    /// The receiver itself is the authority on what it can tune; a frequency it
+    /// will not take comes back as a refusal from it, which is a real answer
+    /// rather than one this program invented.
     pub fn tuning_range(&self) -> (f64, f64) {
-        let i = &self.handle.info;
-        if i.bandwidth_hz <= 0.0 {
-            // Every KiwiSDR ever made covers this; a receiver that did not say
-            // is better given the family's range than none at all.
-            return (0.0, 30_000_000.0);
-        }
-        (i.center_hz - i.bandwidth_hz / 2.0, i.center_hz + i.bandwidth_hz / 2.0)
+        (0.0, 30_000_000.0)
     }
 }
 

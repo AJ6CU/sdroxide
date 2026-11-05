@@ -601,6 +601,11 @@ pub struct SdroxideApp {
     /// their address, so a row that will not answer is shown greyed with the
     /// reason instead of offered again.
     dead_public_sdrs: std::collections::HashSet<String>,
+    /// The starred receivers, by address — the same list the settings keep, in
+    /// the shape a lookup wants. Written back to the settings on every star.
+    public_sdr_favourites: std::collections::HashSet<String>,
+    /// The **MINE** chip: only the starred receivers.
+    public_sdr_mine_only: bool,
     /// The address just handed to [`SdroxideApp::take_public_sdr`], so a
     /// following "Interface change failed" notice can be charged to it.
     last_public_sdr_try: Option<String>,
@@ -823,6 +828,14 @@ pub struct SdroxideApp {
     update: update::UpdateCheck,
     #[cfg(not(target_arch = "wasm32"))]
     update_dismissed: bool,
+    /// The dynamic-DNS worker's last answer, as the engine reported it: (unix,
+    /// ok, the provider's own word). The worker lives in the engine because the
+    /// name has to point at the machine that is heard — see `crate::dyndns` in
+    /// `sdroxide-radio` — so the screen only ever holds the answer.
+    ///
+    /// Not gated on the target: the browser client receives the same answer as
+    /// `ServerMsg::DyndnsAnswer`, so it holds it too (review, 2026-11-03).
+    dyndns_last: Option<(i64, bool, String)>,
     /// Which half of the band/mode menu was last shown (listen or operate).
     band_menu_tab: top_bar::BandMenuTab,
     /// Which slice of the spectrum the band menu's chips are narrowed to (HF,
@@ -893,6 +906,12 @@ pub struct SdroxideApp {
     /// Fade clock for the receive-filter popup behind the BW chip, like
     /// `nr_popup_since`.
     bw_popup_since: Option<f64>,
+    /// When the pointer started resting on the BW chip, for the large timed
+    /// hint ([`BW_HINT_SECS`]); `None` while it is elsewhere.
+    bw_hint_since: Option<f64>,
+    /// The BW chip was clicked during this hover: the hint stays away until
+    /// the pointer has left and come back.
+    bw_hint_dismissed: bool,
     /// Fade clocks for the repeater popups in the VFO box — the DUPLEX shift
     /// and the TONE encoder — like `tone_popup_since`.
     duplex_popup_since: Option<f64>,
@@ -2216,6 +2235,8 @@ impl SdroxideApp {
             public_sdr_low_bw: false,
             public_sdr_confirm: None,
             dead_public_sdrs: std::collections::HashSet::new(),
+            public_sdr_favourites: ui_settings.public_sdr_favourites.iter().cloned().collect(),
+            public_sdr_mine_only: false,
             last_public_sdr_try: None,
             smartsdr_devices: Vec::new(),
             smartsdr_test_result: None,
@@ -2315,6 +2336,7 @@ impl SdroxideApp {
             },
             #[cfg(not(target_arch = "wasm32"))]
             update_dismissed: false,
+            dyndns_last: None,
             band_menu_tab: if ui_settings.band_menu_listen {
                 top_bar::BandMenuTab::Listen
             } else {
@@ -2336,6 +2358,8 @@ impl SdroxideApp {
             rec_gate_s: None,
             rec_gate: Default::default(),
             bw_popup_since: None,
+            bw_hint_since: None,
+            bw_hint_dismissed: false,
             duplex_popup_since: None,
             rpt_tone_popup_since: None,
             // A station that keeps the band/mode selector docked gets it back

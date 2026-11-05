@@ -1182,6 +1182,11 @@ fn handle_event(shared: &Shared, ev: RadioEvent) {
                 latest.notice = n.clone();
                 Some(ServerMsg::Notice(n))
             }
+            // The provider's word about the station's own name, which the
+            // screen shows; the address it was sent to stays in the engine.
+            RadioEvent::DyndnsAnswer { at_unix, ok, text } => {
+                Some(ServerMsg::DyndnsAnswer { at_unix, ok, text })
+            }
             RadioEvent::Ft8Decodes(d) => Some(ServerMsg::Ft8Decodes(d)),
             RadioEvent::Ft8Status(s) => {
                 latest.digi = Some(s.clone());

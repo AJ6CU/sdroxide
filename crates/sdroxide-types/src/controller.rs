@@ -495,6 +495,19 @@ pub enum RadioEvent {
     /// than a [`RadioEvent::Notice`] so the screen can word it in the operator's
     /// language. Rides `ServerMsg::TxRefused`. Appended last.
     TxRefused(crate::TxBlock, f64),
+
+    /// The dynamic-DNS worker's last answer.
+    ///
+    /// From the **engine**, because the name has to point at the address of the
+    /// machine that is heard: a headless station updates with no screen open,
+    /// and a screen on a laptop driving a remote station must not send its own
+    /// address to the provider. Only the provider's word travels — never the
+    /// update address, which carries the token.
+    DyndnsAnswer {
+        at_unix: i64,
+        ok: bool,
+        text: String,
+    },
 }
 
 /// Snapshot of the frontend's switchable sound devices (native clients).

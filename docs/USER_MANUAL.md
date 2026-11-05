@@ -652,7 +652,8 @@ mode. What is in the box never changes; only where the two rows are cut does.
   refusing it. The sub receiver still has to live inside the span, so if it was
   parked outside the new one it is moved back in.
 - **BW** — the receive filter as a number. The chip reads the passband width
-  the receiver is running (`BW 2.7k`, `BW 500`), and clicking it opens the
+  the receiver is running (`BW 2.7k`, `BW 500`) — or, when the passband is one
+  of the mode's preset chips, that chip's name (`BW 3.0k`) — and clicking it opens the
   width, the two edges and the mode's standard filters as fields you can type
   into. The panadapter's grips are the quick way to place a passband by eye
   against what is on the band; this is where an exact figure — 2200, 2700,
@@ -931,6 +932,16 @@ filter you have now. **Save** puts your preset in place of the built-in one and
 selects it; **Reset** brings the built-in back. Each mode keeps its own, so
 changing a USB chip leaves LSB's alone. They are kept per machine in
 `filter_presets.json`.
+
+After the presets comes a fifth chip, **M+**, your own memory for that mode.
+While it is empty a click stores the passband you have now in it (labelled with
+its width) and a right-click opens the editor to type one; once filled it is a
+chip like the others — click to recall, right-click to edit, **Reset** to empty
+it. The **BW** chip carries the name of whichever chip matches the filter in
+force, so you can tell which setting is applied; on a passband that matches
+none it reads the width. Resting the pointer on the **BW** chip raises a large
+reminder of all this for ten seconds; a click on the chip puts it away until
+the next time the pointer comes back.
 
 In **AM, SAM, DSB, ISB and the FM modes** the two edges move together: the passband
 is a channel carved out about the carrier, both halves carry the same signal,
@@ -13930,11 +13941,22 @@ fails on 4532, the usual cause is a real `rigctld` already running.
 
 Supported: frequency, mode and passband, PTT, VFO A/B and split (including split
 frequency and mode), RIT and XIT, the `RFPOWER` / `AF` / `MICGAIN` / `STRENGTH`
-levels, the `NB` / `NR` / `ANF` / `MUTE` functions, the `XCHG` / `CPY` /
-`TOGGLE` / `BAND_UP` / `BAND_DOWN` / `TUNE` VFO operations, and the voice keyer
+/ `RF` / `SQL` / `AGC` / `NR` levels, the `NB` / `NR` / `ANF` / `MUTE` functions, the
+`XCHG` / `CPY` / `TOGGLE` / `BAND_UP` / `BAND_DOWN` / `TUNE` VFO operations, and
+the voice keyer
 (`send_voice_mem 1`…`10`, `stop_voice_mem` — see
 [2.11](#211-voice-keyer)). The voice keyer obeys **Allow clients to transmit**
 like PTT does.
+
+`RF` is the receiver's front-end gain — the stage the top bar's **Gain** slider
+moves — as 0 to 1 across that stage's range, landing on its own steps. A radio
+with no RX gain the software can set has no `RF` level and does not advertise
+one. On a PlutoSDR whose own AGC is running, the part ignores the setting, as
+it ignores the slider. `SQL` is the squelch threshold, 0 open to 1 closed. `AGC` is Hamlib's
+`RIG_AGC_*` number: 0 off, 2 fast, 5 medium, 3 slow. The `NR` level is the
+strength (a third, two thirds, 1 for low, medium, high) of the engine chosen in
+the NR panel, which it leaves alone; `U NR 1` brings back the engine and
+strength last on.
 
 Setting up clients:
 
@@ -14074,6 +14096,25 @@ contact is the thing that knows the rules.
 For the modes no logger speaks — RTTY, PSK, Olivia, THOR, MFSK, DominoEX, Hell,
 CW and WSPR — there is a plainer feed beside these two: see
 [§6.8.4](#684-decoded-text-over-udp).
+
+**Decoded CW over UDP**, also on this page with its own switch, sends the CW
+panel's copy ([2.14](#214-cw-decoding-and-keyboard-sending)) as plain UTF-8
+text, a datagram at a time as it settles — for a station controller, a
+logger's CW window or a script. There is no protocol: a listener appends what
+arrives, and `nc -ul 9998` shows it as it comes. Only settled text goes out,
+never the last word or two the neural decoder is still revising, so nothing
+sent is ever taken back. Each radio has its own switch and sends only its own
+copy; two radios sending to one port arrive interleaved. It is not the JSON
+feed of [§6.8.4](#684-decoded-text-over-udp), which sends a keyboard mode's
+lines only once they are complete, and the CW copy has no line ends.
+
+- **Send to** — `127.0.0.1` for this machine; a LAN address, or this subnet's
+  broadcast address, for others.
+- **Port** — 9998. Not 9999, which the JSON feed's box suggests: a listener
+  waiting for one would otherwise be handed the other's datagrams.
+
+It sends only while the radio is in CW with the panel decoding; the skimmer's
+spots are not part of it.
 
 #### 6.8.4 Decoded text over UDP
 

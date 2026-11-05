@@ -2176,17 +2176,23 @@ use sdroxide_types::{
 /// an English `Notice`; now it carries the reason and the frequency, and the
 /// screen words it in the operator's language. `PROTO_VERSION` 259 → 260,
 /// `VERSION_BYTE` 0x4F → 0x50.
-/// v261: **an HPSDR board's second ADC as a second aerial.**
+/// v264: decoded CW over UDP. [`sdroxide_types::WsjtxConfig`] gains `cw_text`
+/// ([`sdroxide_types::CwTextConfig`]) on its tail, beside the N1MM broadcast it
+/// sits with. `WsjtxConfig` rides `Command::SetWsjtxConfig` whole, so a v263
+/// peer handed one reads the extra bytes as the start of the next message. The
+/// same change as upstream's v171. `PROTO_VERSION` 263 → 264, `VERSION_BYTE`
+/// 0x53 → 0x54.
+/// v265: **an HPSDR board's second ADC as a second aerial.**
 /// [`sdroxide_types::HpsdrConfig`] gains `diversity`, `div_mode`, `div_taps`,
 /// `div_rate` and `div_frozen` at its tail, for a Protocol 2 board that streams its two ADCs as a
 /// synced DDC pair (the TRX-DUO firmware v0.7.0, piHPSDR, Thetis). The struct
 /// rides inside `RadioConfig`, which crosses the link whole in
-/// `ServerMsg::RadioConfig` and `Command::SetRadioConfig`, so a v260 peer reads
+/// `ServerMsg::RadioConfig` and `Command::SetRadioConfig`, so a v264 peer reads
 /// every field after it out of step. `#[serde(default)]`, so a `radio.json`
 /// written before this loads unchanged, with Diversity off. `PROTO_VERSION`
-/// 260 → 261, `VERSION_BYTE` 0x50 → 0x51.
-pub const PROTO_VERSION: u16 = 261;
-const VERSION_BYTE: u8 = 0x51;
+/// 264 → 265, `VERSION_BYTE` 0x54 → 0x55.
+pub const PROTO_VERSION: u16 = 265;
+const VERSION_BYTE: u8 = 0x55;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -2755,6 +2761,19 @@ pub enum ServerMsg {
     ///
     /// Appended last, for the usual reason.
     TxRefused(sdroxide_types::TxBlock, f64),
+
+    /// The dynamic-DNS worker's last answer.
+    ///
+    /// From the **engine**, because the name has to point at the address of the
+    /// machine that is heard: a headless station updates with no screen open,
+    /// and a screen on a laptop driving a remote station must not send its own
+    /// address to the provider. Only the provider's word travels — never the
+    /// update address, which carries the operator's token.
+    DyndnsAnswer {
+        at_unix: i64,
+        ok: bool,
+        text: String,
+    },
 }
 
 /// What [`ServerMsg::ClientSettings`] carries.
@@ -3100,6 +3119,10 @@ mod tests {
                 // The FSK ID a station sent after its picture, which travels
                 // as a whole string rather than a code — it is a callsign.
                 rx_id: Some("OE1XYZ".to_string()),
+                // Why the last frame was not kept, which the panel says out
+                // loud — appended to the status rather than its own message
+                // (PROTO_VERSION 262 → 263).
+                not_saved: Some(sdroxide_types::SstvDrop::NotAPicture),
                 ..SstvStatus::default()
             }),
         ];
@@ -3450,7 +3473,38 @@ mod tests {
             ServerMsg::TxRefused(w, hz) => assert_eq!((w, hz), (why, 7_074_000.0)),
             _ => panic!("TxRefused did not round-trip"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (261, 0x51));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (265, 0x55));
+    }
+
+    /// The dynamic-DNS answer rides last on [`ServerMsg`], and it has to: the
+    /// variant was appended, so an older peer reads every message it knows and
+    /// this one simply is not among them.
+    ///
+    /// It comes from the engine and not the screen on purpose — the name has to
+    /// point at the address of the machine that is heard, and a headless station
+    /// has no screen at all. Only the provider's word travels; the update
+    /// address carries the operator's token and never leaves the engine.
+    #[test]
+    fn the_dyndns_answer_is_appended_last() {
+        let answer =
+            ServerMsg::DyndnsAnswer { at_unix: 1_790_000_000, ok: true, text: "good".into() };
+        let bytes = encode(&answer).unwrap();
+        // The position, not just the round trip: a variant inserted mid-enum
+        // would round-trip perfectly and still shift every peer's reading of
+        // what follows. The last variant's index moves when one is appended,
+        // and this line is then the conscious edit that a bump requires.
+        // **The position, not just the round trip.** A variant inserted mid-enum
+        // would round-trip perfectly and still shift every peer's reading of
+        // what follows. 81 is where this one sits; appending another variant
+        // moves it, and this line is then the conscious edit a bump requires.
+        assert_eq!(bytes[1], 81, "DyndnsAnswer is no longer the last variant");
+        match decode::<ServerMsg>(&bytes).unwrap() {
+            ServerMsg::DyndnsAnswer { at_unix, ok, text } => {
+                assert_eq!((at_unix, ok, text.as_str()), (1_790_000_000, true, "good"));
+            }
+            other => panic!("the answer did not round-trip: {other:?}"),
+        }
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (265, 0x55));
     }
 
     /// postcard is positional: a field inserted mid-struct shifts every byte
@@ -3470,19 +3524,30 @@ mod tests {
         let digi = postcard::to_allocvec(&sdroxide_types::DigiConfig::default()).unwrap();
         let radio = postcard::to_allocvec(&sdroxide_types::RadioConfig::default()).unwrap();
         let net = postcard::to_allocvec(&sdroxide_types::NetworkConfig::default()).unwrap();
+        // 481 since SSTV's sync-pulse setting and its save-everything switch
+        // were appended at the tail (PROTO_VERSION 262 → 263). Appended, so an
+        // older peer reads the struct it knows and the new bytes are simply not
+        // there.
         assert_eq!(
             (digi.len(), fnv1a(&digi)),
-            (479, 221_087_630_763_656_457),
+            (481, 5_599_147_536_364_706_919),
             "DigiConfig's wire layout shifted — append fields, never insert them"
         );
+        // 897 since `HpsdrConfig` gained its five Diversity fields (a bool, a
+        // mode, the taps, the rate and the hold: 8 bytes) at its own tail
+        // (PROTO_VERSION 264 → 265). `HpsdrConfig` sits inside `RadioConfig`,
+        // so this moves what follows it: that is what the bump is for.
         assert_eq!(
             (radio.len(), fnv1a(&radio)),
-            (889, 17_500_317_737_597_158_402),
+            (897, 1_396_573_632_080_966_650),
             "RadioConfig's wire layout shifted — append fields, never insert them"
         );
+        // 316 since the two Dynamic DNS fields were appended at the end
+        // (PROTO_VERSION 260 → 261). Appended, so an older peer reads the
+        // struct it knows and the two new bytes are simply not there.
         assert_eq!(
             (net.len(), fnv1a(&net)),
-            (314, 15_307_633_050_357_107_781),
+            (316, 9_696_214_884_124_040_590),
             "NetworkConfig's wire layout shifted — append fields, never insert them"
         );
     }
@@ -3644,6 +3709,39 @@ mod tests {
         let m = ServerMsg::StationConfig(Box::new(StationConfig { relay, ..no_station() }));
         let back: ServerMsg = decode(&encode(&m).unwrap()).unwrap();
         assert_eq!(back, m);
+    }
+
+    /// The WSJT-X / N1MM / decoded-CW output configuration, both ways.
+    ///
+    /// Worth its own test for `roundtrip_station_config`'s reason. It rides
+    /// `Command::SetWsjtxConfig` **whole**, and v264 appended `cw_text` to it:
+    /// a field the encoder carries but the decoder drops does not fail, it
+    /// silently arrives as its default, and the operator's setting is simply
+    /// never applied.
+    ///
+    /// Filled in rather than defaulted, and every field different from its
+    /// neighbour, so a field-order slip shows instead of hiding behind two
+    /// equal values.
+    #[test]
+    fn roundtrip_wsjtx_config() {
+        use sdroxide_types::{CwTextConfig, N1mmConfig, WsjtxConfig};
+
+        let cfg = WsjtxConfig {
+            enabled: true,
+            host: "192.0.2.7".into(),
+            port: 2238,
+            id: "SDR Oxide Brown".into(),
+            n1mm: N1mmConfig {
+                enabled: true,
+                host: "192.0.2.8".into(),
+                port: 12060,
+                station: "SHACK-2".into(),
+            },
+            cw_text: CwTextConfig { enabled: true, host: "192.0.2.9".into(), port: 9998 },
+        };
+        let cmd = ClientMsg::Command(Command::SetWsjtxConfig(cfg));
+        let back: ClientMsg = decode(&encode(&cmd).unwrap()).unwrap();
+        assert_eq!(back, cmd);
     }
 
     /// The interface configuration, both ways.

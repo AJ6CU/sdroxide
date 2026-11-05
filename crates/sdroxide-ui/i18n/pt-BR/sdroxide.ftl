@@ -821,7 +821,7 @@ settings-servers-t-127-0-0-1-reaches-2 = 127.0.0.1 alcança os clientes desta m�
 settings-servers-t-12060-port-n1mm-s-documentation = 12060 é a porta que a documentação do N1MM recomenda
 settings-servers-station-name = Nome da estação
 settings-servers-what-n1mm-calls-stationname-name = O que o N1MM chama de StationName: o nome do computador que enviou o pacote. Os loggers o mostram para distinguir uma posição de operação de outra.
-settings-servers-cw-panel-s-copy-plain = A cópia do painel de CW como texto simples, um datagrama UDP por trecho à medida que se fixa — para um controlador de estação, a janela de CW de um logger ou um script. Sem protocolo: um ouvinte apenas anexa o que chega (tente nc -ul 9999). Só o texto fixado é enviado, nunca o final que o decodificador ainda está revisando. Cada rádio tem a sua própria chave.
+settings-servers-cw-panel-s-copy-plain = A cópia do painel de CW como texto simples, um datagrama UDP por trecho à medida que se fixa — para um controlador de estação, a janela de CW de um logger ou um script. Sem protocolo: um ouvinte apenas anexa o que chega (tente nc -ul 9998). Só o texto fixado é enviado, nunca o final que o decodificador ainda está revisando. Cada rádio tem a sua própria chave.
 settings-servers-apply = {" "}APLICAR{" "}
 settings-servers-persist-re-open-broadcast-sockets = Salvar e (re)abrir os sockets de transmissão
 settings-servers-hamlib-rigctld-server = Servidor rigctld do Hamlib
@@ -9039,3 +9039,55 @@ tx-bands-check-again-hint = Retira a confirmação para rever a lista. Alterar q
 settings-radio-hpsdr-diversity = Segunda antena no ADC 2 (diversidade)
 
 settings-radio-hpsdr-diversity-hint = Envia os dois ADCs da placa como um par sincronizado: a primeira antena no ADC 1 e uma segunda no ADC 2. Cancel anula uma fonte de ruído local, Combine preenche os desvanecimentos. Requer uma placa Protocol 2 cujo firmware ofereça Diversity (o TRX-DUO a partir da v0.7.0, por exemplo) e o DDC 1. O DDC 2 passa a ser a segunda antena e não pode ser um rádio separado. Vale após Apply.
+topbar-bw-hint-title = Ajustar e memorizar o filtro
+
+topbar-bw-hint-body = Clique para abrir os ajustes do filtro. Clique com o botão direito em uma predefinição para alterá-la, ou clique em M+ para guardar a banda passante atual na sua memória.
+
+topbar-preset-memory-hint = Memória vazia: clique para guardar aqui a banda passante atual, botão direito para digitar uma
+
+settings-dyndns = DNS DINÂMICO
+
+settings-dyndns-hint = O endereço de atualização do provedor, com o token. Deixe vazio para manter desligado: nada é enviado e o programa continua como está. O endereço é secreto e nunca vai para um registro.
+
+settings-dyndns-address = Endereço
+
+settings-dyndns-every = A cada
+
+settings-dyndns-last = Última atualização { $when }: { $answer }
+
+settings-dyndns-off = Desligado — sem endereço, nada é enviado.
+
+settings-dyndns-waiting = À espera da primeira resposta…
+
+settings-dyndns-token-note = O endereço carrega seu token: ele fica gravado em texto claro no net.json e vai para toda tela conectada a esta estação. Nunca é escrito em um registro.
+
+publicsdr-mine = MEUS
+
+publicsdr-mine-hint = Apenas os receptores que você marcou
+
+publicsdr-mine-empty = Nada marcado ainda — a ☆ em uma linha guarda esse receptor aqui.
+
+publicsdr-star-receiver = Guardar este receptor em MEUS
+
+publicsdr-unstar-receiver = Remover este receptor de MEUS
+
+
+sstv-sync-pulses = PULSOS DE SYNC
+
+sstv-sync-pulses-hint = Quantos pulsos de sincronismo o receptor quer antes de desenhar uma imagem sem cabeçalho VIS: mais é mais estável em uma banda ruidosa, menos pega mais cedo uma transmissão em andamento. O travamento sempre começa no pulso mais recente, então a imagem não perde nada.
+
+sstv-not-saved-not-a-picture = Última imagem não salva: era ruído, não uma imagem.
+
+sstv-not-saved-no-picture = Última imagem não salva: o sinal não trazia imagem.
+
+sstv-save-all = SALVAR TUDO
+
+sstv-save-all-hint = Salvar toda imagem concluída, inclusive as que o receptor chamaria de ruído. Desligado por padrão: o filtro mantém o ruído de uma banda silenciosa fora da galeria, e isto é o caminho de volta para uma imagem que quase não está lá.
+
+settings-controls-cw-keeps-the-fine-grid = Em CW o clique usa a grade de 10 Hz seja qual for este ajuste: um sinal de CW é mais estreito do que uma grade feita para voz consegue acertar.
+
+settings-servers-decoded-cw-udp = CW decodificado via UDP
+
+settings-servers-decoded-cw-udp-host-hint = 127.0.0.1 alcança os programas desta máquina; um endereço da rede local ou o endereço de broadcast desta sub-rede alcança os outros.
+
+settings-servers-decoded-cw-udp-port-hint = 9998 por padrão

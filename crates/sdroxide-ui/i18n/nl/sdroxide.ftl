@@ -816,7 +816,7 @@ settings-servers-t-127-0-0-1-reaches-2 = 127.0.0.1 bereikt clients op deze machi
 settings-servers-t-12060-port-n1mm-s-documentation = 12060 is de poort die de documentatie van N1MM aanbeveelt
 settings-servers-station-name = Stationsnaam
 settings-servers-what-n1mm-calls-stationname-name = Wat N1MM de StationName noemt: de naam van de computer die het pakket verstuurde. Loggers tonen die om de ene operatorpositie van de andere te onderscheiden.
-settings-servers-cw-panel-s-copy-plain = De kopie van het CW-paneel als platte tekst, één UDP-datagram per stuk zodra het vaststaat — voor een stationscontroller, het CW-venster van een logger of een script. Geen protocol: een luisteraar voegt gewoon toe wat binnenkomt (probeer nc -ul 9999). Alleen vaststaande tekst wordt verzonden, nooit de staart die de decoder nog herziet. Elke radio heeft zijn eigen schakelaar.
+settings-servers-cw-panel-s-copy-plain = De kopie van het CW-paneel als platte tekst, één UDP-datagram per stuk zodra het vaststaat — voor een stationscontroller, het CW-venster van een logger of een script. Geen protocol: een luisteraar voegt gewoon toe wat binnenkomt (probeer nc -ul 9998). Alleen vaststaande tekst wordt verzonden, nooit de staart die de decoder nog herziet. Elke radio heeft zijn eigen schakelaar.
 settings-servers-apply = {" "}TOEPASSEN{" "}
 settings-servers-persist-re-open-broadcast-sockets = Opslaan en de broadcastsockets (opnieuw) openen
 settings-servers-hamlib-rigctld-server = Hamlib rigctld-server
@@ -9047,3 +9047,55 @@ tx-bands-check-again-hint = Trekt de bevestiging in om de lijst opnieuw te bekij
 settings-radio-hpsdr-diversity = Tweede antenne op ADC 2 (diversity)
 
 settings-radio-hpsdr-diversity-hint = Stuurt de twee ADC's van de kaart als een gesynchroniseerd paar: de eerste antenne op ADC 1, een tweede op ADC 2. Cancel onderdrukt een lokale stoorbron, Combine vult fading op. Vereist een Protocol 2-kaart waarvan de firmware Diversity biedt (bijvoorbeeld de TRX-DUO vanaf v0.7.0) en DDC 1. DDC 2 is dan de tweede antenne en kan geen eigen radio zijn. Werkt na Apply.
+topbar-bw-hint-title = Filter instellen en opslaan
+
+topbar-bw-hint-body = Klik om de filterinstellingen te openen. Rechtsklik op een preset om die te wijzigen, of klik op M+ om de huidige doorlaatband in je eigen geheugen op te slaan.
+
+topbar-preset-memory-hint = Leeg geheugen: klik om de huidige doorlaatband hier op te slaan, rechtsklik om er een in te typen
+
+settings-dyndns = DYNAMISCHE DNS
+
+settings-dyndns-hint = Het update-adres van de provider, met token. Leeg laten is uit: er wordt niets verstuurd en het programma blijft zoals het is. Het adres is geheim en komt nooit in een log.
+
+settings-dyndns-address = Adres
+
+settings-dyndns-every = Elke
+
+settings-dyndns-last = Laatste update { $when }: { $answer }
+
+settings-dyndns-off = Uit — geen adres, er wordt niets verstuurd.
+
+settings-dyndns-waiting = Wacht op het eerste antwoord…
+
+settings-dyndns-token-note = Het adres bevat je token: het staat leesbaar in net.json en gaat mee naar elk scherm dat met dit station verbonden is. Het komt nooit in een log.
+
+publicsdr-mine = MIJN
+
+publicsdr-mine-hint = Alleen de ontvangers die je hebt gemarkeerd
+
+publicsdr-mine-empty = Nog niets gemarkeerd — het ☆ op een rij bewaart die ontvanger hier.
+
+publicsdr-star-receiver = Deze ontvanger in MIJN bewaren
+
+publicsdr-unstar-receiver = Deze ontvanger uit MIJN halen
+
+
+sstv-sync-pulses = SYNCPULSEN
+
+sstv-sync-pulses-hint = Hoeveel syncpulsen de ontvanger wil voordat hij een beeld tekent zonder VIS-header: meer is rustiger op een rumoerige band, minder pikt een lopende uitzending eerder op. De lock begint altijd op de nieuwste puls, dus een foto verliest hoe dan ook niets.
+
+sstv-not-saved-not-a-picture = Laatste beeld niet bewaard: het was ruis, geen foto.
+
+sstv-not-saved-no-picture = Laatste beeld niet bewaard: het signaal bevatte geen foto.
+
+sstv-save-all = ALLES BEWAREN
+
+sstv-save-all-hint = Bewaar elk afgemaakt beeld, ook wat de ontvanger ruis zou noemen. Standaard uit: de poort houdt de ruis van een stille band uit de galerij, en dit is de terugweg voor een foto die er nauwelijks is.
+
+settings-controls-cw-keeps-the-fine-grid = In CW klikt het op het 10 Hz-raster wat hier ook staat: een CW-signaal is smaller dan een raster voor spraak kan raken.
+
+settings-servers-decoded-cw-udp = Gedecodeerde CW via UDP
+
+settings-servers-decoded-cw-udp-host-hint = 127.0.0.1 bereikt programma's op deze computer; een LAN-adres of het broadcastadres van dit subnet bereikt andere.
+
+settings-servers-decoded-cw-udp-port-hint = Standaard 9998

@@ -1193,6 +1193,32 @@ fn tune_to_net_spot(
     }
 }
 
+/// The dial a CW click asks for: a sidetone pitch below the clicked signal,
+/// on the click-tune grid, so the signal is heard *at* the pitch.
+///
+/// Its own function because the answer can be checked without a receiver: a
+/// dial a pitch below the signal puts the tone at the pitch, and the CW
+/// passband is centred there — which is the whole question a report of "clicked
+/// a CW signal and ended up off frequency" turns on.
+fn cw_click_dial(clicked_hz: f64, pitch: f64, step: f64) -> f64 {
+    let step = if step > 0.0 { step } else { 1.0 };
+    ((clicked_hz - pitch) / step).round() * step
+}
+
+/// The click-tune grid for a mode.
+///
+/// CW keeps the fine grid whatever the operator set for voice. A CW signal is a
+/// few hundred hertz wide and the passband narrower still, so a grid built for
+/// hunting SSB cannot land on one — and the setting is a single number for
+/// every mode, which made that a trap with nothing on screen to warn about it:
+/// 1000 Hz set for SSB, every CW click up to half a kilohertz away, and the
+/// click, the readout and the arithmetic all blameless (issue #439). A finer
+/// choice than the default is kept — the cap only takes the coarse ones away.
+fn click_grid(mode: Mode, step_hz: f64) -> f64 {
+    let set = if step_hz > 0.0 { step_hz } else { CLICK_TUNE_STEP };
+    if mode == Mode::Cw { set.min(CLICK_TUNE_STEP) } else { set }
+}
+
 /// Decaying peak-hold trace, reset whenever the frame mapping changes.
 #[derive(Default)]
 pub struct PeakHold {
@@ -2024,11 +2050,7 @@ pub fn show_ext(
         }
         if resp.clicked() && !stop_click {
             if let Some(pos) = resp.interact_pointer_pos() {
-                let step = if wheel.click_tune_step_hz > 0.0 {
-                    wheel.click_tune_step_hz
-                } else {
-                    CLICK_TUNE_STEP
-                };
+                let step = click_grid(state.rx[0].mode, wheel.click_tune_step_hz);
                 if ui.input(|i| i.modifiers.shift) {
                     // Shift-click places the *second* receiver: the sub when it
                     // is running, VFO B otherwise — what this gesture meant
@@ -2146,7 +2168,8 @@ pub fn show_ext(
                     // you hear, so tuning a signal to the dial is the one place
                     // it is guaranteed not to be audible.
                     let off = cursor_hz.map(f64::from).unwrap_or(0.0);
-                    let hz = ((view.x_to_freq(pos.x, &rect) - off) / step).round() * step;
+                    let clicked = view.x_to_freq(pos.x, &rect);
+                    let hz = cw_click_dial(clicked, off, step);
                     cmds.push(Command::TuneInSpan { vfo: state.active_vfo, hz });
                 }
             }
@@ -3370,6 +3393,25 @@ fn offset_bracket(
     label_box(p, pos2(hi + 4.0, y - 6.0), label, color, bounds);
 }
 
+/// Where a label of `size` sits, given the place it would like to be and the
+/// rectangle it has to stay inside.
+///
+/// **Both edges are ordered, not clamped against each other.** `y.clamp(bounds.top(),
+/// bounds.bottom() - size.y)` panics outright — `min > max, or either was NaN` —
+/// as soon as the box is taller than the room it has, and that is not a rare
+/// state: for one frame at start-up on a source with a narrow span the
+/// panadapter is laid out shorter than an 11 pt label, and the whole program
+/// died on the first frame with a signal in it (bench, 2026-11-02: 284.5 against
+/// 283.0 on a KiwiSDR and on the sound-card radio, twice each).
+///
+/// A label that cannot fit goes to the top-left of the room it was given, which
+/// is the closest thing to "inside" that exists.
+pub(crate) fn label_origin(top_left: Pos2, bounds: Rect, size: egui::Vec2) -> Pos2 {
+    let rightmost = (bounds.right() - size.x).max(bounds.left());
+    let lowest = (bounds.bottom() - size.y).max(bounds.top());
+    pos2(top_left.x.clamp(bounds.left(), rightmost), top_left.y.clamp(bounds.top(), lowest))
+}
+
 /// Draw `text` in a small semi-transparent black box, clamped inside `bounds`.
 pub(crate) fn label_box(p: &egui::Painter, top_left: Pos2, text: &str, fg: Color32, bounds: Rect) {
     let galley = p.layout_no_wrap(
@@ -3379,9 +3421,9 @@ pub(crate) fn label_box(p: &egui::Painter, top_left: Pos2, text: &str, fg: Color
     );
     let pad = vec2(4.0, 2.0);
     let size = galley.size() + pad * 2.0;
-    let x = (top_left.x).min(bounds.right() - size.x).max(bounds.left());
-    let y = (top_left.y).clamp(bounds.top(), bounds.bottom() - size.y);
-    let bg = Rect::from_min_size(pos2(x, y), size);
+    let pos = label_origin(top_left, bounds, size);
+    let (x, y) = (pos.x, pos.y);
+    let bg = Rect::from_min_size(pos, size);
     p.rect_filled(bg, 2.0, Color32::from_rgba_unmultiplied(0, 0, 0, 180));
     p.galley(pos2(x + pad.x, y + pad.y), galley, fg);
 }
@@ -3775,6 +3817,69 @@ mod axis_tests {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// **A label taller than the room it has must not end the program.** The
+    /// panadapter is laid out shorter than an 11 pt label for a frame at
+    /// start-up on a narrow-band source, and the clamp that placed the label
+    /// panicked with `min > max … 284.5 against 283.0` — on a KiwiSDR and on
+    /// the sound-card radio, on the first frame with a signal in it (bench,
+    /// 2026-11-02).
+    #[test]
+    fn a_label_that_cannot_fit_is_placed_at_the_top_left_instead_of_panicking() {
+        let bounds = egui::Rect::from_min_size(pos2(10.0, 20.0), egui::vec2(200.0, 1.5));
+        let pos = label_origin(pos2(300.0, 300.0), bounds, egui::vec2(40.0, 15.0));
+        assert_eq!(pos.x, 170.0, "a label that fits across is still placed inside");
+        assert_eq!(pos.y, 20.0, "and to the top edge, which is all the room there is");
+    }
+
+    /// **A CW click leaves the tone at the operator's pitch.**
+    ///
+    /// Reported as "tuning a CW signal by mouse click is off frequency"
+    /// (issue #439). This pins the arithmetic the click performs — the tone it
+    /// leaves is at the pitch, not a pitch away from it — and nothing more: the
+    /// path from the click to the dial the engine ends up with is one call to
+    /// `cw_click_dial`, and the passband half of the chain (the filter centred
+    /// on the same pitch) is `preset_edges`, tested in `app::top_bar`. Together
+    /// the two say the signal lands in the middle of the filter; separately,
+    /// neither says where a real click ends up, which is why #439 stays open
+    /// until the reporter answers.
+    #[test]
+    fn a_cw_click_leaves_the_tone_at_the_pitch() {
+        let signal = 7_030_000.0;
+        for pitch in [400.0, 700.0, 900.0, 1500.0] {
+            let dial = cw_click_dial(signal, f64::from(pitch), 10.0);
+            let tone = signal - dial;
+            assert!(
+                (tone - f64::from(pitch)).abs() <= 5.0,
+                "a {pitch} Hz pitch left the tone at {tone} Hz"
+            );
+        }
+        // The step grid rounds the dial, not the tone: 10 Hz here, so 5 Hz of
+        // error at worst — the passband is 500 wide.
+        assert_eq!(cw_click_dial(7_030_004.0, 700.0, 10.0), 7_029_300.0);
+    }
+
+    /// A coarse grid set for voice must not reach CW. This is #439: 1000 Hz
+    /// chosen for SSB made every CW click up to half a kilohertz wrong, and
+    /// nothing on screen said the two modes shared the number.
+    #[test]
+    fn the_click_grid_is_fine_in_cw_whatever_is_set() {
+        assert_eq!(click_grid(Mode::Cw, 1000.0), CLICK_TUNE_STEP, "a voice grid must not reach CW");
+        assert_eq!(click_grid(Mode::Cw, 0.0), CLICK_TUNE_STEP, "unset is the default");
+        assert_eq!(click_grid(Mode::Cw, 5.0), 5.0, "a finer choice is kept");
+        assert_eq!(click_grid(Mode::Usb, 1000.0), 1000.0, "voice keeps what was set");
+        assert_eq!(click_grid(Mode::Lsb, 0.0), CLICK_TUNE_STEP, "unset is the default everywhere");
+    }
+
+    /// The ordinary case still puts the box inside the corner it was aimed at.
+    #[test]
+    fn a_label_that_fits_stays_inside_the_bounds() {
+        let bounds = egui::Rect::from_min_size(pos2(0.0, 0.0), egui::vec2(200.0, 100.0));
+        let pos = label_origin(pos2(500.0, 500.0), bounds, egui::vec2(40.0, 15.0));
+        assert_eq!(pos, pos2(160.0, 85.0));
+        let pos = label_origin(pos2(12.0, 8.0), bounds, egui::vec2(40.0, 15.0));
+        assert_eq!(pos, pos2(12.0, 8.0), "a label with room to spare is left where it asked");
+    }
 
     /// A frame of `bins` bins over 800 Hz centred on `center`: one bin per
     /// 100 Hz, so the arithmetic in these tests is readable.

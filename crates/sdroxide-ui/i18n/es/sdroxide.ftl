@@ -815,7 +815,7 @@ settings-servers-t-127-0-0-1-reaches-2 = 127.0.0.1 llega a los clientes de esta 
 settings-servers-t-12060-port-n1mm-s-documentation = 12060 es el puerto que recomienda la documentación de N1MM
 settings-servers-station-name = Nombre de la estación
 settings-servers-what-n1mm-calls-stationname-name = Lo que N1MM llama StationName: el nombre del ordenador que envió el paquete. Los programas de registro lo muestran para distinguir un puesto de operación de otro.
-settings-servers-cw-panel-s-copy-plain = La copia del panel de CW como texto plano, un datagrama UDP por fragmento a medida que se asienta — para un controlador de estación, la ventana de CW de un programa de registro o un script. Sin protocolo: un oyente simplemente añade lo que llega (prueba nc -ul 9999). Solo se envía el texto asentado, nunca la cola que el decodificador aún está revisando. Cada radio tiene su propio interruptor.
+settings-servers-cw-panel-s-copy-plain = La copia del panel de CW como texto plano, un datagrama UDP por fragmento a medida que se asienta — para un controlador de estación, la ventana de CW de un programa de registro o un script. Sin protocolo: un oyente simplemente añade lo que llega (prueba nc -ul 9998). Solo se envía el texto asentado, nunca la cola que el decodificador aún está revisando. Cada radio tiene su propio interruptor.
 settings-servers-apply = {" "}APLICAR{" "}
 settings-servers-persist-re-open-broadcast-sockets = Guardar y (re)abrir los sockets de difusión
 settings-servers-hamlib-rigctld-server = Servidor rigctld de Hamlib
@@ -9038,3 +9038,55 @@ tx-bands-check-again-hint = Retira la confirmación para revisar la lista. Cambi
 settings-radio-hpsdr-diversity = Segunda antena en el ADC 2 (diversidad)
 
 settings-radio-hpsdr-diversity-hint = Envía los dos ADC de la placa como un par sincronizado: la primera antena en el ADC 1 y una segunda en el ADC 2. Cancel anula una fuente de ruido local, Combine rellena los desvanecimientos. Requiere una placa Protocol 2 cuyo firmware ofrezca Diversity (el TRX-DUO desde la v0.7.0, por ejemplo) y el DDC 1. El DDC 2 pasa a ser la segunda antena y no puede ser una radio aparte. Se aplica con Apply.
+topbar-bw-hint-title = Ajustar y memorizar el filtro
+
+topbar-bw-hint-body = Haga clic para abrir los ajustes del filtro. Clic derecho en un preajuste para cambiarlo, o clic en M+ para guardar el ancho de banda actual en su memoria.
+
+topbar-preset-memory-hint = Memoria vacía: clic para guardar aquí el ancho de banda actual, clic derecho para escribir uno
+
+settings-dyndns = DNS DINÁMICO
+
+settings-dyndns-hint = La dirección de actualización del proveedor, con su token. Déjela vacía para mantenerlo desactivado: no se envía nada y el programa sigue igual. La dirección es un secreto y nunca se escribe en un registro.
+
+settings-dyndns-address = Dirección
+
+settings-dyndns-every = Cada
+
+settings-dyndns-last = Última actualización { $when }: { $answer }
+
+settings-dyndns-off = Desactivado — sin dirección, no se envía nada.
+
+settings-dyndns-waiting = Esperando la primera respuesta…
+
+settings-dyndns-token-note = La dirección lleva tu token: se guarda en claro en net.json y viaja a cada pantalla conectada a esta estación. Nunca se escribe en un registro.
+
+publicsdr-mine = MÍOS
+
+publicsdr-mine-hint = Solo los receptores que marcaste
+
+publicsdr-mine-empty = Nada marcado todavía: la ☆ de una fila guarda ese receptor aquí.
+
+publicsdr-star-receiver = Guardar este receptor en MÍOS
+
+publicsdr-unstar-receiver = Quitar este receptor de MÍOS
+
+
+sstv-sync-pulses = PULSOS DE SYNC
+
+sstv-sync-pulses-hint = Cuántos pulsos de sincronización quiere el receptor antes de dibujar una imagen sin cabecera VIS: más es más estable en una banda ruidosa, menos engancha antes una emisión en curso. El enganche siempre empieza en el pulso más reciente, así que la imagen no pierde nada.
+
+sstv-not-saved-not-a-picture = Última imagen no guardada: era ruido, no una imagen.
+
+sstv-not-saved-no-picture = Última imagen no guardada: la señal no llevaba ninguna imagen.
+
+sstv-save-all = GUARDAR TODO
+
+sstv-save-all-hint = Guardar cada imagen terminada, incluidas las que el receptor llamaría ruido. Desactivado por defecto: el filtro mantiene el ruido de una banda tranquila fuera de la galería, y esto es la vuelta atrás para una imagen que apenas está.
+
+settings-controls-cw-keeps-the-fine-grid = En CW el clic usa la rejilla de 10 Hz sea cual sea este ajuste: una señal CW es más estrecha de lo que una rejilla pensada para voz puede acertar.
+
+settings-servers-decoded-cw-udp = CW decodificado por UDP
+
+settings-servers-decoded-cw-udp-host-hint = 127.0.0.1 llega a los programas de este equipo; una dirección de la red local o la dirección de difusión de esta subred llega a los demás.
+
+settings-servers-decoded-cw-udp-port-hint = 9998 por defecto

@@ -821,7 +821,7 @@ settings-servers-t-127-0-0-1-reaches-2 = 127.0.0.1 reaches clients on this machi
 settings-servers-t-12060-port-n1mm-s-documentation = 12060 is the port N1MM's documentation recommends
 settings-servers-station-name = Station name
 settings-servers-what-n1mm-calls-stationname-name = What N1MM calls the StationName: the name of the computer that sent the packet. Loggers show it to tell one operating position from another.
-settings-servers-cw-panel-s-copy-plain = The CW panel's copy as plain text, one UDP datagram per piece as it settles — for a station controller, a logger's CW window or a script. No protocol: a listener just appends what arrives (try nc -ul 9999). Only settled text is sent, never the tail the decoder is still revising. Each radio has its own switch.
+settings-servers-cw-panel-s-copy-plain = The CW panel's copy as plain text, one UDP datagram per piece as it settles — for a station controller, a logger's CW window or a script. No protocol: a listener just appends what arrives (try nc -ul 9998). Only settled text is sent, never the tail the decoder is still revising. Each radio has its own switch.
 settings-servers-apply = {" "}APPLY{" "}
 settings-servers-persist-re-open-broadcast-sockets = Persist and (re)open the broadcast sockets
 settings-servers-hamlib-rigctld-server = Hamlib rigctld server
@@ -9044,3 +9044,69 @@ tx-bands-check-again-hint = Withdraw the confirmation and check the list again. 
 settings-radio-hpsdr-diversity = Second aerial on ADC 2 (diversity)
 
 settings-radio-hpsdr-diversity-hint = Streams the board's two ADCs as one synced pair: the first aerial on ADC 1, a second one on ADC 2. Cancel nulls a local noise source, Combine fills in fades. Needs a Protocol 2 board whose firmware offers Diversity (the TRX-DUO from v0.7.0, for example) and DDC 1. DDC 2 is then the second aerial and cannot be a radio of its own. Takes effect on Apply.
+topbar-bw-hint-title = Adjust and memorise the filter
+
+topbar-bw-hint-body = Click to open the filter settings. Right-click a preset chip to change it, or click M+ to store the current passband in your own memory.
+
+topbar-preset-memory-hint = Empty memory: click to store the current passband here, right-click to type one
+
+settings-dyndns = DYNAMIC DNS
+
+settings-dyndns-hint = The provider's update address, token and all. Leave it empty to keep this off: nothing is sent and the program stays as it is. The address is a secret and is never written to a log.
+
+settings-dyndns-address = Address
+
+settings-dyndns-every = Every
+
+settings-dyndns-last = Last update { $when }: { $answer }
+
+settings-dyndns-off = Off — no address set, nothing is sent.
+
+settings-dyndns-waiting = Waiting for the first answer…
+
+# Shown under the Dynamic DNS address field: the URL is a secret but is not encrypted.
+settings-dyndns-token-note = The address carries your token: it is stored in the clear in net.json and travels to every screen connected to this station. It is never written to a log.
+
+# Chip in the PUBLIC SDRS window: show only the starred receivers.
+publicsdr-mine = MINE
+
+# Hover text for the MINE chip.
+publicsdr-mine-hint = Only the receivers you starred
+
+# Shown when the MINE chip is on and no receiver is starred yet.
+publicsdr-mine-empty = Nothing starred yet — the ☆ on a row keeps that receiver here.
+
+# Hover text on the empty star in a public SDR row.
+publicsdr-star-receiver = Keep this receiver in MINE
+
+# Hover text on the filled star in a public SDR row.
+publicsdr-unstar-receiver = Remove this receiver from MINE
+
+# SSTV panel: a finished frame was not a picture and was not saved. { $why } is a short English reason from the decoder.
+
+# SSTV panel: how many sync pulses the receiver wants before it starts drawing a picture with no VIS header.
+sstv-sync-pulses = SYNC PULSES
+
+# Hover text for the SSTV sync-pulse chips (4, 5, 6).
+sstv-sync-pulses-hint = How many sync pulses the receiver wants before it draws a picture that has no VIS header: more is steadier on a noisy band, fewer catches a picture already under way sooner. The lock always starts at the newest pulse, so a picture loses nothing either way.
+
+# SSTV panel: the last finished frame was noise and was not saved.
+sstv-not-saved-not-a-picture = Last frame not saved: it was noise, not a picture.
+
+# SSTV panel: the frame's syncs were there but its content was not a picture.
+sstv-not-saved-no-picture = Last frame not saved: the signal carried no picture.
+
+# SSTV panel chip: keep every finished frame, including ones the noise gate would drop.
+sstv-save-all = SAVE ALL
+
+# Hover text for the SAVE ALL chip in the SSTV panel.
+sstv-save-all-hint = Keep every finished frame, including the ones the receiver would call noise. On by default is off: the gate is what keeps a quiet band's noise out of the gallery, and this is the way back for a picture that is barely there.
+
+# Hover text under Settings > Controls > Click-tune rounding.
+settings-controls-cw-keeps-the-fine-grid = CW clicks on the 10 Hz grid whatever is set here: a CW signal is narrower than a grid built for voice can land on.
+
+settings-servers-decoded-cw-udp = Decoded CW over UDP
+
+settings-servers-decoded-cw-udp-host-hint = 127.0.0.1 reaches programs on this machine; a LAN address or this subnet's broadcast address reaches others.
+
+settings-servers-decoded-cw-udp-port-hint = 9998 by default

@@ -73,6 +73,9 @@ or stackable and add it to the Detachable page in Settings.
 
 - **Say it short.** Release notes: one line per change, max 60 lines. Replies
   are prose, not documents. No headings, no bulleted essays.
+- **Not submissive, short, friendly.** Say the thing once and move on. No
+  apologising for existing, no asking permission for work already agreed, no
+  self-deprecation, no flattery. Friendly is warm and plain, not deferential.
 - **No performance about honesty.** Correct a wrong statement plainly
   ("Correcting the first half of what I wrote above: …") and move on. Never
   frame the correction as a virtue — no "I would rather correct it than leave it
@@ -88,6 +91,15 @@ or stackable and add it to the Detachable page in Settings.
   faults are the fault.
 - **A fix carries a test verified to fail on unfixed code.** Remove, watch fail,
   restore.
+- **Read your own diff before pushing.** A script that inserts code can leave a
+  duplicate attribute, a doc comment on the wrong item, or a stray blank line,
+  and a green test run will not say so: the tests passed, the text around them
+  was not looked at. Two of those reached a PR on 2026-11-04 and a reviewer
+  found both.
+- **Change a name or a format, then find its readers.** The writer is the easy
+  half. `sstv-<ms>-2.png` broke `received_at` in another crate because that
+  parses the timestamp back out of the name (review, 2026-11-04). Grep for
+  every place that reads the thing, not only the one that writes it.
 - **For anything drawn, render and look.** Numbers prove where ink is; only
   looking proves it's there.
 - **Never claim fixed/shipped when it isn't.** "Needs feedback" is a request.
@@ -256,9 +268,10 @@ are closed/unlicensed (research only). SDRuno look is parked.
 
 ## Where the work stands
 
-- `main` at crate 2.2.0, PROTO_VERSION 256 (0x4C). Latest release v2.2.0.3_brown.
-- Open issues: 13 (re-measured 2026-10-29). Open PRs: 4 (antenna #304, navtex
-  #317, adsb #312, ft8 #323) + upstream #651 (SAT Doppler, SP9TKN testing).
+- `main` at crate 2.2.0, PROTO_VERSION 262 (0x52). Latest release
+  v2.2.3.6.2_brown (pre-release).
+- Open issues: 8 (re-measured 2026-11-04). Open PRs: 1 — #434 public-SDR
+  favourites.
 - STANAG 4285 finished (Mark proved decode with video; coded payload not
   implemented — legal restriction). Olivia proven by user (RX+TX). Grey-line
   confirmed. S-meter still an issue.
@@ -270,13 +283,23 @@ are closed/unlicensed (research only). SDRuno look is parked.
 
 ## Current work
 
-- SAT Doppler for CAT rigs: branch `fork/sat-doppler-cat`, step 1+2a+2b+2c
-  implemented. MSI build available. Wacht op SP9TKN's testresultaten.
-- NAVTEX restore: PR #317 open, mergeable, wacht op F4NRM's test.
-- ADS-B overlay: PR #312 open, wacht op F4NRM's review.
-- Airspy HF+: PR #309 open, wacht op Graeme's test.
-- Antenna: PR #304 open.
-- FT8 auto queue UI: PR #323 open (not live-tested).
+- WEFAX is ours now (the operator's call, 2026-11-03) and still goes up as a PR
+  for a second pair of eyes. Merged that day: unique chart names, KiwiSDR tuning
+  range, the auto-slant fit, the carrier-gone ending, the schedule links, and
+  #435 — #432 merged a carrier rule the bench disproved within hours (1687/1687
+  windows read "in band" over a real gap), so the corrected trigger followed.
+  It has not fired on air yet: propagation went before the night half could run.
+- Dynamic DNS merged (#425, 2026-11-03): the worker lives in the engine, the
+  answer travels as `RadioEvent::DyndnsAnswer` / `ServerMsg::DyndnsAnswer`
+  (PROTO_VERSION 260 → 262), the address is hidden and the token-in-clear note
+  is in eleven languages.
+- Public-SDR favourites (#434): a star per receiver and a MINE chip, kept by
+  address in the settings.
+- #427 SSTV starts on voice: ours after F4NRM made no move; the fix is to keep
+  hunting for a VIS while drawing, so a false start cannot cost the real picture.
+- #421 NB with Kiwi: the reporter came back — the blanker works on strong noise
+  and not on weak, and its threshold is in samples, so it means something
+  different at 20 kHz than at 768 kHz. A counter build was promised.
 
 
 ## History

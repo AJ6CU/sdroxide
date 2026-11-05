@@ -320,7 +320,7 @@ struct PendingUpload {
     at: Instant,
 }
 
-fn unix_now() -> i64 {
+pub(crate) fn unix_now() -> i64 {
     SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs() as i64)
 }
 
@@ -3198,6 +3198,10 @@ struct Engine {
     /// band plan is only consulted when the dial has actually moved.
     auto_shift_dial: Option<f64>,
     nb: NoiseBlanker,
+    /// When the blanker's count was last reported. Once a second while it is
+    /// on, because a blanker that blanks nothing and one that never fires look
+    /// identical from the outside — see [`NoiseBlanker::read`] and #421.
+    nb_report_at: Instant,
     /// Converter headroom, read straight off the samples the device handed
     /// over. Fed before the blanker and before decimation — see
     /// [`sdroxide_dsp::AdcMeter`], which records why either of those would
@@ -3574,6 +3578,8 @@ struct Engine {
     wsjtx: Option<sdroxide_wsjtx::WsjtxUdp>,
     /// The N1MM contactinfo broadcast, if switched on — see [`Engine::sync_n1mm`].
     n1mm: Option<sdroxide_wsjtx::N1mmUdp>,
+    /// The decoded-CW UDP output, if switched on — see [`Engine::sync_cw_text`].
+    cw_text: Option<sdroxide_wsjtx::CwTextUdp>,
     wsjtx_cfg: sdroxide_types::WsjtxConfig,
     /// When the last WSJT-X heartbeat went out (clients time a station out
     /// without one).
@@ -3767,6 +3773,9 @@ struct Engine {
     /// Network cockpit: owns the spot feeds (DX cluster / POTA / SOTA / PSK)
     /// and the lookup/upload worker threads. The engine only drains it.
     spots: sdroxide_net::SpotManager,
+    /// Dynamic DNS: the update worker, which lives here because the name has
+    /// to point at *this* machine's address — see [`crate::dyndns`].
+    dyndns: crate::dyndns::Dyndns,
     /// Winlink radio email: owns the mailbox and the forwarding-session worker.
     /// `None` when the mailbox directory could not be opened, which must not
     /// stop the radio from running — the operator simply gets an error the
@@ -4999,6 +5008,7 @@ fn engine_thread(
         burst_unkeys: false,
         auto_shift_dial: None,
         nb: NoiseBlanker::new(),
+        nb_report_at: Instant::now(),
         adc: AdcMeter::new(),
         audio_notch: AutoNotch::new(),
         audio_notch_on: false,
@@ -5116,6 +5126,7 @@ fn engine_thread(
         ext_voice_armed: false,
         wsjtx: None,
         n1mm: None,
+        cw_text: None,
         wsjtx_cfg: sdroxide_types::WsjtxConfig::default(),
         wsjtx_beat: Instant::now(),
         decode_feed: None,
@@ -5195,6 +5206,7 @@ fn engine_thread(
         // pair is folded in below, once the engine owns them.
         vfo_memory: [initial_vfo_memory.clone(), initial_vfo_memory],
         spots: sdroxide_net::SpotManager::new(),
+        dyndns: crate::dyndns::Dyndns::default(),
         winlink: open_mailbox(&sdroxide_types::WinlinkConfig::default()),
         kiss: None,
         packet_port: None,
@@ -5285,6 +5297,11 @@ fn engine_thread(
     }
     engine.spots.set_operator(&engine.effective_call(), &engine.report_grid());
     engine.net_cfg = sdroxide_config::load_network_config();
+    // The address, if there is one: from boot, with no screen open, because a
+    // headless station is exactly where this matters.
+    engine
+        .dyndns
+        .set(&engine.net_cfg.dyndns_url, engine.net_cfg.dyndns_interval_minutes());
     let decode_udp = engine.net_cfg.decode_udp.clone();
     engine.set_decode_feed(&decode_udp);
     // Hand the persisted account to the mailbox. Without this the manager keeps
@@ -5619,6 +5636,28 @@ fn engine_thread(
                     // nothing left for the blanker to recognise.
                     if engine.state.noise_blanker {
                         engine.nb.process(&mut buf[..n]);
+                        // Once a second: what it removed, and how close the
+                        // strongest sample came to the bar. On a receiver whose
+                        // stream arrives already filtered (a Kiwi's 20 kHz) this
+                        // is what says whether the blanker is finding nothing or
+                        // finding nothing it recognises (#421).
+                        if engine.nb_report_at.elapsed() >= Duration::from_secs(1) {
+                            engine.nb_report_at = Instant::now();
+                            let r = engine.nb.read();
+                            if r.offered > 0 {
+                                info!(
+                                    "noise blanker: {} of {} samples blanked ({:.2}%), strongest \
+                                     {:.1}x the mean, mean {:.4}, bar {:.0}x, at {:.1} kHz",
+                                    r.blanked,
+                                    r.offered,
+                                    r.share() * 100.0,
+                                    r.peak_ratio,
+                                    r.mean,
+                                    NoiseBlanker::bar(),
+                                    engine.radio_fs / 1000.0
+                                );
+                            }
+                        }
                     }
                     let iq = decimate(engine.decim.as_mut(), &buf[..n], &mut dbuf);
                     engine.process_block(iq, pool.as_ref());
@@ -6033,6 +6072,14 @@ struct RigDigest {
     noise_blanker: bool,
     noise_reduction: bool,
     auto_notch: bool,
+    nr_level: sdroxide_types::NrLevel,
+    squelch: u32,
+    agc: sdroxide_types::AgcMode,
+    /// The CW sidetone pitch, by bit pattern — a client's CW filter is centred
+    /// on it, so a change has to reach the protocol layer.
+    cw_pitch: u32,
+    /// The front-end gain's setting and range, by bit pattern.
+    rf_gain: Option<(u64, u64, u64)>,
     ranges: (usize, usize),
 }
 
@@ -6059,6 +6106,14 @@ impl RigDigest {
             noise_blanker: s.noise_blanker,
             noise_reduction: s.noise_reduction,
             auto_notch: s.auto_notch,
+            nr_level: s.nr_level,
+            squelch: s.squelch_db.to_bits(),
+            agc: s.agc,
+            cw_pitch: s.cw_pitch_hz.to_bits(),
+            rf_gain: s
+                .rf_gain
+                .as_ref()
+                .map(|g| (g.value.to_bits(), g.min.to_bits(), g.max.to_bits())),
             ranges: (s.rx_ranges.len(), s.tx_ranges.len()),
         }
     }
@@ -7678,12 +7733,38 @@ impl Engine {
         }
     }
 
+    /// Start, retarget or stop the decoded-CW UDP output to match its config.
+    /// Its own destination and its own switch, like the N1MM broadcast's.
+    fn sync_cw_text(&mut self) {
+        let cfg = &self.wsjtx_cfg.cw_text;
+        let want = cfg.enabled;
+        if want && self.cw_text.as_ref().is_some_and(|c| c.addr() == cfg.addr()) {
+            return;
+        }
+        let had = self.cw_text.take().is_some();
+        if !want {
+            if had {
+                info!("decoded CW UDP output stopped");
+            }
+            return;
+        }
+        match sdroxide_wsjtx::CwTextUdp::start(cfg) {
+            Ok(c) => self.cw_text = Some(c),
+            Err(e) => {
+                warn!("decoded CW UDP output: {e}");
+                let _ =
+                    self.event_tx.send(RadioEvent::NetStatus(Some(format!("CW text UDP: {e}"))));
+            }
+        }
+    }
+
     /// Start, retarget or stop the WSJT-X UDP broadcast to match its config.
     fn sync_wsjtx(&mut self) {
         // The N1MM broadcast rides the same configuration and the same call
         // sites, so it is kept in step here rather than at a second set of
-        // them that could be forgotten.
+        // them that could be forgotten. The decoded-CW output likewise.
         self.sync_n1mm();
+        self.sync_cw_text();
         let want = self.wsjtx_cfg.enabled;
         let same = self
             .wsjtx
@@ -8236,6 +8317,11 @@ impl Engine {
                         // is about to put on the air at full power.
                         self.lead_tr_switch();
                         self.source.send_cw(&text);
+                    }
+                }
+                DigiAction::CwText(text) => {
+                    if let Some(out) = self.cw_text.as_ref() {
+                        out.send(&text);
                     }
                 }
                 DigiAction::AbortCw => {
@@ -10970,6 +11056,7 @@ impl Engine {
                     warn!("saving network config: {e}");
                 }
                 self.net_cfg = cfg.clone();
+                self.dyndns.set(&cfg.dyndns_url, cfg.dyndns_interval_minutes());
                 let decode_udp = cfg.decode_udp.clone();
                 self.set_decode_feed(&decode_udp);
                 // The mailbox root does not depend on the settings, but the
@@ -13830,7 +13917,18 @@ impl Engine {
             strength_dbm: self.last_s_dbm.round() as i32,
             noise_blanker: self.state.noise_blanker,
             noise_reduction: rx.noise_reduction.is_on(),
+            nr_level: rx.noise_reduction,
             auto_notch: rx.auto_notch,
+            squelch_db: rx.squelch_db,
+            agc: rx.agc,
+            cw_pitch_hz: self.cw_pitch_hz(),
+            rf_gain: self.rigctld_rf_gain().map(|(g, value)| sdroxide_rigctld::RfGain {
+                element: g.name.clone(),
+                min: g.min_db,
+                max: g.max_db,
+                step: g.step_db,
+                value,
+            }),
             can_tx: self.caps.is_transmit_capable(),
             rx_ranges: self.caps.freq_ranges_rx.clone(),
             tx_ranges: self.caps.freq_ranges_tx.clone(),
@@ -13891,8 +13989,30 @@ impl Engine {
             noise_blanker: self.state.noise_blanker,
             noise_reduction: rx.noise_reduction.is_on(),
             auto_notch: rx.auto_notch,
+            nr_level: rx.noise_reduction,
+            squelch: rx.squelch_db.to_bits(),
+            agc: rx.agc,
+            cw_pitch: self.cw_pitch_hz().to_bits(),
+            rf_gain: self
+                .rigctld_rf_gain()
+                .map(|(g, value)| (value.to_bits(), g.min_db.to_bits(), g.max_db.to_bits())),
             ranges: (self.caps.freq_ranges_rx.len(), self.caps.freq_ranges_tx.len()),
         }
+    }
+
+    /// The RX gain stage rigctl's `RF` level drives, and where it is set: the
+    /// device's first, the one the top bar's Gain slider moves, read the same
+    /// way (its minimum until the engine has recorded a setting).
+    fn rigctld_rf_gain(&self) -> Option<(&sdroxide_types::GainElement, f64)> {
+        let g = self.caps.gains.iter().find(|g| g.direction == sdroxide_types::Direction::Rx)?;
+        let value = self
+            .state
+            .gains
+            .iter()
+            .find(|(n, _)| *n == g.name)
+            .map(|(_, v)| *v)
+            .unwrap_or(g.min_db);
+        Some((g, value))
     }
 
     /// Start, stop or rebind the built-in TCI server to match `tci_cfg`.
@@ -15180,6 +15300,16 @@ impl Engine {
         let (rx_freq, mode) = (self.state.rx_freq_hz(), self.state.rx[0].mode);
         self.spots.wavelog_radio(self.state.tx_freq_hz(), rx_freq, mode);
 
+        // Dynamic DNS answers go out as they come: one update an interval, and
+        // the screen shows the provider's word without ever seeing the address.
+        while let Some(a) = self.dyndns.poll() {
+            let _ = self.event_tx.send(RadioEvent::DyndnsAnswer {
+                at_unix: a.at_unix,
+                ok: a.ok,
+                text: a.text,
+            });
+        }
+
         for ev in self.spots.poll() {
             let re = match ev {
                 sdroxide_net::NetEvent::Spots(s) => RadioEvent::Spots(s),
@@ -15756,7 +15886,16 @@ impl Engine {
                 // The `accepts_mode` check is the same one below: a band that
                 // cannot carry the mode keeps its own default, which is how
                 // picking the FM broadcast band from USB still lands on WFM.
-                let mode = if band.accepts_mode(rx.mode) { rx.mode } else { default_mode };
+                // ...and **not for a decoder that belongs to a service**: ACARS
+                // is on the airband and there is nothing to decode on 70cm, so
+                // keeping it left the operator on "70cm — ACARS" with the panel
+                // still open and no way back but choosing the mode by hand
+                // (#413). A mode an operator can carry to any band still carries.
+                let mode = if band.accepts_mode(rx.mode) && !rx.mode.belongs_to_a_service() {
+                    rx.mode
+                } else {
+                    default_mode
+                };
                 let (filter_lo, filter_hi) = mode.default_filter_at(freq_hz);
                 BandStackEntry { freq_hz, mode, filter_lo, filter_hi }
             });
@@ -20802,7 +20941,7 @@ fn save_image_rx(kind: &str, png: &[u8]) -> Option<String> {
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_millis())
         .unwrap_or(0);
-    let name = format!("{kind}-{ts}.png");
+    let name = free_image_name(&dir, kind, ts);
     let path = dir.join(&name);
     match std::fs::write(&path, png) {
         Ok(()) => Some(name),
@@ -20810,6 +20949,59 @@ fn save_image_rx(kind: &str, png: &[u8]) -> Option<String> {
             warn!("saving {kind} image {}: {e}", path.display());
             None
         }
+    }
+}
+
+/// A file name for a received picture that nothing else has taken.
+///
+/// The same picture arrives on two receivers at once — a public SDR and the
+/// station's own radio on the same station — and both complete inside the same
+/// millisecond, so the plain name is written twice and the first is lost (the
+/// same fault WEFAX had, fixed the same way: the first keeps the plain name and
+/// the later ones take `-2`, `-3`).
+fn free_image_name(dir: &std::path::Path, kind: &str, ts: u128) -> String {
+    let mut name = format!("{kind}-{ts}.png");
+    for n in 2..=99u32 {
+        if !dir.join(&name).exists() {
+            break;
+        }
+        name = format!("{kind}-{ts}-{n}.png");
+    }
+    name
+}
+
+#[cfg(test)]
+mod image_name_tests {
+    use super::free_image_name;
+
+    /// **Two receivers finishing the same picture do not overwrite each other.**
+    ///
+    /// The same transmission heard on a public SDR and on the station's own
+    /// radio completes inside the same millisecond, so the plain name was
+    /// written twice and the first picture lost (bench, 2026-11-04). The first
+    /// keeps the plain name, the later ones take `-2`, `-3`, as WEFAX's charts
+    /// already did.
+    #[test]
+    fn a_picture_two_receivers_finish_at_once_keeps_both() {
+        let dir = std::env::temp_dir().join(format!("sdroxide-image-names-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).expect("temp dir");
+        let ts = 1_790_000_000_000u128;
+        assert_eq!(
+            free_image_name(&dir, "sstv", ts),
+            format!("sstv-{ts}.png"),
+            "the first keeps the plain name"
+        );
+        std::fs::write(dir.join(format!("sstv-{ts}.png")), b"x").expect("first");
+        assert_eq!(free_image_name(&dir, "sstv", ts), format!("sstv-{ts}-2.png"));
+        std::fs::write(dir.join(format!("sstv-{ts}-2.png")), b"x").expect("second");
+        assert_eq!(free_image_name(&dir, "sstv", ts), format!("sstv-{ts}-3.png"));
+        // Another kind is unaffected: the name carries it.
+        assert_eq!(
+            free_image_name(&dir, "wefax", ts),
+            format!("wefax-{ts}.png"),
+            "a different store does not share the count"
+        );
+        std::fs::remove_dir_all(&dir).ok();
     }
 }
 
@@ -20839,7 +21031,11 @@ fn save_wefax_rx(png: &[u8], dial_hz: f64) -> Option<String> {
         // recording — better an unlabelled chart than a mislabelled one.
         dial_hz: (dial_hz > 0.0).then_some(dial_hz),
     };
-    let name = meta.file_name();
+    // **A name another receiver has already used is not a name.** Two radios on
+    // one frequency finish the same transmission in the same second; the first
+    // keeps the plain name and the rest take -2, -3, … rather than overwriting
+    // each other (bench, 2026-11-03).
+    let name = free_chart_name(&dir, &meta);
     let path = dir.join(&name);
     match std::fs::write(&path, png) {
         Ok(()) => Some(name),
@@ -20848,6 +21044,23 @@ fn save_wefax_rx(png: &[u8], dial_hz: f64) -> Option<String> {
             None
         }
     }
+}
+
+/// A chart name no file in `dir` is using yet.
+///
+/// The first chart of a transmission keeps the plain name; a second one — another
+/// receiver on the same frequency, or another instance of the program — takes
+/// `-2`, `-3`, … rather than overwriting it (bench, 2026-11-03: a local RSP1 and
+/// a remote KiwiSDR both on DWD 3855, one chart lost to the other).
+fn free_chart_name(dir: &std::path::Path, meta: &sdroxide_types::WefaxChartMeta) -> String {
+    let mut name = meta.file_name();
+    for n in 2..=99u32 {
+        if !dir.join(&name).exists() {
+            break;
+        }
+        name = meta.file_name_numbered(n);
+    }
+    name
 }
 
 /// Encode a single-channel raster as a grayscale PNG.
@@ -23187,6 +23400,32 @@ mod mic_input_tests {
         let msg = silent_mic_notice("there is no microphone open");
         assert!(msg.starts_with("That over went out with no audio"), "{msg}");
         assert!(msg.contains("there is no microphone open"), "{msg}");
+    }
+}
+
+#[cfg(test)]
+mod chart_name_tests {
+    use super::free_chart_name;
+
+    /// **A name another receiver has used is not free.** Two radios on one
+    /// frequency finish the same transmission in the same second; the first
+    /// keeps the plain name and the second takes -2 instead of overwriting it
+    /// (bench, 2026-11-03).
+    #[test]
+    fn a_chart_that_would_overwrite_another_gets_its_own_name() {
+        let dir = std::env::temp_dir().join(format!("sdroxide-chartnames-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let meta = sdroxide_types::WefaxChartMeta {
+            unix: sdroxide_types::ymd_hms_to_unix(2026, 11, 3, 11, 30, 0),
+            dial_hz: Some(3_853_100.0),
+        };
+        assert_eq!(free_chart_name(&dir, &meta), "wefax-20261103-113000Z-3853.1kHz-DWD.png");
+        std::fs::write(dir.join(meta.file_name()), b"x").unwrap();
+        assert_eq!(free_chart_name(&dir, &meta), "wefax-20261103-113000Z-3853.1kHz-DWD-2.png");
+        std::fs::write(dir.join(meta.file_name_numbered(2)), b"x").unwrap();
+        assert_eq!(free_chart_name(&dir, &meta), "wefax-20261103-113000Z-3853.1kHz-DWD-3.png");
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }
 

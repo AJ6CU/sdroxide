@@ -816,7 +816,7 @@ settings-servers-t-127-0-0-1-reaches-2 = 127.0.0.1 atteint les clients de cette 
 settings-servers-t-12060-port-n1mm-s-documentation = 12060 est le port recommandé par la documentation de N1MM
 settings-servers-station-name = Nom de la station
 settings-servers-what-n1mm-calls-stationname-name = Ce que N1MM appelle StationName : le nom de l'ordinateur qui a envoyé le paquet. Les logiciels de journal l'affichent pour distinguer un poste opérateur d'un autre.
-settings-servers-cw-panel-s-copy-plain = La copie du panneau CW en texte brut, un datagramme UDP par morceau dès qu'il est stabilisé — pour un contrôleur de station, la fenêtre CW d'un logiciel de journal ou un script. Pas de protocole : un écouteur ajoute simplement ce qui arrive (essayez nc -ul 9999). Seul le texte stabilisé est envoyé, jamais la queue que le décodeur révise encore. Chaque radio a son propre commutateur.
+settings-servers-cw-panel-s-copy-plain = La copie du panneau CW en texte brut, un datagramme UDP par morceau dès qu'il est stabilisé — pour un contrôleur de station, la fenêtre CW d'un logiciel de journal ou un script. Pas de protocole : un écouteur ajoute simplement ce qui arrive (essayez nc -ul 9998). Seul le texte stabilisé est envoyé, jamais la queue que le décodeur révise encore. Chaque radio a son propre commutateur.
 settings-servers-apply = {" "}APPLIQUER{" "}
 settings-servers-persist-re-open-broadcast-sockets = Enregistrer et (ré)ouvrir les sockets de diffusion
 settings-servers-hamlib-rigctld-server = Serveur rigctld Hamlib
@@ -9050,3 +9050,55 @@ tx-bands-check-again-hint = Retire la confirmation pour revoir la liste. Changer
 settings-radio-hpsdr-diversity = Seconde antenne sur l'ADC 2 (diversity)
 
 settings-radio-hpsdr-diversity-hint = Envoie les deux ADC de la carte comme une paire synchronisée : la première antenne sur l'ADC 1, une seconde sur l'ADC 2. Cancel annule une source de bruit locale, Combine comble les évanouissements. Demande une carte Protocol 2 dont le firmware propose le Diversity (le TRX-DUO à partir de la v0.7.0, par exemple) et le DDC 1. Le DDC 2 devient alors la seconde antenne et ne peut plus être une radio à part. Pris en compte à Apply.
+topbar-bw-hint-title = Régler et mémoriser le filtre
+
+topbar-bw-hint-body = Cliquez pour ouvrir les réglages du filtre. Clic droit sur un préréglage pour le modifier, ou cliquez sur M+ pour stocker la bande passante actuelle dans votre mémoire.
+
+topbar-preset-memory-hint = Mémoire vide : cliquez pour y stocker la bande passante actuelle, clic droit pour en saisir une
+
+settings-dyndns = DNS DYNAMIQUE
+
+settings-dyndns-hint = L'adresse de mise à jour du fournisseur, jeton compris. Laissez vide pour désactiver : rien n'est envoyé et le programme reste tel quel. Cette adresse est un secret et n'est jamais écrite dans un journal.
+
+settings-dyndns-address = Adresse
+
+settings-dyndns-every = Toutes les
+
+settings-dyndns-last = Dernière mise à jour { $when } : { $answer }
+
+settings-dyndns-off = Désactivé — aucune adresse, rien n'est envoyé.
+
+settings-dyndns-waiting = En attente de la première réponse…
+
+settings-dyndns-token-note = L'adresse contient votre jeton : elle est stockée en clair dans net.json et transmise à chaque écran connecté à cette station. Elle n'est jamais écrite dans un journal.
+
+publicsdr-mine = LES MIENS
+
+publicsdr-mine-hint = Seulement les récepteurs que vous avez marqués
+
+publicsdr-mine-empty = Rien de marqué — l'☆ d'une ligne garde ce récepteur ici.
+
+publicsdr-star-receiver = Garder ce récepteur dans LES MIENS
+
+publicsdr-unstar-receiver = Retirer ce récepteur des MIENS
+
+
+sstv-sync-pulses = IMPULSIONS SYNC
+
+sstv-sync-pulses-hint = Combien d'impulsions de synchronisation le récepteur veut avant de dessiner une image sans en-tête VIS : plus est plus stable sur une bande bruitée, moins accroche plus tôt une émission en cours. Le verrouillage commence toujours à l'impulsion la plus récente, l'image n'y perd rien.
+
+sstv-not-saved-not-a-picture = Dernière image non enregistrée : c'était du bruit, pas une image.
+
+sstv-not-saved-no-picture = Dernière image non enregistrée : le signal ne portait aucune image.
+
+sstv-save-all = TOUT ENREGISTRER
+
+sstv-save-all-hint = Enregistrer chaque image terminée, y compris celles que le récepteur appellerait du bruit. Désactivé par défaut : le filtre garde le bruit d'une bande calme hors de la galerie, et ceci est le retour pour une image à peine présente.
+
+settings-controls-cw-keeps-the-fine-grid = En CW, le clic se fait sur la grille de 10 Hz quel que soit ce réglage : un signal CW est plus étroit qu'une grille prévue pour la parole ne peut le viser.
+
+settings-servers-decoded-cw-udp = CW décodé par UDP
+
+settings-servers-decoded-cw-udp-host-hint = 127.0.0.1 atteint les programmes de cette machine ; une adresse du réseau local ou l'adresse de diffusion de ce sous-réseau atteint les autres.
+
+settings-servers-decoded-cw-udp-port-hint = 9998 par défaut

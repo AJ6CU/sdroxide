@@ -170,6 +170,12 @@ pub(crate) fn set_language(language: UiLanguage) {
 /// The languages the operating system — or the browser — says the operator
 /// reads, most preferred first.
 fn system_languages() -> Vec<LanguageIdentifier> {
+    // The unit tests assert on the English text; they must not depend on the
+    // language of the machine that runs them.
+    #[cfg(test)]
+    if std::env::var_os("SDROXIDE_TEST_SYSTEM_LANG").is_none() {
+        return Vec::new();
+    }
     sys_locale::get_locales().filter_map(|l| locale_tag(&l)).collect()
 }
 

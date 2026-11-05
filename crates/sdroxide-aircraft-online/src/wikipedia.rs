@@ -5,7 +5,7 @@
 //! address itself: [`Article::new`] accepts only a two-letter language and a
 //! plain title, so the host is always `xx.wikipedia.org` and the path always
 //! the summary API's. The summary names a thumbnail; only an `https` address on
-//! `upload.wikimedia.org` is followed ([`image_url_ok`]), and what comes back
+//! `upload.wikimedia.org` or `thumb.wikimedia.org` is followed ([`image_url_ok`]), and what comes back
 //! must be a JPEG or a PNG of a bounded size ([`crate::image_ok`]).
 //!
 //! Nothing here is cached: the picture is held in memory for the open card and
@@ -82,11 +82,15 @@ fn escape(title: &str) -> String {
 }
 
 /// Whether an address is one Wikimedia hands out for a picture: `https`, no
-/// credentials, no port, and the one host `upload.wikimedia.org`.
+/// credentials, no port, and one of Wikimedia's two picture hosts:
+/// `upload.wikimedia.org` and `thumb.wikimedia.org` (the summary API now hands
+/// out its thumbnails from the latter).
 pub fn image_url_ok(url: &str) -> bool {
     let Some(rest) = url.strip_prefix("https://") else { return false };
     let host = rest.split(['/', '?', '#']).next().unwrap_or("");
-    host == "upload.wikimedia.org" && !url.contains(['\\', ' ']) && !rest.contains('@')
+    matches!(host, "upload.wikimedia.org" | "thumb.wikimedia.org")
+        && !url.contains(['\\', ' '])
+        && !rest.contains('@')
 }
 
 #[derive(Deserialize)]
@@ -170,7 +174,16 @@ mod tests {
     #[test]
     fn only_a_wikimedia_upload_address_over_https_is_followed() {
         assert!(image_url_ok("https://upload.wikimedia.org/wikipedia/commons/a.jpg"));
+        // The summary API's thumbnails now come from this host (checked live).
+        assert!(image_url_ok(
+            "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d9/A.jpg/330px-A.jpg?utm_source=en.wikipedia.org"
+        ));
         for bad in [
+            "http://thumb.wikimedia.org/a.jpg",
+            "https://thumb.wikimedia.org.evil.example/a.jpg",
+            "https://thumb.wikimedia.org:8443/a.jpg",
+            "https://thumb.wikimedia.org@evil.example/a.jpg",
+            "https://commons.wikimedia.org/a.jpg",
             "http://upload.wikimedia.org/a.jpg",
             "https://evil.example/a.jpg",
             "https://upload.wikimedia.org.evil.example/a.jpg",

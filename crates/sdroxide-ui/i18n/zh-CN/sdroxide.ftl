@@ -818,7 +818,7 @@ settings-servers-t-127-0-0-1-reaches-2 = 127.0.0.1 可到达本机上的客户�
 settings-servers-t-12060-port-n1mm-s-documentation = 12060 是 N1MM 文档推荐的端口
 settings-servers-station-name = 电台站点名称
 settings-servers-what-n1mm-calls-stationname-name = N1MM 所称的 StationName：发送该数据包的计算机名称。日志软件借此区分不同的操作位置。
-settings-servers-cw-panel-s-copy-plain = 将 CW 面板的文字以纯文本形式发送，每段稳定后作为一个 UDP 数据报发送——用于电台站点控制器、日志软件的 CW 窗口或脚本。没有协议：监听方只需追加接收到的内容（可尝试 nc -ul 9999）。只发送已确定的文字，从不发送解码器仍在修正的尾部。每台电台有各自的开关。
+settings-servers-cw-panel-s-copy-plain = 将 CW 面板的文字以纯文本形式发送，每段稳定后作为一个 UDP 数据报发送——用于电台站点控制器、日志软件的 CW 窗口或脚本。没有协议：监听方只需追加接收到的内容（可尝试 nc -ul 9998）。只发送已确定的文字，从不发送解码器仍在修正的尾部。每台电台有各自的开关。
 settings-servers-apply = {" "}应用{" "}
 settings-servers-persist-re-open-broadcast-sockets = 保存并（重新）打开广播套接字
 settings-servers-hamlib-rigctld-server = Hamlib rigctld 服务器
@@ -8977,3 +8977,55 @@ tx-bands-check-again-hint = 撤回确认以便重新检查列表。更改任何�
 settings-radio-hpsdr-diversity = ADC 2 上的第二天线（分集）
 
 settings-radio-hpsdr-diversity-hint = 将板上的两个 ADC 作为一对同步数据流传输：第一根天线接 ADC 1，第二根接 ADC 2。Cancel 可消除本地噪声源，Combine 可弥补衰落。需要固件支持 Diversity 的 Protocol 2 板卡（例如 v0.7.0 起的 TRX-DUO）和 DDC 1。此时 DDC 2 作为第二天线，不能再作为独立电台。点击 Apply 后生效。
+topbar-bw-hint-title = 调整并记忆滤波器
+
+topbar-bw-hint-body = 单击打开滤波器设置。右键单击预设可修改，单击 M+ 可将当前通带存入您自己的存储。
+
+topbar-preset-memory-hint = 空存储：单击存入当前通带，右键单击手动输入
+
+settings-dyndns = 动态DNS
+
+settings-dyndns-hint = 服务商提供的更新地址，含令牌。留空即关闭：不发送任何内容，程序保持原样。该地址是秘密，永远不会写入日志。
+
+settings-dyndns-address = 地址
+
+settings-dyndns-every = 每隔
+
+settings-dyndns-last = 上次更新 { $when }：{ $answer }
+
+settings-dyndns-off = 已关闭 — 未设置地址，不发送任何内容。
+
+settings-dyndns-waiting = 等待第一次应答…
+
+settings-dyndns-token-note = 地址中含有你的令牌：它以明文保存在 net.json 中，并会发送到连接本站的每个画面。它永远不会写入日志。
+
+publicsdr-mine = 我的
+
+publicsdr-mine-hint = 仅显示你加星的接收机
+
+publicsdr-mine-empty = 还没有加星——点行上的 ☆ 即可把该接收机保存在这里。
+
+publicsdr-star-receiver = 将此接收机保存在“我的”中
+
+publicsdr-unstar-receiver = 从“我的”中移除此接收机
+
+
+sstv-sync-pulses = 同步脉冲
+
+sstv-sync-pulses-hint = 接收机在没有 VIS 头的情况下开始绘制图像前所需的同步脉冲数：多一些在噪声大的频段更稳，少一些能更早接上正在进行的发射。锁定总是从最新的脉冲开始，因此图像不会因此丢失。
+
+sstv-not-saved-not-a-picture = 上一幅图像未保存：那是噪声，不是图像。
+
+sstv-not-saved-no-picture = 上一幅图像未保存：信号中没有图像。
+
+sstv-save-all = 全部保存
+
+sstv-save-all-hint = 保存每一幅完成的图像，包括接收机判定为噪声的那些。默认关闭：过滤器让安静频段的噪声不进画廊，而这是为一幅几乎收不到的图像留的后路。
+
+settings-controls-cw-keeps-the-fine-grid = 在 CW 下无论此项如何设置，点击都按 10 Hz 栅格对齐：CW 信号比面向语音的栅格所能命中的范围更窄。
+
+settings-servers-decoded-cw-udp = 通过 UDP 发送 CW 解码文本
+
+settings-servers-decoded-cw-udp-host-hint = 127.0.0.1 发送给本机上的程序；局域网地址或本子网的广播地址发送给其他机器。
+
+settings-servers-decoded-cw-udp-port-hint = 默认为 9998

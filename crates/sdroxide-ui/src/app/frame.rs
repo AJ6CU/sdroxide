@@ -4079,6 +4079,12 @@ impl SdroxideApp {
                     self.error = Some(e);
                     self.arm_retry(now);
                 }
+                // The engine's dynamic-DNS worker answered. Only the provider's
+                // word arrives — the address carries the token and stays in the
+                // engine — and this is what the settings row shows.
+                RadioEvent::DyndnsAnswer { at_unix, ok, text } => {
+                    self.dyndns_last = Some((at_unix, ok, text));
+                }
                 RadioEvent::LoginTest(r) => {
                     self.login_tests_pending.remove(&r.target);
                     self.push_net_log(format!(
@@ -4465,6 +4471,15 @@ impl SdroxideApp {
                             self.sstv.preview_dirty = true;
                         }
                         self.sstv.last_detected = s.detected;
+                    }
+                    // **A frame the save gate dropped is wiped, not left on
+                    // screen.** Its lines were drawn as they arrived, and on a
+                    // quiet frequency nothing follows for hours: a panel holding
+                    // a frame of noise reads as a receiver that has hung (bench,
+                    // 2026-11-04). The panel says why instead.
+                    if s.not_saved.is_some() && !s.rx_active {
+                        self.sstv.rx_color = None;
+                        self.sstv.rx_tex = None;
                     }
                     self.sstv.status = s;
                 }

@@ -1008,6 +1008,16 @@ pub struct UiSettings {
     #[serde(default)]
     pub band_dock_open: std::collections::BTreeMap<u32, bool>,
 
+    /// Public SDRs the operator starred, by **address**.
+    ///
+    /// The address and not the name: it is what a connection is made to and
+    /// what the two directories agree on, while the name and the place are the
+    /// operator's own words and change. A starred receiver that is renamed
+    /// keeps its star; one whose address changes is a different receiver and
+    /// does not.
+    #[serde(default)]
+    pub public_sdr_favourites: Vec<String>,
+
     /// GUI repaint + spectrum frame rate, in frames per second.
     pub frame_rate_fps: u32,
     /// How fast the waterfall scrolls.
@@ -1864,6 +1874,7 @@ impl Default for UiSettings {
     fn default() -> Self {
         UiSettings {
             band_dock_open: Default::default(),
+            public_sdr_favourites: Vec::new(),
             // Off: the dial is what every other radio shows, and an operator
             // who has not asked for the change should not find their readout
             // reading differently from the rig beside it.

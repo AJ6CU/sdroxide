@@ -31,6 +31,10 @@ rayon = "1"
 crossbeam-channel.workspace = true
 rtrb.workspace = true
 sdroxide-config = { path = "../sdroxide-config" }
+# The dynamic-DNS update is one HTTPS GET, with the same client the spot feeds
+# use rather than a second one.
+ureq = "3.4"
+
 sdroxide-digi = { path = "../sdroxide-digi" }
 sdroxide-kiss = { path = "../sdroxide-kiss" }
 sdroxide-ax25 = { path = "../sdroxide-ax25" }

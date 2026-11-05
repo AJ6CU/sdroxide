@@ -539,14 +539,25 @@ pub struct WefaxRx {
     /// Sample-clock trim in parts per million. Positive stretches the line,
     /// which corrects an image slanting to the left.
     slant_ppm: f64,
-    /// Auto-slant: the pulse position and phasing-line index the drift is
-    /// measured from. A pulse a few lines later that has moved names the slant,
-    /// and the trim is corrected once rather than per line. `None` while the
-    /// phasing signal has not shown a clear pulse yet.
-    slant_anchor: Option<(f64, u32)>,
-    /// Phasing lines seen so far, to index [`Self::slant_anchor`] without
-    /// trusting `phase_samples` (the line length changes as the trim does).
+    /// Auto-slant: a least-squares fit of the phasing pulse's position against
+    /// the phasing-line index. The pulse sits at the same place in every
+    /// phasing line, so the slope of that fit *is* the line-clock error — and
+    /// a fit over the whole phasing signal is a far steadier number than the
+    /// walk between two lines twenty apart.
+    slant_fit: SlantFit,
+    /// Phasing lines seen so far, to index the fit without trusting
+    /// `phase_samples` (the line length changes as the trim does).
     phasing_lines: u32,
+    /// The correction that put the trim where it is, in parts per million, and
+    /// the number of phasing lines the fit behind it covered. Zero lines means
+    /// no correction was ever applied and the trim is the operator's own.
+    ///
+    /// Kept because the trim is otherwise invisible: a page that leaned and a
+    /// page that was corrected to the same tilt look identical in the picture,
+    /// and the two floors (25 ppm from twenty lines, 10 from fifty) mean the
+    /// difference between "it acted" and "it never had enough signal to act" is
+    /// a number nobody could see. Reported with each page (#444).
+    last_slant: (f64, u32),
 
     phase: Phase,
     /// Demodulated brightness of the line being built, one entry per input
@@ -576,6 +587,19 @@ pub struct WefaxRx {
     had_content: bool,
     blank_run: u32,
     blank_gap: u32,
+    /// Seconds the subcarrier has been absent, in the tone windows that measure
+    /// its share of the band. A page whose carrier is gone is over: between two
+    /// transmissions a station is silent for minutes, and a page that runs
+    /// through that gap draws noise.
+    carrier_gone_s: f64,
+    /// The subcarrier band's mean power as it has been, which the drop is
+    /// measured against. Only ever follows a window that is *not* far below it,
+    /// so a gap cannot walk the reference down into the noise it is being
+    /// measured against.
+    carrier_ref: f32,
+    /// The last window's power against that reference, for the log: 1.0 is a
+    /// carrier where it has been, 0.01 is one twenty decibels down.
+    carrier_ratio: f32,
 
     start_det: ToneDetect,
     stop_det: ToneDetect,
@@ -658,9 +682,26 @@ const STOP_MISS_TOL: u32 = 2;
 /// after chart content, before it is ended. Stations keep a white carrier up
 /// after a chart; if the stop tone was missed it is the only way out of the
 /// picture, and it would otherwise hide every later start tone.
-const BLANK_END_S: f64 = 60.0;
+///
+/// **Two minutes, not one.** A chart's own footer is very nearly white — the
+/// wind-scale box of a GYA chart ran a minute and a half of near-white before
+/// the transmission ended — and a minute closed the page in the middle of it
+/// (bench, 2026-11-03). The stop tone ends a page long before this; this rule
+/// is the fallback for a station that keeps a carrier up instead, and being
+/// slow costs a listener nothing.
+const BLANK_END_S: f64 = 120.0;
 /// Brightness a line's mean must reach to count as blank (white carrier).
 const BLANK_MEAN: f32 = 0.9;
+/// Brightness below which a sample is **ink** rather than white paper.
+const INK_LEVEL: f32 = 0.25;
+/// How many ink samples a line needs before it counts as content.
+///
+/// One is too few: a noisy white carrier throws the odd dark speckle and those
+/// must not keep a page open for ever. Two is enough to catch what a chart
+/// actually puts in its own whitespace — the ruled border of a scale box, a
+/// caption — because a vertical rule runs through *every* line of the block it
+/// encloses (bench, 2026-11-03).
+const INK_SAMPLES: usize = 2;
 /// Non-blank lines in a row (fading) that restart the blank count.
 const BLANK_GAP_LINES: u32 = 6;
 /// How far a measured crossing rate may be from the nominal one, as a fraction.
@@ -775,15 +816,85 @@ const PHASING_SIGNAL_S: f64 = 30.0;
 /// length rejects it. That is [`phasing_skew_strict`]'s job; this only keeps a
 /// passing shape from cutting the page on a line or two of it.
 const REPHASE_LINES: u32 = 8;
+/// Least-squares sums of a phasing pulse's position against its line index:
+/// `n`, `Σi`, `Σp`, `Σip` and `Σi²`.
+///
+/// The slope is the line-clock error in samples per line. Accumulated rather
+/// than stored, because a page reads a line every half second for as long as
+/// the phasing lasts and the whole fit is five numbers.
+#[derive(Clone, Copy, Default)]
+struct SlantFit {
+    n: f64,
+    sx: f64,
+    sy: f64,
+    sxy: f64,
+    sxx: f64,
+}
+
+impl SlantFit {
+    fn add(&mut self, i: f64, p: f64) {
+        self.n += 1.0;
+        self.sx += i;
+        self.sy += p;
+        self.sxy += i * p;
+        self.sxx += i * i;
+    }
+
+    /// Samples of walk per line, once there are enough lines to say.
+    fn slope(&self, need: u32) -> Option<f64> {
+        if self.n < f64::from(need) {
+            return None;
+        }
+        let den = self.n * self.sxx - self.sx * self.sx;
+        if den.abs() < f64::EPSILON {
+            return None;
+        }
+        Some((self.n * self.sxy - self.sx * self.sy) / den)
+    }
+}
+
+/// Seconds without the subcarrier that end a page.
+///
+/// Long enough to ride a deep fade on a night path — a chart that ends early
+/// because the band dropped for a minute is the complaint #426 was — and short
+/// enough to cut the silence between two transmissions, which is minutes.
+const CARRIER_GONE_S: f64 = 90.0;
+/// How far the subcarrier band's **power** must fall below where it has been,
+/// as a fraction, before the carrier counts as gone: 10 dB.
+///
+/// The first attempt tested the subcarrier band's *share* of the audio — what
+/// the tone detectors use — and the bench threw it out: over a real gap every
+/// one of 1687 windows still read "in band", because a receiver's audio is
+/// already band-limited and noise fills the share. What collapses when a
+/// station goes off is the power in that band, by tens of dB.
+const CARRIER_DROP: f32 = 0.1;
+/// Time constant of the reference that drop is measured against, in seconds:
+/// long enough to ride a chart's own modulation, short enough to settle within
+/// a page.
+const CARRIER_REF_S: f32 = 20.0;
 /// Phasing lines the auto-slant measures the drift over. Twenty is ten seconds
 /// at 120 LPM, well inside the thirty-second phasing signal, and long enough
 /// that a few parts-per-million of line-clock error move the pulse several
 /// samples — which is what makes the slant measurable at all.
 const SLANT_PROBE_LINES: u32 = 20;
-/// The smallest drift the auto-slant will act on, in parts per million. Below
-/// this the picture's own edge-wander swamps the measurement, and "correcting"
-/// it would only add a wobble the operator never asked for.
-const SLANT_MIN_PPM: f64 = 25.0;
+/// The smallest drift the auto-slant will act on once the whole phasing signal
+/// has been fitted, in parts per million.
+///
+/// A chart of DWD on 3855 (bench, 2026-11-03 14:07) came out with its frame
+/// border walking 51 px to the right over 1354 lines: twenty-one parts per
+/// million, under the twenty-five a twenty-line measurement can act on, so
+/// nothing was applied and the page leaned. Fitting the whole signal brings the
+/// measurement's own noise down to a couple of parts per million, and this is
+/// the floor that then becomes useful.
+const SLANT_MIN_PPM: f64 = 10.0;
+/// The smallest drift the auto-slant will act on from a short fit, in parts per
+/// million. Below this the pulse's own edge-wander swamps the measurement, and
+/// "correcting" it would only add a wobble the operator never asked for.
+const SLANT_COARSE_MIN_PPM: f64 = 25.0;
+/// Phasing lines the fit must cover before a correction under
+/// [`SLANT_COARSE_MIN_PPM`] is believed. The phasing signal is thirty seconds —
+/// sixty lines at 120 LPM, and the lock takes five — so this is most of it.
+const SLANT_FINE_LINES: u32 = 50;
 /// The largest line-clock error the auto-slant will believe, in parts per
 /// million.
 ///
@@ -834,8 +945,9 @@ impl WefaxRx {
             auto_start: true,
             auto_stop: true,
             slant_ppm: 0.0,
-            slant_anchor: None,
+            slant_fit: SlantFit::default(),
             phasing_lines: 0,
+            last_slant: (0.0, 0),
             phase: Phase::Idle,
             line_buf: Vec::new(),
             line_start: 0.0,
@@ -852,6 +964,9 @@ impl WefaxRx {
             stop_miss: 0,
             had_content: false,
             blank_run: 0,
+            carrier_gone_s: 0.0,
+            carrier_ref: 0.0,
+            carrier_ratio: 1.0,
             blank_gap: 0,
             start_ioc: Ioc::default(),
             audio_tone: AudioToneDetect::new(rate),
@@ -918,6 +1033,20 @@ impl WefaxRx {
 
     pub fn slant_ppm(&self) -> f32 {
         self.slant_ppm as f32
+    }
+
+    /// The correction that put [`Self::slant_ppm`] where it is: the parts per
+    /// million applied, and the phasing lines the fit behind it covered. Zero
+    /// lines means nothing was applied.
+    pub fn slant_correction(&self) -> (f32, u32) {
+        (self.last_slant.0 as f32, self.last_slant.1)
+    }
+
+    /// The subcarrier band's power against where it has been: 1.0 is a carrier
+    /// at the level it has held, 0.01 is one twenty decibels down. What the
+    /// carrier-gone rule reads, and what the log quotes while a page runs on.
+    pub fn carrier_ratio(&self) -> f32 {
+        self.carrier_ratio
     }
 
     /// The operator's receive sensitivity, `-5..=+5`; see [`WefaxRx::sens_k`].
@@ -1047,7 +1176,7 @@ impl WefaxRx {
         self.line_start = self.sample_idx as f64;
         self.line_no = 0;
         self.phase_samples = 0;
-        self.slant_anchor = None;
+        self.slant_fit = SlantFit::default();
         self.phasing_lines = 0;
         self.auto_begun = auto;
         self.phasing_stack.reset();
@@ -1059,6 +1188,9 @@ impl WefaxRx {
         self.rephase_lines = 0;
         self.had_content = false;
         self.blank_run = 0;
+        self.carrier_gone_s = 0.0;
+        self.carrier_ref = 0.0;
+        self.carrier_ratio = 1.0;
         self.blank_gap = 0;
         self.start_det.reset();
         self.start_run = 0;
@@ -1364,42 +1496,49 @@ impl WefaxRx {
     /// number, and it costs nothing real: the next chart's phasing is minutes
     /// away, never seconds.
     /// Measure the line clock's drift over the phasing signal and correct the
-    /// slant once, from the pulse's movement across [`SLANT_PROBE_LINES`] lines.
+    /// slant from the pulse's movement across it.
     ///
     /// The pulse sits at the same place in every phasing line; if the line clock
     /// is a little long or short it walks a few samples per line, and that walk
-    /// *is* the slant. Measured rather than per line so a weak line's edge-wander
-    /// does not turn into a wobble, and only when the drift is large enough to
-    /// mean something ([`SLANT_MIN_PPM`]).
+    /// *is* the slant. Fitted over every phasing line seen rather than measured
+    /// between two of them, so a weak line's edge-wander averages out instead of
+    /// turning into a wobble — and so a slant too small for a twenty-line
+    /// measurement to name is still corrected once the whole signal has been
+    /// read (see [`SLANT_FINE_LINES`]).
     fn probe_slant(&mut self, line: &[f32]) {
         let Some(pos) = phasing_skew_strict(line) else { return };
         self.phasing_lines += 1;
-        let pos = pos as f64;
-        let i = self.phasing_lines;
-        let Some((p0, i0)) = self.slant_anchor else {
-            self.slant_anchor = Some((pos, i));
-            return;
-        };
-        let di = (i - i0) as f64;
-        if di < f64::from(SLANT_PROBE_LINES) {
-            return;
-        }
+        self.slant_fit.add(f64::from(self.phasing_lines), f64::from(pos));
+        let Some(slope) = self.slant_fit.slope(SLANT_PROBE_LINES) else { return };
         // Pulse movement in samples per line, as a fraction of the nominal
         // line: a clock that is too long walks the pulse backwards, and that is
         // exactly the amount the trim must come down by.
         let nominal = self.rate * self.lpm.line_secs();
-        let ppm = (pos - p0) / di / nominal * 1e6;
-        if (SLANT_MIN_PPM..=SLANT_MAX_PPM).contains(&ppm.abs()) {
+        let ppm = slope / nominal * 1e6;
+        // Small corrections need more evidence than large ones: over twenty
+        // lines the fit's own noise is several parts per million, over the
+        // whole signal it is a couple. Acting on the noise is worse than
+        // leaving the picture as it is.
+        let floor = if self.slant_fit.n >= f64::from(SLANT_FINE_LINES) {
+            SLANT_MIN_PPM
+        } else {
+            SLANT_COARSE_MIN_PPM
+        };
+        if (floor..=SLANT_MAX_PPM).contains(&ppm.abs()) {
             // Clamped as well as filtered: a handful of small mis-measures in a
             // row must not walk the clock away from the signal either.
+            self.last_slant = (ppm, self.slant_fit.n as u32);
             self.slant_ppm = (self.slant_ppm + ppm).clamp(-SLANT_MAX_PPM, SLANT_MAX_PPM);
+            // The clock has just moved, so every walk measured so far was
+            // measured against the old one: the next window starts here.
+            self.slant_fit = SlantFit::default();
+            self.phasing_lines = 0;
         } else if ppm.abs() > SLANT_MAX_PPM {
-            // Not drift: re-take the baseline from this line rather than keep
-            // measuring the same mistake against a stale anchor.
-            self.slant_anchor = Some((pos, i));
-            return;
+            // Not drift: re-take the baseline rather than keep measuring the
+            // same mistake against a stale one.
+            self.slant_fit = SlantFit::default();
+            self.phasing_lines = 0;
         }
-        self.slant_anchor = None;
     }
 
     fn note_phasing_line(&mut self, line: &[f32]) -> bool {
@@ -1440,7 +1579,15 @@ impl WefaxRx {
         // white it reads as white, but one that has drifted (or a station on a
         // slightly different frequency) is steady at some other brightness.
         let std = (line.iter().map(|l| (l - mean) * (l - mean)).sum::<f32>() / n).sqrt();
-        let blank = mean >= BLANK_MEAN || (std <= FLAT_STD && mean >= FLAT_MEAN);
+        // **White paper is not blank if it has ink on it.** A chart's footer is
+        // very nearly white — mean well over BLANK_MEAN — with only the ruled
+        // border of a scale box drawn across it, and the mean alone read that
+        // as the end of the page: the chart was closed a minute early, mid-box
+        // (bench, 2026-11-03, GYA 4608 kHz). A white carrier has no ink in it
+        // at all, which is exactly the difference.
+        let ink = line.iter().filter(|l| **l < INK_LEVEL).count();
+        let blank = ink < INK_SAMPLES
+            && (mean >= BLANK_MEAN || (std <= FLAT_STD && mean >= FLAT_MEAN));
         if blank {
             self.blank_gap = 0;
             self.blank_run += 1;
@@ -1468,9 +1615,48 @@ impl WefaxRx {
                 // Same two conditions as a start signal: it has to be the
                 // subcarrier swinging, not a plain audio tone or a steady
                 // carrier that the discriminator reads as noise.
-                let in_band = self.band_sub >= self.band_raw * self.subcarrier_share();
+                // Silence is not a carrier either: with no energy in the
+                // window the share test would say "in band" about nothing.
+                let in_band =
+                    self.band_raw > 0.0 && self.band_sub >= self.band_raw * self.subcarrier_share();
+                // Taken before the band counters are cleared for the next
+                // window: this is the power the carrier rule is measured on.
+                let power = self.band_sub / (self.rate * TONE_WINDOW_S) as f32;
                 self.band_raw = 0.0;
                 self.band_sub = 0.0;
+                // **The carrier went away.** A white line is not this: a
+                // chart's footer is white with the carrier still there, which
+                // is why that rule needs no ink (#426) — but noise has ink, so
+                // a page that runs into the gap between transmissions passes
+                // the blank test. The subcarrier's own share of the band is the
+                // honest test, and a minute and a half of its absence is a gap
+                // between transmissions, not a fade.
+                // **The carrier went away**, and the measure is the
+                // subcarrier band's **power** against what it has been for the
+                // last twenty seconds — not its share of the audio. `in_band`
+                // above is the share, and the bench showed a real gap reading
+                // "in band" in every one of 1687 windows: a receiver's audio is
+                // already band-limited, so noise fills the share. A station
+                // that goes off drops tens of dB in that band, and that shows.
+                if self.carrier_ref <= 0.0 {
+                    self.carrier_ref = power;
+                }
+                self.carrier_ratio =
+                    if self.carrier_ref > 0.0 { power / self.carrier_ref } else { 1.0 };
+                if self.carrier_ratio < CARRIER_DROP {
+                    self.carrier_gone_s += TONE_WINDOW_S;
+                    if self.carrier_gone_s >= CARRIER_GONE_S {
+                        self.finish(false, out);
+                        return;
+                    }
+                } else {
+                    self.carrier_gone_s = 0.0;
+                    // Follow the level — but only from a window that is not far
+                    // below it, or a gap would drag the reference down to the
+                    // noise it is supposed to be measured against.
+                    let k = (TONE_WINDOW_S as f32 / CARRIER_REF_S).clamp(0.0, 1.0);
+                    self.carrier_ref += k * (power - self.carrier_ref);
+                }
                 if in_band
                     && self.stop_det.swing
                     && (alt_hz - STOP_TONE_HZ).abs() <= STOP_TONE_HZ * self.tone_tol()
@@ -1518,9 +1704,9 @@ impl WefaxRx {
                     self.calibrate(&line, &line_hz);
                     self.line_start += f64::from(mean);
                     // The line clock has just been re-aligned to the pulse, so
-                    // the pulse position's baseline moved: the auto-slant's
-                    // anchor has to restart from here.
-                    self.slant_anchor = None;
+                    // the pulse position's baseline moved: the auto-slant's fit
+                    // has to restart from here.
+                    self.slant_fit = SlantFit::default();
                     self.phasing_lines = 0;
                     self.phasing_stack.reset();
                     self.phase = Phase::Image;
@@ -1921,13 +2107,22 @@ mod tests {
     /// pulse sits at the end of each of *these* lines, so against the nominal
     /// line clock it walks right by that fraction of a line per line.
     fn phasing_slanted(lpm: Lpm, count: usize, slant_ppm: f64) -> Vec<f32> {
-        let per = (RATE * lpm.line_secs()) as usize;
-        let slanted = (per as f64 * (1.0 + slant_ppm * 1e-6)).round() as usize;
-        let pulse = (slanted as f64 * 0.05) as usize;
+        let per = RATE * lpm.line_secs();
+        let slanted = per * (1.0 + slant_ppm * 1e-6);
+        let pulse = (slanted * 0.05) as usize;
+        // The fractional part of the line length **accumulates**: a clock that
+        // is twenty-one parts per million long is 0.126 samples longer per line,
+        // and rounding each line on its own would make that zero. A sound card's
+        // crystal does not round.
         let mut levels = Vec::new();
+        let mut at = 0.0f64;
+        let mut cut = 0usize;
         for _ in 0..count {
-            levels.extend(std::iter::repeat_n(0.0f32, slanted - pulse));
+            at += slanted;
+            let end = at.round() as usize;
+            levels.extend(std::iter::repeat_n(0.0f32, end - cut - pulse));
             levels.extend(std::iter::repeat_n(1.0f32, pulse));
+            cut = end;
         }
         modulate(&levels)
     }
@@ -2006,7 +2201,31 @@ mod tests {
                 slant,
                 rx.slant_ppm()
             );
+            // ...and the page can say what the trim was fitted over, which is
+            // what a report of a leaning chart needs to be diagnosed from.
+            let (ppm, lines) = rx.slant_correction();
+            assert!((ppm as f64 - slant).abs() < 80.0, "reported {ppm} for {slant}");
+            assert!(lines > 0, "the correction must say how many lines it used");
         }
+    }
+
+    /// **A slant too small for a short measurement is still corrected.**
+    ///
+    /// The DWD chart of 2026-11-03 14:07 came out with its frame border walking
+    /// 51 px to the right over 1354 lines: twenty-one parts per million. That is
+    /// under the twenty-five a twenty-line measurement can name, so nothing was
+    /// applied and the page leaned. The phasing signal is sixty lines long, and
+    /// a fit over the whole of it names a slant this small.
+    #[test]
+    fn a_small_slant_is_corrected_over_the_whole_phasing_signal() {
+        let mut rx = WefaxRx::new(RATE);
+        rx.start_manual(&mut Vec::new());
+        let _ = drain(&mut rx, &phasing_slanted(Lpm::L120, 60, 21.0));
+        assert!(
+            (rx.slant_ppm() as f64 - 21.0).abs() < 6.0,
+            "21 ppm was left at {}",
+            rx.slant_ppm()
+        );
     }
 
     /// **A noisy phasing signal still cuts the page.**
@@ -2393,6 +2612,72 @@ mod tests {
         ev.iter().filter(|e| matches!(e, WefaxEvent::Complete { .. })).count()
     }
 
+    /// **A page ends when the carrier goes away.**
+    ///
+    /// DWD on 3855 is off the air for minutes between transmissions, and the
+    /// schedule chart of 2026-11-03 14:25 UTC ran through that gap: 2286 lines
+    /// for a twelve-minute chart, the last six and a half minutes of it noise,
+    /// ending only when the next transmission's tone arrived. Neither the stop
+    /// tone nor the rephase signal can end such a page — neither is being sent —
+    /// and the blank-carrier rule cannot either, because noise has ink in it.
+    #[test]
+    fn a_page_ends_when_the_carrier_goes_away() {
+        let lpm = Lpm::L120;
+        let mut rx = WefaxRx::new(RATE);
+        rx.set_lpm(lpm);
+        let mut ev = auto_page(&mut rx, lpm, 70);
+        assert!(rx.receiving(), "the page should be under way: {ev:?}");
+
+        // The transmitter goes off: noise, and no 1900 Hz subcarrier in it.
+        let mut gone = vec![0.0f32; (RATE * 100.0) as usize];
+        noise(&mut gone, 0.5);
+        ev.extend(drain(&mut rx, &gone));
+
+        let done = ev.iter().filter(|e| matches!(e, WefaxEvent::Complete { .. })).count();
+        assert!(
+            done >= 1,
+            "the page ran on through a hundred seconds of no carrier ({done} complete)"
+        );
+    }
+
+    /// A near-white stretch **with a ruled border across it** is content, not
+    /// the end of the page.
+    ///
+    /// This is the bench case of 2026-11-03: GYA on 4608 kHz ended its chart a
+    /// minute early, cutting the wind-scale box in half, because the footer is
+    /// very nearly white and its mean alone read as a white carrier. The
+    /// difference is that the footer has ink in it — the box's own vertical
+    /// rules, one in every line of the block — and a carrier has none.
+    fn white_carrier_with_a_rule(secs: f64, samples_per_line: f64) -> Vec<f32> {
+        let n = (RATE * secs) as usize;
+        let step = samples_per_line.round().max(1.0) as usize;
+        let levels: Vec<f32> = (0..n)
+            .map(|i| if i % step < 30 { 0.0 } else { 1.0 })
+            .collect();
+        modulate(&levels)
+    }
+
+    #[test]
+    fn a_nearly_white_footer_with_a_ruled_border_does_not_end_the_page() {
+        let lpm = Lpm::L120;
+        let mut rx = WefaxRx::new(RATE);
+        rx.set_lpm(lpm);
+        let mut ev = auto_page(&mut rx, lpm, 20);
+        assert!(rx.receiving(), "the page should be under way: {ev:?}");
+        let spl = rx.samples_per_line();
+        ev.extend(drain(&mut rx, &white_carrier_with_a_rule(150.0, spl)));
+        assert_eq!(
+            completes(&ev),
+            0,
+            "a ruled footer is ink, not a white carrier: {ev:?}"
+        );
+        assert!(rx.receiving(), "the page is still open");
+
+        // ...and the carrier that really follows it still closes it.
+        ev.extend(drain(&mut rx, &white_carrier(130.0, false)));
+        assert_eq!(completes(&ev), 1, "a clean white carrier ends the page: {ev:?}");
+    }
+
     /// The station keeps a white carrier up after the chart and the stop tone
     /// was missed: the page ends, and the next start tone begins another.
     #[test]
@@ -2402,7 +2687,7 @@ mod tests {
         rx.set_lpm(lpm);
         let mut ev = auto_page(&mut rx, lpm, 20);
         assert!(rx.receiving(), "the page should be under way: {ev:?}");
-        ev.extend(drain(&mut rx, &white_carrier(70.0, false)));
+        ev.extend(drain(&mut rx, &white_carrier(130.0, false)));
         assert_eq!(completes(&ev), 1, "the white carrier should end the page: {ev:?}");
         assert!(!rx.receiving());
         let next = auto_page(&mut rx, lpm, 6);
@@ -2416,7 +2701,7 @@ mod tests {
         let mut rx = WefaxRx::new(RATE);
         rx.set_lpm(lpm);
         let mut ev = auto_page(&mut rx, lpm, 20);
-        ev.extend(drain(&mut rx, &white_carrier(90.0, true)));
+        ev.extend(drain(&mut rx, &white_carrier(150.0, true)));
         assert_eq!(completes(&ev), 1, "the fading carrier should end the page: {ev:?}");
     }
 
@@ -3368,7 +3653,7 @@ mod carrier_tests {
         let mut rx = WefaxRx::new(RATE);
         let mut audio = fm(&phasing(12, 0.95, 0.05, 1.0), BLACK_HZ, WHITE_HZ);
         audio.extend(fm(&ramp(30), BLACK_HZ, WHITE_HZ));
-        audio.extend(carrier(2100.0, 80.0));
+        audio.extend(carrier(2100.0, 150.0));
         let ev = feed(&mut rx, &audio);
         assert!(
             ev.iter().any(|e| matches!(e, WefaxEvent::Complete { by_tone: false, .. })),

@@ -243,7 +243,7 @@ pub use memory::{BandStackEntry, MemoryChannel, MemoryFolder, MemorySort, RttyMe
 pub use meters::{Meters, OVERLOAD_FRACTION, PsMeter, TxMeters, TxTelemetry};
 pub use mode::{
     AgcMode, CustomFilterPreset, Mode, NrEngine, NrLevel, NrStrength, SlotTiming,
-    filter_presets_with,
+    filter_memory_slot, filter_presets_with,
 };
 pub use morse_trainer::{ADVANCE_RUN, Answer, KOCH_ORDER, MorseProgress, START_UNLOCKED};
 pub use netcfg::{
@@ -347,7 +347,7 @@ pub use speech::{
     Verbosity,
 };
 pub use spot::{Spot, SpotKind, spots_to_kml};
-pub use sstv::{SstvMode, SstvStatus};
+pub use sstv::{SstvDrop, SstvMode, SstvStatus};
 pub use state::{
     CESSB_MAX_DB, MAX_DECIMATION, MAX_MANUAL_GAIN_DB, MIN_DECIMATED_RATE_HZ, OffsetState,
     RadioState, RxId, RxState, SQUELCH_CLOSED_DB, SQUELCH_OPEN_DB, SWR_LIMIT_MAX, SWR_LIMIT_MIN,
@@ -391,7 +391,7 @@ pub use winlink::{
     DEFAULT_CMS_ADDRESS, MAIL_PAGE_MAX, MailAttachment, MailDraft, MailEntry, MailFolder,
     MailListing, MailMessage, WinlinkConfig, WinlinkGateway, WinlinkLane, WinlinkStatus,
 };
-pub use wsjtx::{N1mmConfig, WsjtxConfig};
+pub use wsjtx::{CwTextConfig, N1mmConfig, WsjtxConfig};
 pub use wspr::{
     BURST_S as WSPR_BURST_S, DEFAULT_TX_HZ as WSPR_DEFAULT_TX_HZ, POWERS_DBM as WSPR_POWERS_DBM,
     POWERS_W as WSPR_POWERS_W, SLOT_S as WSPR_SLOT_S, TX_OFFSET_S as WSPR_TX_OFFSET_S,

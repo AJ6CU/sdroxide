@@ -7895,16 +7895,10 @@ impl RadioConfig {
 
     /// The S-meter calibration in dB, to be added to
     /// [`Meters::s_dbm`](crate::Meters::s_dbm): [`Self::smeter_cal`] S-units of
-    /// [`DB_PER_S_UNIT`] each. A value outside the offered range (a
-    /// hand-edited `radio.json`, or one written when the setting was in dB,
-    /// e.g. `-15`) is not a calibration the operator chose: it counts as 0
-    /// rather than being clamped to ±5 S, which would pin the needle.
+    /// [`DB_PER_S_UNIT`] each, held to the offered range so a hand-edited
+    /// `radio.json` cannot throw the needle off its scale.
     pub fn smeter_cal_db(&self) -> f32 {
-        if (SMETER_CAL_MIN..=SMETER_CAL_MAX).contains(&self.smeter_cal) {
-            f32::from(self.smeter_cal) * DB_PER_S_UNIT
-        } else {
-            0.0
-        }
+        f32::from(self.smeter_cal.clamp(SMETER_CAL_MIN, SMETER_CAL_MAX)) * DB_PER_S_UNIT
     }
 
     /// The converter offset that is actually in force at `dial_hz`, to be
@@ -9441,8 +9435,8 @@ mod tests {
         assert_eq!(cal(-2), -12.0);
         assert_eq!(cal(5), 30.0);
         assert_eq!(cal(-5), -30.0);
-        assert_eq!(cal(40), 0.0, "out of range is no calibration, not +5");
-        assert_eq!(cal(-15), 0.0, "an old dB-era -15 must not pin the needle at -5 S");
+        assert_eq!(cal(40), 30.0, "a hand-edited file cannot go past +5");
+        assert_eq!(cal(-40), -30.0, "nor past -5");
     }
 
     fn tx_list(bands: &[Band], confirmed: bool) -> RadioConfig {

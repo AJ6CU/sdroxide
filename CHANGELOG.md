@@ -15,7 +15,6 @@ and the [README](https://github.com/madmedicnl/sdroxide-brown#readme).
 
 ### Fixed
 - **S-meter of a paired radio** — with a transceiver (e.g. a Wolf on CAT + sound card) whose panadapter is another radio (e.g. an RSP1), the transceiver's S-meter or its audio level was shown; it is only the transmitter and cannot be right. The S-meter is now the attached receiver's, measured on its I/Q and calibrated with S-Meter calib.
-- **S-meter stuck low after the S-Meter calib change** — a `radio.json` still holding an old dB-era value (e.g. `-15`) was clamped to −5 S (−30 dB) and pinned the needle. A value outside −5…+5 now counts as 0, and Settings → Radio shows and saves 0.
 - **`sdroxide-config` builds again** — the Aoki index error message passed a redundant `url, e` to `format!` ("redundant argument"), which stopped `sdroxide-ui` from compiling.
 - **Choppy audio and a stuttering waterfall in the web client on a healthy network** — the server now sets `TCP_NODELAY` on every connection, serves audio ahead of the other lanes, gives the audio lane twice the room, and logs when it has to drop audio packets. Plan and the native/Linux checks still owed: `docs/WEB-LAG-PLAN.md`.
 - **MEMORIES panel no longer overflows on the right** — the name and folder boxes now take what their button leaves ("Nouveau dossier" was wider than the 100 pt the row assumed, so the window grew and the button stuck out). The colour swatch wears a chip frame and PST is chip height. Opens at 510 pt; still resizable and detachable.
