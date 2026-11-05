@@ -2,10 +2,10 @@
 
 Working queue. Rules in AGENTS.md. Last updated 2026-11-04.
 
-State: `main` at crate 2.2.0, PROTO_VERSION 265 (0x55). Latest release
-v2.2.3.6.2_brown (pre-release). Open PRs: 2 (#470 ours — the WEFAX page says what
-the trim was fitted over; #467 F4NRM's HPSDR Protocol 2 diversity, conflicting
-and his to rebase). Open issues: 5 (re-measured 2026-11-05).
+State: `main` at crate 2.2.0, PROTO_VERSION 267 (0x57). Latest release
+v2.2.3.6.4_brown (pre-release). Open PRs: 1 (#477 one clear chip in SSTV, held
+for F4NRM because the SSTV panel is his). Open issues: 8 (re-measured
+2026-11-05).
 
 ## Task tracking rules
 
@@ -22,6 +22,8 @@ and his to rebase). Open issues: 5 (re-measured 2026-11-05).
 
 ## Now
 
+- **PR #472 — a band-plan sub-segment carries the operator's own name** (taken from upstream `1de045ea`, owned by Claude): `"label": "CH19"` in `bandplan.json` names a block on the waterfall strip instead of the kind's short label, which still sets the colour; blank counts as none and postcard always sees the field. Wire 264 → **265** (`0x55`), postcard round trip with a labelled segment, red verified by dropping the label on the way in. The strip itself was not rendered here — no display — so the drawing side is worth one look on screen.
+- **PR #473 — Memories CLEAR deletes every channel at once** (taken from upstream `ffdefc70`, owned by Claude): a CLEAR chip that arms on the first click and clears on the second, folders stay, three messages in eleven languages and a manual paragraph. Wire 265 → **266** (`0x56`), so it is built on #472 and merges after it. Red verified with the engine's arm made a no-op.
 - **PR #470 — a WEFAX page says what the line-clock trim was fitted over** (added by madmedicnl, owned by Claude): the trim is invisible in the picture, and the auto-slant's two floors (25 ppm from twenty phasing lines, 10 from fifty) mean "it acted" and "it never had enough signal" differ by a number nothing shows. The bench's five charts left −11.5 to +12.3 ppm over, just above the fine floor, so the fit was probably starved — but the operator's own charts come in straight, so the number has to come from DK8JV and F4NRM. Asked on #444 for one evening's charts plus the log lines.
 - **#421 NB with Kiwi** (added by trainrhd-del, owned by Claude) — the promised count is in (**#456** merged): while the blanker is on it writes one line a second with how many samples it zeroed, how close the strongest came to the 5× bar, and the device rate. A simulation of the shipped rule says the dependence is real and in our code — at the same impulse strength 20.3 kHz blanked 14 of 258 bursts where 768 kHz blanked 207 of 297 — but the reporter's own log lines decide the fix, and he gets them in the next pre-release.
 - **#388 HL2 datagram loss** (added by DK8JV, owned by Claude) — the reporter confirms it gone in v2.2.3.6.1; today's WEFAX findings are posted there. Closes when his fax test comes back clean.
@@ -36,6 +38,9 @@ Everything else that was in this list has been merged or closed since — see **
 
 - #388 HL2 (HPSDR P1) datagram loss every ~2 s (added by DK8JV, owned by Roy).
 - #340 S-meter (added by F4NRM, owned by Roy) — measurement disagrees with the report; the measurement is the first suspect.
+- #476 HL2 ADC overload warning shown while automatic overload protection is on (added by DK8JV, owned by Claude) — a nuisance, not a fault: the message is useful only when protection is off. Small, ours.
+- #469 rigctl SPECTRUM_SPAN mapped to the decimation (added by AJ6CU, owned by Claude) — a feature request, and a good fit: `SetDecimation` already rounds and clamps.
+- #468 CW receive peak filter (APF), and Hamlib's APF over rigctl (added by AJ6CU, owned by Claude) — a feature request; the peaking biquad already exists in `sdroxide-dsp/src/eq.rs`.
 - #331 Long labels in the tab strip (added by F4NRM, owned by Roy).
 - #264 Public SDR stuck fetching the list in a web session (added by F4NRM, owned by Roy).
 - #263 Zoom (added by F4NRM, owned by Roy).
@@ -75,6 +80,8 @@ Everything else that was in this list has been merged or closed since — see **
 
 ## Parked
 
+- **CB channels as band-plan segments** (added by Claude, decided by the operator 2026-11-05) — no. The waterfall already names the CB channels, so a second set on the band-plan strip would say the same thing twice. The `label` field from #472 stays available for anyone who wants their own names in `bandplan.json`; we ship no labelled 11 m table.
+
 - **USB sound card lost mid-session** (added by the operator at the bench, owned by Claude) — parked 2026-11-04 at his word: his station is an exotic setup, and this is not the moment. What the bench did show, so it is not lost: pulling the card while the app runs kills the **radio audio input** and the **audio output** (`22:52:53`, both logged as "device is not available"), and neither is reopened — only the microphone is, and on his bench that stream never broke (#461, merged, is right for a microphone and does nothing for this). The app then hung at `shutdown: joining the engine thread`, with the engine still alive but starved (0.65 rows/s). Unpark with a thread stack from a reproducible run: `gdb -p PID -batch -ex "thread apply all bt"`. Order matters: a reopen loop against a device ALSA has wedged may be what hangs, so understand the hang first.
 
 - **SSTV's remaining modes** (Martin 3/4, Robot 12/24 and the B/W variants, Pasokon P3/P5/P7) — parked 2026-11-04 at the operator's word. We decode 16 modes and report the rest by name when a header arrives. The blocker is the spec, not the work: slowrx's table gives Martin M4 a 226.8 ms line with **two** rows and a 0.2288 ms pixel, which needs 1920 pixels in one line — 439 ms of scan in 226.8 ms, and the 0.1144 ms pixel that would fix it is 8.7 kHz of brightness, past what a 3 kHz SSTV channel carries. Robot 12 B/W has the same shape of contradiction (two rows per line, one luma scan). The published *picture durations* are consistent (M3 57 s, M4 29 s, Robot 24 36 s, Robot 12 18 s), so the line times are right and the structure around them is what does not reconcile. What would unblock it: KB4YZ's "SSTV modes – line timing" or N7CXI's proposal, or one 20–30 s recording per mode to check the timing against real audio.
@@ -95,6 +102,8 @@ Everything else that was in this list has been merged or closed since — see **
 
 ## Recently done
 
+- 2026-11-05 — #475 and #478 merged by the operator's word (owned by Claude): the VDL2 lines in the decoded-text feed (a new `kind`, no new socket, no wire change) and the HL2 overload warning standing down while the protection loop works, with the loop's floor still reported. Main after both: gate silent, the VDL2 take-test and the overload-warning test green.
+- 2026-11-05 — #472 and #473 merged by the operator's word (owned by Claude): band-plan sub-segments carry the operator's own label (wire 265 → **266**), and Memories CLEAR deletes every channel at once behind a two-click chip (266 → **267**). Main after both: gate silent, `sdroxide-proto` 23, the band-plan label test, `memory_import` and `i18n` 7 all green.
 - 2026-11-05 — #453 and #464 merged by F4NRM (AJ6CU's): decoded CW over UDP with its `WsjtxConfig` round-trip test, the 9998 note, the manual and three messages in all eleven languages, `PROTO_VERSION` 263 → **264**; and the clamp half of the rigctl CW follow-ups on top of our #463. The two upstream wire commits are unblocked by it and take 265 and 266.
 - 2026-11-04 — Seven of ours merged by F4NRM in one evening (added by madmedicnl, owned by Claude): **#456** the noise blanker's count, **#458** the CW click grid capped at the fine one in CW (plus the removal of the `cw click:` diagnostic that #450's `git add -A` had swept into `main`), **#459** a PTT release ends a keyed over (upstream `5f9f1aa3`), **#460** public SDRs fall back only to tight fuzzy matches (upstream `ee5b7fbf`), **#461** a microphone whose stream the host broke is reopened (upstream `eeb6bfc5`; **still needs the bench** — card out and in mid-session), **#462** the TODO mirror, and **#463** a CW width over rigctl centred on the sidetone (F4NRM's review point on #451). Main after all seven: gate silent, `sdroxide-rigctld` 50, `nb` 5, `fuzzy` 13, `publicsdr` 10, `cw_ptt` 2, `local_controller` 1.
 - 2026-11-04 — #465 merged (AJ6CU's own): the `\dump_state` level-mask test, which was F4NRM's second point on #452.
