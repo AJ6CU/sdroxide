@@ -9201,3 +9201,9 @@ sonde-export-kml-hover = Salva il volo di questa sonda come traccia KML (Google 
 sonde-export-csv-hover = Salva il volo di questa sonda come tabella CSV per un foglio di calcolo: ora, latitudine, longitudine, quota in metri
 
 sonde-export-none = Nessuna posizione ancora conservata per questa sonda.
+
+sonde-col-temp = Temp.
+
+sonde-col-humidity = UmiditÃ 
+
+sonde-col-pressure = Pressione

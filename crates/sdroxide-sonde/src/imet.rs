@@ -21,7 +21,7 @@
 use sdroxide_dsp::Complex32;
 use xng_mode_sonde::GpsPos;
 
-use crate::model::{ModelDecoder, SondeFix, SondeModel};
+use crate::model::{Meteo, ModelDecoder, SondeFix, SondeModel};
 
 const BAUD: f64 = 1200.0;
 const MARK_HZ: f64 = 1200.0;
@@ -62,6 +62,7 @@ fn le_f32(b: &[u8], o: usize) -> f32 {
 struct Assembler {
     frame: u32,
     battery_v: Option<f32>,
+    meteo: Meteo,
 }
 
 impl Assembler {
@@ -72,6 +73,16 @@ impl Assembler {
                 self.frame = u32::from(u16::from_le_bytes([p[2], p[3]]));
                 let v = f32::from(p[0x0B]) / 10.0;
                 self.battery_v = (v > 0.0).then_some(v);
+                // Pressure in 1/100 hPa (24 bits), temperature and humidity in
+                // 1/100 °C and 1/100 % (16 bits each).
+                let press = u32::from(p[4]) | u32::from(p[5]) << 8 | u32::from(p[6]) << 16;
+                let temp = i16::from_le_bytes([p[7], p[8]]);
+                let hum = u16::from_le_bytes([p[9], p[10]]);
+                self.meteo = Meteo {
+                    temp_c: Some(f32::from(temp) / 100.0),
+                    humidity_pct: Some(f32::from(hum) / 100.0),
+                    pressure_hpa: Some(press as f32 / 100.0),
+                };
             }
             2 | 5 => {
                 let lat = f64::from(le_f32(p, 2));
@@ -93,6 +104,7 @@ impl Assembler {
                     serial: String::new(),
                     frame_num: self.frame,
                     battery_v: self.battery_v,
+                    meteo: self.meteo,
                     pos: ok.then(|| GpsPos {
                         lat,
                         lon,
@@ -326,6 +338,10 @@ mod tests {
         let f = &out[0];
         assert_eq!(f.frame_num, 75);
         assert!((f.battery_v.unwrap() - 6.0).abs() < 1e-6);
+        let m = f.meteo;
+        assert!((m.temp_c.unwrap() - 26.43).abs() < 1e-4);
+        assert!((m.humidity_pct.unwrap() - 39.10).abs() < 1e-4);
+        assert!((m.pressure_hpa.unwrap() - 1001.87).abs() < 1e-3);
         let p = f.pos.as_ref().unwrap();
         assert!((p.lat + 44.1951).abs() < 1e-3 && (p.lon - 124.1006).abs() < 1e-3);
         assert!((p.alt_m - 10_374.0).abs() < 1e-6);

@@ -79,6 +79,18 @@ fn real_f32_sample_decodes() {
     if let Some(p) = all.last().and_then(|f| f.pos.as_ref()) {
         println!("last:  lat {:.5} lon {:.5} alt {:.1} m", p.lat, p.lon, p.alt_m);
     }
+    if std::env::var("SONDE_VERBOSE").is_ok() {
+        for f in &all {
+            let m = f.meteo;
+            println!("[{:3}] T {:?} RH {:?} P {:?}", f.frame_num, m.temp_c, m.humidity_pct, m.pressure_hpa);
+        }
+    }
+    println!(
+        "{} with a position, {} with a temperature, {} with a humidity",
+        all.iter().filter(|f| f.pos.is_some()).count(),
+        all.iter().filter(|f| f.meteo.temp_c.is_some()).count(),
+        all.iter().filter(|f| f.meteo.humidity_pct.is_some()).count()
+    );
     println!("{} with a position", all.iter().filter(|f| f.pos.is_some()).count());
     assert!(!all.is_empty());
 }

@@ -92,6 +92,12 @@ pub struct SondeTrack {
     pub num_sv: Option<u8>,
     /// Battery voltage, V.
     pub battery_v: Option<f32>,
+    /// Air temperature, °C, when the model sends it and it is calibrated.
+    pub temp_c: Option<f32>,
+    /// Relative humidity, %.
+    pub humidity_pct: Option<f32>,
+    /// Air pressure, hPa.
+    pub pressure_hpa: Option<f32>,
     /// Unix second the latest frame was heard.
     pub last_unix: i64,
     /// Frames decoded from this sonde since it was first heard.
@@ -152,6 +158,9 @@ mod tests {
                 climb_ms: Some(5.2),
                 num_sv: Some(9),
                 battery_v: Some(2.7),
+                temp_c: None,
+                humidity_pct: None,
+                pressure_hpa: None,
                 last_unix: 1,
                 frames: 3,
                 track: vec![SondePoint { lat: 48.8, lon: 2.3, alt_m: 1234.5, unix: 1 }],

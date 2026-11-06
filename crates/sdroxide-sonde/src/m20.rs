@@ -21,7 +21,7 @@ use xng_mode_sonde::GpsPos;
 
 use crate::fsk::{FskSlicer, Threshold};
 use crate::m10::checksum;
-use crate::model::{ModelDecoder, SondeFix, SondeModel};
+use crate::model::{Meteo, ModelDecoder, SondeFix, SondeModel};
 
 const BAUD: f64 = 9600.0;
 /// 32 raw symbols that end the preamble; the frame follows at once.
@@ -157,6 +157,7 @@ fn decode_frame(bits: &[u8]) -> Option<SondeFix> {
         serial: String::new(),
         frame_num: u32::from(b[0x15]),
         battery_v: None,
+        meteo: Meteo::default(),
         pos: position(&b),
     })
 }

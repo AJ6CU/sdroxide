@@ -139,7 +139,7 @@ impl SdroxideApp {
         );
 
         if !sondes.is_empty() {
-            egui::Grid::new("sonde_table").striped(true).num_columns(7).show(ui, |ui| {
+            egui::Grid::new("sonde_table").striped(true).num_columns(10).show(ui, |ui| {
                 for head in [
                     tr!("sonde-col-serial"),
                     tr!("sonde-col-alt"),
@@ -147,6 +147,9 @@ impl SdroxideApp {
                     tr!("sonde-col-speed"),
                     tr!("sonde-channel"),
                     tr!("sonde-col-battery"),
+                    tr!("sonde-col-temp"),
+                    tr!("sonde-col-humidity"),
+                    tr!("sonde-col-pressure"),
                     tr!("sonde-col-heard"),
                 ] {
                     ui.label(RichText::new(head).size(10.0).weak());
@@ -173,6 +176,9 @@ impl SdroxideApp {
                     cell(ui, s.speed_ms.map_or("—".into(), |v| format!("{:.0} km/h", v * 3.6)));
                     cell(ui, format!("{:.3} MHz", s.freq_hz / 1e6));
                     cell(ui, s.battery_v.map_or("—".into(), |v| format!("{v:.1} V")));
+                    cell(ui, s.temp_c.map_or("—".into(), |t| format!("{t:.1} °C")));
+                    cell(ui, s.humidity_pct.map_or("—".into(), |h| format!("{h:.0} %")));
+                    cell(ui, s.pressure_hpa.map_or("—".into(), |p| format!("{p:.0} hPa")));
                     cell(ui, age(now - s.last_unix));
                     ui.end_row();
                 }

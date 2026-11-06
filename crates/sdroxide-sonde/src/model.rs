@@ -8,6 +8,7 @@
 //! calibration…) stays inside the model's own module.
 
 use sdroxide_dsp::Complex32;
+use crate::rs41meteo::Calibration;
 use xng_mode_sonde::{Decoded, GpsPos, SondeChannelDecoder};
 
 /// A radiosonde model this build can decode.
@@ -57,6 +58,17 @@ pub struct SondeFix {
     pub battery_v: Option<f32>,
     /// GPS position and velocity, when the frame carries a valid one.
     pub pos: Option<GpsPos>,
+    /// What the sonde measured about the air, when the model sends it.
+    pub meteo: Meteo,
+}
+
+/// The air the sonde flies through. Each value is `None` until the model has
+/// sent enough to give a calibrated reading.
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct Meteo {
+    pub temp_c: Option<f32>,
+    pub humidity_pct: Option<f32>,
+    pub pressure_hpa: Option<f32>,
 }
 
 impl From<&Decoded> for SondeFix {
@@ -67,6 +79,7 @@ impl From<&Decoded> for SondeFix {
             frame_num: u32::from(d.frame.frame_num),
             battery_v: Some(d.frame.battery_v),
             pos: d.frame.gps_pos.clone(),
+            meteo: Meteo::default(),
         }
     }
 }
@@ -80,17 +93,41 @@ pub trait ModelDecoder: Send {
     fn level_dbfs(&self) -> f32;
 }
 
-impl ModelDecoder for SondeChannelDecoder {
+/// The RS41 decoder of `xng-mode-sonde`, with the calibration table that
+/// turns its raw counts into temperature and humidity.
+pub struct Rs41Decoder {
+    inner: SondeChannelDecoder,
+    cal: Calibration,
+}
+
+impl Rs41Decoder {
+    pub fn new(input_rate: f64, freq_offset_hz: f64) -> Result<Self, String> {
+        Ok(Self { inner: SondeChannelDecoder::new(input_rate, freq_offset_hz)?, cal: Calibration::default() })
+    }
+}
+
+impl ModelDecoder for Rs41Decoder {
     fn model(&self) -> SondeModel {
         SondeModel::Rs41
     }
 
     fn process(&mut self, input: &[Complex32]) -> Vec<SondeFix> {
-        SondeChannelDecoder::process(self, input).iter().map(SondeFix::from).collect()
+        self.inner
+            .process(input)
+            .iter()
+            .map(|d| {
+                let mut fix = SondeFix::from(d);
+                if let Some(ptu) = &d.frame.ptu {
+                    self.cal.feed(&d.frame.serial, ptu);
+                    fix.meteo = self.cal.meteo(ptu);
+                }
+                fix
+            })
+            .collect()
     }
 
     fn level_dbfs(&self) -> f32 {
-        SondeChannelDecoder::level_dbfs(self)
+        self.inner.level_dbfs()
     }
 }
 
@@ -101,7 +138,7 @@ pub fn decoder_for(
     freq_offset_hz: f64,
 ) -> Result<Box<dyn ModelDecoder>, String> {
     match model {
-        SondeModel::Rs41 => Ok(Box::new(SondeChannelDecoder::new(input_rate, freq_offset_hz)?)),
+        SondeModel::Rs41 => Ok(Box::new(Rs41Decoder::new(input_rate, freq_offset_hz)?)),
         SondeModel::Dfm => Ok(Box::new(crate::dfm::DfmDecoder::new(input_rate, freq_offset_hz)?)),
         SondeModel::M10 => Ok(Box::new(crate::m10::M10Decoder::new(input_rate, freq_offset_hz)?)),
         SondeModel::M20 => Ok(Box::new(crate::m20::M20Decoder::new(input_rate, freq_offset_hz)?)),
