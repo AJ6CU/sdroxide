@@ -105,6 +105,12 @@ const fn parse_font(src: &str) -> [[u16; COLS]; GLYPHS] {
         }
         g += 1;
     }
+    // fldigi's Q sends the tip of its tail on the cell's very bottom row
+    // (bit 0). The art format reserves that row for padding, so the dot cannot
+    // be drawn there and would otherwise be lost: our Q went out as an O, and
+    // "CQ CQ DE …" was copied as "CO CO DE …" (#444). Set it here so the font
+    // is the reference bit for bit.
+    font[0x51 - 0x20][4] |= 1;
     font
 }
 
@@ -1188,6 +1194,27 @@ mod tests {
     fn unrenderable_characters_are_blank_cells() {
         for c in ['\u{0}', '\n', '\t', '\u{7f}', '\u{e9}', '\u{4e2d}'] {
             assert_eq!(glyph(c), [0; COLS], "{c:?}");
+        }
+    }
+
+    /// What we transmit must be fldigi's glyph bit for bit, or a station
+    /// running fldigi copies a different letter than the one we sent. The
+    /// letters and digits are the set that matters on the air; Q was the one
+    /// that did not match, its tail tip lost because the art format reserves
+    /// the cell's bottom row (#444).
+    #[test]
+    fn letters_and_digits_match_fldigi_bit_for_bit() {
+        use crate::hell_ref_font::REF_GLYPHS;
+        for cp in 0x30u8..=0x5a {
+            let c = cp as char;
+            let ours = glyph(c);
+            let reference = REF_GLYPHS[cp as usize - 0x20];
+            for col in 0..5 {
+                assert_eq!(
+                    ours[col + 1], reference[col],
+                    "{c:?} column {col} differs from fldigi's glyph"
+                );
+            }
         }
     }
 }
