@@ -9201,3 +9201,15 @@ sonde-col-pressure = BasÄ±nÃ§
 
 settings-net-broadcast-import-needs-station = İçe aktarmak için bir istasyona bağlanın.
 
+
+sonde-online-why-signin = İstasyon önce oturum açılmasını istiyor.
+
+sonde-online-why-busy = İstasyon SondeHub'ı zaten izin verilen sıklıkta sorguluyor. Bir dakika sonra yeniden deneyin.
+
+sonde-online-why-upstream = İstasyon SondeHub'a ulaşamadı.
+
+sonde-online-why-unreadable = Yanıt bir sonda listesi değildi.
+
+sonde-online-why-no-station = Sorulacak istasyon yok ve bu sayfa SondeHub'a kendisi ulaşamıyor.
+
+sonde-online-why-http = Yanıt: HTTP { $n }.

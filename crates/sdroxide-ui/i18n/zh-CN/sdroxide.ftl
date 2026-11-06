@@ -9139,3 +9139,15 @@ sonde-col-pressure = æ°”åŽ‹
 
 settings-net-broadcast-import-needs-station = 连接到电台以导入。
 
+
+sonde-online-why-signin = 站点要求先登录。
+
+sonde-online-why-busy = 站点已按允许的最高频率查询 SondeHub，请一分钟后再试。
+
+sonde-online-why-upstream = 站点无法连接 SondeHub。
+
+sonde-online-why-unreadable = 返回的内容不是探空仪列表。
+
+sonde-online-why-no-station = 没有可查询的站点，且本页面无法直接访问 SondeHub。
+
+sonde-online-why-http = 响应：HTTP { $n }。

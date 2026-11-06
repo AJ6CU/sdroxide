@@ -9149,3 +9149,15 @@ sonde-col-pressure = æ°—åœ§
 
 settings-net-broadcast-import-needs-station = インポートするには局に接続してください。
 
+
+sonde-online-why-signin = ステーションが先にサインインを求めています。
+
+sonde-online-why-busy = ステーションは許される上限の頻度で SondeHub に問い合わせています。1 分後にもう一度お試しください。
+
+sonde-online-why-upstream = ステーションは SondeHub に接続できませんでした。
+
+sonde-online-why-unreadable = 応答がゾンデの一覧ではありませんでした。
+
+sonde-online-why-no-station = 問い合わせ先のステーションがなく、このページから直接 SondeHub には接続できません。
+
+sonde-online-why-http = 応答: HTTP { $n }。

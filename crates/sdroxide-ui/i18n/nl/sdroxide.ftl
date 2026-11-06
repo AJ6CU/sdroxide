@@ -9209,3 +9209,15 @@ sonde-col-pressure = Druk
 
 settings-net-broadcast-import-needs-station = Verbind met een station om te importeren.
 
+
+sonde-online-why-signin = Het station vraagt eerst om aanmelden.
+
+sonde-online-why-busy = Het station vraagt SondeHub al zo vaak als is toegestaan. Probeer het over een minuut opnieuw.
+
+sonde-online-why-upstream = Het station kon SondeHub niet bereiken.
+
+sonde-online-why-unreadable = Het antwoord was geen lijst met sondes.
+
+sonde-online-why-no-station = Geen station om te vragen, en deze pagina kan SondeHub zelf niet bereiken.
+
+sonde-online-why-http = Antwoord: HTTP { $n }.

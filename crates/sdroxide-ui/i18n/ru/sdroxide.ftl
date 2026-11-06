@@ -9216,3 +9216,15 @@ sonde-col-pressure = Ð”Ð°Ð²Ð».
 
 settings-net-broadcast-import-needs-station = Подключитесь к станции для импорта.
 
+
+sonde-online-why-signin = Станция требует сначала войти в систему.
+
+sonde-online-why-busy = Станция уже опрашивает SondeHub так часто, как разрешено. Повторите через минуту.
+
+sonde-online-why-upstream = Станция не смогла связаться с SondeHub.
+
+sonde-online-why-unreadable = Ответ не был списком зондов.
+
+sonde-online-why-no-station = Нет станции для запроса, а эта страница сама не может связаться с SondeHub.
+
+sonde-online-why-http = Ответ: HTTP { $n }.

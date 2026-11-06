@@ -9199,3 +9199,15 @@ sonde-col-pressure = Druck
 
 settings-net-broadcast-import-needs-station = Mit einer Station verbinden, um zu importieren.
 
+
+sonde-online-why-signin = Die Station verlangt zuerst eine Anmeldung.
+
+sonde-online-why-busy = Die Station fragt SondeHub bereits so oft ab, wie sie darf. Versuchen Sie es in einer Minute erneut.
+
+sonde-online-why-upstream = Die Station konnte SondeHub nicht erreichen.
+
+sonde-online-why-unreadable = Die Antwort war keine Sondenliste.
+
+sonde-online-why-no-station = Keine Station zum Fragen, und diese Seite erreicht SondeHub nicht selbst.
+
+sonde-online-why-http = Antwort: HTTP { $n }.

@@ -101,7 +101,8 @@ impl SdroxideApp {
 
         // Sondes other stations hear: read-only, off until the operator says.
         let home = self.hfdl_home_for_maps();
-        self.sonde_online.tick(ui.ctx(), home, now);
+        let peer = self.ctrl.peer_url();
+        self.sonde_online.tick(ui.ctx(), home, now, peer.as_deref());
         ui.horizontal_wrapped(|ui| {
             ui.checkbox(
                 &mut self.sonde_online.on,
@@ -117,7 +118,10 @@ impl SdroxideApp {
                     Some(tr!("sonde-online-count", n = self.sonde_online.sondes.len()))
                 };
                 if let Some(n) = note {
-                    ui.label(RichText::new(n).size(10.5).weak());
+                    let r = ui.label(RichText::new(n).size(10.5).weak());
+                    if let (true, Some(why)) = (self.sonde_online.failed, &self.sonde_online.why) {
+                        r.on_hover_text(why.text());
+                    }
                 }
             }
         });
