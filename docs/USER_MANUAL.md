@@ -6272,7 +6272,9 @@ sample window. Each sonde heard is drawn on the map with the track it has flown 
 while it climbs, a triangle once it falls under its parachute, a cross when it has been
 silent for a minute — and a table under the map gives its serial, altitude, climb rate,
 speed, channel, battery and when it was last heard. Hover a mark for the position and the
-distance from your station. The decoder needs a wideband source (a receiver that sends
+distance from your station. *Export flight* under the table saves the selected sonde's
+flight (the newest if none is selected) as a **KML** track for Google Earth or a **CSV**
+table for a spreadsheet. The decoder needs a wideband source (a receiver that sends
 I/Q); it is off for a rig that only hands over audio. The setting is kept in `sonde.json`.
 
 **Export.** The **CSV** and **JSON** buttons under *Export* in the AIRCRAFT window

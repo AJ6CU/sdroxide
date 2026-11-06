@@ -9113,3 +9113,11 @@ sonde-col-speed = 速度
 sonde-col-battery = 電池
 
 sonde-col-heard = 受信
+
+sonde-export = 飛行をエクスポート
+
+sonde-export-kml-hover = このゾンデの飛行を KML トラック（Google Earth）として保存：時刻、経度、緯度、高度（メートル）
+
+sonde-export-csv-hover = このゾンデの飛行を表計算用の CSV として保存：時刻、緯度、経度、高度（メートル）
+
+sonde-export-none = このゾンデの位置はまだ保存されていません。

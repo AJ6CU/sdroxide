@@ -9180,3 +9180,11 @@ sonde-col-speed = Скорость
 sonde-col-battery = Батарея
 
 sonde-col-heard = Принято
+
+sonde-export = Экспорт полёта
+
+sonde-export-kml-hover = Сохранить полёт этого зонда как трек KML (Google Earth): время, долгота, широта, высота в метрах
+
+sonde-export-csv-hover = Сохранить полёт этого зонда как таблицу CSV для электронной таблицы: время, широта, долгота, высота в метрах
+
+sonde-export-none = Для этого зонда пока нет сохранённых позиций.

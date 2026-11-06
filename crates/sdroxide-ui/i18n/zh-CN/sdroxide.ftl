@@ -9103,3 +9103,11 @@ sonde-col-speed = 速度
 sonde-col-battery = 电池
 
 sonde-col-heard = 接收
+
+sonde-export = 导出飞行轨迹
+
+sonde-export-kml-hover = 将此探空仪的飞行保存为 KML 轨迹（Google Earth）：时间、经度、纬度、高度（米）
+
+sonde-export-csv-hover = 将此探空仪的飞行保存为可用于电子表格的 CSV：时间、纬度、经度、高度（米）
+
+sonde-export-none = 此探空仪尚无已保存的位置。
