@@ -16,6 +16,7 @@
 use sdroxide_dsp::Complex32;
 use xng_mode_sonde::GpsPos;
 
+use crate::fsk::{FskSlicer, Threshold};
 use crate::model::{ModelDecoder, SondeFix, SondeModel};
 
 const BAUD: f64 = 2500.0;
@@ -169,50 +170,24 @@ struct Frame {
 }
 
 pub struct DfmDecoder {
-    spb: f64,
-    osc: f64,
-    osc_step: f64,
-    prev: Complex32,
-    // Discriminator, low-passed.
-    y: f32,
-    // Slow mean of the discriminator: the slicing threshold.
-    dc: f32,
-    // Bit clock.
-    phase: f64,
-    acc: f32,
-    cnt: u32,
-    last_above: bool,
+    slicer: FskSlicer,
     // Raw bit history, for the two Manchester alignments.
     raw_n: u64,
     last_raw: u8,
     sr: [u32; 2],
     frames: [Option<Frame>; 2],
     asm: Assembler,
-    level: f32,
 }
 
 impl DfmDecoder {
     pub fn new(input_rate: f64, freq_offset_hz: f64) -> Result<Self, String> {
-        if input_rate < 4.0 * BAUD {
-            return Err(format!("input rate {input_rate} too low for DFM"));
-        }
         Ok(Self {
-            spb: input_rate / BAUD,
-            osc: 0.0,
-            osc_step: -2.0 * std::f64::consts::PI * freq_offset_hz / input_rate,
-            prev: Complex32::new(1.0, 0.0),
-            y: 0.0,
-            dc: 0.0,
-            phase: 0.0,
-            acc: 0.0,
-            cnt: 0,
-            last_above: false,
+            slicer: FskSlicer::new(input_rate, freq_offset_hz, BAUD, Threshold::Mean)?,
             raw_n: 0,
             last_raw: 0,
             sr: [0; 2],
             frames: [None, None],
             asm: Assembler::default(),
-            level: -120.0,
         })
     }
 
@@ -272,45 +247,16 @@ impl ModelDecoder for DfmDecoder {
 
     fn process(&mut self, input: &[Complex32]) -> Vec<SondeFix> {
         let mut out = Vec::new();
-        for &x in input {
-            // Mix the channel to baseband.
-            let (s, c) = self.osc.sin_cos();
-            self.osc += self.osc_step;
-            if self.osc > std::f64::consts::TAU {
-                self.osc -= std::f64::consts::TAU;
-            }
-            let z = x * Complex32::new(c as f32, s as f32);
-            self.level += 0.0005 * (10.0 * (z.norm_sqr() + 1e-12).log10() - self.level);
-            // FM discriminator.
-            let d = (z * self.prev.conj()).arg();
-            self.prev = z;
-            self.y += 0.5 * (d - self.y);
-
-            // Bit clock: integrate and dump, nudged by zero crossings.
-            self.acc += self.y;
-            self.cnt += 1;
-            self.phase += 1.0;
-            let above = self.y > self.dc;
-            if above != self.last_above {
-                let err = if self.phase < self.spb / 2.0 { self.phase } else { self.phase - self.spb };
-                self.phase -= 0.08 * err;
-            }
-            self.last_above = above;
-            if self.phase >= self.spb {
-                self.phase -= self.spb;
-                let mean = self.acc / self.cnt.max(1) as f32;
-                self.acc = 0.0;
-                self.cnt = 0;
-                let bit = u8::from(mean > self.dc);
-                self.dc += 0.02 * (mean - self.dc);
-                self.raw_bit(bit, &mut out);
-            }
+        let mut bits = Vec::new();
+        self.slicer.process(input, |b| bits.push(b));
+        for b in bits {
+            self.raw_bit(b, &mut out);
         }
         out
     }
 
     fn level_dbfs(&self) -> f32 {
-        self.level
+        self.slicer.level_dbfs()
     }
 }
 

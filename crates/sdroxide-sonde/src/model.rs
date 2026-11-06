@@ -17,17 +17,20 @@ pub enum SondeModel {
     Rs41,
     /// Graw DFM-06 / DFM-09 / DFM-17.
     Dfm,
+    /// Meteomodem M10.
+    M10,
 }
 
 impl SondeModel {
     /// Every model decoded, in the order a lane tries them.
-    pub const ALL: &'static [SondeModel] = &[SondeModel::Rs41, SondeModel::Dfm];
+    pub const ALL: &'static [SondeModel] = &[SondeModel::Rs41, SondeModel::Dfm, SondeModel::M10];
 
     /// The type as printed in the track table and sent to SondeHub.
     pub fn name(self) -> &'static str {
         match self {
             SondeModel::Rs41 => "RS41",
             SondeModel::Dfm => "DFM",
+            SondeModel::M10 => "M10",
         }
     }
 }
@@ -90,6 +93,7 @@ pub fn decoder_for(
     match model {
         SondeModel::Rs41 => Ok(Box::new(SondeChannelDecoder::new(input_rate, freq_offset_hz)?)),
         SondeModel::Dfm => Ok(Box::new(crate::dfm::DfmDecoder::new(input_rate, freq_offset_hz)?)),
+        SondeModel::M10 => Ok(Box::new(crate::m10::M10Decoder::new(input_rate, freq_offset_hz)?)),
     }
 }
 
