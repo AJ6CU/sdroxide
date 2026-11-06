@@ -47,6 +47,7 @@ fn real_f32_sample_decodes() {
     let model = match std::env::var("SONDE_MODEL").as_deref() {
         Ok("DFM") => SondeModel::Dfm,
         Ok("M10") => SondeModel::M10,
+        Ok("M20") => SondeModel::M20,
         _ => SondeModel::Rs41,
     };
     let rate0 = std::env::var("SONDE_RATE").ok().and_then(|v| v.parse().ok()).unwrap_or(96_000.0);

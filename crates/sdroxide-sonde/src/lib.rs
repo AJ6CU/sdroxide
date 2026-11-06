@@ -13,6 +13,7 @@ pub mod controller;
 pub mod dfm;
 pub mod fsk;
 pub mod m10;
+pub mod m20;
 pub mod model;
 pub mod scan;
 pub mod tracks;
