@@ -544,10 +544,12 @@ const RTL433_FLEX_SEED: &str = "\
 /// what makes the file editable and belong with the type rather than with the
 /// code that moves bytes. See [`sdroxide_types::BandPlan::to_json_document`].
 ///
-/// Called in exactly one place — seeding a file that is not there yet — and it
-/// should stay that way. An existing `bandplan.json` is the operator's
-/// document; nothing in sdroxide rewrites it, so their spacing, their ordering
-/// and anything they added to the `readme` all survive untouched.
+/// Called when seeding a file that is not there yet, and when the operator
+/// deliberately chooses a shipped band plan from Settings → General. Those are
+/// the only two callers, and they should stay the only two: an existing
+/// `bandplan.json` is the operator's document, so it is never rewritten
+/// silently — their spacing, their ordering and anything they added to the
+/// `readme` survive until they themselves pick another plan.
 pub fn save_band_plan(plan: &sdroxide_types::BandPlan) -> Result<(), ConfigError> {
     write_atomic(&config_dir()?, BAND_PLAN_FILE, &plan.to_json_document())
 }

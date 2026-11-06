@@ -9201,3 +9201,12 @@ sonde-col-pressure = PressÃ£o
 
 settings-net-broadcast-import-needs-station = Conecte-se a uma estação para importar.
 
+settings-general-band-plan = Plano de bandas
+
+settings-general-band-plan-built-in = IARU integrado
+
+settings-general-band-plan-germany-nrw = Alemanha (NRW, SWL)
+
+settings-general-band-plan-own = Próprio da estação
+
+settings-general-band-plan-hint = Escolha um plano de bandas incluído. Ele substitui bandplan.json; as tabelas IARU integradas continuam sendo o padrão.
