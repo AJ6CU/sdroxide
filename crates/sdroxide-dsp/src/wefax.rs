@@ -816,6 +816,14 @@ const PHASING_SIGNAL_S: f64 = 30.0;
 /// length rejects it. That is [`phasing_skew_strict`]'s job; this only keeps a
 /// passing shape from cutting the page on a line or two of it.
 const REPHASE_LINES: u32 = 8;
+/// Share of a *mid-picture* line that may be bright outside the phasing pulse
+/// and still count as phasing. A real phasing line is black but for one narrow
+/// pulse; a chart's own thick black bar with white lettering (the water
+/// temperature chart's longitude labels, #444) is the same shape line after
+/// line but carries several bright patches. The run-length test cannot tell
+/// them apart — a graphic fixed in the chart lasts the whole page — so this is
+/// the property that does.
+const REPHASE_BRIGHT_OUTSIDE: f32 = 0.12;
 /// Least-squares sums of a phasing pulse's position against its line index:
 /// `n`, `Σi`, `Σp`, `Σip` and `Σi²`.
 ///
@@ -1995,6 +2003,26 @@ fn pulse_region(line: &[f32], strict: bool) -> Option<PulseRegion> {
         // White for most of the line is a bright picture, not a pulse.
         return None;
     }
+    if strict {
+        // A phasing line is black outside its one pulse. A chart's thick black
+        // bar with white lettering carries several bright patches, and the run
+        // of "same pulse, same place, line after line" cannot reject it — the
+        // graphic is fixed in the chart. The bright area *outside* the pulse
+        // can: a phasing line keeps it near zero, the bar does not (#444).
+        let start = (best.1 + n - before) % n;
+        let bright_outside = line
+            .iter()
+            .enumerate()
+            .filter(|(i, v)| {
+                let off = (*i + n - start) % n;
+                **v > 0.5 && off >= width
+            })
+            .count();
+        if bright_outside as f32 / n as f32 > REPHASE_BRIGHT_OUTSIDE {
+            return None;
+        }
+        return Some(PulseRegion { start, width });
+    }
     Some(PulseRegion { start: (best.1 + n - before) % n, width })
 }
 
@@ -3031,6 +3059,40 @@ mod tests {
         // Degenerate input is refused rather than panicking.
         assert_eq!(phasing_skew(&[]), None);
         assert_eq!(phasing_skew(&[0.0; 8]), None);
+    }
+
+    /// A mid-picture line that is a chart's own thick black bar with white
+    /// lettering must not be read as the next transmission's phasing: the run
+    /// of "same pulse, same place, line after line" fits it exactly, so the
+    /// bright area outside the pulse is what has to tell them apart (#444).
+    #[test]
+    fn a_chart_bar_is_not_read_as_mid_picture_phasing() {
+        let n = 6000;
+        let pulse = n / 20;
+        // A real phasing line: black with one narrow white pulse.
+        let mut phasing = vec![0.0f32; n];
+        for v in phasing.iter_mut().skip(n / 3).take(pulse) {
+            *v = 1.0;
+        }
+        assert!(
+            phasing_skew_strict(&phasing).is_some(),
+            "a real phasing line must still pass the strict test"
+        );
+
+        // The water-temperature chart's black bar: several white patches (the
+        // longitude labels) spread across an almost-black line.
+        let mut bar = vec![0.0f32; n];
+        for k in 0..5 {
+            let at = n / 10 + k * n / 6;
+            for v in bar.iter_mut().skip(at).take(pulse) {
+                *v = 1.0;
+            }
+        }
+        assert_eq!(
+            phasing_skew_strict(&bar),
+            None,
+            "a chart's dark bar with white lettering must not cut the page"
+        );
     }
 
     #[test]
