@@ -64,6 +64,10 @@ pub struct SondePoint {
     pub alt_m: f32,
     /// Unix second the frame was heard.
     pub unix: i64,
+    /// The latest air readings when the point was kept, when the model sends them.
+    pub temp_c: Option<f32>,
+    pub humidity_pct: Option<f32>,
+    pub pressure_hpa: Option<f32>,
 }
 
 /// One radiosonde the decoder has heard: its identity, its latest frame and
@@ -163,7 +167,7 @@ mod tests {
                 pressure_hpa: None,
                 last_unix: 1,
                 frames: 3,
-                track: vec![SondePoint { lat: 48.8, lon: 2.3, alt_m: 1234.5, unix: 1 }],
+                track: vec![SondePoint { lat: 48.8, lon: 2.3, alt_m: 1234.5, unix: 1, temp_c: None, humidity_pct: None, pressure_hpa: None }],
             }],
         };
         let bytes = postcard::to_stdvec(&st).unwrap();
