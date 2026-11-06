@@ -55,7 +55,8 @@ pub enum Why {
     Upstream,
     /// The answer was not a list.
     Unreadable,
-    /// This window has no station and no way out of its own.
+    /// This window has no station and no way out of its own (the browser build).
+    #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
     NoStation,
     /// Any other status.
     Http(u16),
@@ -310,6 +311,7 @@ mod tests {
             speed_ms: None,
             freq_mhz: Some(405.8),
             unix,
+            ..Default::default()
         }
     }
 

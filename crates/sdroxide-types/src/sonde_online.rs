@@ -9,7 +9,11 @@
 pub const RADIUS_M: u32 = 400_000;
 
 /// A sonde as SondeHub last heard it.
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+///
+/// Every field after `unix` is optional and defaults to nothing, so a station
+/// running an older version, whose list lacks them, still reads.
+#[derive(Debug, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
 pub struct OnlineSonde {
     pub serial: String,
     pub model: String,
@@ -23,6 +27,39 @@ pub struct OnlineSonde {
     pub freq_mhz: Option<f64>,
     /// Unix second of its last frame.
     pub unix: i64,
+    pub manufacturer: Option<String>,
+    /// The variant, e.g. "RS41-SG".
+    pub subtype: Option<String>,
+    pub heading_deg: Option<f64>,
+    pub temp_c: Option<f64>,
+    pub humidity_pct: Option<f64>,
+    pub pressure_hpa: Option<f64>,
+    pub battery_v: Option<f64>,
+    pub sats: Option<u32>,
+    pub snr_db: Option<f64>,
+    /// The callsign of the station that heard it, its place and its antenna,
+    /// and the program it ran.
+    pub station: Option<String>,
+    pub station_pos: Option<(f64, f64)>,
+    pub antenna: Option<String>,
+    pub software: Option<String>,
+    /// Unix second SondeHub received that frame.
+    pub received_unix: Option<i64>,
+}
+
+/// A text from the internet, fit to be drawn: control characters out, at most
+/// 64 characters, and nothing if that leaves nothing.
+fn text(v: &serde_json::Value, key: &str) -> Option<String> {
+    let t: String = v.get(key)?.as_str()?.chars().filter(|c| !c.is_control()).take(64).collect();
+    let t = t.trim().to_string();
+    (!t.is_empty()).then_some(t)
+}
+
+/// `"51.0583,-0.1282"` → a place on Earth.
+fn parse_place(s: &str) -> Option<(f64, f64)> {
+    let (a, b) = s.split_once(',')?;
+    let (lat, lon) = (a.trim().parse().ok()?, b.trim().parse().ok()?);
+    place_ok(lat, lon).then_some((lat, lon))
 }
 
 /// The address to ask, the locator rounded to 0.1° so the exact place stays
@@ -83,6 +120,29 @@ pub fn parse(json: &str) -> Vec<OnlineSonde> {
                 speed_ms: v.get("vel_h").and_then(|x| x.as_f64()),
                 freq_mhz: v.get("frequency").and_then(|x| x.as_f64()),
                 unix: parse_time(v.get("datetime")?.as_str()?)?,
+                manufacturer: text(v, "manufacturer"),
+                subtype: text(v, "subtype"),
+                heading_deg: v.get("heading").and_then(|x| x.as_f64()),
+                temp_c: v.get("temp").and_then(|x| x.as_f64()),
+                humidity_pct: v.get("humidity").and_then(|x| x.as_f64()),
+                pressure_hpa: v.get("pressure").and_then(|x| x.as_f64()),
+                battery_v: v.get("batt").and_then(|x| x.as_f64()),
+                sats: v.get("sats").and_then(|x| x.as_u64()).and_then(|n| u32::try_from(n).ok()),
+                snr_db: v.get("snr").and_then(|x| x.as_f64()),
+                station: text(v, "uploader_callsign"),
+                station_pos: v
+                    .get("uploader_position")
+                    .and_then(|p| p.as_str())
+                    .and_then(parse_place),
+                antenna: text(v, "uploader_antenna"),
+                software: text(v, "software_name").map(|n| match text(v, "software_version") {
+                    Some(ver) => format!("{n} {ver}"),
+                    None => n,
+                }),
+                received_unix: v
+                    .get("time_received")
+                    .and_then(|t| t.as_str())
+                    .and_then(parse_time),
             })
         })
         .collect();
@@ -155,6 +215,53 @@ mod tests {
         let u = url(48.8566, 2.3522);
         assert_eq!(u, "https://api.v2.sondehub.org/sondes?lat=48.9&lon=2.4&distance=400000");
         assert!(!u.contains("48.85") && !u.contains("2.352"));
+    }
+
+    /// A real record (a Vaisala RS41 over London), as the API answers it.
+    const FULL: &str = r#"{"Y1432014": {"software_name": "radiosonde_auto_rx",
+        "software_version": "1.8.2", "uploader_callsign": "M6BIK",
+        "uploader_position": "51.0583,-0.1282", "uploader_antenna": "1/4 wave monopole",
+        "time_received": "2026-11-06T14:08:01.176206Z", "datetime": "2026-11-06T14:08:16.999000Z",
+        "manufacturer": "Vaisala", "type": "RS41", "serial": "Y1432014", "subtype": "RS41-SG",
+        "frame": 11922, "lat": 51.53776, "lon": -0.44878, "alt": 589.46337, "temp": 6.2,
+        "humidity": 95.1, "vel_v": -3.90183, "vel_h": 1.88131, "heading": 266.82564,
+        "sats": 9, "batt": 2.7, "frequency": 405.799875, "snr": 6.7}}"#;
+
+    #[test]
+    fn a_full_record_keeps_what_the_card_shows() {
+        let v = parse(FULL);
+        let s = &v[0];
+        assert_eq!(s.manufacturer.as_deref(), Some("Vaisala"));
+        assert_eq!(s.subtype.as_deref(), Some("RS41-SG"));
+        assert_eq!(s.heading_deg, Some(266.82564));
+        assert_eq!((s.temp_c, s.humidity_pct, s.battery_v), (Some(6.2), Some(95.1), Some(2.7)));
+        assert_eq!((s.sats, s.snr_db, s.pressure_hpa), (Some(9), Some(6.7), None));
+        assert_eq!(s.station.as_deref(), Some("M6BIK"));
+        assert_eq!(s.station_pos, Some((51.0583, -0.1282)));
+        assert_eq!(s.antenna.as_deref(), Some("1/4 wave monopole"));
+        assert_eq!(s.software.as_deref(), Some("radiosonde_auto_rx 1.8.2"));
+        // 2026-11-06T14:08:01Z and :16Z (checked with calendar.timegm)
+        assert_eq!(s.received_unix, Some(1_793_974_081));
+        assert_eq!(s.unix, 1_793_974_096);
+    }
+
+    #[test]
+    fn an_old_stations_short_list_still_reads() {
+        let old = r#"[{"serial":"A","model":"RS41","lat":1.0,"lon":2.0,"alt_m":null,
+            "climb_ms":null,"speed_ms":null,"freq_mhz":null,"unix":5}]"#;
+        let v: Vec<OnlineSonde> = serde_json::from_str(old).unwrap();
+        assert_eq!(v[0].serial, "A");
+        assert!(v[0].station.is_none() && v[0].temp_c.is_none());
+    }
+
+    #[test]
+    fn texts_from_the_internet_are_cleaned_before_they_are_drawn() {
+        let j = serde_json::json!({"a": "  ok\u{7}\n ", "b": "x".repeat(200), "c": "\n"});
+        assert_eq!(text(&j, "a").as_deref(), Some("ok"));
+        assert_eq!(text(&j, "b").map(|t| t.len()), Some(64));
+        assert_eq!(text(&j, "c"), None);
+        assert_eq!(parse_place("95,0"), None);
+        assert_eq!(parse_place("junk"), None);
     }
 
     #[test]

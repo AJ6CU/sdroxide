@@ -9228,3 +9228,39 @@ sonde-online-why-unreadable = Ответ не был списком зондов
 sonde-online-why-no-station = Нет станции для запроса, а эта страница сама не может связаться с SondeHub.
 
 sonde-online-why-http = Ответ: HTTP { $n }.
+
+sonde-card-source = Источник
+
+sonde-card-source-radio = Это радио
+
+sonde-card-source-hub = SondeHub (принята другой станцией)
+
+sonde-card-model = Модель
+
+sonde-card-maker = Производитель
+
+sonde-card-variant = Вариант
+
+sonde-card-position = Позиция
+
+sonde-card-from-you = От вас
+
+sonde-card-heading = Курс
+
+sonde-card-satellites = Спутники
+
+sonde-card-snr = Отношение сигнал/шум
+
+sonde-card-station = Принята станцией
+
+sonde-card-station-position = Положение станции
+
+sonde-card-antenna = Антенна
+
+sonde-card-software = Программа
+
+sonde-card-frames = Принято кадров
+
+sonde-card-open = Открыть на { $site }
+
+sonde-card-close = Закрыть

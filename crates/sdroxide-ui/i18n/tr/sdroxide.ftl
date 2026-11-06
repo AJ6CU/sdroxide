@@ -9213,3 +9213,39 @@ sonde-online-why-unreadable = Yanıt bir sonda listesi değildi.
 sonde-online-why-no-station = Sorulacak istasyon yok ve bu sayfa SondeHub'a kendisi ulaşamıyor.
 
 sonde-online-why-http = Yanıt: HTTP { $n }.
+
+sonde-card-source = Kaynak
+
+sonde-card-source-radio = Bu telsiz
+
+sonde-card-source-hub = SondeHub (başka bir istasyon duydu)
+
+sonde-card-model = Model
+
+sonde-card-maker = Üretici
+
+sonde-card-variant = Varyant
+
+sonde-card-position = Konum
+
+sonde-card-from-you = Sizden
+
+sonde-card-heading = Yön
+
+sonde-card-satellites = Uydular
+
+sonde-card-snr = Sinyal/gürültü oranı
+
+sonde-card-station = Dinleyen
+
+sonde-card-station-position = İstasyon konumu
+
+sonde-card-antenna = Anten
+
+sonde-card-software = Yazılım
+
+sonde-card-frames = Alınan çerçeve
+
+sonde-card-open = { $site } sitesinde aç
+
+sonde-card-close = Kapat
