@@ -9164,3 +9164,11 @@ sonde-col-speed = Velocidad
 sonde-col-battery = Batería
 
 sonde-col-heard = Oída
+
+sonde-export = Exportar el vuelo
+
+sonde-export-kml-hover = Guardar el vuelo de esta sonda como pista KML (Google Earth): hora, longitud, latitud, altitud en metros
+
+sonde-export-csv-hover = Guardar el vuelo de esta sonda como tabla CSV para una hoja de cálculo: hora, latitud, longitud, altitud en metros
+
+sonde-export-none = Aún no hay ninguna posición guardada para esta sonda.

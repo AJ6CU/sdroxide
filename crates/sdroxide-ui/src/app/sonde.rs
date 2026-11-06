@@ -144,7 +144,47 @@ impl SdroxideApp {
                     ui.end_row();
                 }
             });
+            self.sonde_export_row(ui, &sondes, now);
         }
+    }
+
+    /// Save the selected sonde's flight (the newest if none is selected) as a
+    /// KML track or a CSV table.
+    fn sonde_export_row(&mut self, ui: &mut egui::Ui, sondes: &[SondeTrack], now: i64) {
+        let target = self
+            .sonde_map
+            .selected
+            .as_deref()
+            .and_then(|sel| sondes.iter().find(|s| s.serial == sel))
+            .or_else(|| sondes.first());
+        let Some(s) = target else { return };
+        ui.horizontal(|ui| {
+            ui.label(RichText::new(tr!("sonde-export")).size(10.5).weak());
+            for (ext, hover) in
+                [("kml", tr!("sonde-export-kml-hover")), ("csv", tr!("sonde-export-csv-hover"))]
+            {
+                let b = ui.small_button(ext.to_ascii_uppercase()).on_hover_text(hover);
+                if !b.clicked() {
+                    continue;
+                }
+                let text = if ext == "kml" {
+                    sdroxide_types::sonde_export::kml(s)
+                } else {
+                    sdroxide_types::sonde_export::csv(s)
+                };
+                self.sonde_map.note = Some(match text {
+                    Some(text) => {
+                        let name = sdroxide_types::sonde_export::file_name(s, now, ext);
+                        crate::download::save(&name, text.as_bytes());
+                        tr!("aircraft-track-kml-saved", name = name)
+                    }
+                    None => tr!("sonde-export-none"),
+                });
+            }
+            if let Some(note) = &self.sonde_map.note {
+                ui.label(RichText::new(note).size(10.5).color(crate::theme::gray(160)));
+            }
+        });
     }
 
     /// The operator's own position, from the grid in the digital-mode setup —

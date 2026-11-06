@@ -9173,3 +9173,11 @@ sonde-col-speed = Snelheid
 sonde-col-battery = Batterij
 
 sonde-col-heard = Ontvangen
+
+sonde-export = Vlucht exporteren
+
+sonde-export-kml-hover = De vlucht van deze sonde opslaan als KML-track (Google Earth): tijd, lengtegraad, breedtegraad, hoogte in meters
+
+sonde-export-csv-hover = De vlucht van deze sonde opslaan als CSV-tabel voor een spreadsheet: tijd, breedtegraad, lengtegraad, hoogte in meters
+
+sonde-export-none = Nog geen positie bewaard voor deze sonde.
