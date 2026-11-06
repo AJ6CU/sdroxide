@@ -53,6 +53,7 @@ fn real_f32_sample_decodes() {
         Ok("LMS6") => SondeModel::Lms6,
         Ok("MTS01") => SondeModel::Mts01,
         Ok("IMET54") => SondeModel::Imet54,
+        Ok("MEISEI") => SondeModel::Meisei,
         Ok("MK2A") => SondeModel::Mk2a,
         _ => SondeModel::Rs41,
     };
