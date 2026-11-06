@@ -21,6 +21,7 @@ for F4NRM because the SSTV panel is his). Open issues: 7 (re-measured
   kept current in the state line.
 
 ## Now
+- **PR #500 — usb audio: silently use a renamed sound card** (added by madmedicnl, owned by Claude): the recurring "renamed by the sound server — Apply to update it" notice is gone; the card is used as-is and its new ALSA name is written back to radio.json. `git revert db07b6b9` takes it back.
 - **PR #499 — usb audio: set the radio sound card mixer level on open** (added by madmedicnl, owned by Claude): default 80% playback/capture so a USB rig (SS9900v) triggers its VOX; adjustable in Settings → Audio. ALSA only, best-effort, no wire change. `git revert dad98a77` takes it back.
 
 - **PR #491 — CW peak filter (APF) on receive, and Hamlib's `APF` over rigctl** (added by AJ6CU, owned by AJ6CU) — #468, design agreed by madmedicnl: the transmit EQ's peaking bell on the receive side, centred on the CW pitch and following it, after the decoder tap and ahead of the AGC, CW only, retuned only when a number changes. `RxState.cw_peak` (on, width 20–200 Hz, lift 1–20 dB), remembered per mode; `Command::SetCwPeak` appended last, wire 268 → **269** (`0x59`), postcard round trip. `U/u APF` is the switch, `L/l APF` the width (0 widest, 1 narrowest), advertised only where the filter runs and refused outside CW. APF chip and popup (greyed, saying why, where the rig supplies the audio), eight messages in eleven languages, manual. One commit: `git revert <sha>` takes it out; at runtime, untick APF.
