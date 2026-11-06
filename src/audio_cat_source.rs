@@ -202,10 +202,13 @@ impl AudioCatSource {
                 // because the stream runs: a rig whose stored name no longer
                 // matches falls back to the default input and looks like a
                 // working radio carrying the wrong signal.
-                let status = s.swap.as_ref().map(|sw| {
+                let status = s.swap.as_ref().and_then(|sw| {
+                    if sw.reason == sdroxide_audio::SwapReason::Renamed {
+                        return None;
+                    }
                     let msg = format!("Radio input: {}", sw.sentence());
                     tracing::warn!("{msg}");
-                    msg
+                    Some(msg)
                 });
                 (Some(s), c, rate, status)
             }
@@ -227,10 +230,13 @@ impl AudioCatSource {
             sdroxide_types::AudioRouting::Both,
         ) {
             Ok((o, p)) => {
-                let status = o.swap.as_ref().map(|sw| {
+                let status = o.swap.as_ref().and_then(|sw| {
+                    if sw.reason == sdroxide_audio::SwapReason::Renamed {
+                        return None;
+                    }
                     let msg = format!("Radio transmit device: {}", sw.sentence());
                     tracing::warn!("{msg}");
-                    msg
+                    Some(msg)
                 });
                 (Some((o, p)), status)
             }
@@ -1149,6 +1155,32 @@ impl IqSource for AudioCatSource {
 
     fn open_status(&self) -> Option<String> {
         self.status.clone()
+    }
+
+    fn renamed_rx(&self) -> Option<String> {
+        self.in_stream
+            .as_ref()
+            .and_then(|s| s.swap.as_ref())
+            .and_then(|sw| {
+                if sw.reason == sdroxide_audio::SwapReason::Renamed {
+                    Some(sw.opened.clone())
+                } else {
+                    None
+                }
+            })
+    }
+
+    fn renamed_tx(&self) -> Option<String> {
+        self.out
+            .as_ref()
+            .and_then(|(o, _)| o.swap.as_ref())
+            .and_then(|sw| {
+                if sw.reason == sdroxide_audio::SwapReason::Renamed {
+                    Some(sw.opened.clone())
+                } else {
+                    None
+                }
+            })
     }
 
     fn needs_reopen(&self) -> bool {
