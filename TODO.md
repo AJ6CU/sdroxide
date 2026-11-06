@@ -129,6 +129,8 @@ Everything else that was in this list has been merged or closed since â€” s
 - AppImage â€” beslissing nodig.
 
 ## Recently done
+- 2026-11-06 — #514 merged (added by madmedicnl, owned by Claude): the Hell strip drew the first transmitted dot at the top, so receive and transmit echo were upside down; it is drawn at the bottom now. `git revert 50476a61`.
+- 2026-11-06 — #512 merged (added by madmedicnl, owned by Claude): our transmitted Q lost its tail tip (the art format reserves the cell's bottom row), so it could copy as O; the bit is set so the font matches fldigi bit for bit. `git revert a97e2ea0`.
 - 2026-11-06 â€” #506 merged (added by madmedicnl, owned by Claude): a chart's thick black bar with white lettering is no longer read as mid-picture phasing, so the water-temperature chart on DWD 3855 stops splitting in two (#444). `git revert 24b993d5` takes it back.
 - 2026-11-06 â€” #501 merged (added by madmedicnl, owned by Claude): the decoded-text-over-UDP address is now persisted when applying WSJT-X settings, so it survives a restart and the feed actually starts. `git revert 20a0edc5` takes it back.
 - 2026-11-06 â€” #500 merged (added by madmedicnl, owned by Claude): usb audio no longer nags "renamed by the sound server â€” Apply to update it"; a card found by stable tokens is used as-is and its new ALSA name is written back to radio.json. `git revert db07b6b9` takes it back.
