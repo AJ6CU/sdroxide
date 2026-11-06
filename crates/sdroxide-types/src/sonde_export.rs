@@ -73,15 +73,20 @@ pub fn csv(s: &SondeTrack) -> Option<String> {
     if s.track.is_empty() {
         return None;
     }
-    let mut out = String::from("time_utc,unix,latitude,longitude,altitude_m\n");
+    let mut out = String::from("time_utc,unix,latitude,longitude,altitude_m,temperature_c,humidity_pct,pressure_hpa\n");
     for p in &s.track {
+        // A reading the sonde did not send is an empty cell.
+        let cell = |v: Option<f32>, digits: usize| v.map_or(String::new(), |v| format!("{v:.digits$}"));
         out.push_str(&format!(
-            "{},{},{:.6},{:.6},{:.1}\n",
+            "{},{},{:.6},{:.6},{:.1},{},{},{}\n",
             iso_utc(p.unix),
             p.unix,
             p.lat,
             p.lon,
-            p.alt_m
+            p.alt_m,
+            cell(p.temp_c, 1),
+            cell(p.humidity_pct, 0),
+            cell(p.pressure_hpa, 1)
         ));
     }
     Some(out)
@@ -113,7 +118,7 @@ mod tests {
             frames: 1,
             track: points
                 .iter()
-                .map(|&(lat, lon, alt_m, unix)| SondePoint { lat, lon, alt_m, unix })
+                .map(|&(lat, lon, alt_m, unix)| SondePoint { lat, lon, alt_m, unix, temp_c: None, humidity_pct: None, pressure_hpa: None })
                 .collect(),
         }
     }
@@ -145,9 +150,19 @@ mod tests {
         let s = sonde(&[(48.5, 2.25, 120.0, 1_762_432_496), (48.6, 2.35, 220.5, 1_762_432_497)]);
         let c = csv(&s).unwrap();
         let lines: Vec<&str> = c.lines().collect();
-        assert_eq!(lines[0], "time_utc,unix,latitude,longitude,altitude_m");
+        assert_eq!(lines[0], "time_utc,unix,latitude,longitude,altitude_m,temperature_c,humidity_pct,pressure_hpa");
         assert_eq!(lines.len(), 3);
-        assert_eq!(lines[1], "2025-11-06T12:34:56Z,1762432496,48.500000,2.250000,120.0");
+        assert_eq!(lines[1], "2025-11-06T12:34:56Z,1762432496,48.500000,2.250000,120.0,,,");
+    }
+
+    #[test]
+    fn the_readings_of_a_point_are_in_the_csv() {
+        let mut s = sonde(&[(48.5, 2.25, 120.0, 1_762_432_496)]);
+        s.track[0].temp_c = Some(-12.34);
+        s.track[0].humidity_pct = Some(57.6);
+        s.track[0].pressure_hpa = Some(812.34);
+        let c = csv(&s).unwrap();
+        assert_eq!(c.lines().nth(1).unwrap(), "2025-11-06T12:34:56Z,1762432496,48.500000,2.250000,120.0,-12.3,58,812.3");
     }
 
     #[test]

@@ -83,7 +83,15 @@ impl TrackBook {
                 if s.track.len() >= SONDE_TRACK_DEPTH {
                     thin(&mut s.track);
                 }
-                s.track.push(SondePoint { lat: p.lat, lon: p.lon, alt_m: p.alt_m as f32, unix });
+                s.track.push(SondePoint {
+                    lat: p.lat,
+                    lon: p.lon,
+                    alt_m: p.alt_m as f32,
+                    unix,
+                    temp_c: s.temp_c,
+                    humidity_pct: s.humidity_pct,
+                    pressure_hpa: s.pressure_hpa,
+                });
             }
         }
         // Most recently heard first.
@@ -219,6 +227,8 @@ mod tests {
         b.push(&frame("A1", 2, 48.0, 2.0, 110.0), 403e6, 11);
         let s = &b.sondes[0];
         assert_eq!((s.temp_c, s.humidity_pct, s.pressure_hpa), (Some(12.5), Some(55.0), Some(980.0)));
+        // The point kept with a frame carries the readings at that time.
+        assert_eq!(s.track.last().unwrap().temp_c, Some(12.5));
         // Nonsense is dropped, the last good value stays.
         let mut g = frame("A1", 3, 48.0, 2.0, 120.0);
         g.meteo = Meteo { temp_c: Some(900.0), humidity_pct: Some(-4.0), pressure_hpa: Some(f32::NAN) };
