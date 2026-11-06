@@ -9236,3 +9236,39 @@ sonde-online-why-unreadable = The answer was not a list of sondes.
 sonde-online-why-no-station = No station to ask, and this page cannot reach SondeHub itself.
 
 sonde-online-why-http = Answer: HTTP { $n }.
+
+sonde-card-source = Source
+
+sonde-card-source-radio = This radio
+
+sonde-card-source-hub = SondeHub (heard by another station)
+
+sonde-card-model = Model
+
+sonde-card-maker = Maker
+
+sonde-card-variant = Variant
+
+sonde-card-position = Position
+
+sonde-card-from-you = From you
+
+sonde-card-heading = Heading
+
+sonde-card-satellites = Satellites
+
+sonde-card-snr = Signal-to-noise
+
+sonde-card-station = Heard by
+
+sonde-card-station-position = Station position
+
+sonde-card-antenna = Antenna
+
+sonde-card-software = Software
+
+sonde-card-frames = Frames heard
+
+sonde-card-open = Open on { $site }
+
+sonde-card-close = Close

@@ -9213,3 +9213,39 @@ sonde-online-why-unreadable = A resposta não era uma lista de sondas.
 sonde-online-why-no-station = Nenhuma estação para consultar, e esta página não alcança o SondeHub sozinha.
 
 sonde-online-why-http = Resposta: HTTP { $n }.
+
+sonde-card-source = Origem
+
+sonde-card-source-radio = Este rádio
+
+sonde-card-source-hub = SondeHub (ouvida por outra estação)
+
+sonde-card-model = Modelo
+
+sonde-card-maker = Fabricante
+
+sonde-card-variant = Variante
+
+sonde-card-position = Posição
+
+sonde-card-from-you = De você
+
+sonde-card-heading = Rumo
+
+sonde-card-satellites = Satélites
+
+sonde-card-snr = Relação sinal/ruído
+
+sonde-card-station = Ouvida por
+
+sonde-card-station-position = Posição da estação
+
+sonde-card-antenna = Antena
+
+sonde-card-software = Software
+
+sonde-card-frames = Quadros recebidos
+
+sonde-card-open = Abrir no { $site }
+
+sonde-card-close = Fechar
