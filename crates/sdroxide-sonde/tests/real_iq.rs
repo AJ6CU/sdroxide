@@ -25,11 +25,63 @@ fn read_wav(path: &str, max_secs: f64) -> (f64, Vec<Complex>) {
     (rate, iq)
 }
 
+/// Raw interleaved float32 I/Q (the projecthorus sample set: 96 kS/s, centred).
+fn read_f32(path: &str, rate: f64, max_secs: f64) -> (f64, Vec<Complex>) {
+    let b = std::fs::read(path).expect("read bin");
+    let n = ((max_secs * rate) as usize).min(b.len() / 8);
+    let iq = (0..n)
+        .map(|i| {
+            let f = |o: usize| f32::from_le_bytes(b[8 * i + o..8 * i + o + 4].try_into().unwrap());
+            Complex::new(f(0), f(4))
+        })
+        .collect();
+    (rate, iq)
+}
+
+/// A projecthorus-style sample (raw float32 I/Q, 96 kS/s, centred), decoded by
+/// the model named in `SONDE_MODEL` (`RS41` by default, or `DFM`).
+#[test]
+#[ignore]
+fn real_f32_sample_decodes() {
+    let path = std::env::var("SONDE_IQ_F32").expect("SONDE_IQ_F32");
+    let model = match std::env::var("SONDE_MODEL").as_deref() {
+        Ok("DFM") => SondeModel::Dfm,
+        _ => SondeModel::Rs41,
+    };
+    let (rate, iq) = read_f32(&path, 96_000.0, 120.0);
+    let mut dec = decoder_for(model, rate, 0.0).unwrap();
+    let mut all = Vec::new();
+    for chunk in iq.chunks(4096) {
+        all.extend(dec.process(chunk));
+    }
+    let mut serials: Vec<_> = all.iter().map(|f| f.serial.clone()).collect();
+    serials.sort();
+    serials.dedup();
+    println!("{} fixes, serials {serials:?}", all.len());
+    if std::env::var("SONDE_VERBOSE").is_ok() {
+        for f in &all {
+            if let Some(p) = f.pos.as_ref() {
+                println!(
+                    "[{:3}] lat {:.6} lon {:.6} alt {:.1} vH {:.2} D {:.1} vV {:.2} sv {}",
+                    f.frame_num, p.lat, p.lon, p.alt_m, p.speed_ms, p.course_deg, p.climb_ms, p.num_sv
+                );
+            }
+        }
+    }
+    if let Some(p) = all.first().and_then(|f| f.pos.as_ref()) {
+        println!("first: lat {:.5} lon {:.5} alt {:.1} m", p.lat, p.lon, p.alt_m);
+    }
+    if let Some(p) = all.last().and_then(|f| f.pos.as_ref()) {
+        println!("last:  lat {:.5} lon {:.5} alt {:.1} m", p.lat, p.lon, p.alt_m);
+    }
+    assert!(!all.is_empty());
+}
+
 #[test]
 #[ignore]
 fn real_recording_sweep() {
     let path = std::env::var("SONDE_IQ_WAV").expect("SONDE_IQ_WAV");
-    let (rate0, iq0) = read_wav(&path, 60.0);
+    let (rate0, iq0) = read_wav(&path, std::env::var("SONDE_SECS").ok().and_then(|v| v.parse().ok()).unwrap_or(60.0));
     // The decoder wants at least 48 kS/s: upsample x3 with linear interpolation.
     let rate = rate0 * 3.0;
     let mut iq = Vec::with_capacity(iq0.len() * 3);
@@ -41,14 +93,20 @@ fn real_recording_sweep() {
     }
     println!("{} samples at {rate} Hz", iq.len());
     let mut best = (0usize, 0.0f64);
-    let mut off = -14_000.0;
-    while off <= 14_000.0 {
+    let (lo, hi) = match std::env::var("SONDE_OFFSET").ok().and_then(|v| v.parse::<f64>().ok()) {
+        Some(o) => (o, o),
+        None => (-14_000.0, 14_000.0),
+    };
+    let mut off = lo;
+    while off <= hi {
         let mut dec = decoder_for(SondeModel::Rs41, rate, off).unwrap();
         let mut n = 0;
+        let mut all: Vec<(String, u32, Option<f64>)> = Vec::new();
         let mut first = None;
         for chunk in iq.chunks(4096) {
             for d in dec.process(chunk) {
                 n += 1;
+                all.push((d.serial.clone(), d.frame_num, d.pos.as_ref().map(|p| p.alt_m)));
                 if first.is_none() {
                     first = Some(format!("{} #{} {:?} pos={:?}", d.serial, d.frame_num, d.battery_v, d.pos));
                 }
@@ -56,6 +114,22 @@ fn real_recording_sweep() {
         }
         if n > 0 {
             println!("offset {off:+.0} Hz: {n} frames, first {first:?}");
+        }
+        if lo == hi && !all.is_empty() {
+            let mut serials: Vec<_> = all.iter().map(|a| a.0.clone()).collect();
+            serials.sort();
+            serials.dedup();
+            let f0 = all.iter().map(|a| a.1).min().unwrap();
+            let f1 = all.iter().map(|a| a.1).max().unwrap();
+            let alts: Vec<f64> = all.iter().filter_map(|a| a.2).collect();
+            let missing = (f1 - f0 + 1) as usize - all.len().min((f1 - f0 + 1) as usize);
+            println!(
+                "serials {serials:?}; {} frames, counter {f0}..{f1} ({missing} missing); alt {:.0}..{:.0} m ({} with a fix)",
+                all.len(),
+                alts.iter().cloned().fold(f64::MAX, f64::min),
+                alts.iter().cloned().fold(f64::MIN, f64::max),
+                alts.len()
+            );
         }
         if n > best.0 {
             best = (n, off);

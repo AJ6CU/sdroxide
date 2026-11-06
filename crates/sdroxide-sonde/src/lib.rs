@@ -10,6 +10,7 @@
 
 pub mod bank;
 pub mod controller;
+pub mod dfm;
 pub mod model;
 pub mod scan;
 pub mod tracks;
