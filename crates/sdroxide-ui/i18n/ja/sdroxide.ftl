@@ -9067,3 +9067,19 @@ aircraft-track-kml = 航跡を保存 (KML)
 aircraft-track-kml-hover = 局が保存したこの機体の位置を、時刻と高度付きの Google Earth 用 KML 航跡として保存します。長い無信号で線は途切れます。
 
 aircraft-track-kml-saved = { $name } を保存しました。
+
+topbar-changed-cw-peak = CWピーク
+
+topbar-caption-cw-peak = CWピーク
+
+topbar-apf-width = 幅
+
+topbar-apf-gain = 持ち上げ
+
+topbar-apf-off-hover = CWピークフィルター（APF）— CWピッチの信号をノイズや近接局より持ち上げます。クリックで開きます
+
+topbar-apf-on-hover = CWピークフィルター：幅 { $width } Hz、ピッチを { $gain } dB 持ち上げ。クリックで設定
+
+topbar-apf-hint = CWピッチを中心にし、ピッチに追従します。AGCの前段。デコーダーは届いたままの信号を受け取ります。
+
+topbar-apf-rig-audio-hover = CWピークフィルター — この無線機では使えません。聞こえているのは無線機自身の音声で、フィルターはここで復調した音声に働きます

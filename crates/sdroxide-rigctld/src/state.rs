@@ -2,7 +2,7 @@
 //! vocabulary it is reported in.
 
 use sdroxide_types::{
-    AgcMode, Band, MAX_DECIMATION, Mode, NrEngine, NrLevel, NrStrength, SQUELCH_CLOSED_DB,
+    AgcMode, Band, CwPeak, MAX_DECIMATION, Mode, NrEngine, NrLevel, NrStrength, SQUELCH_CLOSED_DB,
     SQUELCH_OPEN_DB, Vfo,
 };
 
@@ -62,6 +62,11 @@ pub struct RigState {
     /// moves — reported as Hamlib's `RF` level. `None` on a radio with no RX
     /// gain the software can set, which then has no `RF` level at all.
     pub rf_gain: Option<RfGain>,
+    /// The main receiver's CW peak filter, reported as Hamlib's `APF` function
+    /// and level — see [`apf_level`]. `None` on a rig that hands over
+    /// demodulated audio, where the filter does not run, which then has no
+    /// `APF` at all.
+    pub cw_peak: Option<CwPeak>,
     /// Whether this radio can transmit at all. False empties the TX range list
     /// in `\dump_state`, which makes Hamlib itself refuse to key.
     pub can_tx: bool,
@@ -101,6 +106,7 @@ impl Default for RigState {
             device_rate_hz: 0.0,
             can_decimate: false,
             rf_gain: None,
+            cw_peak: None,
             can_tx: false,
             rx_ranges: Vec::new(),
             tx_ranges: Vec::new(),
@@ -265,6 +271,21 @@ pub fn agc_from_hamlib(v: i32) -> Option<AgcMode> {
         4..=6 => AgcMode::Med,
         _ => return None,
     })
+}
+
+/// The CW peak filter's width as Hamlib's `APF` level, 0.0..=1.0: 0.0 is the
+/// widest bell ([`CwPeak::WIDTH_HZ_RANGE`]'s top, 200 Hz), 1.0 the narrowest
+/// (its bottom, 20 Hz), linear in Hz between — the level is how hard the filter
+/// picks out the pitch. The lift stays the operator's, set in the pop-up.
+pub fn apf_level(peak: &CwPeak) -> f32 {
+    let (lo, hi) = (*CwPeak::WIDTH_HZ_RANGE.start(), *CwPeak::WIDTH_HZ_RANGE.end());
+    ((hi - peak.width_hz) / (hi - lo)).clamp(0.0, 1.0)
+}
+
+/// The width an `APF` level asks for — the inverse of [`apf_level`].
+pub fn apf_width_for(level: f64) -> f32 {
+    let (lo, hi) = (*CwPeak::WIDTH_HZ_RANGE.start(), *CwPeak::WIDTH_HZ_RANGE.end());
+    hi - level.clamp(0.0, 1.0) as f32 * (hi - lo)
 }
 
 /// The Hamlib mode string we report for one of ours.
@@ -448,6 +469,22 @@ mod tests {
         let (lo, hi) = filter_for(Mode::Am, 6000);
         assert_eq!(lo, -3000.0);
         assert_eq!(hi, 3000.0);
+    }
+
+    /// `APF` 0.0 is the widest bell and 1.0 the narrowest, and a level read
+    /// back is the one that was set.
+    #[test]
+    fn the_apf_level_is_the_bell_width() {
+        let at = |w: f32| CwPeak { width_hz: w, ..CwPeak::default() };
+        assert_eq!(apf_level(&at(200.0)), 0.0);
+        assert_eq!(apf_level(&at(20.0)), 1.0);
+        assert_eq!(apf_width_for(0.0), 200.0);
+        assert_eq!(apf_width_for(1.0), 20.0);
+        assert_eq!(apf_width_for(7.0), 20.0, "clamped");
+        for level in [0.0, 0.25, 0.5, 0.9] {
+            let back = apf_level(&at(apf_width_for(level)));
+            assert!((f64::from(back) - level).abs() < 1e-5, "{level} came back {back}");
+        }
     }
 
     #[test]

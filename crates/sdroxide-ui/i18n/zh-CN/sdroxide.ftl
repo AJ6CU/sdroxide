@@ -9057,3 +9057,19 @@ aircraft-track-kml = 保存航迹 (KML)
 aircraft-track-kml-hover = 将电台为该飞机保存的位置保存为带时间和高度的 Google Earth KML 航迹。长时间无信号会使线条断开。
 
 aircraft-track-kml-saved = 已保存 { $name }。
+
+topbar-changed-cw-peak = CW 峰值
+
+topbar-caption-cw-peak = CW 峰值
+
+topbar-apf-width = 宽度
+
+topbar-apf-gain = 提升
+
+topbar-apf-off-hover = CW 峰值滤波器（APF）：把 CW 音调上的信号提升到噪声和邻近信号之上。点击展开
+
+topbar-apf-on-hover = CW 峰值滤波器：宽 { $width } Hz，将音调提升 { $gain } dB。点击查看设置
+
+topbar-apf-hint = 以 CW 音调为中心并跟随它。位于 AGC 之前；解码器仍然听到原始信号。
+
+topbar-apf-rig-audio-hover = CW 峰值滤波器 — 此电台不可用：您听到的是电台自身的音频，而滤波器作用于这里解调的音频

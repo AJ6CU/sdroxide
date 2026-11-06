@@ -350,7 +350,7 @@ pub use speech::{
 pub use spot::{Spot, SpotKind, spots_to_kml};
 pub use sstv::{SstvDrop, SstvMode, SstvStatus};
 pub use state::{
-    CESSB_MAX_DB, MAX_DECIMATION, MAX_MANUAL_GAIN_DB, MIN_DECIMATED_RATE_HZ, OffsetState,
+    CESSB_MAX_DB, CwPeak, MAX_DECIMATION, MAX_MANUAL_GAIN_DB, MIN_DECIMATED_RATE_HZ, OffsetState,
     RadioState, RxId, RxState, SQUELCH_CLOSED_DB, SQUELCH_OPEN_DB, SWR_LIMIT_MAX, SWR_LIMIT_MIN,
     SWR_TUNE_LIMIT_SCALE, TxEqBand, TxEqState, TxState, Vfo, ZOOM_LANE_MARGIN, max_decimation,
     panadapter_fft_ceiling, swr_tune_limit, zoom_lane_decimation,

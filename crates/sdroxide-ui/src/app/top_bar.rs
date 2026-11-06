@@ -3653,6 +3653,9 @@ impl SdroxideApp {
             // chips above cannot open from inside a menu.
             self.filter_controls(ui, cmds);
             self.nr_controls(ui, cmds);
+            if chips.contains(&RxChip::Apf) && !self.meter_is_audio() {
+                self.apf_controls(ui, cmds);
+            }
             self.rec_controls(ui, cmds);
         }
     }
@@ -3706,6 +3709,9 @@ impl SdroxideApp {
         }
         if defaults.loudness != Some(rx.loudness) {
             changed.push(tr!("topbar-changed-loudness"));
+        }
+        if defaults.cw_peak != Some(rx.cw_peak) {
+            changed.push(tr!("topbar-changed-cw-peak"));
         }
         if changed.is_empty() {
             return;
@@ -3841,6 +3847,29 @@ impl SdroxideApp {
                 .clicked()
                 {
                     cmds.push(Command::SetMute { rx: RxId::Main, muted: !muted });
+                }
+            }
+            RxChip::Apf => {
+                // The CW peak filter: lit while it is on; the click opens its
+                // switch, width and lift. Greyed, saying why, where what is
+                // heard is the rig's own audio — the filter runs on the audio
+                // demodulated here and would silently do nothing there.
+                let peak = self.state.rx[0].cw_peak;
+                if self.meter_is_audio() {
+                    crate::chrome::chip_enabled(ui, false, peak.on, "APF")
+                        .on_disabled_hover_text(tr!("topbar-apf-rig-audio-hover"));
+                } else {
+                    let hover = if peak.on {
+                        tr!(
+                            "topbar-apf-on-hover",
+                            width = format!("{:.0}", peak.width_hz),
+                            gain = format!("{:.0}", peak.gain_db)
+                        )
+                    } else {
+                        tr!("topbar-apf-off-hover")
+                    };
+                    let resp = crate::chrome::chip(ui, peak.on, "APF").on_hover_text(hover);
+                    self.apf_popup(ui, cmds, &resp);
                 }
             }
             RxChip::Eq => {
@@ -4508,6 +4537,67 @@ impl SdroxideApp {
             RichText::new(tr!("topbar-eq-remembered", mode = self.state.rx[0].mode.label()))
             .size(10.5)
             .color(crate::theme::gray(140)),
+        );
+    }
+
+    /// The CW peak (APF) popup behind its chip: on/off, width and lift, on
+    /// [`sdroxide_types::RxState::cw_peak`].
+    fn apf_popup(&mut self, ui: &mut egui::Ui, cmds: &mut Vec<Command>, btn: &egui::Response) {
+        let popup_id = egui::Popup::default_response_id(btn);
+        let now = ui.input(|i| i.time);
+        let alpha =
+            crate::chrome::popup_fade_alpha(ui.ctx(), popup_id, now, &mut self.apf_popup_since);
+        let resp = egui::Popup::from_toggle_button_response(btn)
+            .frame(crate::chrome::window_frame_alpha(alpha))
+            .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
+            .show(|ui| {
+                ui.set_opacity(alpha);
+                crate::chrome::window_body_bg(ui);
+                ui.spacing_mut().item_spacing = egui::vec2(4.0, 4.0);
+                ui.set_max_width(250.0);
+                self.apf_controls(ui, cmds);
+            });
+        if let Some(r) = &resp {
+            crate::chrome::paint_popup_cut_border(ui.ctx(), &r.response, alpha);
+            if r.response.contains_pointer() {
+                self.apf_popup_since = Some(now);
+            }
+        }
+    }
+
+    /// The rows inside the APF popup, and inlined in a menu column: the switch,
+    /// the width and the lift. Sent only when something changed, so the filter
+    /// is retuned only then.
+    fn apf_controls(&mut self, ui: &mut egui::Ui, cmds: &mut Vec<Command>) {
+        crate::chrome::menu_caption(ui, &tr!("topbar-caption-cw-peak"));
+        let mut peak = self.state.rx[0].cw_peak;
+        let before = peak;
+        ui.horizontal(|ui| {
+            crate::chrome::checkbox(ui, &mut peak.on, &tr!("topbar-eq-on"));
+            ui.label(RichText::new(tr!("topbar-apf-width")).size(11.0));
+            ui.add(
+                egui::DragValue::new(&mut peak.width_hz)
+                    .speed(1.0)
+                    .range(sdroxide_types::CwPeak::WIDTH_HZ_RANGE)
+                    .suffix(" Hz"),
+            );
+            ui.label(RichText::new(tr!("topbar-apf-gain")).size(11.0));
+            ui.add(
+                egui::DragValue::new(&mut peak.gain_db)
+                    .speed(0.2)
+                    .range(sdroxide_types::CwPeak::GAIN_DB_RANGE)
+                    .suffix(" dB"),
+            );
+        });
+        if peak != before {
+            self.state.rx[0].cw_peak = peak; // optimistic echo
+            cmds.push(Command::SetCwPeak { rx: RxId::Main, peak });
+        }
+        ui.label(RichText::new(tr!("topbar-apf-hint")).size(10.5).color(crate::theme::gray(140)));
+        ui.label(
+            RichText::new(tr!("topbar-eq-remembered", mode = self.state.rx[0].mode.label()))
+                .size(10.5)
+                .color(crate::theme::gray(140)),
         );
     }
 
@@ -7552,6 +7642,8 @@ pub(in crate::app) enum RxChip {
     Mute,
     /// The listener's receive-tone equalizer (bass/mid/treble).
     Eq,
+    /// The CW peak filter (APF): CW only.
+    Apf,
     Rec,
     /// WFM's stereo pilot.
     Stereo,
@@ -7588,7 +7680,7 @@ impl RxChip {
     /// (issue #388), so the answer lives here where the invariant can be
     /// tested rather than in three `if narrow` branches.
     fn inlined_in_a_menu(self) -> bool {
-        matches!(self, Self::Bw | Self::Rec | Self::Eq)
+        matches!(self, Self::Bw | Self::Rec | Self::Eq | Self::Apf)
     }
 
     /// The widest label the chip ever wears, which is what the box reserves
@@ -7607,6 +7699,7 @@ impl RxChip {
             Self::Bin => "BIN",
             Self::Mute => "MUTE",
             Self::Eq => "EQ",
+            Self::Apf => "APF",
             Self::Rec => "REC",
             Self::Stereo => "ST",
             Self::Rds => "RDS",
@@ -7862,6 +7955,12 @@ pub(in crate::app) fn rx_chips(mode: Mode, listener: bool) -> Vec<RxChip> {
     // beside the other things done to the audio on its way to the ear.
     if mode.binaural_audio() {
         chips.insert(4, RxChip::Bin);
+    }
+    // The CW peak filter in CW alone, where there is a pitch to peak on. Ahead
+    // of MUTE too, beside the other things done to the audio.
+    if mode == Mode::Cw {
+        let at = chips.iter().position(|c| *c == RxChip::Mute).unwrap_or(chips.len());
+        chips.insert(at, RxChip::Apf);
     }
     match mode {
         // Only WFM has a stereo pilot to lock or an RDS subcarrier to decode.
@@ -11608,7 +11707,8 @@ mod tests {
             // desktop; the top panel's 8+8 margin and `angled_frame`'s 10+10
             // come off it before the packer sees it.
             let avail = 1400.0 - 16.0 - 20.0;
-            for mode in [Mode::Lsb, Mode::Nfm, Mode::Wfm, Mode::Drm] {
+            // CW too: it carries BIN and APF on top of the plain run.
+            for mode in [Mode::Lsb, Mode::Cw, Mode::Nfm, Mode::Wfm, Mode::Drm] {
                 let boxes = cat_rig_strip_boxes(ui, mode, false);
                 let widths: Vec<f32> = boxes.iter().map(|b| b.w).collect();
                 assert_eq!(

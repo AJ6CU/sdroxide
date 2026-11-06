@@ -2206,8 +2206,14 @@ use sdroxide_types::{
 /// target-state, operational-status and airspeed squitters. The struct rides in
 /// the aircraft table every half second, so a v267 peer reads the table out of
 /// step. `PROTO_VERSION` 267 → 268, `VERSION_BYTE` 0x57 → 0x58.
-pub const PROTO_VERSION: u16 = 268;
-const VERSION_BYTE: u8 = 0x58;
+///
+/// v269: **the CW peak filter.** [`sdroxide_types::RxState`] gains `cw_peak`
+/// ([`sdroxide_types::CwPeak`]: on, width, gain) at its tail, and `Command`
+/// gains `SetCwPeak` last. `RxState` rides `RadioState` twice, so a v268 peer
+/// reads the whole state out of step. `PROTO_VERSION` 268 → 269,
+/// `VERSION_BYTE` 0x58 → 0x59.
+pub const PROTO_VERSION: u16 = 269;
+const VERSION_BYTE: u8 = 0x59;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -3488,7 +3494,7 @@ mod tests {
             ServerMsg::TxRefused(w, hz) => assert_eq!((w, hz), (why, 7_074_000.0)),
             _ => panic!("TxRefused did not round-trip"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (268, 0x58));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (269, 0x59));
     }
 
     /// The dynamic-DNS answer rides last on [`ServerMsg`], and it has to: the
@@ -3519,7 +3525,7 @@ mod tests {
             }
             other => panic!("the answer did not round-trip: {other:?}"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (268, 0x58));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (269, 0x59));
     }
 
     /// What an aircraft says about its own flight crosses the wire with the
@@ -4002,6 +4008,28 @@ mod tests {
             let st = ServerMsg::State(state);
             assert_eq!(decode::<ServerMsg>(&encode(&st).unwrap()).unwrap(), st);
         }
+    }
+
+    /// The CW peak filter crosses the wire both ways: the command, and the
+    /// receiver field that tells a remote client where it is. Set away from
+    /// its default on both receivers, so a field that decoded into its default
+    /// would fail here rather than pass silently.
+    #[test]
+    fn roundtrip_cw_peak() {
+        let peak = sdroxide_types::CwPeak { on: true, width_hz: 50.0, gain_db: 12.5 };
+        for rx in [sdroxide_types::RxId::Main, sdroxide_types::RxId::Sub] {
+            let m = ClientMsg::Command(Command::SetCwPeak { rx, peak });
+            assert_eq!(decode::<ClientMsg>(&encode(&m).unwrap()).unwrap(), m);
+        }
+        let mut state = RadioState::default();
+        state.rx[0].cw_peak = peak;
+        state.rx[1].cw_peak = sdroxide_types::CwPeak { on: true, width_hz: 180.0, gain_db: 3.0 };
+        let st = ServerMsg::State(state.clone());
+        let back = decode::<ServerMsg>(&encode(&st).unwrap()).unwrap();
+        assert_eq!(back, st);
+        let ServerMsg::State(back) = back else { panic!("not a state") };
+        assert_eq!(back.rx[0].cw_peak, peak);
+        assert_ne!(back.rx[1].cw_peak, sdroxide_types::CwPeak::default());
     }
 
     /// The per-mode transmit-audio level, over the wire in both directions

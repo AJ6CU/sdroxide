@@ -9127,3 +9127,19 @@ aircraft-track-kml = Spoor opslaan (KML)
 aircraft-track-kml-hover = Slaat de posities op die het station van dit vliegtuig bewaarde als KML-spoor voor Google Earth, met tijd en hoogte. Een lange stilte onderbreekt de lijn.
 
 aircraft-track-kml-saved = { $name } opgeslagen.
+
+topbar-changed-cw-peak = CW-piek
+
+topbar-caption-cw-peak = CW-piek
+
+topbar-apf-width = breedte
+
+topbar-apf-gain = versterking
+
+topbar-apf-off-hover = CW-piekfilter (APF) — tilt het signaal op de CW-toonhoogte boven de ruis en de buren uit. Klik om te openen
+
+topbar-apf-on-hover = CW-piekfilter: { $width } Hz breed, tilt de toonhoogte { $gain } dB op. Klik voor de instellingen
+
+topbar-apf-hint = Gecentreerd op de CW-toonhoogte en volgt die. Vóór de AGC; de decoders horen het signaal nog zoals het binnenkwam.
+
+topbar-apf-rig-audio-hover = CW-piekfilter — niet op deze radio: wat u hoort is de eigen audio van het toestel, en het filter werkt op hier gedemoduleerde audio

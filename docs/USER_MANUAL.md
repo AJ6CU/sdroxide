@@ -703,6 +703,16 @@ mode. What is in the box never changes; only where the two rows are cut does.
   **SAM**, **WFM** or **DRM**: on broadcast audio the sustained notes of the
   programme are exactly what it cancels, so it took the station away with the
   whistle (issue #434).
+- **APF** (CW only) — the CW peak filter: a narrow peak centred on the CW
+  pitch, which lifts the signal you are copying above the noise and the stations
+  beside it. It follows the pitch, so moving the pitch moves the peak. Click the
+  chip for its switch, its **width** (20–200 Hz) and its **lift** (1–20 dB); it
+  sits ahead of the AGC, so a large lift is levelled rather than played louder,
+  and the decoders still hear the signal as it arrived. Remembered for CW like
+  the other per-mode settings. To take it out of the audio, untick it — nothing
+  else changes. Greyed on a radio whose own audio you hear (a rig on a sound
+  card, or a transceiver beside a panadapter receiver): the filter works on the
+  audio demodulated here, so there it could not act.
 - **NR** — noise reduction on the audio, with five selectable engines. The button
   always reads just `NR` and lights when noise reduction is in circuit — that is
   all it tells you, and it never changes width under the buttons beside it. Click
@@ -1029,7 +1039,7 @@ mode: a little noise reduction helps a weak SSB voice and only gets in the way
 of an FT8 decoder, and a slow AGC is kinder to a signal sitting in the noise
 than the fast one that sounds right on a strong local. So each mode carries a
 set of starting values for **AGC**, **Man**, **SQL**, **NR**, **ANC**, **BIN**,
-WFM's **ST**, and the receive **tone** and **LOUDNESS** of the **EQ** popup, and
+CW's **APF**, WFM's **ST**, and the receive **tone** and **LOUDNESS** of the **EQ** popup, and
 selecting a mode — here, or on a CAT rig's own controls — lays its own on the
 receiver. The tone and LOUDNESS are **off in every mode** until you switch them
 on, so ticking LOUDNESS for a broadcast in AM leaves your SSB and FT8 exactly as
@@ -13945,7 +13955,7 @@ fails on 4532, the usual cause is a real `rigctld` already running.
 
 Supported: frequency, mode and passband, PTT, VFO A/B and split (including split
 frequency and mode), RIT and XIT, the `RFPOWER` / `AF` / `MICGAIN` / `STRENGTH`
-/ `RF` / `SQL` / `AGC` / `NR` levels, the `NB` / `NR` / `ANF` / `MUTE` functions, the
+/ `RF` / `SQL` / `AGC` / `NR` / `APF` levels, the `NB` / `NR` / `ANF` / `MUTE` / `APF` functions, the
 `XCHG` / `CPY` / `TOGGLE` / `BAND_UP` / `BAND_DOWN` / `TUNE` VFO operations, and
 the voice keyer
 (`send_voice_mem 1`…`10`, `stop_voice_mem` — see
@@ -13960,7 +13970,11 @@ it ignores the slider. `SQL` is the squelch threshold, 0 open to 1 closed. `AGC`
 `RIG_AGC_*` number: 0 off, 2 fast, 5 medium, 3 slow. The `NR` level is the
 strength (a third, two thirds, 1 for low, medium, high) of the engine chosen in
 the NR panel, which it leaves alone; `U NR 1` brings back the engine and
-strength last on.
+strength last on. `APF` is the **APF** chip's CW peak filter: the function is
+its switch, and the level its width — 0 the widest bell (200 Hz), 1 the
+narrowest (20 Hz), linear between; the lift stays the one set in the popup.
+Both are refused outside CW, and a rig that hands over its own demodulated
+audio has neither.
 
 Setting up clients:
 

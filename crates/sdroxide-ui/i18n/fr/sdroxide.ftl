@@ -9130,3 +9130,19 @@ aircraft-track-kml = Enregistrer la trace (KML)
 aircraft-track-kml-hover = Enregistre les positions que la station a gardées pour cet aéronef sous forme de trace KML pour Google Earth, avec l'heure et l'altitude. Un long silence coupe la ligne.
 
 aircraft-track-kml-saved = { $name } enregistré.
+
+topbar-changed-cw-peak = pic CW
+
+topbar-caption-cw-peak = Pic CW
+
+topbar-apf-width = largeur
+
+topbar-apf-gain = gain
+
+topbar-apf-off-hover = Filtre de pic CW (APF) — fait ressortir le signal à la tonalité CW au-dessus du bruit et des stations voisines. Cliquez pour ouvrir
+
+topbar-apf-on-hover = Filtre de pic CW : { $width } Hz de large, la tonalité relevée de { $gain } dB. Cliquez pour ses réglages
+
+topbar-apf-hint = Centré sur la tonalité CW et la suit. Avant l'AGC ; les décodeurs entendent toujours le signal tel qu'il est arrivé.
+
+topbar-apf-rig-audio-hover = Filtre de pic CW — pas sur cette radio : vous entendez l'audio du poste lui-même, et le filtre agit sur l'audio démodulé ici

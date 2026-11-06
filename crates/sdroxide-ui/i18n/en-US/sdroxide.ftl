@@ -9142,3 +9142,19 @@ aircraft-track-kml = Save track (KML)
 aircraft-track-kml-hover = Save the positions the station kept for this aircraft as a KML track for Google Earth, with time and altitude. A long silence cuts the line.
 
 aircraft-track-kml-saved = Saved { $name }.
+
+topbar-changed-cw-peak = CW peak
+
+topbar-caption-cw-peak = CW peak
+
+topbar-apf-width = width
+
+topbar-apf-gain = lift
+
+topbar-apf-off-hover = CW peak filter (APF) — lifts the signal at the CW pitch above the noise and its neighbours. Click to open
+
+topbar-apf-on-hover = CW peak filter: { $width } Hz wide, lifting the pitch { $gain } dB. Click for its settings
+
+topbar-apf-hint = Centred on the CW pitch and follows it. Ahead of the AGC; the decoders still hear the signal as it arrived.
+
+topbar-apf-rig-audio-hover = CW peak filter — not on this radio: what you hear is the rig's own audio, and the filter works on audio demodulated here

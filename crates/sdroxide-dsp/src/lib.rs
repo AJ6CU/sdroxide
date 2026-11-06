@@ -92,7 +92,7 @@ pub use demod::{
 };
 pub use dfnr::DeepFilterNr;
 pub use diversity::{Diversity, DiversityMode};
-pub use eq::{ParametricEq, loudness_curve};
+pub use eq::{CwPeakFilter, ParametricEq, loudness_curve};
 pub use fec::{ConvCode, ConvEncoder, ViterbiStream, viterbi_soft};
 pub use fir::{ComplexFir, RealFir, bandpass_taps};
 pub use fsk441::{
