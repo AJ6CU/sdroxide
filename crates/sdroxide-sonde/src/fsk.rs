@@ -98,26 +98,43 @@ impl FskSlicer {
         self
     }
 
+    /// One sample through the mixer, the optional channel low-pass and the
+    /// discriminator; returns the smoothed discriminator output (radians per
+    /// sample).
+    fn demod(&mut self, x: Complex32) -> f32 {
+        let (s, c) = self.osc.sin_cos();
+        self.osc += self.osc_step;
+        if self.osc > std::f64::consts::TAU {
+            self.osc -= std::f64::consts::TAU;
+        } else if self.osc < -std::f64::consts::TAU {
+            self.osc += std::f64::consts::TAU;
+        }
+        let mut z = x * Complex32::new(c as f32, s as f32);
+        self.level += 0.0005 * (10.0 * (z.norm_sqr() + 1e-12).log10() - self.level);
+        if let Some((a, st)) = self.lp.as_mut() {
+            st[0] += (z - st[0]) * *a;
+            st[1] += (st[0] - st[1]) * *a;
+            z = st[1];
+        }
+        let d = (z * self.prev.conj()).arg();
+        self.prev = z;
+        self.y += self.alpha * (d - self.y);
+        self.y
+    }
+
+    /// Feed I/Q; `out` is called with every discriminator sample (the audio
+    /// of an FM signal, radians per sample), for models that carry tones.
+    pub fn process_fm(&mut self, input: &[Complex32], mut out: impl FnMut(f32)) {
+        for &x in input {
+            let y = self.demod(x);
+            out(y);
+        }
+    }
+
     /// Feed I/Q; `bit` is called with every raw symbol (0 or 1).
     pub fn process(&mut self, input: &[Complex32], mut bit: impl FnMut(u8)) {
         for &x in input {
-            let (s, c) = self.osc.sin_cos();
-            self.osc += self.osc_step;
-            if self.osc > std::f64::consts::TAU {
-                self.osc -= std::f64::consts::TAU;
-            } else if self.osc < -std::f64::consts::TAU {
-                self.osc += std::f64::consts::TAU;
-            }
-            let mut z = x * Complex32::new(c as f32, s as f32);
-            self.level += 0.0005 * (10.0 * (z.norm_sqr() + 1e-12).log10() - self.level);
-            if let Some((a, st)) = self.lp.as_mut() {
-                st[0] += (z - st[0]) * *a;
-                st[1] += (st[0] - st[1]) * *a;
-                z = st[1];
-            }
-            let d = (z * self.prev.conj()).arg();
-            self.prev = z;
-            self.y += self.alpha * (d - self.y);
+            self.demod(x);
 
             if self.mode == Threshold::Midrange {
                 self.since_cross = self.since_cross.saturating_add(1);
