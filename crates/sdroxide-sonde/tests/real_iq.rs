@@ -52,11 +52,13 @@ fn real_f32_sample_decodes() {
         Ok("MRZ") => SondeModel::Mrz,
         Ok("LMS6") => SondeModel::Lms6,
         Ok("MTS01") => SondeModel::Mts01,
+        Ok("IMET54") => SondeModel::Imet54,
         _ => SondeModel::Rs41,
     };
     let rate0 = std::env::var("SONDE_RATE").ok().and_then(|v| v.parse().ok()).unwrap_or(96_000.0);
     let (rate, iq) = read_f32(&path, rate0, 120.0);
-    let mut dec = decoder_for(model, rate, 0.0).unwrap();
+    let offset = std::env::var("SONDE_OFFSET_HZ").ok().and_then(|v| v.parse().ok()).unwrap_or(0.0);
+    let mut dec = decoder_for(model, rate, offset).unwrap();
     let mut all = Vec::new();
     for chunk in iq.chunks(4096) {
         all.extend(dec.process(chunk));
