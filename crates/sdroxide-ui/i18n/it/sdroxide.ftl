@@ -9231,3 +9231,39 @@ settings-general-band-plan-germany-nrw = Germania (NRW, SWL)
 settings-general-band-plan-own = Proprio della stazione
 
 settings-general-band-plan-hint = Scegli un piano bande fornito. Sostituisce bandplan.json; le tabelle IARU integrate restano il valore predefinito.
+
+sonde-card-source = Origine
+
+sonde-card-source-radio = Questa radio
+
+sonde-card-source-hub = SondeHub (sentita da un'altra stazione)
+
+sonde-card-model = Modello
+
+sonde-card-maker = Costruttore
+
+sonde-card-variant = Variante
+
+sonde-card-position = Posizione
+
+sonde-card-from-you = Da lei
+
+sonde-card-heading = Rotta
+
+sonde-card-satellites = Satelliti
+
+sonde-card-snr = Rapporto segnale/rumore
+
+sonde-card-station = Sentita da
+
+sonde-card-station-position = Posizione della stazione
+
+sonde-card-antenna = Antenna
+
+sonde-card-software = Software
+
+sonde-card-frames = Frame ricevuti
+
+sonde-card-open = Apri su { $site }
+
+sonde-card-close = Chiudi

@@ -195,6 +195,7 @@ pub fn show(
 
     // ── the sondes other stations hear (SondeHub), hollow diamonds ──
     let online_ink = alpha(Color32::from_rgb(110, 165, 255), 230.0);
+    let mut online_click: Option<String> = None;
     for o in online.iter().filter(|o| !sondes.iter().any(|s| s.serial == o.serial)) {
         let c = project(o.lat, o.lon);
         if !rect.contains(c) {
@@ -213,6 +214,9 @@ pub fn show(
         );
         if let Some(m) = pointer.filter(|m| m.distance(c) <= HIT_RADIUS) {
             let _ = m;
+            if resp.clicked() {
+                online_click = Some(o.serial.clone());
+            }
             let mut tip = format!("SondeHub  {} {}", o.model, o.serial);
             tip.push_str(&format!("
 {:.4}, {:.4}", o.lat, o.lon));
@@ -299,7 +303,11 @@ pub fn show(
 
     // ── interaction ──
     let mut clicked = None;
-    if let Some(i) = hover {
+    if let Some(serial) = online_click.filter(|_| hover.is_none()) {
+        // A sonde only SondeHub has heard: its card opens below the map.
+        state.selected = Some(serial.clone());
+        clicked = Some(serial);
+    } else if let Some(i) = hover {
         let (s, lat, lon) = &placed[i];
         let mut tip = format!("{}  {}\n{lat:.4}, {lon:.4}", s.model, s.serial);
         tip.push_str(&format!("\n{}", summary(s)));

@@ -57,6 +57,7 @@ pub(in crate::app) mod grid_tracker;
 pub(in crate::app) mod hd;
 pub(in crate::app) mod hfdl;
 pub(in crate::app) mod sonde;
+mod sonde_card;
 pub(in crate::app) mod ignore;
 pub(in crate::app) mod ism;
 pub(in crate::app) mod known_calls;
