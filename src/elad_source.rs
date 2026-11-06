@@ -1020,6 +1020,10 @@ impl IqSource for EladSource {
         self.last_signal.filter(|(at, _)| at.elapsed() < self.signal_max_age).map(|(_, dbm)| dbm)
     }
 
+    fn smeter_during_tx(&self) -> bool {
+        true
+    }
+
     // ── Lifecycle ────────────────────────────────────────────────────────────
 
     /// A device that has been unplugged, or whose thread has died, is reported

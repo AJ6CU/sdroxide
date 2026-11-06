@@ -1307,6 +1307,10 @@ impl IqSource for IcomNetSource {
         self.last_signal.filter(|(at, _)| at.elapsed() < METER_MAX_AGE).map(|(_, dbm)| dbm)
     }
 
+    fn smeter_during_tx(&self) -> bool {
+        true
+    }
+
     fn needs_reopen(&self) -> bool {
         if !self.dev.is_alive() {
             // The session that just died is the one worth reporting on.
