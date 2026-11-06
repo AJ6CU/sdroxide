@@ -15,16 +15,19 @@ use xng_mode_sonde::{Decoded, GpsPos, SondeChannelDecoder};
 pub enum SondeModel {
     /// Vaisala RS41-SG / -SGP.
     Rs41,
+    /// Graw DFM-06 / DFM-09 / DFM-17.
+    Dfm,
 }
 
 impl SondeModel {
     /// Every model decoded, in the order a lane tries them.
-    pub const ALL: &'static [SondeModel] = &[SondeModel::Rs41];
+    pub const ALL: &'static [SondeModel] = &[SondeModel::Rs41, SondeModel::Dfm];
 
     /// The type as printed in the track table and sent to SondeHub.
     pub fn name(self) -> &'static str {
         match self {
             SondeModel::Rs41 => "RS41",
+            SondeModel::Dfm => "DFM",
         }
     }
 }
@@ -86,6 +89,7 @@ pub fn decoder_for(
 ) -> Result<Box<dyn ModelDecoder>, String> {
     match model {
         SondeModel::Rs41 => Ok(Box::new(SondeChannelDecoder::new(input_rate, freq_offset_hz)?)),
+        SondeModel::Dfm => Ok(Box::new(crate::dfm::DfmDecoder::new(input_rate, freq_offset_hz)?)),
     }
 }
 

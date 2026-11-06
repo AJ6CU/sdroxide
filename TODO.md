@@ -31,7 +31,7 @@ for F4NRM because the SSTV panel is his). Open issues: 7 (re-measured
   <!-- sonde-models:begin -->
   - Model abstraction (`SondeModel`, `SondeFix`, `ModelDecoder`; wire unchanged; real RS41 recording decoded: S1720982, 59 frames in 60 s): **this PR** (added by F4NRM, owned by Claude).
   <!-- sonde-models:1 -->
-  - DFM-06/09/17: to do.
+  - DFM-06/09/17: **this PR** (added by F4NRM, owned by Claude). `sdroxide-sonde::dfm`: 2500 bd, Manchester, [8,4] Hamming, column interleave, serial (channel A), position, speed, climb; the Hamming rows, interleave and polarity were found from a real DFM-09 recording (projecthorus `dfm09_96k_float.bin`): 111 fixes in 120 s, 85 of the 89 frames shared with rs1729's `dfm06ptu` identical (the 4 others differ by under 1 m: packets from different cycles). DFM-09 only is tested on air; DFM-06 serial (channel 6) and DFM-17 are written from the public description and **not** checked.
   <!-- sonde-models:2 -->
   - M10 / M20: to do.
   <!-- sonde-models:3 -->
