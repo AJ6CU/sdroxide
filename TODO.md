@@ -33,7 +33,7 @@ for F4NRM because the SSTV panel is his). Open issues: 7 (re-measured
   <!-- sonde-models:1 -->
   - DFM-06/09/17: **this PR** (added by F4NRM, owned by Claude). `sdroxide-sonde::dfm`: 2500 bd, Manchester, [8,4] Hamming, column interleave, serial (channel A), position, speed, climb; the Hamming rows, interleave and polarity were found from a real DFM-09 recording (projecthorus `dfm09_96k_float.bin`): 111 fixes in 120 s, 85 of the 89 frames shared with rs1729's `dfm06ptu` identical (the 4 others differ by under 1 m: packets from different cycles). DFM-09 only is tested on air; DFM-06 serial (channel 6) and DFM-17 are written from the public description and **not** checked.
   <!-- sonde-models:2 -->
-  - M10 / M20: to do.
+  - M10 / M20: M10 is **this PR** (added by F4NRM, owned by Claude): `sdroxide-sonde::m10` (9616 baud, biphase coding, 102-byte frame, checksum, serial, position and velocity) on a shared FSK front end (`fsk.rs`, DFM uses it too). Checked on a real M10 recording (projecthorus `m10_96k_float.bin`): 120 frames in 120 s, all pass the checksum, one serial, same result at 48 and 96 kS/s. That sonde had **no GPS fix**, so positions are decoded as described by rs1729 but not seen with a real place. M20: to do (a different frame; its sample is `m20_96k_float.bin`).
   <!-- sonde-models:3 -->
   - RS92: to do.
   <!-- sonde-models:4 -->

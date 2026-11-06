@@ -46,9 +46,11 @@ fn real_f32_sample_decodes() {
     let path = std::env::var("SONDE_IQ_F32").expect("SONDE_IQ_F32");
     let model = match std::env::var("SONDE_MODEL").as_deref() {
         Ok("DFM") => SondeModel::Dfm,
+        Ok("M10") => SondeModel::M10,
         _ => SondeModel::Rs41,
     };
-    let (rate, iq) = read_f32(&path, 96_000.0, 120.0);
+    let rate0 = std::env::var("SONDE_RATE").ok().and_then(|v| v.parse().ok()).unwrap_or(96_000.0);
+    let (rate, iq) = read_f32(&path, rate0, 120.0);
     let mut dec = decoder_for(model, rate, 0.0).unwrap();
     let mut all = Vec::new();
     for chunk in iq.chunks(4096) {
@@ -74,6 +76,7 @@ fn real_f32_sample_decodes() {
     if let Some(p) = all.last().and_then(|f| f.pos.as_ref()) {
         println!("last:  lat {:.5} lon {:.5} alt {:.1} m", p.lat, p.lon, p.alt_m);
     }
+    println!("{} with a position", all.iter().filter(|f| f.pos.is_some()).count());
     assert!(!all.is_empty());
 }
 
