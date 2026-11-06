@@ -9136,3 +9136,6 @@ sonde-col-temp = æ°”æ¸©
 sonde-col-humidity = æ¹¿åº¦
 
 sonde-col-pressure = æ°”åŽ‹
+
+settings-net-broadcast-import-needs-station = 连接到电台以导入。
+

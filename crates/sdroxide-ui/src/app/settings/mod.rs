@@ -2090,7 +2090,15 @@ impl SdroxideApp {
             // The import already re-read the file; nothing further to do here.
         }
         if bc_reload {
-            self.reload_broadcast_stations();
+            #[cfg(target_arch = "wasm32")]
+            {
+                self.broadcast_load = None;
+                self.broadcast_load_done = false;
+            }
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                self.reload_broadcast_stations();
+            }
         }
         if let Some((output, name)) = audio_pick {
             self.ctrl.set_audio_device(output, name);
@@ -4153,6 +4161,7 @@ impl SdroxideApp {
                     io.bc_import,
                     io.bc_fetching,
                     io.bc_status,
+                    self.ctrl.peer_url().as_deref(),
                 );
             }
             SettingsTab::Winlink => {
