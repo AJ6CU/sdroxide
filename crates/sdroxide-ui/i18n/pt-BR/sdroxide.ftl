@@ -9166,6 +9166,15 @@ sonde-col-battery = Bateria
 
 sonde-col-heard = Recebida
 
+sonde-online = Online (SondeHub)
+
+sonde-online-hover = Mostra também as sondas ouvidas por outras estações, da lista pública do SondeHub. Apenas leitura: seu locator arredondado a 0,1° e um raio de 400 km são enviados; nada é publicado. Desligado até você ativar.
+
+sonde-online-count = { $n } online
+
+sonde-online-no-grid = Defina seu locator na configuração dos modos digitais para ver as sondas online.
+
+sonde-online-failed = O SondeHub não respondeu.
 sonde-export = Exportar o voo
 
 sonde-export-kml-hover = Salvar o voo desta sonda como trilha KML (Google Earth): hora, longitude, latitude, altitude em metros

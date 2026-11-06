@@ -9175,6 +9175,15 @@ sonde-col-battery = Batteria
 
 sonde-col-heard = Ricevuta
 
+sonde-online = Online (SondeHub)
+
+sonde-online-hover = Mostra anche le sonde ricevute da altre stazioni, dall'elenco pubblico di SondeHub. Solo lettura: vengono inviati il locatore arrotondato a 0,1° e un raggio di 400 km; non viene caricato nulla. Disattivato finché non lo attiva.
+
+sonde-online-count = { $n } online
+
+sonde-online-no-grid = Imposti il suo locatore nella configurazione dei modi digitali per vedere le sonde online.
+
+sonde-online-failed = SondeHub non ha risposto.
 sonde-export = Esporta il volo
 
 sonde-export-kml-hover = Salva il volo di questa sonda come traccia KML (Google Earth): ora, longitudine, latitudine, quota in metri
