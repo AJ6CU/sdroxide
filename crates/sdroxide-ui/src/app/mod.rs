@@ -753,6 +753,8 @@ pub struct SdroxideApp {
     /// the rolling decode log — as last reported by the engine. `None` until
     /// the decoder has been enabled at least once this session.
     hfdl_status: Option<sdroxide_types::HfdlStatus>,
+    /// The radiosonde decoder's latest status (level, sondes heard, tracks).
+    sonde_status: Option<Box<sdroxide_types::SondeStatus>>,
     /// HFDL: the aircraft plot table and the map's pan/zoom and selection. Its
     /// own table rather than the decode log's, so an aircraft stays on the map
     /// after its earliest decodes have scrolled out of the log.
@@ -2313,6 +2315,7 @@ impl SdroxideApp {
             ism_sort_desc: true,
             qo100_status: None,
             hfdl_status: None,
+            sonde_status: None,
             hfdl_map: crate::hfdl_map::HfdlMapState::default(),
             aircraft_registry: aircraft_registry::AircraftRegistry::default(),
             hfdl_filter: String::new(),

@@ -340,6 +340,9 @@ pub enum RadioEvent {
     /// this to a remote/WASM client would mean a matching variant in
     /// `sdroxide_proto::ServerMsg` — not done yet.
     HfdlStatus(crate::HfdlStatus),
+    /// The radiosonde decoder's level and the sondes it has heard, with their
+    /// tracks. Native-engine only, like [`RadioEvent::HfdlStatus`].
+    SondeStatus(Box<crate::SondeStatus>),
     /// Everything the VDL Mode 2 decoder has: the message log, the station
     /// table, and what every channel of the plan is doing. A whole snapshot, a
     /// couple of times a second.

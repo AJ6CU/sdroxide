@@ -43,6 +43,7 @@ mod fst4;
 mod geo;
 mod hd;
 mod hfdl;
+mod sonde;
 mod ibp;
 mod input;
 mod ism;
@@ -210,6 +211,10 @@ pub use geo::{
     grid4, latlon_to_grid,
 };
 pub use hd::{HdAudioService, HdRadioStatus};
+pub use sonde::{
+    SONDE_BAND_HZ, SONDE_DEFAULT_HZ, SONDE_MAX_TRACKS, SONDE_TRACK_DEPTH, SondePoint,
+    SondeSettings, SondeStatus, SondeTrack,
+};
 pub use hfdl::{
     HFDL_DEFAULT_HZ, HFDL_LANE_RATE_HZ, HFDL_LOG_DEPTH, HfdlDecode, HfdlFix, HfdlSettings,
     HfdlStatus,
