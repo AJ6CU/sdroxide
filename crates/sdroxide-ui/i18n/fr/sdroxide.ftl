@@ -9176,3 +9176,13 @@ sonde-col-speed = Vitesse
 sonde-col-battery = Batterie
 
 sonde-col-heard = Reçue
+
+sonde-online = En ligne (SondeHub)
+
+sonde-online-hover = Affiche aussi les sondes reçues par d'autres stations, d'après la liste publique de SondeHub. Lecture seule : votre locator arrondi à 0,1° et un rayon de 400 km sont envoyés ; rien n'est publié. Désactivé tant que vous ne l'activez pas.
+
+sonde-online-count = { $n } en ligne
+
+sonde-online-no-grid = Renseignez votre locator dans la configuration des modes numériques pour voir les sondes en ligne.
+
+sonde-online-failed = SondeHub n'a pas répondu.

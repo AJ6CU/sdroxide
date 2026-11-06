@@ -9173,3 +9173,13 @@ sonde-col-speed = Snelheid
 sonde-col-battery = Batterij
 
 sonde-col-heard = Ontvangen
+
+sonde-online = Online (SondeHub)
+
+sonde-online-hover = Toont ook sondes die andere stations hebben ontvangen, uit de openbare lijst van SondeHub. Alleen lezen: uw locator op 0,1° afgerond en een straal van 400 km worden verstuurd; er wordt niets geüpload. Uit tot u het inschakelt.
+
+sonde-online-count = { $n } online
+
+sonde-online-no-grid = Vul uw locator in bij de instellingen van de digitale modes om online sondes te zien.
+
+sonde-online-failed = SondeHub antwoordde niet.
