@@ -108,6 +108,9 @@ Everything else that was in this list has been merged or closed since — see **
 - AppImage — beslissing nodig.
 
 ## Recently done
+- 2026-11-06 — #501 merged (added by madmedicnl, owned by Claude): the decoded-text-over-UDP address is now persisted when applying WSJT-X settings, so it survives a restart and the feed actually starts. `git revert 20a0edc5` takes it back.
+- 2026-11-06 — #500 merged (added by madmedicnl, owned by Claude): usb audio no longer nags "renamed by the sound server — Apply to update it"; a card found by stable tokens is used as-is and its new ALSA name is written back to radio.json. `git revert db07b6b9` takes it back.
+- 2026-11-06 — #499 merged (added by madmedicnl, owned by Claude): usb audio sets the radio sound card's mixer level on open (default 80%), adjustable in Settings → Audio, so a USB rig (SS9900v) triggers its VOX. ALSA only, best-effort, no wire change.
 
 - 2026-11-06 — #486 merged (added by madmedicnl, owned by Claude): NAVTEX default sub-band span widened from 3.7 to 8 kHz so the signal no longer hugs the right edge with CTR on. Small safe half of #481's zoom points; per-decoder remembered zoom (#b) waits on F4NRM's reaction.
 - 2026-11-06 — #485 merged (added by madmedicnl, owned by Claude): navtex framer now closes an open message when the next `ZCZC` arrives, so a missed `NNNN` no longer merges broadcasts — fixes the wipe and the apparent stuck-SYNC from #481. Single commit, `git revert 6141334c` takes it back.

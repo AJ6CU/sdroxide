@@ -9168,3 +9168,10 @@ sonde-col-heard = Oída
 sonde-scan = Barrido
 
 sonde-scan-hover = Busca sondas en toda la ventana de muestreo y decodifica hasta cuatro a la vez, en lugar de escuchar un solo canal. La ventana debe cubrirlas: el campo Canal centra la radio.
+settings-audio-radio-out-level = Nivel mezclador TX
+
+settings-audio-radio-out-level-hint = Nivel de reproduccion ALSA del dispositivo de salida del radio. Subalo para un rig USB (SS9900v) para que su VOX se active. Solo Linux.
+
+settings-audio-radio-in-level = Nivel mezclador RX
+
+settings-audio-radio-in-level-hint = Nivel de captura ALSA del dispositivo de entrada del radio. Solo Linux.

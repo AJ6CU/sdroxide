@@ -9107,3 +9107,10 @@ sonde-col-heard = 接收
 sonde-scan = 扫描
 
 sonde-scan-hover = 不再只听一个信道，而是在整个采样窗口中寻找探空仪，并同时解码最多四个。窗口必须覆盖它们：信道框用于使电台居中。
+settings-audio-radio-out-level = TX混音器电平
+
+settings-audio-radio-out-level-hint = 无线电音频输出设备的ALSA播放电平。为USB设备（SS9900v）提高以触发其VOX。仅Linux。
+
+settings-audio-radio-in-level = RX混音器电平
+
+settings-audio-radio-in-level-hint = 无线电音频输入设备的ALSA采集电平。仅Linux。

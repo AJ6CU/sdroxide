@@ -361,6 +361,36 @@ impl SdroxideApp {
             if tx != cfg.radio_audio_out {
                 cfg.radio_audio_out = tx;
             }
+            // Mixer level for the radio's TX audio device, so a USB interface
+            // (SS9900v) is loud enough to trigger its VOX. Only meaningful for
+            // an ALSA card; a no-op elsewhere.
+            let mut out_level = cfg.radio_audio_out_level.unwrap_or(80);
+            field(ui, &tr!("settings-audio-radio-out-level"), |ui| {
+                let resp = ui.add(egui::Slider::new(&mut out_level, 0..=100).suffix("%"));
+                if resp.changed() {
+                    cfg.radio_audio_out_level = Some(out_level);
+                    #[cfg(not(target_arch = "wasm32"))]
+                    if let Some(name) = cfg.radio_audio_out.as_deref() {
+                        sdroxide_audio::set_mixer_level(name, true, out_level);
+                    }
+                }
+                resp.on_hover_text(tr!("settings-audio-radio-out-level-hint"));
+            });
+        }
+
+        if has_rx {
+            let mut in_level = cfg.radio_audio_in_level.unwrap_or(80);
+            field(ui, &tr!("settings-audio-radio-in-level"), |ui| {
+                let resp = ui.add(egui::Slider::new(&mut in_level, 0..=100).suffix("%"));
+                if resp.changed() {
+                    cfg.radio_audio_in_level = Some(in_level);
+                    #[cfg(not(target_arch = "wasm32"))]
+                    if let Some(name) = cfg.radio_audio_in.as_deref() {
+                        sdroxide_audio::set_mixer_level(name, false, in_level);
+                    }
+                }
+                resp.on_hover_text(tr!("settings-audio-radio-in-level-hint"));
+            });
         }
 
         if has_rx {

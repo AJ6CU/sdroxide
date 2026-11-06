@@ -895,6 +895,58 @@ pub fn input_device_names() -> Vec<String> {
     device_names(&cpal::default_host(), false)
 }
 
+/// Best-effort: set the ALSA mixer level of the sound card a device name
+/// points at, so a USB radio interface (e.g. the SS9900v) is loud enough to
+/// trigger its VOX and captures audio. `playback` selects output vs. input;
+/// `percent` is 0..=100. A missing device, a non-ALSA (virtual) device or any
+/// mixer error is silently ignored — the level is a hint, not a hard
+/// requirement, and the radio keeps running on whatever the card defaults to.
+#[cfg(target_os = "linux")]
+pub fn set_mixer_level(device_name: &str, playback: bool, percent: u8) {
+    use alsa::mixer::{Mixer, SelemId};
+    let host = cpal::default_host();
+    let devices: Vec<cpal::Device> = if playback {
+        host.output_devices().map(|d| d.collect()).unwrap_or_default()
+    } else {
+        host.input_devices().map(|d| d.collect()).unwrap_or_default()
+    };
+    let cards = alsa_cards();
+    let dev = devices.into_iter().find(|d| {
+        device_display(d, &cards).as_deref() == Some(device_name)
+    });
+    let Some(dev) = dev else { return };
+    let Some(card) = device_card_id(&dev) else { return };
+    let card_name = format!("hw:{}", card);
+    let Ok(mixer) = Mixer::new(&card_name, false) else { return };
+    let pct = percent.clamp(0, 100) as i64;
+    let names: &[&str] = if playback {
+        &["PCM", "Master", "Speaker", "Headphone"]
+    } else {
+        &["Mic", "Capture", "Mic Capture"]
+    };
+    for name in names {
+        let id = SelemId::new(name, 0);
+        if let Some(selem) = mixer.find_selem(&id) {
+            if playback {
+                let (lo, hi) = selem.get_playback_volume_range();
+                let v = lo + (hi - lo) * pct / 100;
+                let _ = selem.set_playback_volume_all(v);
+                let _ = selem.set_playback_switch_all(1);
+            } else {
+                let (lo, hi) = selem.get_capture_volume_range();
+                let v = lo + (hi - lo) * pct / 100;
+                let _ = selem.set_capture_volume_all(v);
+                let _ = selem.set_capture_switch_all(1);
+            }
+            // One control is enough; stop after the first that exists.
+            break;
+        }
+    }
+}
+
+#[cfg(not(target_os = "linux"))]
+pub fn set_mixer_level(_device_name: &str, _playback: bool, _percent: u8) {}
+
 /// True if the device reports at least one sample configuration we can use.
 fn has_usable_config(device: &cpal::Device, output: bool) -> bool {
     if output {

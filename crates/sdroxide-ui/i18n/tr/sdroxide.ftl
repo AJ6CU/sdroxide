@@ -9169,3 +9169,10 @@ sonde-col-heard = Alındı
 sonde-scan = Tara
 
 sonde-scan-hover = Tek bir kanalı dinlemek yerine tüm örnekleme penceresinde sonda arar ve aynı anda dörde kadarını çözer. Pencerenin onları kapsaması gerekir: Kanal alanı telsizi ortalar.
+settings-audio-radio-out-level = TX mikser seviyesi
+
+settings-audio-radio-out-level-hint = Radionun ses cikis cihazinin ALSA oynatma seviyesi. VOX'un tetiklenmesi icin USB rig (SS9900v) icin yukseltin. Sadece Linux.
+
+settings-audio-radio-in-level = RX mikser seviyesi
+
+settings-audio-radio-in-level-hint = Radionun ses giris cihazinin ALSA yakalama seviyesi. Sadece Linux.

@@ -1983,6 +1983,13 @@ impl SdroxideApp {
             self.net_rbn_cmds = rbn_cmds;
             self.net_rbn2_cmds = rbn2_cmds;
         }
+        // The decoded-text-over-UDP address lives in net.json even though its
+        // field is edited on the WSJT-X tab, so applying WSJT-X settings must
+        // also persist (and apply) the network config - otherwise the address
+        // is lost on restart and the feed never starts.
+        if wsjtx_apply {
+            net_apply = true;
+        }
         if net_apply && self.net_cfg_seeded {
             let split = |s: &str| -> Vec<String> {
                 s.lines().map(|l| l.trim().to_string()).filter(|l| !l.is_empty()).collect()

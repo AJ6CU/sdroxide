@@ -9184,3 +9184,10 @@ sonde-col-heard = Принято
 sonde-scan = Поиск
 
 sonde-scan-hover = Ищет зонды по всему окну выборки и декодирует до четырёх одновременно вместо прослушивания одного канала. Окно должно их охватывать: поле «Канал» центрирует радио.
+settings-audio-radio-out-level = Уровень микшера TX
+
+settings-audio-radio-out-level-hint = Уровень воспроизведения ALSA устройства вывода аудио радио. Повысьте для USB-рига (SS9900v), чтобы сработал его VOX. Только Linux.
+
+settings-audio-radio-in-level = Уровень микшера RX
+
+settings-audio-radio-in-level-hint = Уровень захвата ALSA устройства ввода аудио радио. Только Linux.

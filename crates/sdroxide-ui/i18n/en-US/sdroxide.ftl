@@ -9192,3 +9192,10 @@ sonde-col-heard = Heard
 sonde-scan = Scan
 
 sonde-scan-hover = Look across the whole sample window for sondes and decode up to four at once, instead of listening on one channel. The window must cover them: the channel box centres the radio.
+settings-audio-radio-out-level = TX mixer level
+
+settings-audio-radio-out-level-hint = ALSA playback level for the radio's output device. Raise it for a USB rig (SS9900v) so its VOX triggers. Linux only.
+
+settings-audio-radio-in-level = RX mixer level
+
+settings-audio-radio-in-level-hint = ALSA capture level for the radio's input device. Linux only.
