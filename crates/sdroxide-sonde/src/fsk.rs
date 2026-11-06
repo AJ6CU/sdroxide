@@ -34,6 +34,13 @@ pub struct FskSlicer {
     cnt: u32,
     last_above: bool,
     level: f32,
+    /// Two one-pole low-pass stages on the complex baseband, ahead of the
+    /// discriminator, for a narrow signal in a wide channel.
+    lp: Option<(f32, [Complex32; 2])>,
+    /// Midrange only: samples without a crossing after which the highest and
+    /// lowest levels stop decaying (a long run of one symbol).
+    hold: Option<u32>,
+    since_cross: u32,
 }
 
 impl FskSlicer {
@@ -59,6 +66,9 @@ impl FskSlicer {
             cnt: 0,
             last_above: false,
             level: -120.0,
+            lp: None,
+            hold: None,
+            since_cross: 0,
         })
     }
 
@@ -67,6 +77,24 @@ impl FskSlicer {
     /// model wants more.
     pub fn with_smoothing(mut self, tau_s: f64, input_rate: f64) -> Self {
         self.alpha = (1.0 / (input_rate * tau_s)).clamp(0.01, 1.0) as f32;
+        self
+    }
+
+    /// Low-pass the channel (two one-pole stages, about `cutoff_hz`) before
+    /// the discriminator. A narrow signal such as the 1200 baud MTS01 drowns
+    /// in the wideband noise of the raw discriminator without it.
+    pub fn with_channel_lowpass(mut self, cutoff_hz: f64, input_rate: f64) -> Self {
+        let a = 1.0 - (-2.0 * std::f64::consts::PI * cutoff_hz / input_rate).exp();
+        self.lp = Some((a as f32, [Complex32::new(0.0, 0.0); 2]));
+        self
+    }
+
+    /// Midrange threshold: keep the highest and lowest levels when `bits`
+    /// symbols go by without a crossing, so that a long run of the same
+    /// symbol (the zero padding of an MTS01 frame) does not pull the
+    /// threshold onto the signal.
+    pub fn with_hold(mut self, bits: f64) -> Self {
+        self.hold = Some((bits * self.spb) as u32);
         self
     }
 
@@ -80,21 +108,28 @@ impl FskSlicer {
             } else if self.osc < -std::f64::consts::TAU {
                 self.osc += std::f64::consts::TAU;
             }
-            let z = x * Complex32::new(c as f32, s as f32);
+            let mut z = x * Complex32::new(c as f32, s as f32);
             self.level += 0.0005 * (10.0 * (z.norm_sqr() + 1e-12).log10() - self.level);
+            if let Some((a, st)) = self.lp.as_mut() {
+                st[0] += (z - st[0]) * *a;
+                st[1] += (st[0] - st[1]) * *a;
+                z = st[1];
+            }
             let d = (z * self.prev.conj()).arg();
             self.prev = z;
             self.y += self.alpha * (d - self.y);
 
             if self.mode == Threshold::Midrange {
+                self.since_cross = self.since_cross.saturating_add(1);
+                let held = self.hold.is_some_and(|h| self.since_cross > h);
                 if self.y > self.hi {
                     self.hi = self.y;
-                } else {
+                } else if !held {
                     self.hi += 0.001 * (self.y - self.hi);
                 }
                 if self.y < self.lo {
                     self.lo = self.y;
-                } else {
+                } else if !held {
                     self.lo += 0.001 * (self.y - self.lo);
                 }
             }
@@ -105,6 +140,7 @@ impl FskSlicer {
             self.phase += 1.0;
             let above = self.y > thr;
             if above != self.last_above {
+                self.since_cross = 0;
                 let err = if self.phase < self.spb / 2.0 { self.phase } else { self.phase - self.spb };
                 self.phase -= 0.08 * err;
             }

@@ -28,11 +28,13 @@ pub enum SondeModel {
     Mrz,
     /// Lockheed Martin Sippican LMS6-400.
     Lms6,
+    /// Meteosis MTS01.
+    Mts01,
 }
 
 impl SondeModel {
     /// Every model decoded, in the order a lane tries them.
-    pub const ALL: &'static [SondeModel] = &[SondeModel::Rs41, SondeModel::Dfm, SondeModel::M10, SondeModel::M20, SondeModel::Imet4, SondeModel::Mrz, SondeModel::Lms6];
+    pub const ALL: &'static [SondeModel] = &[SondeModel::Rs41, SondeModel::Dfm, SondeModel::M10, SondeModel::M20, SondeModel::Imet4, SondeModel::Mrz, SondeModel::Lms6, SondeModel::Mts01];
 
     /// The type as printed in the track table and sent to SondeHub.
     pub fn name(self) -> &'static str {
@@ -44,6 +46,7 @@ impl SondeModel {
             SondeModel::Imet4 => "iMet",
             SondeModel::Mrz => "MRZ",
             SondeModel::Lms6 => "LMS6",
+            SondeModel::Mts01 => "MTS01",
         }
     }
 }
@@ -148,6 +151,7 @@ pub fn decoder_for(
         SondeModel::Imet4 => Ok(Box::new(crate::imet::Imet4Decoder::new(input_rate, freq_offset_hz)?)),
         SondeModel::Mrz => Ok(Box::new(crate::mrz::MrzDecoder::new(input_rate, freq_offset_hz)?)),
         SondeModel::Lms6 => Ok(Box::new(crate::lms6::Lms6Decoder::new(input_rate, freq_offset_hz)?)),
+        SondeModel::Mts01 => Ok(Box::new(crate::mts01::Mts01Decoder::new(input_rate, freq_offset_hz)?)),
     }
 }
 
