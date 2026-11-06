@@ -9136,6 +9136,39 @@ topbar-apf-hint = CW tonuna ortalanır ve onu izler. AGC'den önce; kod çözüc
 
 topbar-apf-rig-audio-hover = CW tepe filtresi — bu telsizde yok: duyduğunuz cihazın kendi sesi, filtre ise burada demodüle edilen ses üzerinde çalışır
 
+sondemap-no-sonde-yet = Henüz radyosonda alınmadı
+
+aircraft-mode-sonde-hover = Radyosondalar (RS41, 400–406 MHz) — hava balonları, uçuş izleriyle
+
+sonde-decoding = ÇÖZÜLÜYOR
+
+sonde-decoding-off = ÇÖZÜCÜ KAPALI
+
+sonde-count = Sondalar: { $n }
+
+sonde-frames = Çerçeve: { $n }
+
+sonde-channel = Kanal
+
+sonde-channel-hover = Dinlenecek sonda frekansı (400–406 MHz). Kanal pencerede kalsın diye telsiz de oraya ayarlanır.
+
+sonde-off-note = Radyosonda çözücüsü kapalı. Başlatmak için SONDE'a basın.
+
+sonde-col-serial = Sonda
+
+sonde-col-alt = Yükseklik
+
+sonde-col-climb = Tırmanış
+
+sonde-col-speed = Hız
+
+sonde-col-battery = Pil
+
+sonde-col-heard = Alındı
+
+sonde-scan = Tara
+
+sonde-scan-hover = Tek bir kanalı dinlemek yerine tüm örnekleme penceresinde sonda arar ve aynı anda dörde kadarını çözer. Pencerenin onları kapsaması gerekir: Kanal alanı telsizi ortalar.
 settings-audio-radio-out-level = TX mikser seviyesi
 
 settings-audio-radio-out-level-hint = Radionun ses cikis cihazinin ALSA oynatma seviyesi. VOX'un tetiklenmesi icin USB rig (SS9900v) icin yukseltin. Sadece Linux.
@@ -9143,3 +9176,19 @@ settings-audio-radio-out-level-hint = Radionun ses cikis cihazinin ALSA oynatma 
 settings-audio-radio-in-level = RX mikser seviyesi
 
 settings-audio-radio-in-level-hint = Radionun ses giris cihazinin ALSA yakalama seviyesi. Sadece Linux.
+sonde-online = Çevrimiçi (SondeHub)
+
+sonde-online-hover = Diğer istasyonların duyduğu sondaları da SondeHub'ın herkese açık listesinden gösterir. Yalnızca okur: 0,1°'ye yuvarlanmış konumunuz ve 400 km yarıçap gönderilir; hiçbir şey yüklenmez. Siz açana kadar kapalıdır.
+
+sonde-online-count = { $n } çevrimiçi
+
+sonde-online-no-grid = Çevrimiçi sondaları görmek için sayısal modlar ayarında konum belirleyicinizi girin.
+
+sonde-online-failed = SondeHub yanıt vermedi.
+sonde-export = Uçuşu dışa aktar
+
+sonde-export-kml-hover = Bu sondanın uçuşunu KML izi olarak kaydet (Google Earth): zaman, boylam, enlem, metre cinsinden yükseklik
+
+sonde-export-csv-hover = Bu sondanın uçuşunu elektronik tablo için CSV olarak kaydet: zaman, enlem, boylam, metre cinsinden yükseklik
+
+sonde-export-none = Bu sonda için henüz kayıtlı konum yok.

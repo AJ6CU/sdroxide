@@ -9159,6 +9159,39 @@ topbar-apf-hint = Centred on the CW pitch and follows it. Ahead of the AGC; the 
 
 topbar-apf-rig-audio-hover = CW peak filter — not on this radio: what you hear is the rig's own audio, and the filter works on audio demodulated here
 
+sondemap-no-sonde-yet = No radiosonde heard yet
+
+aircraft-mode-sonde-hover = Radiosondes (RS41, 400–406 MHz) — weather balloons, with their flight track
+
+sonde-decoding = DECODING
+
+sonde-decoding-off = DECODER OFF
+
+sonde-count = Sondes: { $n }
+
+sonde-frames = Frames: { $n }
+
+sonde-channel = Channel
+
+sonde-channel-hover = The sonde frequency to listen on (400–406 MHz). The radio is tuned there too, so the channel is inside the window.
+
+sonde-off-note = The radiosonde decoder is off. Press SONDE to start it.
+
+sonde-col-serial = Sonde
+
+sonde-col-alt = Altitude
+
+sonde-col-climb = Climb
+
+sonde-col-speed = Speed
+
+sonde-col-battery = Battery
+
+sonde-col-heard = Heard
+
+sonde-scan = Scan
+
+sonde-scan-hover = Look across the whole sample window for sondes and decode up to four at once, instead of listening on one channel. The window must cover them: the channel box centres the radio.
 settings-audio-radio-out-level = TX mixer level
 
 settings-audio-radio-out-level-hint = ALSA playback level for the radio's output device. Raise it for a USB rig (SS9900v) so its VOX triggers. Linux only.
@@ -9166,3 +9199,19 @@ settings-audio-radio-out-level-hint = ALSA playback level for the radio's output
 settings-audio-radio-in-level = RX mixer level
 
 settings-audio-radio-in-level-hint = ALSA capture level for the radio's input device. Linux only.
+sonde-online = Online (SondeHub)
+
+sonde-online-hover = Also show sondes other stations have heard, from SondeHub's public list. Only reads: your locator, rounded to 0.1°, and a 400 km radius are sent; nothing is uploaded. Off until you switch it on.
+
+sonde-online-count = { $n } online
+
+sonde-online-no-grid = Set your locator in the digital-mode setup to see online sondes.
+
+sonde-online-failed = SondeHub did not answer.
+sonde-export = Export flight
+
+sonde-export-kml-hover = Save this sonde's flight as a KML track (Google Earth): time, longitude, latitude, altitude in metres
+
+sonde-export-csv-hover = Save this sonde's flight as a CSV table for a spreadsheet: time, latitude, longitude, altitude in metres
+
+sonde-export-none = No position kept yet for this sonde.

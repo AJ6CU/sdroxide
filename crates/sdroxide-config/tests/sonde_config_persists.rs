@@ -15,14 +15,14 @@ fn the_sonde_lane_remembers_its_channel_and_clamps_a_stray_one() {
     assert!(!fresh.enabled, "a fresh configuration starts with the sonde lane off");
     assert_eq!(fresh.frequency_hz, sdroxide_types::SONDE_DEFAULT_HZ);
 
-    let mine = sdroxide_types::SondeSettings { enabled: true, frequency_hz: 404_500_000.0 };
+    let mine = sdroxide_types::SondeSettings { enabled: true, frequency_hz: 404_500_000.0, scan: true };
     sdroxide_config::save_sonde_config(&mine).unwrap();
     assert!(dir.join("sonde.json").exists());
     assert_eq!(sdroxide_config::load_sonde_config(), mine, "the lane forgot what it was told");
 
     // A converter offset saved as a channel lands at the top of the band
     // rather than tuning the lane to nowhere.
-    let stray = sdroxide_types::SondeSettings { enabled: true, frequency_hz: 6.0e9 };
+    let stray = sdroxide_types::SondeSettings { enabled: true, frequency_hz: 6.0e9, scan: false };
     sdroxide_config::save_sonde_config(&stray).unwrap();
     assert_eq!(
         sdroxide_config::load_sonde_config().frequency_hz,

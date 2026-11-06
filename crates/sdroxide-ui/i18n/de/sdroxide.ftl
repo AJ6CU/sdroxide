@@ -9134,6 +9134,39 @@ topbar-apf-hint = Auf der CW-Tonhöhe zentriert und folgt ihr. Vor der AGC; die 
 
 topbar-apf-rig-audio-hover = CW-Peakfilter — nicht bei diesem Funkgerät: Sie hören das Audio des Geräts selbst, und der Filter arbeitet auf dem hier demodulierten Audio
 
+sondemap-no-sonde-yet = Noch keine Radiosonde empfangen
+
+aircraft-mode-sonde-hover = Radiosonden (RS41, 400–406 MHz) — Wetterballons mit ihrer Flugbahn
+
+sonde-decoding = DEKODIERUNG
+
+sonde-decoding-off = DEKODER AUS
+
+sonde-count = Sonden: { $n }
+
+sonde-frames = Frames: { $n }
+
+sonde-channel = Kanal
+
+sonde-channel-hover = Die Sondenfrequenz, auf der gehört wird (400–406 MHz). Das Radio wird ebenfalls dorthin abgestimmt, damit der Kanal im Fenster liegt.
+
+sonde-off-note = Der Radiosonden-Dekoder ist aus. SONDE drücken, um ihn zu starten.
+
+sonde-col-serial = Sonde
+
+sonde-col-alt = Höhe
+
+sonde-col-climb = Steigen
+
+sonde-col-speed = Geschwindigkeit
+
+sonde-col-battery = Batterie
+
+sonde-col-heard = Gehört
+
+sonde-scan = Suche
+
+sonde-scan-hover = Sucht im ganzen Abtastfenster nach Sonden und dekodiert bis zu vier gleichzeitig, statt auf einem Kanal zu hören. Das Fenster muss sie abdecken: das Kanalfeld zentriert das Radio.
 settings-audio-radio-out-level = TX-Mixer-Pegel
 
 settings-audio-radio-out-level-hint = ALSA-Wiedergabepegel des Audioausgabegerats des Funkgerats. Fur ein USB-Rig (SS9900v) anheben, damit dessen VOX auslost. Nur Linux.
@@ -9141,3 +9174,19 @@ settings-audio-radio-out-level-hint = ALSA-Wiedergabepegel des Audioausgabegerat
 settings-audio-radio-in-level = RX-Mixer-Pegel
 
 settings-audio-radio-in-level-hint = ALSA-Aufnahmepegel des Audioeingabegerats des Funkgerats. Nur Linux.
+sonde-online = Online (SondeHub)
+
+sonde-online-hover = Zeigt auch Sonden, die andere Stationen gehört haben, aus der öffentlichen Liste von SondeHub. Nur lesend: Ihr Locator auf 0,1° gerundet und ein Radius von 400 km werden gesendet; nichts wird hochgeladen. Aus, bis Sie es einschalten.
+
+sonde-online-count = { $n } online
+
+sonde-online-no-grid = Tragen Sie Ihren Locator in der Digimode-Einrichtung ein, um Online-Sonden zu sehen.
+
+sonde-online-failed = SondeHub hat nicht geantwortet.
+sonde-export = Flug exportieren
+
+sonde-export-kml-hover = Den Flug dieser Sonde als KML-Spur speichern (Google Earth): Zeit, Länge, Breite, Höhe in Metern
+
+sonde-export-csv-hover = Den Flug dieser Sonde als CSV-Tabelle für eine Tabellenkalkulation speichern: Zeit, Breite, Länge, Höhe in Metern
+
+sonde-export-none = Für diese Sonde ist noch keine Position gespeichert.

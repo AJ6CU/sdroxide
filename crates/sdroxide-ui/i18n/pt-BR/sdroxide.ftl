@@ -9136,6 +9136,39 @@ topbar-apf-hint = Centrado no tom de CW e o acompanha. Antes do AGC; os decodifi
 
 topbar-apf-rig-audio-hover = Filtro de pico CW — não neste rádio: o que você ouve é o áudio do próprio equipamento, e o filtro atua no áudio demodulado aqui
 
+sondemap-no-sonde-yet = Nenhuma radiossonda recebida ainda
+
+aircraft-mode-sonde-hover = Radiossondas (RS41, 400–406 MHz) — balões meteorológicos, com a trajetória
+
+sonde-decoding = DECODIFICANDO
+
+sonde-decoding-off = DECODIFICADOR DESLIGADO
+
+sonde-count = Sondas: { $n }
+
+sonde-frames = Quadros: { $n }
+
+sonde-channel = Canal
+
+sonde-channel-hover = A frequência da sonda a escutar (400–406 MHz). O rádio também é sintonizado ali, para que o canal fique dentro da janela.
+
+sonde-off-note = O decodificador de radiossondas está desligado. Pressione SONDE para iniciá-lo.
+
+sonde-col-serial = Sonda
+
+sonde-col-alt = Altitude
+
+sonde-col-climb = Subida
+
+sonde-col-speed = Velocidade
+
+sonde-col-battery = Bateria
+
+sonde-col-heard = Recebida
+
+sonde-scan = Varredura
+
+sonde-scan-hover = Procura sondas em toda a janela de amostragem e decodifica até quatro ao mesmo tempo, em vez de escutar um só canal. A janela precisa cobri-las: o campo Canal centraliza o rádio.
 settings-audio-radio-out-level = Nivel do mixer TX
 
 settings-audio-radio-out-level-hint = Nivel de reproducao ALSA do dispositivo de saida de audio do radio. Aumente para um rig USB (SS9900v) para disparar seu VOX. Somente Linux.
@@ -9143,3 +9176,19 @@ settings-audio-radio-out-level-hint = Nivel de reproducao ALSA do dispositivo de
 settings-audio-radio-in-level = Nivel do mixer RX
 
 settings-audio-radio-in-level-hint = Nivel de captura ALSA do dispositivo de entrada de audio do radio. Somente Linux.
+sonde-online = Online (SondeHub)
+
+sonde-online-hover = Mostra também as sondas ouvidas por outras estações, da lista pública do SondeHub. Apenas leitura: seu locator arredondado a 0,1° e um raio de 400 km são enviados; nada é publicado. Desligado até você ativar.
+
+sonde-online-count = { $n } online
+
+sonde-online-no-grid = Defina seu locator na configuração dos modos digitais para ver as sondas online.
+
+sonde-online-failed = O SondeHub não respondeu.
+sonde-export = Exportar o voo
+
+sonde-export-kml-hover = Salvar o voo desta sonda como trilha KML (Google Earth): hora, longitude, latitude, altitude em metros
+
+sonde-export-csv-hover = Salvar o voo desta sonda como tabela CSV para uma planilha: hora, latitude, longitude, altitude em metros
+
+sonde-export-none = Nenhuma posição guardada ainda para esta sonda.

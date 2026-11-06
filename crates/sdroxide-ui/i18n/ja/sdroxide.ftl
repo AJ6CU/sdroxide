@@ -9084,6 +9084,39 @@ topbar-apf-hint = CWピッチを中心にし、ピッチに追従します。AGC
 
 topbar-apf-rig-audio-hover = CWピークフィルター — この無線機では使えません。聞こえているのは無線機自身の音声で、フィルターはここで復調した音声に働きます
 
+sondemap-no-sonde-yet = ラジオゾンデはまだ受信されていません
+
+aircraft-mode-sonde-hover = ラジオゾンデ（RS41、400〜406 MHz）— 気象観測気球と飛行経路
+
+sonde-decoding = デコード中
+
+sonde-decoding-off = デコーダー停止
+
+sonde-count = ゾンデ: { $n }
+
+sonde-frames = フレーム: { $n }
+
+sonde-channel = チャンネル
+
+sonde-channel-hover = 受信するゾンデの周波数（400〜406 MHz）。チャンネルがウィンドウ内に入るよう、無線機もその周波数に合わせます。
+
+sonde-off-note = ラジオゾンデのデコーダーは停止中です。SONDE を押すと開始します。
+
+sonde-col-serial = ゾンデ
+
+sonde-col-alt = 高度
+
+sonde-col-climb = 上昇率
+
+sonde-col-speed = 速度
+
+sonde-col-battery = 電池
+
+sonde-col-heard = 受信
+
+sonde-scan = スキャン
+
+sonde-scan-hover = 1 つのチャンネルを聞く代わりに、サンプリングウィンドウ全体からゾンデを探し、最大 4 つを同時にデコードします。ウィンドウがそれらを含む必要があります。チャンネル欄で無線機の中心を合わせます。
 settings-audio-radio-out-level = TXミキサーレベル
 
 settings-audio-radio-out-level-hint = ラジオの音声出力デバイスのALSA再生レベル。VOXをトリガーするためUSBリグ（SS9900v）では上げてください。Linuxのみ。
@@ -9091,3 +9124,19 @@ settings-audio-radio-out-level-hint = ラジオの音声出力デバイスのALS
 settings-audio-radio-in-level = RXミキサーレベル
 
 settings-audio-radio-in-level-hint = ラジオの音声入力デバイスのALSAキャプチャレベル。Linuxのみ。
+sonde-online = オンライン（SondeHub）
+
+sonde-online-hover = 他の局が受信したゾンデも SondeHub の公開リストから表示します。読み取りのみ：0.1° に丸めたロケーターと半径 400 km を送信し、何もアップロードしません。オンにするまでオフです。
+
+sonde-online-count = オンライン { $n } 件
+
+sonde-online-no-grid = オンラインのゾンデを表示するには、デジタルモード設定でロケーターを設定してください。
+
+sonde-online-failed = SondeHub から応答がありません。
+sonde-export = 飛行をエクスポート
+
+sonde-export-kml-hover = このゾンデの飛行を KML トラック（Google Earth）として保存：時刻、経度、緯度、高度（メートル）
+
+sonde-export-csv-hover = このゾンデの飛行を表計算用の CSV として保存：時刻、緯度、経度、高度（メートル）
+
+sonde-export-none = このゾンデの位置はまだ保存されていません。

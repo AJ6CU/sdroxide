@@ -9144,6 +9144,39 @@ topbar-apf-hint = Gecentreerd op de CW-toonhoogte en volgt die. Vóór de AGC; d
 
 topbar-apf-rig-audio-hover = CW-piekfilter — niet op deze radio: wat u hoort is de eigen audio van het toestel, en het filter werkt op hier gedemoduleerde audio
 
+sondemap-no-sonde-yet = Nog geen radiosonde ontvangen
+
+aircraft-mode-sonde-hover = Radiosondes (RS41, 400–406 MHz) — weerballonnen, met hun vliegroute
+
+sonde-decoding = DECODEREN
+
+sonde-decoding-off = DECODER UIT
+
+sonde-count = Sondes: { $n }
+
+sonde-frames = Frames: { $n }
+
+sonde-channel = Kanaal
+
+sonde-channel-hover = De sondefrequentie waarop wordt geluisterd (400–406 MHz). De radio wordt er ook op afgestemd, zodat het kanaal in het venster ligt.
+
+sonde-off-note = De radiosonde-decoder staat uit. Druk op SONDE om hem te starten.
+
+sonde-col-serial = Sonde
+
+sonde-col-alt = Hoogte
+
+sonde-col-climb = Stijging
+
+sonde-col-speed = Snelheid
+
+sonde-col-battery = Batterij
+
+sonde-col-heard = Ontvangen
+
+sonde-scan = Scan
+
+sonde-scan-hover = Zoekt in het hele samplevenster naar sondes en decodeert er tot vier tegelijk, in plaats van op één kanaal te luisteren. Het venster moet ze bestrijken: het kanaalveld centreert de radio.
 settings-audio-radio-out-level = TX-mixerniveau
 
 settings-audio-radio-out-level-hint = ALSA-afspeelniveau van het audio-uitvoerapparaat van de radio. Verhoog voor een USB-rig (SS9900v) zodat de VOX triggert. Alleen Linux.
@@ -9151,3 +9184,19 @@ settings-audio-radio-out-level-hint = ALSA-afspeelniveau van het audio-uitvoerap
 settings-audio-radio-in-level = RX-mixerniveau
 
 settings-audio-radio-in-level-hint = ALSA-opnameniveau van het audio-invoerapparaat van de radio. Alleen Linux.
+sonde-online = Online (SondeHub)
+
+sonde-online-hover = Toont ook sondes die andere stations hebben ontvangen, uit de openbare lijst van SondeHub. Alleen lezen: uw locator op 0,1° afgerond en een straal van 400 km worden verstuurd; er wordt niets geüpload. Uit tot u het inschakelt.
+
+sonde-online-count = { $n } online
+
+sonde-online-no-grid = Vul uw locator in bij de instellingen van de digitale modes om online sondes te zien.
+
+sonde-online-failed = SondeHub antwoordde niet.
+sonde-export = Vlucht exporteren
+
+sonde-export-kml-hover = De vlucht van deze sonde opslaan als KML-track (Google Earth): tijd, lengtegraad, breedtegraad, hoogte in meters
+
+sonde-export-csv-hover = De vlucht van deze sonde opslaan als CSV-tabel voor een spreadsheet: tijd, breedtegraad, lengtegraad, hoogte in meters
+
+sonde-export-none = Nog geen positie bewaard voor deze sonde.

@@ -32,11 +32,17 @@ pub struct SondeSettings {
     pub enabled: bool,
     /// The sonde channel the lane centres on, in Hz.
     pub frequency_hz: f64,
+    /// Look for sondes across the whole sample window instead of listening on
+    /// one channel: a few are decoded at once, one lane per carrier found.
+    /// Appended last: postcard numbers fields by position, and the config file
+    /// of a version without it still loads (`default`).
+    #[serde(default)]
+    pub scan: bool,
 }
 
 impl Default for SondeSettings {
     fn default() -> Self {
-        Self { enabled: false, frequency_hz: SONDE_DEFAULT_HZ }
+        Self { enabled: false, frequency_hz: SONDE_DEFAULT_HZ, scan: false }
     }
 }
 
@@ -123,7 +129,7 @@ mod tests {
             SondeSettings { frequency_hz: 0.0, ..Default::default() }.sane().frequency_hz,
             SONDE_BAND_HZ.0
         );
-        let s = SondeSettings { enabled: true, frequency_hz: 404_500_000.0 };
+        let s = SondeSettings { enabled: true, frequency_hz: 404_500_000.0, scan: true };
         assert_eq!(s.sane(), s);
     }
 

@@ -2219,8 +2219,13 @@ use sdroxide_types::{
 /// so a v269 peer reads the extra bytes as the start of the next field. The
 /// live tracks are engine-side only (`RadioEvent::SondeStatus`), bridged
 /// nowhere. `PROTO_VERSION` 269 → 270, `VERSION_BYTE` 0x59 → 0x5A.
-pub const PROTO_VERSION: u16 = 270;
-const VERSION_BYTE: u8 = 0x5A;
+///
+/// v271: the radiosonde lane can scan the window. [`sdroxide_types::SondeSettings`]
+/// gains `scan` at its tail. The struct rides `RadioState` and
+/// `Command::SetSondeConfig` whole, so a v270 peer reads the extra byte as the
+/// start of the next field. `PROTO_VERSION` 270 → 271, `VERSION_BYTE` 0x5A → 0x5B.
+pub const PROTO_VERSION: u16 = 271;
+const VERSION_BYTE: u8 = 0x5B;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -4045,7 +4050,7 @@ mod tests {
     /// its default would fail here.
     #[test]
     fn roundtrip_sonde_config() {
-        let cfg = sdroxide_types::SondeSettings { enabled: true, frequency_hz: 404_500_000.0 };
+        let cfg = sdroxide_types::SondeSettings { enabled: true, frequency_hz: 404_500_000.0, scan: true };
         let m = ClientMsg::Command(Command::SetSondeConfig(cfg));
         assert_eq!(decode::<ClientMsg>(&encode(&m).unwrap()).unwrap(), m);
         let mut state = RadioState::default();

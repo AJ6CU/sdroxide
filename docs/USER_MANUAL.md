@@ -6264,6 +6264,26 @@ only for aircraft whose card has been looked up; when a word begins `type:` or
 online data — open their card*). The search is not saved: closing the program
 clears it.
 
+**Radiosondes.** The **SONDE** button in the AIRCRAFT window's column decodes Vaisala
+RS41 weather-balloon sondes (400–406 MHz). It is a view like *Cards*, not a radio mode:
+pressing it switches the decoder on and tunes the radio to the sonde channel (403.000 MHz
+at first; change it in the *Channel* box, 400–406.1 MHz), so the channel lies inside the
+sample window. Each sonde heard is drawn on the map with the track it has flown — a ring
+while it climbs, a triangle once it falls under its parachute, a cross when it has been
+silent for a minute — and a table under the map gives its serial, altitude, climb rate,
+speed, channel, battery and when it was last heard. Hover a mark for the position and the
+distance from your station. *Export flight* under the table saves the selected sonde's
+flight (the newest if none is selected) as a **KML** track for Google Earth or a **CSV**
+table for a spreadsheet. The *Online (SondeHub)* box, off until you tick it, also
+shows the sondes other stations have heard within 400 km (hollow blue diamonds): it only
+reads SondeHub's public list, sending your locator rounded to 0.1° and the radius, and
+uploads nothing; it needs the locator set in the digital-mode setup. The *Scan* box looks across the whole sample window for sonde
+carriers instead of listening on one channel, and decodes up to four sondes at once, one
+lane per carrier (a lane is dropped two minutes after its carrier goes; what it heard
+stays listed). The window has to cover the sondes: centre the radio with the *Channel*
+box, and note that a 2.4 MS/s receiver sees about 2.4 MHz of the 5.85 MHz band. The decoder needs a wideband source (a receiver that sends
+I/Q); it is off for a rig that only hands over audio. The setting is kept in `sonde.json`.
+
 **Export.** The **CSV** and **JSON** buttons under *Export* in the AIRCRAFT window
 save the tracked aircraft as a table you can open in a spreadsheet or feed to a
 script. One row per aircraft: ICAO address, callsign, registration, category, type,

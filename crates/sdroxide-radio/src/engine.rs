@@ -34,7 +34,7 @@ use sdroxide_dsp::{
     make_demod, make_modulator,
 };
 use sdroxide_hfdl::HfdlController;
-use sdroxide_sonde::SondeController;
+use sdroxide_sonde::SondeBank;
 use sdroxide_ism::{IsmAction, IsmController};
 use sdroxide_nrsc5::{HdDemod, Mode as HdMode};
 use sdroxide_qo100::Qo100Controller;
@@ -3590,19 +3590,12 @@ struct Engine {
     /// `state.hfdl` for the same reason `qo100_cfg` is. Read back at startup
     /// from `hfdl.json`.
     hfdl_cfg: sdroxide_types::HfdlSettings,
-    /// Radiosonde (RS41) decoder: a 48 kS/s downconversion centred on the
-    /// chosen sonde channel plus a worker-thread demodulator, present only
-    /// while the decoder is enabled. The same fixed-frequency shape as the HFDL
-    /// lane — retuning it is just re-seating the mixer (`sync_sonde_window`).
-    sonde_ddc: Option<Ddc>,
-    sonde: Option<SondeController>,
-    sonde_buf: Vec<Complex32>,
-    /// The lane resampled to exactly the decoder's channel rate, for the reason
-    /// `hfdl_rs` exists: the DDC lands on it only when the device rate divides
-    /// evenly into it.
-    sonde_rs: Option<ComplexResampler>,
-    sonde_res_buf: Vec<Complex32>,
-    /// The stream rate `sonde_ddc` was built to decimate.
+    /// Radiosonde (RS41) decoder lanes: one on the chosen channel, or — with
+    /// scan on — one per sonde carrier found in the window, each a 48 kS/s
+    /// downconversion with its own worker; present only while the decoder is
+    /// enabled. See `sdroxide_sonde::SondeBank`.
+    sonde: Option<SondeBank>,
+    /// The stream rate `sonde` was built for.
     sonde_in_rate: f64,
     /// Open capture file for `--record-iq`, and the interleaving scratch it is
     /// written from.
@@ -5212,11 +5205,7 @@ fn engine_thread(
         hfdl_rs: None,
         hfdl_res_buf: Vec::new(),
         hfdl_in_rate: 0.0,
-        sonde_ddc: None,
         sonde: None,
-        sonde_buf: Vec::new(),
-        sonde_rs: None,
-        sonde_res_buf: Vec::new(),
         sonde_in_rate: 0.0,
         // From `hfdl.json`, as `qo100_cfg` is.
         hfdl_cfg: sdroxide_config::load_hfdl_config(),
@@ -6883,21 +6872,9 @@ impl Engine {
                 c.on_rx_iq(lane);
             }
         }
-        // ...and the radiosonde decoder from a 48 kS/s lane centred on the
-        // sonde channel, resampled onto the decoder's exact channel rate.
-        if let Some(ddc) = self.sonde_ddc.as_mut() {
-            self.sonde_buf.clear();
-            ddc.process(iq, &mut self.sonde_buf);
-            let lane = if let Some(rs) = self.sonde_rs.as_mut() {
-                self.sonde_res_buf.clear();
-                rs.push(&self.sonde_buf, &mut self.sonde_res_buf);
-                &self.sonde_res_buf
-            } else {
-                &self.sonde_buf
-            };
-            if let Some(c) = self.sonde.as_ref() {
-                c.on_rx_iq(lane);
-            }
+        // ...and the radiosonde decoder lanes, mixed from the wide stream.
+        if let Some(bank) = self.sonde.as_mut() {
+            bank.on_wide_iq(iq, unix_now());
         }
         // Feed TCI clients: the same clean tap the digital decoders use (so
         // muting or turning down sdroxide can't silence somebody's decoder),
@@ -11319,10 +11296,8 @@ impl Engine {
                 if let Err(e) = sdroxide_config::save_sonde_config(&cfg) {
                     warn!("saving radiosonde config: {e}");
                 }
+                // `sync_sonde` hands the new settings to a running bank itself.
                 self.sync_sonde();
-                if let Some(c) = self.sonde.as_ref() {
-                    c.set_config(cfg);
-                }
             }
 
             ReloadIsmDecoders => {
@@ -12985,68 +12960,66 @@ impl Engine {
         ddc.set_offset_hz(self.state.hfdl.frequency_hz - self.state.center_hz);
     }
 
-    /// Construct or tear down the radiosonde decoder: a fixed-frequency lane
-    /// like [`Self::sync_hfdl`], a 48 kS/s downconversion centred on
-    /// [`sdroxide_types::SondeSettings::frequency_hz`], the decoder's own
-    /// channel rate. The channel must lie inside the sample window; the AIRCRAFT
-    /// window's SONDE button brings the dial there.
+    /// Construct or tear down the radiosonde decoder: a bank of fixed-frequency
+    /// lanes like [`Self::sync_hfdl`], mixed from the sample window. The
+    /// channel (or, with scan, the sonde carriers) must lie inside the window;
+    /// the AIRCRAFT window's SONDE button brings the dial there.
     fn sync_sonde(&mut self) {
         // Wideband-only, for the same reason as the HFDL lane.
         if self.audio_mode {
             self.state.sonde.enabled = false;
         }
-        let rate = sdroxide_sonde::SONDE_LANE_RATE_HZ;
         match (self.state.sonde.enabled, self.sonde.is_some()) {
             (true, false) => {
-                let mut ddc = Ddc::new(self.state.sample_rate, rate);
-                ddc.set_offset_hz(self.state.sonde.frequency_hz - self.state.center_hz);
-                let out_rate = ddc.out_rate();
-                self.sonde_rs = ComplexResampler::new(out_rate, rate);
-                self.sonde = Some(SondeController::new(self.state.sonde));
-                self.sonde_ddc = Some(ddc);
+                self.sonde = Some(SondeBank::new(
+                    self.state.sample_rate,
+                    self.state.center_hz,
+                    self.state.sonde,
+                ));
                 self.sonde_in_rate = self.state.sample_rate;
-                info!(rate = out_rate, "radiosonde decoder started");
+                info!(scan = self.state.sonde.scan, "radiosonde decoder started");
             }
             (false, true) => {
                 self.sonde = None;
-                self.sonde_ddc = None;
-                self.sonde_rs = None;
-                self.sonde_buf.clear();
-                self.sonde_res_buf.clear();
                 info!("radiosonde decoder stopped");
             }
-            (true, true) => self.sync_sonde_window(),
+            (true, true) => {
+                self.sync_sonde_window();
+                if let Some(b) = self.sonde.as_mut() {
+                    b.set_config(self.state.sonde);
+                }
+            }
             _ => {}
         }
     }
 
-    /// Re-seat the radiosonde downconverter's mixer after a retune, and rebuild
-    /// it if the sample rate feeding it has changed (a `Ddc` bakes its input
-    /// rate in at construction).
+    /// Re-seat the radiosonde mixers after a retune, and rebuild the bank if
+    /// the sample rate feeding it has changed (a `Ddc` bakes its input rate in
+    /// at construction).
     fn sync_sonde_window(&mut self) {
-        if self.sonde_ddc.is_none() {
+        if self.sonde.is_none() {
             return;
         }
-        let rate = sdroxide_sonde::SONDE_LANE_RATE_HZ;
         if (self.state.sample_rate - self.sonde_in_rate).abs() >= 1.0 {
-            let mut ddc = Ddc::new(self.state.sample_rate, rate);
-            ddc.set_offset_hz(self.state.sonde.frequency_hz - self.state.center_hz);
-            let out_rate = ddc.out_rate();
-            self.sonde_rs = ComplexResampler::new(out_rate, rate);
-            self.sonde_ddc = Some(ddc);
+            self.sonde = Some(SondeBank::new(
+                self.state.sample_rate,
+                self.state.center_hz,
+                self.state.sonde,
+            ));
             self.sonde_in_rate = self.state.sample_rate;
-            self.sonde = Some(SondeController::new(self.state.sonde));
-            info!(rate = out_rate, "radiosonde window rebuilt");
+            info!("radiosonde window rebuilt");
             return;
         }
-        let Some(ddc) = self.sonde_ddc.as_mut() else { return };
-        ddc.set_offset_hz(self.state.sonde.frequency_hz - self.state.center_hz);
+        if let Some(b) = self.sonde.as_mut() {
+            b.set_center(self.state.center_hz);
+        }
     }
 
     /// Drain the radiosonde decoder's latest status and forward it.
     fn poll_sonde(&mut self) {
-        let Some(c) = self.sonde.as_ref() else { return };
-        let Some(status) = c.poll() else { return };
+        let now = unix_now();
+        let Some(bank) = self.sonde.as_mut() else { return };
+        let Some(status) = bank.poll(now) else { return };
         let _ = self.event_tx.send(RadioEvent::SondeStatus(Box::new(status)));
     }
 
