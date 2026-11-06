@@ -10,11 +10,13 @@
 
 pub mod bank;
 pub mod controller;
+pub mod model;
 pub mod scan;
 pub mod tracks;
 
 pub use bank::SondeBank;
 pub use controller::SondeController;
+pub use model::{ModelDecoder, SondeFix, SondeModel, decoder_for};
 
 /// The lane rate the engine feeds the decoder: the decoder's own channel rate.
 pub const SONDE_LANE_RATE_HZ: f64 = xng_mode_sonde::CHANNEL_RATE;

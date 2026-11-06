@@ -1,4 +1,4 @@
-//! Threading wrapper around `xng_mode_sonde::SondeChannelDecoder`, mirroring
+//! Threading wrapper around the `xng_mode_sonde` model decoders, mirroring
 //! `sdroxide_hfdl::HfdlController`: the realtime engine thread ships I/Q
 //! blocks to a worker over a bounded channel and drains status updates
 //! non-blocking via [`SondeController::poll`]. All the DSP runs on the worker.
@@ -14,8 +14,8 @@ use std::thread::JoinHandle;
 use crossbeam_channel::{Receiver, Sender, bounded, select, unbounded};
 use sdroxide_dsp::Complex32;
 use sdroxide_types::{SondeSettings, SondeStatus};
-use xng_mode_sonde::SondeChannelDecoder;
 
+use crate::model::{SondeModel, decoder_for};
 use crate::tracks::TrackBook;
 
 /// Realtime data, dropped on backpressure.
@@ -54,13 +54,19 @@ impl SondeController {
             .name("sdroxide-sonde".into())
             .spawn(move || {
                 let mut cfg = cfg;
-                let mut decoder = match SondeChannelDecoder::new(crate::SONDE_LANE_RATE_HZ, 0.0) {
-                    Ok(d) => d,
-                    Err(e) => {
-                        tracing::error!(%e, "radiosonde decoder could not start");
-                        return;
+                // One decoder per model, all fed the same lane.
+                let mut decoders = Vec::new();
+                for &m in SondeModel::ALL {
+                    match decoder_for(m, crate::SONDE_LANE_RATE_HZ, 0.0) {
+                        Ok(d) => decoders.push(d),
+                        Err(e) => {
+                            tracing::error!(%e, model = m.name(), "radiosonde decoder could not start");
+                        }
                     }
-                };
+                }
+                if decoders.is_empty() {
+                    return;
+                }
                 let mut book = TrackBook::default();
                 let mut frames = 0u64;
                 let mut tick = 0u64;
@@ -76,16 +82,18 @@ impl SondeController {
                                 let mut emitted = false;
                                 if cfg.enabled {
                                     let now = now_unix();
-                                    for d in decoder.process(&samples) {
-                                        book.push(&d.frame, cfg.frequency_hz, now);
-                                        frames += 1;
-                                        emitted = true;
+                                    for dec in decoders.iter_mut() {
+                                        for fix in dec.process(&samples) {
+                                            book.push(&fix, cfg.frequency_hz, now);
+                                            frames += 1;
+                                            emitted = true;
+                                        }
                                     }
                                 }
                                 if emitted || tick % IDLE_TICK == 0 || tick == 1 {
                                     let _ = res_tx.send(SondeStatus {
                                         running: cfg.enabled,
-                                        level_dbfs: decoder.level_dbfs(),
+                                        level_dbfs: decoders.iter().map(|d| d.level_dbfs()).fold(f32::MIN, f32::max),
                                         frames,
                                         sondes: book.snapshot(),
                                     });

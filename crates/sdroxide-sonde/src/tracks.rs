@@ -2,7 +2,7 @@
 //! frame by frame. Pure data handling, no threads, so it is tested directly.
 
 use sdroxide_types::{SONDE_MAX_TRACKS, SONDE_TRACK_DEPTH, SondePoint, SondeTrack};
-use xng_mode_sonde::Rs41Frame;
+use crate::model::SondeFix;
 
 /// Every sonde heard since the lane started, most recently heard first.
 #[derive(Debug, Default)]
@@ -13,14 +13,14 @@ pub struct TrackBook {
 impl TrackBook {
     /// Fold one decoded frame in. `freq_hz` is the channel it was heard on and
     /// `unix` the time it was heard.
-    pub fn push(&mut self, f: &Rs41Frame, freq_hz: f64, unix: i64) {
+    pub fn push(&mut self, f: &SondeFix, freq_hz: f64, unix: i64) {
         let idx = match self.sondes.iter().position(|s| s.serial == f.serial) {
             Some(i) => i,
             None => {
                 self.sondes.insert(
                     0,
                     SondeTrack {
-                        model: "RS41".to_string(),
+                        model: f.model.name().to_string(),
                         serial: f.serial.clone(),
                         freq_hz,
                         frame: 0,
@@ -43,11 +43,11 @@ impl TrackBook {
         };
         let s = &mut self.sondes[idx];
         s.freq_hz = freq_hz;
-        s.frame = u32::from(f.frame_num);
-        s.battery_v = Some(f.battery_v).filter(|v| v.is_finite() && *v > 0.0);
+        s.frame = f.frame_num;
+        s.battery_v = f.battery_v.filter(|v| v.is_finite() && *v > 0.0);
         s.last_unix = unix;
         s.frames = s.frames.saturating_add(1);
-        if let Some(p) = f.gps_pos.as_ref().filter(|p| valid_fix(p.lat, p.lon)) {
+        if let Some(p) = f.pos.as_ref().filter(|p| valid_fix(p.lat, p.lon)) {
             s.lat = Some(p.lat);
             s.lon = Some(p.lon);
             s.alt_m = Some(p.alt_m as f32);
@@ -101,15 +101,16 @@ fn thin(track: &mut Vec<SondePoint>) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use xng_mode_sonde::{CrcStatus, GpsPos};
+    use crate::model::SondeModel;
+    use xng_mode_sonde::GpsPos;
 
-    fn frame(serial: &str, n: u16, lat: f64, lon: f64, alt: f64) -> Rs41Frame {
-        Rs41Frame {
+    fn frame(serial: &str, n: u16, lat: f64, lon: f64, alt: f64) -> SondeFix {
+        SondeFix {
+            model: SondeModel::Rs41,
             serial: serial.to_string(),
-            frame_num: n,
-            battery_v: 2.7,
-            gps_time: None,
-            gps_pos: Some(GpsPos {
+            frame_num: u32::from(n),
+            battery_v: Some(2.7),
+            pos: Some(GpsPos {
                 lat,
                 lon,
                 alt_m: alt,
@@ -118,8 +119,6 @@ mod tests {
                 climb_ms: 5.0,
                 num_sv: 9,
             }),
-            ptu: None,
-            crc: CrcStatus { status: true, ptu: true, gps_info: true, gps_pos: true },
         }
     }
 
