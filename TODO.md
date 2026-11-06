@@ -2,10 +2,7 @@
 
 Working queue. Rules in AGENTS.md. Last updated 2026-11-04.
 
-State: `main` at crate 2.2.0, PROTO_VERSION 268 (0x58). Latest release
-v2.2.3.6.4_brown (pre-release). Open PRs: 1 (#477 one clear chip in SSTV, held
-for F4NRM because the SSTV panel is his). Open issues: 7 (re-measured
-2026-11-05).
+State: `main` at crate 2.3.0, PROTO_VERSION 271 (0x10F). Latest release v2.2.3.6.5_brown (pre-release); full release 2.3.0_brown due 2026-11-06 18:00 UTC. Open PRs: 1 (#516 sonde CSV, F4NRM). Open issues: 8 (re-measured 2026-11-06).
 
 ## Task tracking rules
 
@@ -133,6 +130,7 @@ Everything else that was in this list has been merged or closed since â€” s
 - AppImage â€” beslissing nodig.
 
 ## Recently done
+- 2026-11-06 — #517 merged (added by madmedicnl, owned by Claude): release prep, crate 2.3.0 and the changelog heading `## [2.3.0_brown]`. Tag `v2.3.0_brown` at 18:00 UTC for the full release.
 - 2026-11-06 — #514 merged (added by madmedicnl, owned by Claude): the Hell strip drew the first transmitted dot at the top, so receive and transmit echo were upside down; it is drawn at the bottom now. `git revert 50476a61`.
 - 2026-11-06 — #512 merged (added by madmedicnl, owned by Claude): our transmitted Q lost its tail tip (the art format reserves the cell's bottom row), so it could copy as O; the bit is set so the font matches fldigi bit for bit. `git revert a97e2ea0`.
 - 2026-11-06 â€” #506 merged (added by madmedicnl, owned by Claude): a chart's thick black bar with white lettering is no longer read as mid-picture phasing, so the water-temperature chart on DWD 3855 stops splitting in two (#444). `git revert 24b993d5` takes it back.
