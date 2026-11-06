@@ -14,14 +14,20 @@ impl TrackBook {
     /// Fold one decoded frame in. `freq_hz` is the channel it was heard on and
     /// `unix` the time it was heard.
     pub fn push(&mut self, f: &SondeFix, freq_hz: f64, unix: i64) {
-        let idx = match self.sondes.iter().position(|s| s.serial == f.serial) {
+        // A model whose frame has no readable serial is named by its channel.
+        let serial = if f.serial.is_empty() {
+            format!("{}@{:.3}", f.model.name(), freq_hz / 1e6)
+        } else {
+            f.serial.clone()
+        };
+        let idx = match self.sondes.iter().position(|s| s.serial == serial) {
             Some(i) => i,
             None => {
                 self.sondes.insert(
                     0,
                     SondeTrack {
                         model: f.model.name().to_string(),
-                        serial: f.serial.clone(),
+                        serial: serial.clone(),
                         freq_hz,
                         frame: 0,
                         lat: None,
@@ -149,6 +155,21 @@ mod tests {
             b.push(&frame(&format!("S{i}"), 1, 48.0, 2.0, 1.0), 403e6, 10 + i);
         }
         assert_eq!(b.snapshot().len(), SONDE_MAX_TRACKS);
+    }
+
+    #[test]
+    fn a_model_without_a_serial_is_named_by_its_channel() {
+        let mut b = TrackBook::default();
+        let mut f = frame("", 1, 48.0, 2.0, 1.0);
+        f.model = SondeModel::M20;
+        b.push(&f, 403.5e6, 1);
+        b.push(&f, 403.5e6, 2);
+        b.push(&f, 404.1e6, 3);
+        let s = b.snapshot();
+        assert_eq!(s.len(), 2, "two channels, two sondes");
+        assert_eq!(s[0].serial, "M20@404.100");
+        assert_eq!(s[1].serial, "M20@403.500");
+        assert_eq!(s[1].frames, 2);
     }
 
     #[test]

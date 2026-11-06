@@ -19,11 +19,13 @@ pub enum SondeModel {
     Dfm,
     /// Meteomodem M10.
     M10,
+    /// Meteomodem M20.
+    M20,
 }
 
 impl SondeModel {
     /// Every model decoded, in the order a lane tries them.
-    pub const ALL: &'static [SondeModel] = &[SondeModel::Rs41, SondeModel::Dfm, SondeModel::M10];
+    pub const ALL: &'static [SondeModel] = &[SondeModel::Rs41, SondeModel::Dfm, SondeModel::M10, SondeModel::M20];
 
     /// The type as printed in the track table and sent to SondeHub.
     pub fn name(self) -> &'static str {
@@ -31,6 +33,7 @@ impl SondeModel {
             SondeModel::Rs41 => "RS41",
             SondeModel::Dfm => "DFM",
             SondeModel::M10 => "M10",
+            SondeModel::M20 => "M20",
         }
     }
 }
@@ -39,7 +42,8 @@ impl SondeModel {
 #[derive(Debug, Clone, PartialEq)]
 pub struct SondeFix {
     pub model: SondeModel,
-    /// The serial number printed on the sonde.
+    /// The serial number printed on the sonde. Empty when the model's frame
+    /// carries none that is read: the track book then names it by channel.
     pub serial: String,
     /// The sonde's own frame counter.
     pub frame_num: u32,
@@ -94,6 +98,7 @@ pub fn decoder_for(
         SondeModel::Rs41 => Ok(Box::new(SondeChannelDecoder::new(input_rate, freq_offset_hz)?)),
         SondeModel::Dfm => Ok(Box::new(crate::dfm::DfmDecoder::new(input_rate, freq_offset_hz)?)),
         SondeModel::M10 => Ok(Box::new(crate::m10::M10Decoder::new(input_rate, freq_offset_hz)?)),
+        SondeModel::M20 => Ok(Box::new(crate::m20::M20Decoder::new(input_rate, freq_offset_hz)?)),
     }
 }
 
