@@ -23,6 +23,8 @@ pub struct FskSlicer {
     osc_step: f64,
     prev: Complex32,
     y: f32,
+    /// Smoothing of the discriminator output, per sample.
+    alpha: f32,
     mode: Threshold,
     dc: f32,
     hi: f32,
@@ -47,6 +49,7 @@ impl FskSlicer {
             osc_step: -2.0 * std::f64::consts::PI * freq_offset_hz / input_rate,
             prev: Complex32::new(1.0, 0.0),
             y: 0.0,
+            alpha: 0.5,
             mode,
             dc: 0.0,
             hi: 0.0,
@@ -57,6 +60,14 @@ impl FskSlicer {
             last_above: false,
             level: -120.0,
         })
+    }
+
+    /// Smooth the discriminator with a time constant of `tau_s` seconds
+    /// (the default is about 40 microseconds at 48 kS/s). A slow, noisy
+    /// model wants more.
+    pub fn with_smoothing(mut self, tau_s: f64, input_rate: f64) -> Self {
+        self.alpha = (1.0 / (input_rate * tau_s)).clamp(0.01, 1.0) as f32;
+        self
     }
 
     /// Feed I/Q; `bit` is called with every raw symbol (0 or 1).
@@ -73,7 +84,7 @@ impl FskSlicer {
             self.level += 0.0005 * (10.0 * (z.norm_sqr() + 1e-12).log10() - self.level);
             let d = (z * self.prev.conj()).arg();
             self.prev = z;
-            self.y += 0.5 * (d - self.y);
+            self.y += self.alpha * (d - self.y);
 
             if self.mode == Threshold::Midrange {
                 if self.y > self.hi {

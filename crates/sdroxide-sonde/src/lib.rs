@@ -15,6 +15,7 @@ pub mod fsk;
 pub mod imet;
 pub mod m10;
 pub mod m20;
+pub mod mrz;
 pub mod model;
 pub mod scan;
 pub mod tracks;
