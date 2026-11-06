@@ -13,6 +13,7 @@ pub mod controller;
 pub mod dfm;
 pub mod fsk;
 pub mod imet;
+pub mod imet54;
 pub mod lms6;
 pub mod m10;
 pub mod m20;
