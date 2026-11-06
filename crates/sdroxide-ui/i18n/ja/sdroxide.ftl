@@ -9149,6 +9149,18 @@ sonde-col-pressure = æ°—åœ§
 
 settings-net-broadcast-import-needs-station = インポートするには局に接続してください。
 
+
+sonde-online-why-signin = ステーションが先にサインインを求めています。
+
+sonde-online-why-busy = ステーションは許される上限の頻度で SondeHub に問い合わせています。1 分後にもう一度お試しください。
+
+sonde-online-why-upstream = ステーションは SondeHub に接続できませんでした。
+
+sonde-online-why-unreadable = 応答がゾンデの一覧ではありませんでした。
+
+sonde-online-why-no-station = 問い合わせ先のステーションがなく、このページから直接 SondeHub には接続できません。
+
+sonde-online-why-http = 応答: HTTP { $n }。
 settings-general-band-plan = バンドプラン
 
 settings-general-band-plan-built-in = 内蔵IARU
@@ -9158,3 +9170,39 @@ settings-general-band-plan-germany-nrw = ドイツ（NRW、SWL）
 settings-general-band-plan-own = 局独自
 
 settings-general-band-plan-hint = 同梱のバンドプランを選択します。bandplan.json を置き換えますが、内蔵IARUテーブルが常に既定です。
+
+sonde-card-source = ソース
+
+sonde-card-source-radio = この無線機
+
+sonde-card-source-hub = SondeHub（他のステーションが受信）
+
+sonde-card-model = モデル
+
+sonde-card-maker = メーカー
+
+sonde-card-variant = バリエーション
+
+sonde-card-position = 位置
+
+sonde-card-from-you = 自局から
+
+sonde-card-heading = 進行方向
+
+sonde-card-satellites = 衛星数
+
+sonde-card-snr = 信号対雑音比
+
+sonde-card-station = 受信局
+
+sonde-card-station-position = 受信局の位置
+
+sonde-card-antenna = アンテナ
+
+sonde-card-software = ソフトウェア
+
+sonde-card-frames = 受信フレーム数
+
+sonde-card-open = { $site } で開く
+
+sonde-card-close = 閉じる

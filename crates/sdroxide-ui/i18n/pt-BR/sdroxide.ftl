@@ -9201,6 +9201,18 @@ sonde-col-pressure = PressÃ£o
 
 settings-net-broadcast-import-needs-station = Conecte-se a uma estação para importar.
 
+
+sonde-online-why-signin = A estação exige login primeiro.
+
+sonde-online-why-busy = A estação já consulta o SondeHub tão seguido quanto pode. Tente de novo em um minuto.
+
+sonde-online-why-upstream = A estação não conseguiu alcançar o SondeHub.
+
+sonde-online-why-unreadable = A resposta não era uma lista de sondas.
+
+sonde-online-why-no-station = Nenhuma estação para consultar, e esta página não alcança o SondeHub sozinha.
+
+sonde-online-why-http = Resposta: HTTP { $n }.
 settings-general-band-plan = Plano de bandas
 
 settings-general-band-plan-built-in = IARU integrado
@@ -9210,3 +9222,39 @@ settings-general-band-plan-germany-nrw = Alemanha (NRW, SWL)
 settings-general-band-plan-own = Próprio da estação
 
 settings-general-band-plan-hint = Escolha um plano de bandas incluído. Ele substitui bandplan.json; as tabelas IARU integradas continuam sendo o padrão.
+
+sonde-card-source = Origem
+
+sonde-card-source-radio = Este rádio
+
+sonde-card-source-hub = SondeHub (ouvida por outra estação)
+
+sonde-card-model = Modelo
+
+sonde-card-maker = Fabricante
+
+sonde-card-variant = Variante
+
+sonde-card-position = Posição
+
+sonde-card-from-you = De você
+
+sonde-card-heading = Rumo
+
+sonde-card-satellites = Satélites
+
+sonde-card-snr = Relação sinal/ruído
+
+sonde-card-station = Ouvida por
+
+sonde-card-station-position = Posição da estação
+
+sonde-card-antenna = Antena
+
+sonde-card-software = Software
+
+sonde-card-frames = Quadros recebidos
+
+sonde-card-open = Abrir no { $site }
+
+sonde-card-close = Fechar

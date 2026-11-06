@@ -11,7 +11,7 @@ use crate::i18n::tr;
 use eframe::egui::{self, RichText};
 use sdroxide_types::{Command, SONDE_BAND_HZ, SondeSettings, SondeTrack};
 
-use crate::app::SdroxideApp;
+use crate::app::{SdroxideApp, sonde_card};
 use crate::sonde_map::{self, Phase};
 
 /// The commands the SONDE button sends: switch the decoder on if it is off and
@@ -101,7 +101,8 @@ impl SdroxideApp {
 
         // Sondes other stations hear: read-only, off until the operator says.
         let home = self.hfdl_home_for_maps();
-        self.sonde_online.tick(ui.ctx(), home, now);
+        let peer = self.ctrl.peer_url();
+        self.sonde_online.tick(ui.ctx(), home, now, peer.as_deref());
         ui.horizontal_wrapped(|ui| {
             ui.checkbox(
                 &mut self.sonde_online.on,
@@ -117,7 +118,10 @@ impl SdroxideApp {
                     Some(tr!("sonde-online-count", n = self.sonde_online.sondes.len()))
                 };
                 if let Some(n) = note {
-                    ui.label(RichText::new(n).size(10.5).weak());
+                    let r = ui.label(RichText::new(n).size(10.5).weak());
+                    if let (true, Some(why)) = (self.sonde_online.failed, &self.sonde_online.why) {
+                        r.on_hover_text(why.text());
+                    }
                 }
             }
         });
@@ -184,6 +188,51 @@ impl SdroxideApp {
                 }
             });
             self.sonde_export_row(ui, &sondes, now);
+        }
+        self.sonde_card_view(ui, &sondes, home, now);
+    }
+
+    /// The card of the selected sonde, from this radio's or from SondeHub's list.
+    fn sonde_card_view(
+        &mut self,
+        ui: &mut egui::Ui,
+        sondes: &[SondeTrack],
+        home: Option<(f64, f64)>,
+        now: i64,
+    ) {
+        let Some(sel) = self.sonde_map.selected.clone() else { return };
+        let card = match sondes.iter().find(|s| s.serial == sel) {
+            Some(s) => sonde_card::own(s, home, now),
+            None => match self.sonde_online.sondes.iter().find(|o| o.serial == sel) {
+                Some(o) => sonde_card::online(o, home, now),
+                None => return,
+            },
+        };
+        let mut close = false;
+        egui::Frame::group(ui.style()).show(ui, |ui| {
+            ui.horizontal(|ui| {
+                ui.label(RichText::new(&card.title).size(12.0).strong());
+                if ui.small_button(tr!("sonde-card-close")).clicked() {
+                    close = true;
+                }
+                for (site, url) in sonde_card::links(&card.serial) {
+                    if ui.small_button(sonde_card::open_label(site)).on_hover_text(&url).clicked()
+                        && !crate::download::open_external(&url)
+                    {
+                        tracing::warn!(%url, "no handler for the sonde page");
+                    }
+                }
+            });
+            egui::Grid::new("sonde_card").num_columns(2).spacing([14.0, 2.0]).show(ui, |ui| {
+                for (label, value) in &card.rows {
+                    ui.label(RichText::new(label).size(10.5).weak());
+                    ui.label(RichText::new(value).size(10.5));
+                    ui.end_row();
+                }
+            });
+        });
+        if close {
+            self.sonde_map.selected = None;
         }
     }
 

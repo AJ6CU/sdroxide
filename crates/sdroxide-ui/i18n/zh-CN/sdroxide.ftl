@@ -9139,6 +9139,18 @@ sonde-col-pressure = æ°”åŽ‹
 
 settings-net-broadcast-import-needs-station = 连接到电台以导入。
 
+
+sonde-online-why-signin = 站点要求先登录。
+
+sonde-online-why-busy = 站点已按允许的最高频率查询 SondeHub，请一分钟后再试。
+
+sonde-online-why-upstream = 站点无法连接 SondeHub。
+
+sonde-online-why-unreadable = 返回的内容不是探空仪列表。
+
+sonde-online-why-no-station = 没有可查询的站点，且本页面无法直接访问 SondeHub。
+
+sonde-online-why-http = 响应：HTTP { $n }。
 settings-general-band-plan = 波段计划
 
 settings-general-band-plan-built-in = 内置IARU
@@ -9148,3 +9160,39 @@ settings-general-band-plan-germany-nrw = 德国（NRW，SWL）
 settings-general-band-plan-own = 本站自有
 
 settings-general-band-plan-hint = 选择一个随附的波段计划。它会替换 bandplan.json；内置IARU表始终是默认值。
+
+sonde-card-source = 来源
+
+sonde-card-source-radio = 本电台
+
+sonde-card-source-hub = SondeHub（由其他站点接收）
+
+sonde-card-model = 型号
+
+sonde-card-maker = 制造商
+
+sonde-card-variant = 型式
+
+sonde-card-position = 位置
+
+sonde-card-from-you = 距本站
+
+sonde-card-heading = 航向
+
+sonde-card-satellites = 卫星数
+
+sonde-card-snr = 信噪比
+
+sonde-card-station = 接收站
+
+sonde-card-station-position = 接收站位置
+
+sonde-card-antenna = 天线
+
+sonde-card-software = 软件
+
+sonde-card-frames = 已收帧数
+
+sonde-card-open = 在 { $site } 打开
+
+sonde-card-close = 关闭

@@ -45,6 +45,7 @@ mod hd;
 mod hfdl;
 mod sonde;
 pub mod sonde_export;
+pub mod sonde_online;
 mod ibp;
 mod input;
 mod ism;

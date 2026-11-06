@@ -9201,6 +9201,18 @@ sonde-col-pressure = BasÄ±nÃ§
 
 settings-net-broadcast-import-needs-station = İçe aktarmak için bir istasyona bağlanın.
 
+
+sonde-online-why-signin = İstasyon önce oturum açılmasını istiyor.
+
+sonde-online-why-busy = İstasyon SondeHub'ı zaten izin verilen sıklıkta sorguluyor. Bir dakika sonra yeniden deneyin.
+
+sonde-online-why-upstream = İstasyon SondeHub'a ulaşamadı.
+
+sonde-online-why-unreadable = Yanıt bir sonda listesi değildi.
+
+sonde-online-why-no-station = Sorulacak istasyon yok ve bu sayfa SondeHub'a kendisi ulaşamıyor.
+
+sonde-online-why-http = Yanıt: HTTP { $n }.
 settings-general-band-plan = Bant planı
 
 settings-general-band-plan-built-in = Yerleşik IARU
@@ -9210,3 +9222,39 @@ settings-general-band-plan-germany-nrw = Almanya (NRW, SWL)
 settings-general-band-plan-own = İstasyonun kendi
 
 settings-general-band-plan-hint = Birlikte gelen bir bant planı seçin. bandplan.json dosyasını değiştirir; yerleşik IARU tabloları varsayılan olarak kalır.
+
+sonde-card-source = Kaynak
+
+sonde-card-source-radio = Bu telsiz
+
+sonde-card-source-hub = SondeHub (başka bir istasyon duydu)
+
+sonde-card-model = Model
+
+sonde-card-maker = Üretici
+
+sonde-card-variant = Varyant
+
+sonde-card-position = Konum
+
+sonde-card-from-you = Sizden
+
+sonde-card-heading = Yön
+
+sonde-card-satellites = Uydular
+
+sonde-card-snr = Sinyal/gürültü oranı
+
+sonde-card-station = Dinleyen
+
+sonde-card-station-position = İstasyon konumu
+
+sonde-card-antenna = Anten
+
+sonde-card-software = Yazılım
+
+sonde-card-frames = Alınan çerçeve
+
+sonde-card-open = { $site } sitesinde aç
+
+sonde-card-close = Kapat

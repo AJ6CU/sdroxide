@@ -23,6 +23,7 @@ mod session;
 mod session_cookie;
 mod signin;
 mod solar;
+mod sonde_online;
 mod broadcast_schedule;
 mod programs_state;
 mod watchlist;
@@ -319,6 +320,8 @@ pub(crate) struct Station {
     pub auth: Arc<auth::AuthGate>,
     /// The relay behind `/aircraft-info`, switched on or off for the life of the process.
     pub aircraft: Arc<aircraft::AircraftHub>,
+    /// The relay behind `/sonde-online`: SondeHub's list, asked once for all clients.
+    pub(crate) sonde: Arc<sonde_online::SondeRelay>,
     /// What the station remembers of each aircraft for a day, fed by every
     /// radio and served on `/aircraft-history`. Off unless the operator
     /// switched it on.
@@ -675,6 +678,7 @@ pub async fn serve(params: ServerParams) -> Result<(), ServerError> {
         solar: Arc::new(solar::SolarHub::default()),
         auth: Arc::new(auth::AuthGate::new(params.access)),
         aircraft: Arc::new(aircraft::AircraftHub::start(params.aircraft_online)),
+        sonde: Arc::new(sonde_online::SondeRelay::default()),
         history: Arc::new(history::HistoryHub::start()),
         watch: Arc::new(watchlist::WatchHub::start()),
         programs: Arc::new(programs_state::ProgramsHub::start()),
@@ -724,6 +728,7 @@ pub async fn serve(params: ServerParams) -> Result<(), ServerError> {
         .route("/ws/{id}", get(session::ws_route_for))
         .route("/radios", get(radios_route))
         .route("/solar-ws", get(solar::ws_route))
+        .route("/sonde-online", get(sonde_online::route))
         .route("/aircraft-info/{icao}", get(aircraft::info_route))
         .route("/aircraft-photo", axum::routing::delete(aircraft::photo_release))
         .route(
