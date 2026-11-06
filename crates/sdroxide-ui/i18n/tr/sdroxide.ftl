@@ -9213,3 +9213,12 @@ sonde-online-why-unreadable = Yanıt bir sonda listesi değildi.
 sonde-online-why-no-station = Sorulacak istasyon yok ve bu sayfa SondeHub'a kendisi ulaşamıyor.
 
 sonde-online-why-http = Yanıt: HTTP { $n }.
+settings-general-band-plan = Bant planı
+
+settings-general-band-plan-built-in = Yerleşik IARU
+
+settings-general-band-plan-germany-nrw = Almanya (NRW, SWL)
+
+settings-general-band-plan-own = İstasyonun kendi
+
+settings-general-band-plan-hint = Birlikte gelen bir bant planı seçin. bandplan.json dosyasını değiştirir; yerleşik IARU tabloları varsayılan olarak kalır.

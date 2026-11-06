@@ -142,6 +142,7 @@ Everything else that was in this list has been merged or closed since â€” s
 - AppImage â€” beslissing nodig.
 
 ## Recently done
+- 2026-11-07 — #534 merged (added by madmedicnl, owned by Claude): Settings → General has a band-plan chooser (Built-in IARU / Germany NRW / Station's own); the NRW preset ships with the 11 m stretch labelled CB/Freeband. `git revert` the merge if needed.
 - 2026-11-06 — **v2.3.0_brown released** (full release, not pre-release): gate green, tag on main `c87c993f`, all platform assets published (linux cat/soapy/compat, windows cat/soapy, macOS x86_64 + aarch64 cat/soapy, web). The macOS aarch64 build was cancelled on the first run and its soapy asset failed to upload; rebuilt by dispatch against the tag and the missing asset uploaded by hand.
 - 2026-11-06 — #517 merged (added by madmedicnl, owned by Claude): release prep, crate 2.3.0 and the changelog heading `## [2.3.0_brown]`. Tag `v2.3.0_brown` at 18:00 UTC for the full release.
 - 2026-11-06 — #514 merged (added by madmedicnl, owned by Claude): the Hell strip drew the first transmitted dot at the top, so receive and transmit echo were upside down; it is drawn at the bottom now. `git revert 50476a61`.

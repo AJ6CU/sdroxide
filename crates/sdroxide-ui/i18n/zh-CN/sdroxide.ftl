@@ -9151,3 +9151,12 @@ sonde-online-why-unreadable = 返回的内容不是探空仪列表。
 sonde-online-why-no-station = 没有可查询的站点，且本页面无法直接访问 SondeHub。
 
 sonde-online-why-http = 响应：HTTP { $n }。
+settings-general-band-plan = 波段计划
+
+settings-general-band-plan-built-in = 内置IARU
+
+settings-general-band-plan-germany-nrw = 德国（NRW，SWL）
+
+settings-general-band-plan-own = 本站自有
+
+settings-general-band-plan-hint = 选择一个随附的波段计划。它会替换 bandplan.json；内置IARU表始终是默认值。

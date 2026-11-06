@@ -9211,3 +9211,12 @@ sonde-online-why-unreadable = Die Antwort war keine Sondenliste.
 sonde-online-why-no-station = Keine Station zum Fragen, und diese Seite erreicht SondeHub nicht selbst.
 
 sonde-online-why-http = Antwort: HTTP { $n }.
+settings-general-band-plan = Bandplan
+
+settings-general-band-plan-built-in = Integriert (IARU)
+
+settings-general-band-plan-germany-nrw = Deutschland (NRW, SWL)
+
+settings-general-band-plan-own = Eigener der Station
+
+settings-general-band-plan-hint = Einen mitgelieferten Bandplan wählen. Er ersetzt bandplan.json; die integrierten IARU-Tabellen bleiben die Vorgabe.

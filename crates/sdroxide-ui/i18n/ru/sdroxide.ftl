@@ -9228,3 +9228,12 @@ sonde-online-why-unreadable = Ответ не был списком зондов
 sonde-online-why-no-station = Нет станции для запроса, а эта страница сама не может связаться с SondeHub.
 
 sonde-online-why-http = Ответ: HTTP { $n }.
+settings-general-band-plan = План диапазонов
+
+settings-general-band-plan-built-in = Встроенный IARU
+
+settings-general-band-plan-germany-nrw = Германия (NRW, SWL)
+
+settings-general-band-plan-own = Свой план станции
+
+settings-general-band-plan-hint = Выберите поставляемый план диапазонов. Он заменяет bandplan.json; встроенные таблицы IARU остаются по умолчанию.

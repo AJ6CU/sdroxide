@@ -9161,3 +9161,12 @@ sonde-online-why-unreadable = 応答がゾンデの一覧ではありません�
 sonde-online-why-no-station = 問い合わせ先のステーションがなく、このページから直接 SondeHub には接続できません。
 
 sonde-online-why-http = 応答: HTTP { $n }。
+settings-general-band-plan = バンドプラン
+
+settings-general-band-plan-built-in = 内蔵IARU
+
+settings-general-band-plan-germany-nrw = ドイツ（NRW、SWL）
+
+settings-general-band-plan-own = 局独自
+
+settings-general-band-plan-hint = 同梱のバンドプランを選択します。bandplan.json を置き換えますが、内蔵IARUテーブルが常に既定です。

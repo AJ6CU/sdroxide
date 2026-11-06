@@ -37,6 +37,7 @@ pub(in crate::app) mod alerts;
 pub(in crate::app) mod antenna;
 pub(in crate::app) mod auto_mode;
 pub(in crate::app) mod awards;
+pub(in crate::app) mod bandplans;
 pub(in crate::app) mod bands;
 /// **Classic UI** — the left-column arrangement. Native only: it takes a column
 /// off the desktop and a browser has one window with nowhere to put it.
