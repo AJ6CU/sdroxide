@@ -1435,6 +1435,13 @@ pub enum Command {
         rx: RxId,
         peak: crate::CwPeak,
     },
+
+    /// Whether the radiosonde (RS41) decoder runs, and which channel it
+    /// centres on. Kept in `sonde.json`, echoed back in
+    /// [`crate::RadioState::sonde`].
+    ///
+    /// Appended for the usual reason — postcard numbers variants by position.
+    SetSondeConfig(crate::SondeSettings),
 }
 
 /// What a [`Command::GetKnownCalls`] was answered with.

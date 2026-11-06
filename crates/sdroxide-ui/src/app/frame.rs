@@ -4469,6 +4469,7 @@ impl SdroxideApp {
                     self.aircraft_registry.expire(crate::time::now_unix());
                     self.hfdl_status = Some(st);
                 }
+                RadioEvent::SondeStatus(st) => self.sonde_status = Some(st),
                 RadioEvent::SstvStatus(s) => {
                     // Adopt a *newly* detected RX mode for the next transmit, but
                     // don't re-apply a steady detection every frame — that would

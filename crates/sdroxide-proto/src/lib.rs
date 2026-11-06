@@ -2212,8 +2212,15 @@ use sdroxide_types::{
 /// gains `SetCwPeak` last. `RxState` rides `RadioState` twice, so a v268 peer
 /// reads the whole state out of step. `PROTO_VERSION` 268 → 269,
 /// `VERSION_BYTE` 0x58 → 0x59.
-pub const PROTO_VERSION: u16 = 269;
-const VERSION_BYTE: u8 = 0x59;
+///
+/// v270: **the radiosonde decoder.** [`sdroxide_types::RadioState`] gains
+/// `sonde` ([`sdroxide_types::SondeSettings`]: on, channel) at its tail, and
+/// `Command` gains `SetSondeConfig` last. `RadioState` crosses the link whole,
+/// so a v269 peer reads the extra bytes as the start of the next field. The
+/// live tracks are engine-side only (`RadioEvent::SondeStatus`), bridged
+/// nowhere. `PROTO_VERSION` 269 → 270, `VERSION_BYTE` 0x59 → 0x5A.
+pub const PROTO_VERSION: u16 = 270;
+const VERSION_BYTE: u8 = 0x5A;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -4030,6 +4037,25 @@ mod tests {
         let ServerMsg::State(back) = back else { panic!("not a state") };
         assert_eq!(back.rx[0].cw_peak, peak);
         assert_ne!(back.rx[1].cw_peak, sdroxide_types::CwPeak::default());
+    }
+
+    /// The radiosonde lane's settings cross the wire both ways: the command,
+    /// and the state field that tells a remote client whether it runs and on
+    /// which channel. Set away from the default so a field that decoded into
+    /// its default would fail here.
+    #[test]
+    fn roundtrip_sonde_config() {
+        let cfg = sdroxide_types::SondeSettings { enabled: true, frequency_hz: 404_500_000.0 };
+        let m = ClientMsg::Command(Command::SetSondeConfig(cfg));
+        assert_eq!(decode::<ClientMsg>(&encode(&m).unwrap()).unwrap(), m);
+        let mut state = RadioState::default();
+        state.sonde = cfg;
+        let st = ServerMsg::State(state);
+        let back = decode::<ServerMsg>(&encode(&st).unwrap()).unwrap();
+        assert_eq!(back, st);
+        let ServerMsg::State(back) = back else { panic!("not a state") };
+        assert_eq!(back.sonde, cfg);
+        assert_ne!(back.sonde, sdroxide_types::SondeSettings::default());
     }
 
     /// The per-mode transmit-audio level, over the wire in both directions

@@ -1,0 +1,17 @@
+//! The radiosonde (Vaisala RS41) decoder: the threading wrapper and the
+//! wire-type mapping around `xng-mode-sonde`'s channel decoder. Native-only
+//! (runs in the engine's audio-block loop); see [`controller`] for how it is
+//! driven and [`tracks`] for how frames become per-sonde flight tracks.
+//!
+//! The demodulation *is* xng's: a 48 kS/s complex baseband lane centred on the
+//! channel (the decoder's own channel rate, so it runs without a second
+//! downconverter). This crate owns the worker thread, the bounded I/Q queue
+//! and the per-serial track book.
+
+pub mod controller;
+pub mod tracks;
+
+pub use controller::SondeController;
+
+/// The lane rate the engine feeds the decoder: the decoder's own channel rate.
+pub const SONDE_LANE_RATE_HZ: f64 = xng_mode_sonde::CHANNEL_RATE;

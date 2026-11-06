@@ -695,6 +695,12 @@ pub struct RadioState {
     /// engine has decimated, because its decimator is the sharper filter.
     #[serde(default)]
     pub usable_hz: f64,
+    /// The radiosonde decoder (RS41): whether it runs and which channel it
+    /// listens on. Live status (level, sondes heard) is
+    /// [`crate::SondeStatus`], sent separately like [`crate::HfdlStatus`].
+    /// Appended last: postcard numbers fields by position.
+    #[serde(default)]
+    pub sonde: crate::SondeSettings,
 }
 
 impl Default for RadioState {
@@ -710,6 +716,7 @@ impl Default for RadioState {
             // "No opinion": a default state has no front end behind it, and a
             // display that guessed a fraction here would be inventing one.
             usable_hz: 0.0,
+            sonde: crate::SondeSettings::default(),
             decimation: no_decimation(),
             rx: [RxState::with_mode(mode), RxState::with_mode(mode)],
             sub_rx_enabled: false,

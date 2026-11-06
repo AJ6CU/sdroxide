@@ -34,6 +34,7 @@ use sdroxide_dsp::{
     make_demod, make_modulator,
 };
 use sdroxide_hfdl::HfdlController;
+use sdroxide_sonde::SondeController;
 use sdroxide_ism::{IsmAction, IsmController};
 use sdroxide_nrsc5::{HdDemod, Mode as HdMode};
 use sdroxide_qo100::Qo100Controller;
@@ -3589,6 +3590,20 @@ struct Engine {
     /// `state.hfdl` for the same reason `qo100_cfg` is. Read back at startup
     /// from `hfdl.json`.
     hfdl_cfg: sdroxide_types::HfdlSettings,
+    /// Radiosonde (RS41) decoder: a 48 kS/s downconversion centred on the
+    /// chosen sonde channel plus a worker-thread demodulator, present only
+    /// while the decoder is enabled. The same fixed-frequency shape as the HFDL
+    /// lane — retuning it is just re-seating the mixer (`sync_sonde_window`).
+    sonde_ddc: Option<Ddc>,
+    sonde: Option<SondeController>,
+    sonde_buf: Vec<Complex32>,
+    /// The lane resampled to exactly the decoder's channel rate, for the reason
+    /// `hfdl_rs` exists: the DDC lands on it only when the device rate divides
+    /// evenly into it.
+    sonde_rs: Option<ComplexResampler>,
+    sonde_res_buf: Vec<Complex32>,
+    /// The stream rate `sonde_ddc` was built to decimate.
+    sonde_in_rate: f64,
     /// Open capture file for `--record-iq`, and the interleaving scratch it is
     /// written from.
     iq_rec: Option<std::io::BufWriter<std::fs::File>>,
@@ -4730,6 +4745,12 @@ fn engine_thread(
     } else {
         hfdl_cfg
     };
+    let sonde_cfg = sdroxide_config::load_sonde_config();
+    state.sonde = if audio_mode {
+        sdroxide_types::SondeSettings { enabled: false, ..sonde_cfg } // wideband-only
+    } else {
+        sonde_cfg
+    };
     let dab_cfg = engine_cfg.store.load_dab_config();
     state.dab = if audio_mode {
         sdroxide_types::DabSettings::OFF // wideband-only, like the rest of the lanes
@@ -5191,6 +5212,12 @@ fn engine_thread(
         hfdl_rs: None,
         hfdl_res_buf: Vec::new(),
         hfdl_in_rate: 0.0,
+        sonde_ddc: None,
+        sonde: None,
+        sonde_buf: Vec::new(),
+        sonde_rs: None,
+        sonde_res_buf: Vec::new(),
+        sonde_in_rate: 0.0,
         // From `hfdl.json`, as `qo100_cfg` is.
         hfdl_cfg: sdroxide_config::load_hfdl_config(),
         iq_rec,
@@ -5362,6 +5389,7 @@ fn engine_thread(
         engine.sync_ais(); // ...and the shipping lane, likewise
         engine.sync_qo100(); // and the beacon lane, from qo100.json
         engine.sync_hfdl(); // ...and the HFDL lane, likewise
+        engine.sync_sonde(); // ...and the radiosonde lane, likewise
     }
     // This radio's callsign override, read once here so the hot paths never
     // have to touch the file. `SetRadioConfig` is the other writer.
@@ -5620,6 +5648,7 @@ fn engine_thread(
         engine.poll_dab();
         engine.poll_qo100();
         engine.poll_hfdl();
+        engine.poll_sonde();
         engine.poll_scanner();
         engine.poll_tci_server();
         engine.poll_rigctld();
@@ -6854,6 +6883,22 @@ impl Engine {
                 c.on_rx_iq(lane);
             }
         }
+        // ...and the radiosonde decoder from a 48 kS/s lane centred on the
+        // sonde channel, resampled onto the decoder's exact channel rate.
+        if let Some(ddc) = self.sonde_ddc.as_mut() {
+            self.sonde_buf.clear();
+            ddc.process(iq, &mut self.sonde_buf);
+            let lane = if let Some(rs) = self.sonde_rs.as_mut() {
+                self.sonde_res_buf.clear();
+                rs.push(&self.sonde_buf, &mut self.sonde_res_buf);
+                &self.sonde_res_buf
+            } else {
+                &self.sonde_buf
+            };
+            if let Some(c) = self.sonde.as_ref() {
+                c.on_rx_iq(lane);
+            }
+        }
         // Feed TCI clients: the same clean tap the digital decoders use (so
         // muting or turning down sdroxide can't silence somebody's decoder),
         // resampled to the 48 kHz TCI mandates.
@@ -7411,6 +7456,7 @@ impl Engine {
                 self.sync_dab_window();
                 self.sync_qo100_window();
                 self.sync_hfdl_window();
+                self.sync_sonde_window();
                 self.update_tuning();
                 let _ = self.event_tx.send(RadioEvent::State(self.state.clone()));
             }
@@ -7694,6 +7740,7 @@ impl Engine {
         // the operator's chosen channel never moves with the band, so a retune
         // is just re-seating the mixer.
         self.sync_hfdl_window();
+                self.sync_sonde_window();
         // Re-seat the DDCs on the new centre. Without this the main receiver
         // keeps the offset it had against the old one, which is exactly how a
         // rig-initiated retune ends up demodulating somewhere the readout does
@@ -9866,6 +9913,7 @@ impl Engine {
                         // inside it would otherwise leave the DDC on the old
                         // channel.
                         self.sync_hfdl_window();
+                self.sync_sonde_window();
                     }
                 }
                 self.update_tuning();
@@ -11261,6 +11309,18 @@ impl Engine {
                 }
                 self.sync_hfdl();
                 if let Some(c) = self.hfdl.as_ref() {
+                    c.set_config(cfg);
+                }
+            }
+
+            SetSondeConfig(cfg) => {
+                let cfg = cfg.sane();
+                self.state.sonde = cfg;
+                if let Err(e) = sdroxide_config::save_sonde_config(&cfg) {
+                    warn!("saving radiosonde config: {e}");
+                }
+                self.sync_sonde();
+                if let Some(c) = self.sonde.as_ref() {
                     c.set_config(cfg);
                 }
             }
@@ -12923,6 +12983,71 @@ impl Engine {
         }
         let Some(ddc) = self.hfdl_ddc.as_mut() else { return };
         ddc.set_offset_hz(self.state.hfdl.frequency_hz - self.state.center_hz);
+    }
+
+    /// Construct or tear down the radiosonde decoder: a fixed-frequency lane
+    /// like [`Self::sync_hfdl`], a 48 kS/s downconversion centred on
+    /// [`sdroxide_types::SondeSettings::frequency_hz`], the decoder's own
+    /// channel rate. The channel must lie inside the sample window; the AIRCRAFT
+    /// window's SONDE button brings the dial there.
+    fn sync_sonde(&mut self) {
+        // Wideband-only, for the same reason as the HFDL lane.
+        if self.audio_mode {
+            self.state.sonde.enabled = false;
+        }
+        let rate = sdroxide_sonde::SONDE_LANE_RATE_HZ;
+        match (self.state.sonde.enabled, self.sonde.is_some()) {
+            (true, false) => {
+                let mut ddc = Ddc::new(self.state.sample_rate, rate);
+                ddc.set_offset_hz(self.state.sonde.frequency_hz - self.state.center_hz);
+                let out_rate = ddc.out_rate();
+                self.sonde_rs = ComplexResampler::new(out_rate, rate);
+                self.sonde = Some(SondeController::new(self.state.sonde));
+                self.sonde_ddc = Some(ddc);
+                self.sonde_in_rate = self.state.sample_rate;
+                info!(rate = out_rate, "radiosonde decoder started");
+            }
+            (false, true) => {
+                self.sonde = None;
+                self.sonde_ddc = None;
+                self.sonde_rs = None;
+                self.sonde_buf.clear();
+                self.sonde_res_buf.clear();
+                info!("radiosonde decoder stopped");
+            }
+            (true, true) => self.sync_sonde_window(),
+            _ => {}
+        }
+    }
+
+    /// Re-seat the radiosonde downconverter's mixer after a retune, and rebuild
+    /// it if the sample rate feeding it has changed (a `Ddc` bakes its input
+    /// rate in at construction).
+    fn sync_sonde_window(&mut self) {
+        if self.sonde_ddc.is_none() {
+            return;
+        }
+        let rate = sdroxide_sonde::SONDE_LANE_RATE_HZ;
+        if (self.state.sample_rate - self.sonde_in_rate).abs() >= 1.0 {
+            let mut ddc = Ddc::new(self.state.sample_rate, rate);
+            ddc.set_offset_hz(self.state.sonde.frequency_hz - self.state.center_hz);
+            let out_rate = ddc.out_rate();
+            self.sonde_rs = ComplexResampler::new(out_rate, rate);
+            self.sonde_ddc = Some(ddc);
+            self.sonde_in_rate = self.state.sample_rate;
+            self.sonde = Some(SondeController::new(self.state.sonde));
+            info!(rate = out_rate, "radiosonde window rebuilt");
+            return;
+        }
+        let Some(ddc) = self.sonde_ddc.as_mut() else { return };
+        ddc.set_offset_hz(self.state.sonde.frequency_hz - self.state.center_hz);
+    }
+
+    /// Drain the radiosonde decoder's latest status and forward it.
+    fn poll_sonde(&mut self) {
+        let Some(c) = self.sonde.as_ref() else { return };
+        let Some(status) = c.poll() else { return };
+        let _ = self.event_tx.send(RadioEvent::SondeStatus(Box::new(status)));
     }
 
     /// Drain the HFDL decoder's latest status and forward it.
@@ -18572,6 +18697,7 @@ impl Engine {
             self.sync_dab();
             self.sync_qo100();
             self.sync_hfdl();
+            self.sync_sonde();
         }
         // Re-derive the TCI streams at the new device rate and push a fresh
         // state burst, so connected clients follow the swap.
@@ -20913,6 +21039,7 @@ impl Engine {
                 self.sync_dab_window();
                 self.sync_qo100_window();
                 self.sync_hfdl_window();
+                self.sync_sonde_window();
                 true
             }
             Err(e) => {

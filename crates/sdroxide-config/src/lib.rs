@@ -2257,6 +2257,16 @@ pub fn load_hfdl_config() -> sdroxide_types::HfdlSettings {
     load_json::<sdroxide_types::HfdlSettings>("hfdl.json").sane()
 }
 
+/// Radiosonde decoder preferences: the lane's on/off and the channel it
+/// centres on (`sonde.json`).
+pub fn load_sonde_config() -> sdroxide_types::SondeSettings {
+    load_json::<sdroxide_types::SondeSettings>("sonde.json").sane()
+}
+
+pub fn save_sonde_config(cfg: &sdroxide_types::SondeSettings) -> Result<(), ConfigError> {
+    save_json("sonde.json", cfg)
+}
+
 pub fn save_hfdl_config(cfg: &sdroxide_types::HfdlSettings) -> Result<(), ConfigError> {
     save_json("hfdl.json", cfg)
 }

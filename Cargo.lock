@@ -5856,6 +5856,7 @@ dependencies = [
  "sdroxide-rotator",
  "sdroxide-skimmer",
  "sdroxide-solar",
+ "sdroxide-sonde",
  "sdroxide-tci",
  "sdroxide-types",
  "sdroxide-vdl2",
@@ -6028,6 +6029,17 @@ dependencies = [
  "sgp4",
  "tracing",
  "ureq",
+]
+
+[[package]]
+name = "sdroxide-sonde"
+version = "2.2.0"
+dependencies = [
+ "crossbeam-channel",
+ "sdroxide-dsp",
+ "sdroxide-types",
+ "tracing",
+ "xng-mode-sonde",
 ]
 
 [[package]]
@@ -8748,6 +8760,18 @@ dependencies = [
  "serde",
  "serde_json",
  "xng-acars",
+ "xng-dsp",
+ "xng-types",
+]
+
+[[package]]
+name = "xng-mode-sonde"
+version = "0.21.0"
+dependencies = [
+ "chrono",
+ "num-complex",
+ "serde",
+ "serde_json",
  "xng-dsp",
  "xng-types",
 ]

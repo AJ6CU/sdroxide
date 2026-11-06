@@ -1245,6 +1245,8 @@ fn handle_event(shared: &Shared, ev: RadioEvent) {
             // Native-only for the same reason as QO-100 above — the live HFDL
             // decode log is engine-internal, bridged nowhere yet.
             RadioEvent::HfdlStatus(_) => None,
+            // ...and the radiosonde tracks, for the same reason.
+            RadioEvent::SondeStatus(_) => None,
             RadioEvent::SstvLine { image_id, y, rgb } => {
                 Some(ServerMsg::SstvLine { image_id, y, rgb })
             }
