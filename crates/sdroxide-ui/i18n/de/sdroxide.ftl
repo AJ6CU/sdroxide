@@ -9173,3 +9173,10 @@ sonde-online-count = { $n } online
 sonde-online-no-grid = Tragen Sie Ihren Locator in der Digimode-Einrichtung ein, um Online-Sonden zu sehen.
 
 sonde-online-failed = SondeHub hat nicht geantwortet.
+sonde-export = Flug exportieren
+
+sonde-export-kml-hover = Den Flug dieser Sonde als KML-Spur speichern (Google Earth): Zeit, Länge, Breite, Höhe in Metern
+
+sonde-export-csv-hover = Den Flug dieser Sonde als CSV-Tabelle für eine Tabellenkalkulation speichern: Zeit, Breite, Länge, Höhe in Metern
+
+sonde-export-none = Für diese Sonde ist noch keine Position gespeichert.

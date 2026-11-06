@@ -38,6 +38,8 @@ pub struct SondeMapState {
     pub view: MapView,
     /// The serial of the sonde whose details are shown.
     pub selected: Option<String>,
+    /// The line shown after a flight was saved to a file.
+    pub note: Option<String>,
 }
 
 /// What a sonde is doing, from its latest frame and how long ago it was heard.

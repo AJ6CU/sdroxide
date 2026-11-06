@@ -9175,3 +9175,10 @@ sonde-online-count = { $n } çevrimiçi
 sonde-online-no-grid = Çevrimiçi sondaları görmek için sayısal modlar ayarında konum belirleyicinizi girin.
 
 sonde-online-failed = SondeHub yanıt vermedi.
+sonde-export = Uçuşu dışa aktar
+
+sonde-export-kml-hover = Bu sondanın uçuşunu KML izi olarak kaydet (Google Earth): zaman, boylam, enlem, metre cinsinden yükseklik
+
+sonde-export-csv-hover = Bu sondanın uçuşunu elektronik tablo için CSV olarak kaydet: zaman, enlem, boylam, metre cinsinden yükseklik
+
+sonde-export-none = Bu sonda için henüz kayıtlı konum yok.

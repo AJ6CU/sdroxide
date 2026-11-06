@@ -9174,3 +9174,10 @@ sonde-online-count = { $n } en línea
 sonde-online-no-grid = Indique su locator en la configuración de modos digitales para ver las sondas en línea.
 
 sonde-online-failed = SondeHub no respondió.
+sonde-export = Exportar el vuelo
+
+sonde-export-kml-hover = Guardar el vuelo de esta sonda como pista KML (Google Earth): hora, longitud, latitud, altitud en metros
+
+sonde-export-csv-hover = Guardar el vuelo de esta sonda como tabla CSV para una hoja de cálculo: hora, latitud, longitud, altitud en metros
+
+sonde-export-none = Aún no hay ninguna posición guardada para esta sonda.

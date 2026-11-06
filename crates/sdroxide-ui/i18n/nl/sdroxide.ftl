@@ -9183,3 +9183,10 @@ sonde-online-count = { $n } online
 sonde-online-no-grid = Vul uw locator in bij de instellingen van de digitale modes om online sondes te zien.
 
 sonde-online-failed = SondeHub antwoordde niet.
+sonde-export = Vlucht exporteren
+
+sonde-export-kml-hover = De vlucht van deze sonde opslaan als KML-track (Google Earth): tijd, lengtegraad, breedtegraad, hoogte in meters
+
+sonde-export-csv-hover = De vlucht van deze sonde opslaan als CSV-tabel voor een spreadsheet: tijd, breedtegraad, lengtegraad, hoogte in meters
+
+sonde-export-none = Nog geen positie bewaard voor deze sonde.

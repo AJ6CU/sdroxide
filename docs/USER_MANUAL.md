@@ -6272,7 +6272,9 @@ sample window. Each sonde heard is drawn on the map with the track it has flown 
 while it climbs, a triangle once it falls under its parachute, a cross when it has been
 silent for a minute — and a table under the map gives its serial, altitude, climb rate,
 speed, channel, battery and when it was last heard. Hover a mark for the position and the
-distance from your station. The *Online (SondeHub)* box, off until you tick it, also
+distance from your station. *Export flight* under the table saves the selected sonde's
+flight (the newest if none is selected) as a **KML** track for Google Earth or a **CSV**
+table for a spreadsheet. The *Online (SondeHub)* box, off until you tick it, also
 shows the sondes other stations have heard within 400 km (hollow blue diamonds): it only
 reads SondeHub's public list, sending your locator rounded to 0.1° and the radius, and
 uploads nothing; it needs the locator set in the digital-mode setup. The decoder needs a wideband source (a receiver that sends
