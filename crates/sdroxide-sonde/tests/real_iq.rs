@@ -51,6 +51,7 @@ fn real_f32_sample_decodes() {
         Ok("IMET4") => SondeModel::Imet4,
         Ok("MRZ") => SondeModel::Mrz,
         Ok("LMS6") => SondeModel::Lms6,
+        Ok("MTS01") => SondeModel::Mts01,
         _ => SondeModel::Rs41,
     };
     let rate0 = std::env::var("SONDE_RATE").ok().and_then(|v| v.parse().ok()).unwrap_or(96_000.0);
