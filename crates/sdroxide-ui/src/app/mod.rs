@@ -762,6 +762,8 @@ pub struct SdroxideApp {
     hfdl_map: crate::hfdl_map::HfdlMapState,
     /// The radiosonde map's view and selection.
     sonde_map: crate::sonde_map::SondeMapState,
+    /// Sondes other stations heard (SondeHub), read-only, off until switched on.
+    sonde_online: crate::sonde_online::Online,
     /// The AIRCRAFT window shows the radiosonde view (a view like Cards, not a
     /// radio mode).
     aircraft_sonde: bool,
@@ -2324,6 +2326,7 @@ impl SdroxideApp {
             sonde_status: None,
             hfdl_map: crate::hfdl_map::HfdlMapState::default(),
             sonde_map: crate::sonde_map::SondeMapState::default(),
+            sonde_online: crate::sonde_online::Online::default(),
             aircraft_sonde: false,
             aircraft_registry: aircraft_registry::AircraftRegistry::default(),
             hfdl_filter: String::new(),

@@ -9199,3 +9199,19 @@ settings-audio-radio-out-level-hint = ALSA playback level for the radio's output
 settings-audio-radio-in-level = RX mixer level
 
 settings-audio-radio-in-level-hint = ALSA capture level for the radio's input device. Linux only.
+sonde-online = Online (SondeHub)
+
+sonde-online-hover = Also show sondes other stations have heard, from SondeHub's public list. Only reads: your locator, rounded to 0.1°, and a 400 km radius are sent; nothing is uploaded. Off until you switch it on.
+
+sonde-online-count = { $n } online
+
+sonde-online-no-grid = Set your locator in the digital-mode setup to see online sondes.
+
+sonde-online-failed = SondeHub did not answer.
+sonde-export = Export flight
+
+sonde-export-kml-hover = Save this sonde's flight as a KML track (Google Earth): time, longitude, latitude, altitude in metres
+
+sonde-export-csv-hover = Save this sonde's flight as a CSV table for a spreadsheet: time, latitude, longitude, altitude in metres
+
+sonde-export-none = No position kept yet for this sonde.

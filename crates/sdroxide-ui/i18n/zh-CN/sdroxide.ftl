@@ -9114,3 +9114,19 @@ settings-audio-radio-out-level-hint = 无线电音频输出设备的ALSA播放�
 settings-audio-radio-in-level = RX混音器电平
 
 settings-audio-radio-in-level-hint = 无线电音频输入设备的ALSA采集电平。仅Linux。
+sonde-online = 在线（SondeHub）
+
+sonde-online-hover = 同时显示其他电台收到的探空仪，来自 SondeHub 的公开列表。只读：发送四舍五入到 0.1° 的网格位置和 400 公里半径，不上传任何内容。在您开启之前保持关闭。
+
+sonde-online-count = 在线 { $n } 个
+
+sonde-online-no-grid = 请在数字模式设置中填写您的网格定位，以查看在线探空仪。
+
+sonde-online-failed = SondeHub 没有响应。
+sonde-export = 导出飞行轨迹
+
+sonde-export-kml-hover = 将此探空仪的飞行保存为 KML 轨迹（Google Earth）：时间、经度、纬度、高度（米）
+
+sonde-export-csv-hover = 将此探空仪的飞行保存为可用于电子表格的 CSV：时间、纬度、经度、高度（米）
+
+sonde-export-none = 此探空仪尚无已保存的位置。

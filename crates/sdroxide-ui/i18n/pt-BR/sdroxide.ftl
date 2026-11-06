@@ -9176,3 +9176,19 @@ settings-audio-radio-out-level-hint = Nivel de reproducao ALSA do dispositivo de
 settings-audio-radio-in-level = Nivel do mixer RX
 
 settings-audio-radio-in-level-hint = Nivel de captura ALSA do dispositivo de entrada de audio do radio. Somente Linux.
+sonde-online = Online (SondeHub)
+
+sonde-online-hover = Mostra também as sondas ouvidas por outras estações, da lista pública do SondeHub. Apenas leitura: seu locator arredondado a 0,1° e um raio de 400 km são enviados; nada é publicado. Desligado até você ativar.
+
+sonde-online-count = { $n } online
+
+sonde-online-no-grid = Defina seu locator na configuração dos modos digitais para ver as sondas online.
+
+sonde-online-failed = O SondeHub não respondeu.
+sonde-export = Exportar o voo
+
+sonde-export-kml-hover = Salvar o voo desta sonda como trilha KML (Google Earth): hora, longitude, latitude, altitude em metros
+
+sonde-export-csv-hover = Salvar o voo desta sonda como tabela CSV para uma planilha: hora, latitude, longitude, altitude em metros
+
+sonde-export-none = Nenhuma posição guardada ainda para esta sonda.

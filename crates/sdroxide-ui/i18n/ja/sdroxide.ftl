@@ -9124,3 +9124,19 @@ settings-audio-radio-out-level-hint = ラジオの音声出力デバイスのALS
 settings-audio-radio-in-level = RXミキサーレベル
 
 settings-audio-radio-in-level-hint = ラジオの音声入力デバイスのALSAキャプチャレベル。Linuxのみ。
+sonde-online = オンライン（SondeHub）
+
+sonde-online-hover = 他の局が受信したゾンデも SondeHub の公開リストから表示します。読み取りのみ：0.1° に丸めたロケーターと半径 400 km を送信し、何もアップロードしません。オンにするまでオフです。
+
+sonde-online-count = オンライン { $n } 件
+
+sonde-online-no-grid = オンラインのゾンデを表示するには、デジタルモード設定でロケーターを設定してください。
+
+sonde-online-failed = SondeHub から応答がありません。
+sonde-export = 飛行をエクスポート
+
+sonde-export-kml-hover = このゾンデの飛行を KML トラック（Google Earth）として保存：時刻、経度、緯度、高度（メートル）
+
+sonde-export-csv-hover = このゾンデの飛行を表計算用の CSV として保存：時刻、緯度、経度、高度（メートル）
+
+sonde-export-none = このゾンデの位置はまだ保存されていません。

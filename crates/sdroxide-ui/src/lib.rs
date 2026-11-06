@@ -30,6 +30,7 @@ mod hell;
 mod help;
 mod hfdl_map;
 mod sonde_map;
+mod sonde_online;
 mod i18n;
 mod input;
 /// Which layout the window wears — desktop strip, tablet menus, or the compact

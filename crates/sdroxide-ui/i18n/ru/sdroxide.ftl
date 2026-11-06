@@ -9191,3 +9191,19 @@ settings-audio-radio-out-level-hint = Уровень воспроизведен�
 settings-audio-radio-in-level = Уровень микшера RX
 
 settings-audio-radio-in-level-hint = Уровень захвата ALSA устройства ввода аудио радио. Только Linux.
+sonde-online = Онлайн (SondeHub)
+
+sonde-online-hover = Показывает также зонды, принятые другими станциями, из открытого списка SondeHub. Только чтение: отправляются ваш локатор, округлённый до 0,1°, и радиус 400 км; ничего не публикуется. Выключено, пока вы не включите.
+
+sonde-online-count = { $n } онлайн
+
+sonde-online-no-grid = Укажите свой локатор в настройках цифровых режимов, чтобы видеть онлайн-зонды.
+
+sonde-online-failed = SondeHub не ответил.
+sonde-export = Экспорт полёта
+
+sonde-export-kml-hover = Сохранить полёт этого зонда как трек KML (Google Earth): время, долгота, широта, высота в метрах
+
+sonde-export-csv-hover = Сохранить полёт этого зонда как таблицу CSV для электронной таблицы: время, широта, долгота, высота в метрах
+
+sonde-export-none = Для этого зонда пока нет сохранённых позиций.

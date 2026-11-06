@@ -10,6 +10,7 @@
 
 use crate::i18n::tr;
 use eframe::egui::{Align2, Color32, FontId, Sense, Stroke, Ui, pos2, vec2};
+use crate::sonde_online::OnlineSonde;
 use sdroxide_types::SondeTrack;
 
 use crate::hfdl_map::target_view;
@@ -37,6 +38,8 @@ pub struct SondeMapState {
     pub view: MapView,
     /// The serial of the sonde whose details are shown.
     pub selected: Option<String>,
+    /// The line shown after a flight was saved to a file.
+    pub note: Option<String>,
 }
 
 /// What a sonde is doing, from its latest frame and how long ago it was heard.
@@ -80,6 +83,7 @@ pub fn show(
     ui: &mut Ui,
     state: &mut SondeMapState,
     sondes: &[SondeTrack],
+    online: &[OnlineSonde],
     home: Option<(f64, f64)>,
     now: i64,
     night: Option<eframe::egui::TextureId>,
@@ -186,6 +190,44 @@ pub fn show(
             if (seg[0].x - seg[1].x).abs() < rect.width() * 0.5 {
                 p.line_segment([seg[0], seg[1]], Stroke::new(w, alpha(tint, 190.0)));
             }
+        }
+    }
+
+    // ── the sondes other stations hear (SondeHub), hollow diamonds ──
+    let online_ink = alpha(Color32::from_rgb(110, 165, 255), 230.0);
+    for o in online.iter().filter(|o| !sondes.iter().any(|s| s.serial == o.serial)) {
+        let c = project(o.lat, o.lon);
+        if !rect.contains(c) {
+            continue;
+        }
+        let r = 4.0;
+        let d = vec![pos2(c.x, c.y - r), pos2(c.x + r, c.y), pos2(c.x, c.y + r), pos2(c.x - r, c.y)];
+        p.add(eframe::egui::Shape::closed_line(d, Stroke::new(1.4, online_ink)));
+        let alt = o.alt_m.map(|a| format!(" {a:.0} m")).unwrap_or_default();
+        p.text(
+            c + vec2(7.0, 0.0),
+            Align2::LEFT_CENTER,
+            format!("{}{alt}", o.serial),
+            FontId::monospace(9.0),
+            alpha(online_ink, 190.0),
+        );
+        if let Some(m) = pointer.filter(|m| m.distance(c) <= HIT_RADIUS) {
+            let _ = m;
+            let mut tip = format!("SondeHub  {} {}", o.model, o.serial);
+            tip.push_str(&format!("
+{:.4}, {:.4}", o.lat, o.lon));
+            if let Some(a) = o.alt_m {
+                tip.push_str(&format!("
+{a:.0} m"));
+            }
+            if let Some(c) = o.climb_ms {
+                tip.push_str(&format!("  {c:+.1} m/s"));
+            }
+            if let Some(f) = o.freq_mhz {
+                tip.push_str(&format!("
+{f:.3} MHz"));
+            }
+            resp.clone().on_hover_text(tip);
         }
     }
 

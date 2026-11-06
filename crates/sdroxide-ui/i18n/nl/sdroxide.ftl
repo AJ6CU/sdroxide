@@ -9184,3 +9184,19 @@ settings-audio-radio-out-level-hint = ALSA-afspeelniveau van het audio-uitvoerap
 settings-audio-radio-in-level = RX-mixerniveau
 
 settings-audio-radio-in-level-hint = ALSA-opnameniveau van het audio-invoerapparaat van de radio. Alleen Linux.
+sonde-online = Online (SondeHub)
+
+sonde-online-hover = Toont ook sondes die andere stations hebben ontvangen, uit de openbare lijst van SondeHub. Alleen lezen: uw locator op 0,1° afgerond en een straal van 400 km worden verstuurd; er wordt niets geüpload. Uit tot u het inschakelt.
+
+sonde-online-count = { $n } online
+
+sonde-online-no-grid = Vul uw locator in bij de instellingen van de digitale modes om online sondes te zien.
+
+sonde-online-failed = SondeHub antwoordde niet.
+sonde-export = Vlucht exporteren
+
+sonde-export-kml-hover = De vlucht van deze sonde opslaan als KML-track (Google Earth): tijd, lengtegraad, breedtegraad, hoogte in meters
+
+sonde-export-csv-hover = De vlucht van deze sonde opslaan als CSV-tabel voor een spreadsheet: tijd, breedtegraad, lengtegraad, hoogte in meters
+
+sonde-export-none = Nog geen positie bewaard voor deze sonde.

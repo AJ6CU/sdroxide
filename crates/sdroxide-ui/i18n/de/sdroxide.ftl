@@ -9174,3 +9174,19 @@ settings-audio-radio-out-level-hint = ALSA-Wiedergabepegel des Audioausgabegerat
 settings-audio-radio-in-level = RX-Mixer-Pegel
 
 settings-audio-radio-in-level-hint = ALSA-Aufnahmepegel des Audioeingabegerats des Funkgerats. Nur Linux.
+sonde-online = Online (SondeHub)
+
+sonde-online-hover = Zeigt auch Sonden, die andere Stationen gehört haben, aus der öffentlichen Liste von SondeHub. Nur lesend: Ihr Locator auf 0,1° gerundet und ein Radius von 400 km werden gesendet; nichts wird hochgeladen. Aus, bis Sie es einschalten.
+
+sonde-online-count = { $n } online
+
+sonde-online-no-grid = Tragen Sie Ihren Locator in der Digimode-Einrichtung ein, um Online-Sonden zu sehen.
+
+sonde-online-failed = SondeHub hat nicht geantwortet.
+sonde-export = Flug exportieren
+
+sonde-export-kml-hover = Den Flug dieser Sonde als KML-Spur speichern (Google Earth): Zeit, Länge, Breite, Höhe in Metern
+
+sonde-export-csv-hover = Den Flug dieser Sonde als CSV-Tabelle für eine Tabellenkalkulation speichern: Zeit, Breite, Länge, Höhe in Metern
+
+sonde-export-none = Für diese Sonde ist noch keine Position gespeichert.
