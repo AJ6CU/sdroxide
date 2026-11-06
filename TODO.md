@@ -21,8 +21,6 @@ for F4NRM because the SSTV panel is his). Open issues: 7 (re-measured
   kept current in the state line.
 
 ## Now
-- **PR #500 — usb audio: silently use a renamed sound card** (added by madmedicnl, owned by Claude): the recurring "renamed by the sound server — Apply to update it" notice is gone; the card is used as-is and its new ALSA name is written back to radio.json. `git revert db07b6b9` takes it back.
-- **PR #499 — usb audio: set the radio sound card mixer level on open** (added by madmedicnl, owned by Claude): default 80% playback/capture so a USB rig (SS9900v) triggers its VOX; adjustable in Settings → Audio. ALSA only, best-effort, no wire change. `git revert dad98a77` takes it back.
 
 - **PR #491 — CW peak filter (APF) on receive, and Hamlib's `APF` over rigctl** (added by AJ6CU, owned by AJ6CU) — #468, design agreed by madmedicnl: the transmit EQ's peaking bell on the receive side, centred on the CW pitch and following it, after the decoder tap and ahead of the AGC, CW only, retuned only when a number changes. `RxState.cw_peak` (on, width 20–200 Hz, lift 1–20 dB), remembered per mode; `Command::SetCwPeak` appended last, wire 268 → **269** (`0x59`), postcard round trip. `U/u APF` is the switch, `L/l APF` the width (0 widest, 1 narrowest), advertised only where the filter runs and refused outside CW. APF chip and popup (greyed, saying why, where the rig supplies the audio), eight messages in eleven languages, manual. One commit: `git revert <sha>` takes it out; at runtime, untick APF.
 - **PR (number on opening) — decoded-text UDP feed: ACARS, DSC and HFDL** (added by madmedicnl, owned by Claude): the feed already carried FT8-family, keyboard modes, WSPR and VDL2; the ACARS, DSC and HFDL windows now send one `decode` line per message too (taken from closed #318, redone on today's `main` without its NAVTEX/VDL2 duplicates). A mark is looked up in the rolling log instead of a count, so a full log keeps feeding (`fresh_after_mark`, two tests); HFDL log is newest-first. Manual §6.8.4 updated; no screen text, so no new messages. Wire-neutral. Checked here with `cargo check -p sdroxide-radio` and the two new tests on `x86_64-pc-windows-gnu`: green. Not run on air (no ACARS/DSC/HFDL signal here).
@@ -107,6 +105,8 @@ Everything else that was in this list has been merged or closed since — see **
 - AppImage — beslissing nodig.
 
 ## Recently done
+- 2026-11-06 — #500 merged (added by madmedicnl, owned by Claude): usb audio no longer nags "renamed by the sound server — Apply to update it"; a card found by stable tokens is used as-is and its new ALSA name is written back to radio.json. `git revert db07b6b9` takes it back.
+- 2026-11-06 — #499 merged (added by madmedicnl, owned by Claude): usb audio sets the radio sound card's mixer level on open (default 80%), adjustable in Settings → Audio, so a USB rig (SS9900v) triggers its VOX. ALSA only, best-effort, no wire change.
 
 - 2026-11-06 — #486 merged (added by madmedicnl, owned by Claude): NAVTEX default sub-band span widened from 3.7 to 8 kHz so the signal no longer hugs the right edge with CTR on. Small safe half of #481's zoom points; per-decoder remembered zoom (#b) waits on F4NRM's reaction.
 - 2026-11-06 — #485 merged (added by madmedicnl, owned by Claude): navtex framer now closes an open message when the next `ZCZC` arrives, so a missed `NNNN` no longer merges broadcasts — fixes the wipe and the apparent stuck-SYNC from #481. Single commit, `git revert 6141334c` takes it back.
