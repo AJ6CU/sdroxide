@@ -11,7 +11,7 @@ everything before 1.9.5) is described in the
 [User Manual](https://github.com/madmedicnl/sdroxide-brown/blob/main/docs/USER_MANUAL.md)
 and the [README](https://github.com/madmedicnl/sdroxide-brown#readme).
 
-## [Unreleased]
+## [2.3.0_brown] - 2026-11-06
 
 ### Fixed
 - **S-meter of a paired radio** — with a transceiver (e.g. a Wolf on CAT + sound card) whose panadapter is another radio (e.g. an RSP1), the transceiver's S-meter or its audio level was shown; it is only the transmitter and cannot be right. The S-meter is now the attached receiver's, measured on its I/Q and calibrated with S-Meter calib.
@@ -24,6 +24,7 @@ and the [README](https://github.com/madmedicnl/sdroxide-brown#readme).
 - **PROGRAMS keeps its state on the station, not in the browser** — TOUT, the starred stations, the filters and sort, and the colours were written to the browser's own storage on the web client (and the favourites not at all), so after a restart the chip was off and the waterfall labels were gone. A client connected to a station now reads that state from it at start and writes every change back (`GET`/`POST /programs-state`, stored in `programs-state.json` in the station's config folder, behind the same sign-in as the sockets); the browser keeps none of it. A station that is still empty takes over what the client already had, once. The program on the radio's own machine keeps using its config file.
 
 ### Added
+- **Radiosonde LMS6-400** — a third sonde type beside the RS41 and M10: 4800 baud GFSK, a convolutional code and CRC-checked frames. — F4NRM, PR #515
 - **HPSDR Protocol 2: the board's second ADC as a second aerial (diversity / noise cancel)** — Settings → Radio → HPSDR, DDC 1: *Second aerial on ADC 2*. The board is asked for a synced DDC pair (DDC 1 enabled alone, DDC 2 pointed at ADC 2, sync byte 1363 — what piHPSDR and Thetis send and what the TRX-DUO firmware v0.7.0 answers), its interleaved stream is split into the two aerials and fed to the same adaptive filter as the LimeSDR and the RSPduo, with the main window's DIV strip (Cancel / Combine, rate, hold, restart). Opens without it, and says why in the log, on any board or DDC that cannot. PROTO_VERSION 261. **Not yet tested on a real TRX-DUO.** — F4NRM's request
 - **S-Meter calib is documented as it is today** — Settings → Radio, under *Antenna is*: −5 to +5 S-units (6 dB each) per radio, display-only (needle, S and dBm figures); the squelch and auto-record level are not touched.
 - **PROGRAMS window tidied** — aligned columns with a Sort menu over each, the colour in a chip-style frame, a two-row top bar that no longer overlaps, ACCORD → LISTEN, SOLAR TIME → LOCAL TIME, CARTE → SHOW MAP, and every filter, the sort and ALL kept between sessions.
