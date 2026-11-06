@@ -352,6 +352,52 @@ impl SdroxideApp {
                 .wrap(),
             );
         });
+        // Choose a shipped plan. Native and local only: a browser has no config
+        // file, and a remote client would write its own laptop's copy rather
+        // than the station's. Choosing one replaces `bandplan.json` on purpose —
+        // it is the operator's click, not a silent rewrite.
+        #[cfg(not(target_arch = "wasm32"))]
+        if !self.ctrl.engine_is_remote() {
+            let plan = sdroxide_types::band_plan();
+            let current = if plan.is_default() {
+                0
+            } else if crate::app::bandplans::is_germany_nrw(plan) {
+                1
+            } else {
+                2
+            };
+            let names = [
+                tr!("settings-general-band-plan-built-in"),
+                tr!("settings-general-band-plan-germany-nrw"),
+                tr!("settings-general-band-plan-own"),
+            ];
+            let mut choice = current;
+            ui.horizontal_wrapped(|ui| {
+                ui.label(RichText::new(tr!("settings-general-band-plan")).size(10.5).weak());
+                ComboBox::from_id_salt("band-plan-preset")
+                    .selected_text(names[choice].as_str())
+                    .show_ui(ui, |ui| {
+                        for i in 0..2 {
+                            ui.selectable_value(&mut choice, i, names[i].as_str());
+                        }
+                    });
+            })
+            .response
+            .on_hover_text(tr!("settings-general-band-plan-hint"));
+            if choice != current {
+                let picked = match choice {
+                    0 => Some(sdroxide_types::BandPlan::default()),
+                    _ => crate::app::bandplans::preset_plan(crate::app::bandplans::GERMANY_NRW),
+                };
+                match picked {
+                    Some(p) => match sdroxide_config::save_band_plan(&p) {
+                        Ok(()) => cmds.push(Command::ReloadBandPlan),
+                        Err(e) => tracing::warn!("writing band plan preset: {e}"),
+                    },
+                    None => tracing::warn!("the shipped band plan preset did not parse"),
+                }
+            }
+        }
         ui.add_space(4.0);
         // Only where the file is actually on this machine. A remote client
         // showing its own config path would be pointing at the wrong computer.

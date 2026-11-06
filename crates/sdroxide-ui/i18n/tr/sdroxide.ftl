@@ -9201,3 +9201,12 @@ sonde-col-pressure = BasÄ±nÃ§
 
 settings-net-broadcast-import-needs-station = İçe aktarmak için bir istasyona bağlanın.
 
+settings-general-band-plan = Bant planı
+
+settings-general-band-plan-built-in = Yerleşik IARU
+
+settings-general-band-plan-germany-nrw = Almanya (NRW, SWL)
+
+settings-general-band-plan-own = İstasyonun kendi
+
+settings-general-band-plan-hint = Birlikte gelen bir bant planı seçin. bandplan.json dosyasını değiştirir; yerleşik IARU tabloları varsayılan olarak kalır.

@@ -11,6 +11,11 @@ everything before 1.9.5) is described in the
 [User Manual](https://github.com/madmedicnl/sdroxide-brown/blob/main/docs/USER_MANUAL.md)
 and the [README](https://github.com/madmedicnl/sdroxide-brown#readme).
 
+## [Unreleased]
+
+### Added
+- **A German (NRW) SWL band plan to choose from** — Settings → General → Band plan now offers the shipped plans alongside the built-in IARU tables: 630 m, detailed 2 m/70 cm (repeaters, satellites, NL repeaters), 6 m, QO-100, Freenet, PMR 446, the 11 m CB/freeband stretch (labelled CB/Freeband), radiosondes, sea radio, NOAA/Meteor weather satellites, DVB-T2, DAB+ and the 694–2200 MHz utility bands. Choosing one writes it to `bandplan.json` and reloads; the file stays editable and the built-in tables remain the default. — drdatapi's plan, #523
+
 ## [2.3.0_brown] - 2026-11-06
 
 ### Fixed

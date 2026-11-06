@@ -9199,3 +9199,12 @@ sonde-col-pressure = Druck
 
 settings-net-broadcast-import-needs-station = Mit einer Station verbinden, um zu importieren.
 
+settings-general-band-plan = Bandplan
+
+settings-general-band-plan-built-in = Integriert (IARU)
+
+settings-general-band-plan-germany-nrw = Deutschland (NRW, SWL)
+
+settings-general-band-plan-own = Eigener der Station
+
+settings-general-band-plan-hint = Einen mitgelieferten Bandplan wählen. Er ersetzt bandplan.json; die integrierten IARU-Tabellen bleiben die Vorgabe.

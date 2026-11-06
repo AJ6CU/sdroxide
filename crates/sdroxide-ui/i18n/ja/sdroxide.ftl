@@ -9149,3 +9149,12 @@ sonde-col-pressure = æ°—åœ§
 
 settings-net-broadcast-import-needs-station = インポートするには局に接続してください。
 
+settings-general-band-plan = バンドプラン
+
+settings-general-band-plan-built-in = 内蔵IARU
+
+settings-general-band-plan-germany-nrw = ドイツ（NRW、SWL）
+
+settings-general-band-plan-own = 局独自
+
+settings-general-band-plan-hint = 同梱のバンドプランを選択します。bandplan.json を置き換えますが、内蔵IARUテーブルが常に既定です。
