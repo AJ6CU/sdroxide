@@ -9163,3 +9163,7 @@ sonde-col-speed = Geschwindigkeit
 sonde-col-battery = Batterie
 
 sonde-col-heard = Gehört
+
+sonde-scan = Suche
+
+sonde-scan-hover = Sucht im ganzen Abtastfenster nach Sonden und dekodiert bis zu vier gleichzeitig, statt auf einem Kanal zu hören. Das Fenster muss sie abdecken: das Kanalfeld zentriert das Radio.

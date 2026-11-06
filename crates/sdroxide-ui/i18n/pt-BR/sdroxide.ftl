@@ -9165,3 +9165,7 @@ sonde-col-speed = Velocidade
 sonde-col-battery = Bateria
 
 sonde-col-heard = Recebida
+
+sonde-scan = Varredura
+
+sonde-scan-hover = Procura sondas em toda a janela de amostragem e decodifica até quatro ao mesmo tempo, em vez de escutar um só canal. A janela precisa cobri-las: o campo Canal centraliza o rádio.

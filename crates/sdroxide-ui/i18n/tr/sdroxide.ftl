@@ -9165,3 +9165,7 @@ sonde-col-speed = Hız
 sonde-col-battery = Pil
 
 sonde-col-heard = Alındı
+
+sonde-scan = Tara
+
+sonde-scan-hover = Tek bir kanalı dinlemek yerine tüm örnekleme penceresinde sonda arar ve aynı anda dörde kadarını çözer. Pencerenin onları kapsaması gerekir: Kanal alanı telsizi ortalar.

@@ -83,6 +83,8 @@ impl SdroxideApp {
             if r.changed() {
                 cfg.frequency_hz = (mhz * 1e6).round();
             }
+            ui.checkbox(&mut cfg.scan, RichText::new(tr!("sonde-scan")).size(11.0))
+                .on_hover_text(tr!("sonde-scan-hover"));
         });
         if !cfg.enabled {
             ui.label(
@@ -172,7 +174,7 @@ mod tests {
 
     #[test]
     fn a_running_decoder_is_not_switched_on_again() {
-        let on = SondeSettings { enabled: true, frequency_hz: 404_500_000.0 };
+        let on = SondeSettings { enabled: true, frequency_hz: 404_500_000.0, scan: false };
         let cmds = button_commands(&on, sdroxide_types::Vfo::A);
         assert_eq!(cmds.len(), 1, "only the retune");
         assert!(matches!(cmds[0], Command::SetVfo { hz, .. } if hz == 404_500_000.0));

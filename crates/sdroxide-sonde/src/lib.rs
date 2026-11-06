@@ -8,9 +8,12 @@
 //! downconverter). This crate owns the worker thread, the bounded I/Q queue
 //! and the per-serial track book.
 
+pub mod bank;
 pub mod controller;
+pub mod scan;
 pub mod tracks;
 
+pub use bank::SondeBank;
 pub use controller::SondeController;
 
 /// The lane rate the engine feeds the decoder: the decoder's own channel rate.

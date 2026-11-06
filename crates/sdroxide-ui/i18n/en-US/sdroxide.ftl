@@ -9188,3 +9188,7 @@ sonde-col-speed = Speed
 sonde-col-battery = Battery
 
 sonde-col-heard = Heard
+
+sonde-scan = Scan
+
+sonde-scan-hover = Look across the whole sample window for sondes and decode up to four at once, instead of listening on one channel. The window must cover them: the channel box centres the radio.

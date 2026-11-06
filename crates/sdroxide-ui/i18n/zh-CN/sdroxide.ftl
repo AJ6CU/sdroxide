@@ -9103,3 +9103,7 @@ sonde-col-speed = 速度
 sonde-col-battery = 电池
 
 sonde-col-heard = 接收
+
+sonde-scan = 扫描
+
+sonde-scan-hover = 不再只听一个信道，而是在整个采样窗口中寻找探空仪，并同时解码最多四个。窗口必须覆盖它们：信道框用于使电台居中。

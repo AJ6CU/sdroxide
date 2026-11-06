@@ -9164,3 +9164,7 @@ sonde-col-speed = Velocidad
 sonde-col-battery = Batería
 
 sonde-col-heard = Oída
+
+sonde-scan = Barrido
+
+sonde-scan-hover = Busca sondas en toda la ventana de muestreo y decodifica hasta cuatro a la vez, en lugar de escuchar un solo canal. La ventana debe cubrirlas: el campo Canal centra la radio.

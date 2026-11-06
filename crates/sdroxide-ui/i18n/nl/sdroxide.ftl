@@ -9173,3 +9173,7 @@ sonde-col-speed = Snelheid
 sonde-col-battery = Batterij
 
 sonde-col-heard = Ontvangen
+
+sonde-scan = Scan
+
+sonde-scan-hover = Zoekt in het hele samplevenster naar sondes en decodeert er tot vier tegelijk, in plaats van op één kanaal te luisteren. Het venster moet ze bestrijken: het kanaalveld centreert de radio.

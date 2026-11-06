@@ -9174,3 +9174,7 @@ sonde-col-speed = Velocità
 sonde-col-battery = Batteria
 
 sonde-col-heard = Ricevuta
+
+sonde-scan = Scansione
+
+sonde-scan-hover = Cerca sonde in tutta la finestra di campionamento e ne decodifica fino a quattro insieme, invece di ascoltare un solo canale. La finestra deve coprirle: il campo Canale centra la radio.

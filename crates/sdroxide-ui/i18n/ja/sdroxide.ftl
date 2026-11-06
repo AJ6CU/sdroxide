@@ -9113,3 +9113,7 @@ sonde-col-speed = 速度
 sonde-col-battery = 電池
 
 sonde-col-heard = 受信
+
+sonde-scan = スキャン
+
+sonde-scan-hover = 1 つのチャンネルを聞く代わりに、サンプリングウィンドウ全体からゾンデを探し、最大 4 つを同時にデコードします。ウィンドウがそれらを含む必要があります。チャンネル欄で無線機の中心を合わせます。

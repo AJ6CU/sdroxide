@@ -9176,3 +9176,7 @@ sonde-col-speed = Vitesse
 sonde-col-battery = Batterie
 
 sonde-col-heard = Reçue
+
+sonde-scan = Balayage
+
+sonde-scan-hover = Cherche des sondes dans toute la fenêtre d'échantillonnage et en décode jusqu'à quatre à la fois, au lieu d'écouter un seul canal. La fenêtre doit les couvrir : le champ Canal centre la radio.
