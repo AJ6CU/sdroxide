@@ -529,11 +529,6 @@ pub trait IqSource: Send {
     fn rx_signal_dbm(&mut self) -> Option<f32> {
         None
     }
-    /// Whether this source's S-meter keeps reporting while the transmitter is
-    /// keyed. Default: false.
-    fn smeter_during_tx(&self) -> bool {
-        false
-    }
     /// Absolute gain, in dB, between the antenna socket and the converter that
     /// produced these samples. `None` when the front end cannot say.
     ///
