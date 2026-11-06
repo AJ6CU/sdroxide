@@ -9213,3 +9213,6 @@ sonde-col-temp = Ð¢ÐµÐ¼Ð¿.
 sonde-col-humidity = Ð’Ð»Ð°Ð¶Ð½.
 
 sonde-col-pressure = Ð”Ð°Ð²Ð».
+
+settings-net-broadcast-import-needs-station = Подключитесь к станции для импорта.
+

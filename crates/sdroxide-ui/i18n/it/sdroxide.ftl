@@ -9207,3 +9207,6 @@ sonde-col-temp = Temp.
 sonde-col-humidity = UmiditÃ 
 
 sonde-col-pressure = Pressione
+
+settings-net-broadcast-import-needs-station = Collegarsi a una stazione per importare.
+

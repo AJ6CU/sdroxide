@@ -23,6 +23,7 @@ mod session;
 mod session_cookie;
 mod signin;
 mod solar;
+mod broadcast_schedule;
 mod programs_state;
 mod watchlist;
 
@@ -740,6 +741,11 @@ pub async fn serve(params: ServerParams) -> Result<(), ServerError> {
         .route("/aircraft-export", get(history::export_route))
         .route("/aircraft-watch", get(watchlist::get_route).post(watchlist::post_route))
         .route("/programs-state", get(programs_state::get_route).post(programs_state::post_route))
+.route(
+    "/broadcast-schedule",
+    get(broadcast_schedule::get_route).post(broadcast_schedule::post_import_route)
+        .layer(axum::extract::DefaultBodyLimit::max(broadcast_schedule::MAX_BODY_BYTES)),
+)
         // Where a browser trades its password for a signed cookie, and gives
         // it back. Both are plain HTTP because a cookie is a response header
         // and the socket handshake's headers are spent before the sign-in

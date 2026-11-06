@@ -9206,3 +9206,6 @@ sonde-col-temp = Temp.
 sonde-col-humidity = Vochtigheid
 
 sonde-col-pressure = Druk
+
+settings-net-broadcast-import-needs-station = Verbind met een station om te importeren.
+

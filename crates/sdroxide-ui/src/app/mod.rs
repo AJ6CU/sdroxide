@@ -1501,6 +1501,11 @@ pub struct SdroxideApp {
     /// The UTC day the season was last checked on. A season change is a calendar
     /// event, so checking once a day catches it without a timer.
     broadcast_checked_day: i64,
+    /// Browser-only: an in-flight GET of the station's broadcast schedule.
+    #[cfg(target_arch = "wasm32")]
+    broadcast_load: Option<std::sync::Arc<std::sync::Mutex<Option<Result<Vec<sdroxide_types::BroadcastStation>, String>>>>>,
+    #[cfg(target_arch = "wasm32")]
+    broadcast_load_done: bool,
     /// UI-owned editable copy of the network config (edited in the Settings
     /// dialog's Spots / FreeDV / Uploads tabs). Carries no operator identity —
     /// that comes from the digi config, edited on the General tab.
@@ -2620,6 +2625,10 @@ impl SdroxideApp {
             },
             broadcast_fetch_status: None,
             broadcast_checked_day: -1,
+            #[cfg(target_arch = "wasm32")]
+            broadcast_load: None,
+            #[cfg(target_arch = "wasm32")]
+            broadcast_load_done: false,
             net_cfg_edit: NetworkConfig::default(),
             net_cfg_seeded: false,
             rigctld_edit: sdroxide_types::RigctldConfig::default(),

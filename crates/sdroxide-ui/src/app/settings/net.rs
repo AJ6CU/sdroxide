@@ -450,6 +450,7 @@ pub(in crate::app) fn broadcast_stations_settings(
     import: &mut Option<Result<String, String>>,
     fetching: bool,
     status: Option<&Result<String, String>>,
+    _peer: Option<&str>,
 ) {
     let (season, cached) = sdroxide_config::broadcast_schedule_status();
     super::note(
@@ -640,17 +641,117 @@ pub(in crate::app) fn broadcast_stations_settings(
 #[cfg(target_arch = "wasm32")]
 pub(in crate::app) fn broadcast_stations_settings(
     ui: &mut egui::Ui,
-    _reload: &mut bool,
+    reload: &mut bool,
     _refetch: &mut bool,
     _refetch_source: &mut Option<sdroxide_types::ScheduleSource>,
-    _import: &mut Option<Result<String, String>>,
+    import: &mut Option<Result<String, String>>,
     _fetching: bool,
     _status: Option<&Result<String, String>>,
+    peer: Option<&str>,
 ) {
+    use std::sync::{Arc, Mutex};
+
+    thread_local! {
+        static BC_IMPORT_INBOX: std::cell::RefCell<Option<crate::download::BytesInbox>> =
+            const { std::cell::RefCell::new(None) };
+        static BC_IMPORT_RESULT: std::cell::RefCell<Option<Result<String, String>>> =
+            const { std::cell::RefCell::new(None) };
+    }
+
+    // Collect a finished file pick.
+    BC_IMPORT_INBOX.with(|slot| {
+        let inbox = slot.borrow().clone();
+        if let Some(inbox) = inbox {
+            let bytes = if let Ok(mut g) = inbox.lock() { g.take() } else { None };
+            if let Some(res) = bytes {
+                *slot.borrow_mut() = None;
+                match res {
+                    Ok(data) => {
+                        let peer = peer.map(str::to_string);
+                        wasm_bindgen_futures::spawn_local(async move {
+                            let result = post_broadcast_import(peer.as_deref(), &data).await;
+                            BC_IMPORT_RESULT.with(|r| *r.borrow_mut() = Some(result));
+                        });
+                    }
+                    Err(e) => {
+                        BC_IMPORT_RESULT.with(|r| *r.borrow_mut() = Some(Err(e)));
+                    }
+                }
+            }
+        }
+    });
+
+    // Deliver a finished import.
+    BC_IMPORT_RESULT.with(|slot| {
+        if let Some(res) = slot.borrow_mut().take() {
+            *import = Some(res);
+            *reload = true;
+        }
+    });
+
     super::note(
         ui,
         &tr!("settings-net-broadcast-stations-labelled-waterfall-come"),
     );
+
+    if ui
+        .add_enabled(peer.is_some(), egui::Button::new(tr!("settings-net-import-list")))
+        .clicked()
+        && let Some(inbox) = BC_IMPORT_INBOX.with(|s| {
+            if s.borrow().is_some() {
+                None
+            } else {
+                let inbox = Arc::new(Mutex::new(None));
+                *s.borrow_mut() = Some(inbox.clone());
+                Some(inbox)
+            }
+        })
+    {
+        crate::download::load_bytes("broadcast", &["csv", "txt", "zip", "json"], inbox);
+    }
+
+    if peer.is_none() {
+        ui.label(tr!("settings-net-broadcast-import-needs-station"));
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+async fn post_broadcast_import(peer: Option<&str>, data: &[u8]) -> Result<String, String> {
+    let url = peer
+        .and_then(|p| {
+            let base = crate::login::http_base(&crate::login::station_key(p))?;
+            Some(format!("{base}/broadcast-schedule/import"))
+        })
+        .ok_or_else(|| "no station".to_string())?;
+
+    use wasm_bindgen::JsCast;
+    let window = web_sys::window().ok_or_else(|| "no window".to_string())?;
+    let init = web_sys::RequestInit::new();
+    init.set_method("POST");
+    init.set_mode(web_sys::RequestMode::SameOrigin);
+    let headers = web_sys::Headers::new().map_err(|_| "headers".to_string())?;
+    headers.set("content-type", "application/octet-stream").map_err(|_| "headers".to_string())?;
+    headers.set("x-sdroxide", "1").map_err(|_| "headers".to_string())?;
+    init.set_headers(&headers);
+    let array = js_sys::Uint8Array::from(data);
+    init.set_body(&array.into());
+
+    let request = web_sys::Request::new_with_str_and_init(&url, &init).map_err(|_| "request".to_string())?;
+    let resp = wasm_bindgen_futures::JsFuture::from(window.fetch_with_request(&request))
+        .await
+        .map_err(|_| "fetch".to_string())?
+        .dyn_into::<web_sys::Response>()
+        .map_err(|_| "response".to_string())?;
+
+    if resp.status() != 200 {
+        return Err(format!("HTTP {}", resp.status()));
+    }
+    let text = wasm_bindgen_futures::JsFuture::from(resp.text().map_err(|_| "text".to_string())?)
+        .await
+        .map_err(|_| "text".to_string())?
+        .as_string()
+        .unwrap_or_default();
+    Ok(text)
 }
 
 impl crate::app::SdroxideApp {

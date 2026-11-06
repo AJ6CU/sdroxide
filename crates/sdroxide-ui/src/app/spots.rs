@@ -445,6 +445,8 @@ impl SdroxideApp {
     /// Cheap enough to call every frame.
     pub(in crate::app) fn refresh_broadcast_spots(&mut self, now_utc: i64) {
         self.poll_schedule_fetch(now_utc);
+        #[cfg(target_arch = "wasm32")]
+        self.poll_broadcast_load();
         let minute = now_utc.div_euclid(60);
         if minute == self.broadcast_minute {
             return;
@@ -482,6 +484,43 @@ impl SdroxideApp {
             self.broadcast_checked_day = day;
             self.broadcast_fetch = crate::app::persist::spawn_schedule_fetch(false);
         }
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    fn poll_broadcast_load(&mut self) {
+        use std::sync::{Arc, Mutex};
+
+        // Take a finished result.
+        if let Some(inbox) = &self.broadcast_load {
+            let done = if let Ok(mut g) = inbox.lock() {
+                g.take()
+            } else {
+                None
+            };
+            if let Some(res) = done {
+                self.broadcast_load = None;
+                self.broadcast_load_done = true;
+                if let Ok(stations) = res {
+                    self.broadcast = sdroxide_types::broadcast::with_utilities(stations);
+                    self.broadcast_minute = -1;
+                }
+            }
+        }
+
+        if self.broadcast_load_done || self.broadcast_load.is_some() {
+            return;
+        }
+        let Some(peer) = self.ctrl.peer_url() else { return };
+        let Some(url) = Self::broadcast_url(&peer) else { return };
+        let inbox = Arc::new(Mutex::new(None));
+        let inbox2 = inbox.clone();
+        self.broadcast_load = Some(inbox);
+        wasm_bindgen_futures::spawn_local(async move {
+            let result = Self::fetch_broadcast(&url).await;
+            if let Ok(mut g) = inbox2.lock() {
+                *g = Some(result);
+            }
+        });
     }
 
     /// Download the current season's schedule now, whether or not one is cached.
@@ -522,6 +561,36 @@ impl SdroxideApp {
     pub(in crate::app) fn all_spots(&self) -> impl Iterator<Item = &Spot> {
         self.spots.iter().chain(self.broadcast_spots.iter())
     }
+
+#[cfg(target_arch = "wasm32")]
+fn broadcast_url(peer_url: &str) -> Option<String> {
+    let base = crate::login::http_base(&crate::login::station_key(peer_url))?;
+    Some(format!("{base}/broadcast-schedule"))
+}
+
+#[cfg(target_arch = "wasm32")]
+async fn fetch_broadcast(url: &str) -> Result<Vec<sdroxide_types::BroadcastStation>, String> {
+    use wasm_bindgen::JsCast;
+    let window = web_sys::window().ok_or_else(|| "no window".to_string())?;
+    let init = web_sys::RequestInit::new();
+    init.set_method("GET");
+    init.set_mode(web_sys::RequestMode::SameOrigin);
+    let request = web_sys::Request::new_with_str_and_init(url, &init).map_err(|_| "request".to_string())?;
+    let resp = wasm_bindgen_futures::JsFuture::from(window.fetch_with_request(&request))
+        .await
+        .map_err(|_| "fetch".to_string())?
+        .dyn_into::<web_sys::Response>()
+        .map_err(|_| "response".to_string())?;
+    if resp.status() != 200 {
+        return Err(format!("HTTP {}", resp.status()));
+    }
+    let text = wasm_bindgen_futures::JsFuture::from(resp.text().map_err(|_| "text".to_string())?)
+        .await
+        .map_err(|_| "text".to_string())?
+        .as_string()
+        .ok_or_else(|| "text".to_string())?;
+    serde_json::from_str(&text).map_err(|e| e.to_string())
+}
 
     /// The "who heard me" reporters to draw, when the overlay is on: the
     /// [`SpotKind::HeardMe`] spots from the snapshot, cloned out. Empty when
