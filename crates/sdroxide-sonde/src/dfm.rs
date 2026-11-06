@@ -17,7 +17,7 @@ use sdroxide_dsp::Complex32;
 use xng_mode_sonde::GpsPos;
 
 use crate::fsk::{FskSlicer, Threshold};
-use crate::model::{ModelDecoder, SondeFix, SondeModel};
+use crate::model::{Meteo, ModelDecoder, SondeFix, SondeModel};
 
 const BAUD: f64 = 2500.0;
 const HEADER: u32 = 0x45CF;
@@ -142,6 +142,7 @@ impl Assembler {
                             serial: format!("DFM-{serial}"),
                             frame_num: u32::from(self.counter),
                             battery_v: None,
+                            meteo: Meteo::default(),
                             pos: Some(GpsPos {
                                 lat,
                                 lon,

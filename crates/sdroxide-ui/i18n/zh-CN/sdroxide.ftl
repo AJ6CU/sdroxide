@@ -9130,3 +9130,9 @@ sonde-export-kml-hover = 将此探空仪的飞行保存为 KML 轨迹（Google E
 sonde-export-csv-hover = 将此探空仪的飞行保存为可用于电子表格的 CSV：时间、纬度、经度、高度（米）
 
 sonde-export-none = 此探空仪尚无已保存的位置。
+
+sonde-col-temp = æ°”æ¸©
+
+sonde-col-humidity = æ¹¿åº¦
+
+sonde-col-pressure = æ°”åŽ‹

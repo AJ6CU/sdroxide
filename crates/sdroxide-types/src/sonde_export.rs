@@ -106,6 +106,9 @@ mod tests {
             climb_ms: None,
             num_sv: None,
             battery_v: None,
+            temp_c: None,
+            humidity_pct: None,
+            pressure_hpa: None,
             last_unix: 0,
             frames: 1,
             track: points

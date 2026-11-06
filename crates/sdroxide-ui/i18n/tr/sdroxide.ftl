@@ -9192,3 +9192,9 @@ sonde-export-kml-hover = Bu sondanın uçuşunu KML izi olarak kaydet (Google Ea
 sonde-export-csv-hover = Bu sondanın uçuşunu elektronik tablo için CSV olarak kaydet: zaman, enlem, boylam, metre cinsinden yükseklik
 
 sonde-export-none = Bu sonda için henüz kayıtlı konum yok.
+
+sonde-col-temp = SÄ±c.
+
+sonde-col-humidity = Nem
+
+sonde-col-pressure = BasÄ±nÃ§

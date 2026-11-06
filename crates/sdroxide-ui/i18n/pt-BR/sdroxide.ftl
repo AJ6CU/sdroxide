@@ -9192,3 +9192,9 @@ sonde-export-kml-hover = Salvar o voo desta sonda como trilha KML (Google Earth)
 sonde-export-csv-hover = Salvar o voo desta sonda como tabela CSV para uma planilha: hora, latitude, longitude, altitude em metros
 
 sonde-export-none = Nenhuma posição guardada ainda para esta sonda.
+
+sonde-col-temp = Temp.
+
+sonde-col-humidity = Umidade
+
+sonde-col-pressure = PressÃ£o

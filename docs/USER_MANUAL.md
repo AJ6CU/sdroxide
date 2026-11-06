@@ -6271,7 +6271,7 @@ at first; change it in the *Channel* box, 400–406.1 MHz), so the channel lies 
 sample window. Each sonde heard is drawn on the map with the track it has flown — a ring
 while it climbs, a triangle once it falls under its parachute, a cross when it has been
 silent for a minute — and a table under the map gives its serial, altitude, climb rate,
-speed, channel, battery and when it was last heard. Hover a mark for the position and the
+speed, channel, battery, air temperature, humidity and pressure (when the model sends them) and when it was last heard. An RS41 gives temperature and humidity only after it has sent its calibration table, up to a minute after it is first heard; an iMet-4 gives all three at once. Hover a mark for the position and the
 distance from your station. *Export flight* under the table saves the selected sonde's
 flight (the newest if none is selected) as a **KML** track for Google Earth or a **CSV**
 table for a spreadsheet. The *Online (SondeHub)* box, off until you tick it, also

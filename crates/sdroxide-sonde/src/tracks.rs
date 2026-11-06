@@ -3,6 +3,8 @@
 
 use sdroxide_types::{SONDE_MAX_TRACKS, SONDE_TRACK_DEPTH, SondePoint, SondeTrack};
 use crate::model::SondeFix;
+#[cfg(test)]
+use crate::model::Meteo;
 
 /// Every sonde heard since the lane started, most recently heard first.
 #[derive(Debug, Default)]
@@ -38,6 +40,9 @@ impl TrackBook {
                         climb_ms: None,
                         num_sv: None,
                         battery_v: None,
+                        temp_c: None,
+                        humidity_pct: None,
+                        pressure_hpa: None,
                         last_unix: unix,
                         frames: 0,
                         track: Vec::new(),
@@ -51,6 +56,17 @@ impl TrackBook {
         s.freq_hz = freq_hz;
         s.frame = f.frame_num;
         s.battery_v = f.battery_v.filter(|v| v.is_finite() && *v > 0.0);
+        // A reading stays until the model sends a newer one: a sonde sends
+        // temperature and humidity in different frames than the position.
+        if let Some(t) = f.meteo.temp_c.filter(|t| t.is_finite() && (-120.0..80.0).contains(t)) {
+            s.temp_c = Some(t);
+        }
+        if let Some(h) = f.meteo.humidity_pct.filter(|h| h.is_finite() && (0.0..=100.0).contains(h)) {
+            s.humidity_pct = Some(h);
+        }
+        if let Some(p) = f.meteo.pressure_hpa.filter(|p| p.is_finite() && (0.0..1200.0).contains(p)) {
+            s.pressure_hpa = Some(p);
+        }
         s.last_unix = unix;
         s.frames = s.frames.saturating_add(1);
         if let Some(p) = f.pos.as_ref().filter(|p| valid_fix(p.lat, p.lon)) {
@@ -116,6 +132,7 @@ mod tests {
             serial: serial.to_string(),
             frame_num: u32::from(n),
             battery_v: Some(2.7),
+            meteo: Meteo::default(),
             pos: Some(GpsPos {
                 lat,
                 lon,
@@ -191,5 +208,21 @@ mod tests {
         assert!(t.len() <= SONDE_TRACK_DEPTH);
         assert_eq!(t[0].unix, 0, "the launch point is kept");
         assert_eq!(t.last().unwrap().unix, SONDE_TRACK_DEPTH as i64 + 9, "and the newest");
+    }
+
+    #[test]
+    fn a_reading_stays_until_a_newer_one_comes() {
+        let mut b = TrackBook::default();
+        let mut f = frame("A1", 1, 48.0, 2.0, 100.0);
+        f.meteo = Meteo { temp_c: Some(12.5), humidity_pct: Some(55.0), pressure_hpa: Some(980.0) };
+        b.push(&f, 403e6, 10);
+        b.push(&frame("A1", 2, 48.0, 2.0, 110.0), 403e6, 11);
+        let s = &b.sondes[0];
+        assert_eq!((s.temp_c, s.humidity_pct, s.pressure_hpa), (Some(12.5), Some(55.0), Some(980.0)));
+        // Nonsense is dropped, the last good value stays.
+        let mut g = frame("A1", 3, 48.0, 2.0, 120.0);
+        g.meteo = Meteo { temp_c: Some(900.0), humidity_pct: Some(-4.0), pressure_hpa: Some(f32::NAN) };
+        b.push(&g, 403e6, 12);
+        assert_eq!(b.sondes[0].temp_c, Some(12.5));
     }
 }

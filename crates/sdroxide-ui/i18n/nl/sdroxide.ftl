@@ -9200,3 +9200,9 @@ sonde-export-kml-hover = De vlucht van deze sonde opslaan als KML-track (Google 
 sonde-export-csv-hover = De vlucht van deze sonde opslaan als CSV-tabel voor een spreadsheet: tijd, breedtegraad, lengtegraad, hoogte in meters
 
 sonde-export-none = Nog geen positie bewaard voor deze sonde.
+
+sonde-col-temp = Temp.
+
+sonde-col-humidity = Vochtigheid
+
+sonde-col-pressure = Druk

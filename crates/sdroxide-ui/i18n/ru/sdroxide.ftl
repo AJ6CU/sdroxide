@@ -9207,3 +9207,9 @@ sonde-export-kml-hover = Сохранить полёт этого зонда к�
 sonde-export-csv-hover = Сохранить полёт этого зонда как таблицу CSV для электронной таблицы: время, широта, долгота, высота в метрах
 
 sonde-export-none = Для этого зонда пока нет сохранённых позиций.
+
+sonde-col-temp = Ð¢ÐµÐ¼Ð¿.
+
+sonde-col-humidity = Ð’Ð»Ð°Ð¶Ð½.
+
+sonde-col-pressure = Ð”Ð°Ð²Ð».

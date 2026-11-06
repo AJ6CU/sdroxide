@@ -17,6 +17,7 @@ pub mod m10;
 pub mod m20;
 pub mod mrz;
 pub mod model;
+pub mod rs41meteo;
 pub mod scan;
 pub mod tracks;
 
