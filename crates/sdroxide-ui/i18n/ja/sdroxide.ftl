@@ -9083,3 +9083,33 @@ topbar-apf-on-hover = CWピークフィルター：幅 { $width } Hz、ピッチ
 topbar-apf-hint = CWピッチを中心にし、ピッチに追従します。AGCの前段。デコーダーは届いたままの信号を受け取ります。
 
 topbar-apf-rig-audio-hover = CWピークフィルター — この無線機では使えません。聞こえているのは無線機自身の音声で、フィルターはここで復調した音声に働きます
+
+sondemap-no-sonde-yet = ラジオゾンデはまだ受信されていません
+
+aircraft-mode-sonde-hover = ラジオゾンデ（RS41、400〜406 MHz）— 気象観測気球と飛行経路
+
+sonde-decoding = デコード中
+
+sonde-decoding-off = デコーダー停止
+
+sonde-count = ゾンデ: { $n }
+
+sonde-frames = フレーム: { $n }
+
+sonde-channel = チャンネル
+
+sonde-channel-hover = 受信するゾンデの周波数（400〜406 MHz）。チャンネルがウィンドウ内に入るよう、無線機もその周波数に合わせます。
+
+sonde-off-note = ラジオゾンデのデコーダーは停止中です。SONDE を押すと開始します。
+
+sonde-col-serial = ゾンデ
+
+sonde-col-alt = 高度
+
+sonde-col-climb = 上昇率
+
+sonde-col-speed = 速度
+
+sonde-col-battery = 電池
+
+sonde-col-heard = 受信

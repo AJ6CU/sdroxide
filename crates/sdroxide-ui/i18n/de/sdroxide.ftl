@@ -9133,3 +9133,33 @@ topbar-apf-on-hover = CW-Peakfilter: { $width } Hz breit, hebt die Tonhöhe um {
 topbar-apf-hint = Auf der CW-Tonhöhe zentriert und folgt ihr. Vor der AGC; die Decoder hören das Signal weiterhin so, wie es ankam.
 
 topbar-apf-rig-audio-hover = CW-Peakfilter — nicht bei diesem Funkgerät: Sie hören das Audio des Geräts selbst, und der Filter arbeitet auf dem hier demodulierten Audio
+
+sondemap-no-sonde-yet = Noch keine Radiosonde empfangen
+
+aircraft-mode-sonde-hover = Radiosonden (RS41, 400–406 MHz) — Wetterballons mit ihrer Flugbahn
+
+sonde-decoding = DEKODIERUNG
+
+sonde-decoding-off = DEKODER AUS
+
+sonde-count = Sonden: { $n }
+
+sonde-frames = Frames: { $n }
+
+sonde-channel = Kanal
+
+sonde-channel-hover = Die Sondenfrequenz, auf der gehört wird (400–406 MHz). Das Radio wird ebenfalls dorthin abgestimmt, damit der Kanal im Fenster liegt.
+
+sonde-off-note = Der Radiosonden-Dekoder ist aus. SONDE drücken, um ihn zu starten.
+
+sonde-col-serial = Sonde
+
+sonde-col-alt = Höhe
+
+sonde-col-climb = Steigen
+
+sonde-col-speed = Geschwindigkeit
+
+sonde-col-battery = Batterie
+
+sonde-col-heard = Gehört

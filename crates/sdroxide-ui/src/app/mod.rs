@@ -55,6 +55,7 @@ pub(in crate::app) mod frame;
 pub(in crate::app) mod grid_tracker;
 pub(in crate::app) mod hd;
 pub(in crate::app) mod hfdl;
+pub(in crate::app) mod sonde;
 pub(in crate::app) mod ignore;
 pub(in crate::app) mod ism;
 pub(in crate::app) mod known_calls;
@@ -759,6 +760,11 @@ pub struct SdroxideApp {
     /// own table rather than the decode log's, so an aircraft stays on the map
     /// after its earliest decodes have scrolled out of the log.
     hfdl_map: crate::hfdl_map::HfdlMapState,
+    /// The radiosonde map's view and selection.
+    sonde_map: crate::sonde_map::SondeMapState,
+    /// The AIRCRAFT window shows the radiosonde view (a view like Cards, not a
+    /// radio mode).
+    aircraft_sonde: bool,
     /// One card per aircraft, merged across ADS-B, VDL2, HFDL and ACARS. Lives
     /// here, not in a mode's status, so it survives a switch of mode.
     aircraft_registry: aircraft_registry::AircraftRegistry,
@@ -2317,6 +2323,8 @@ impl SdroxideApp {
             hfdl_status: None,
             sonde_status: None,
             hfdl_map: crate::hfdl_map::HfdlMapState::default(),
+            sonde_map: crate::sonde_map::SondeMapState::default(),
+            aircraft_sonde: false,
             aircraft_registry: aircraft_registry::AircraftRegistry::default(),
             hfdl_filter: String::new(),
             // The settings trace is *for* the settings page, so turning it on

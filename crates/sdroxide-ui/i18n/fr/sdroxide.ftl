@@ -9146,3 +9146,33 @@ topbar-apf-on-hover = Filtre de pic CW : { $width } Hz de large, la tonalité re
 topbar-apf-hint = Centré sur la tonalité CW et la suit. Avant l'AGC ; les décodeurs entendent toujours le signal tel qu'il est arrivé.
 
 topbar-apf-rig-audio-hover = Filtre de pic CW — pas sur cette radio : vous entendez l'audio du poste lui-même, et le filtre agit sur l'audio démodulé ici
+
+sondemap-no-sonde-yet = Aucune radiosonde reçue pour l'instant
+
+aircraft-mode-sonde-hover = Radiosondes (RS41, 400–406 MHz) — ballons météo, avec leur trajectoire
+
+sonde-decoding = DÉCODAGE
+
+sonde-decoding-off = DÉCODEUR ARRÊTÉ
+
+sonde-count = Sondes : { $n }
+
+sonde-frames = Trames : { $n }
+
+sonde-channel = Canal
+
+sonde-channel-hover = La fréquence de sonde à écouter (400–406 MHz). La radio s'y accorde aussi, pour que le canal soit dans la fenêtre.
+
+sonde-off-note = Le décodeur de radiosondes est arrêté. Appuyez sur SONDE pour le démarrer.
+
+sonde-col-serial = Sonde
+
+sonde-col-alt = Altitude
+
+sonde-col-climb = Montée
+
+sonde-col-speed = Vitesse
+
+sonde-col-battery = Batterie
+
+sonde-col-heard = Reçue

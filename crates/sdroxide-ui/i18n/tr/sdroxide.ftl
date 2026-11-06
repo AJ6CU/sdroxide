@@ -9135,3 +9135,33 @@ topbar-apf-on-hover = CW tepe filtresi: { $width } Hz genişliğinde, tonu { $ga
 topbar-apf-hint = CW tonuna ortalanır ve onu izler. AGC'den önce; kod çözücüler sinyali geldiği gibi duymaya devam eder.
 
 topbar-apf-rig-audio-hover = CW tepe filtresi — bu telsizde yok: duyduğunuz cihazın kendi sesi, filtre ise burada demodüle edilen ses üzerinde çalışır
+
+sondemap-no-sonde-yet = Henüz radyosonda alınmadı
+
+aircraft-mode-sonde-hover = Radyosondalar (RS41, 400–406 MHz) — hava balonları, uçuş izleriyle
+
+sonde-decoding = ÇÖZÜLÜYOR
+
+sonde-decoding-off = ÇÖZÜCÜ KAPALI
+
+sonde-count = Sondalar: { $n }
+
+sonde-frames = Çerçeve: { $n }
+
+sonde-channel = Kanal
+
+sonde-channel-hover = Dinlenecek sonda frekansı (400–406 MHz). Kanal pencerede kalsın diye telsiz de oraya ayarlanır.
+
+sonde-off-note = Radyosonda çözücüsü kapalı. Başlatmak için SONDE'a basın.
+
+sonde-col-serial = Sonda
+
+sonde-col-alt = Yükseklik
+
+sonde-col-climb = Tırmanış
+
+sonde-col-speed = Hız
+
+sonde-col-battery = Pil
+
+sonde-col-heard = Alındı

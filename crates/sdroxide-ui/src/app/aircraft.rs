@@ -354,6 +354,7 @@ impl super::SdroxideApp {
                     }
                     if ui.small_button(tr!("aircraft-show")).clicked() {
                         self.aircraft_watch_view = true;
+                        self.aircraft_sonde = false;
                         self.aircraft_cards = false;
                     }
                 });
@@ -382,7 +383,8 @@ impl super::SdroxideApp {
                                         shown,
                                         self.aircraft_cards
                                             || self.aircraft_watch_view
-                                            || self.aircraft_stats_view,
+                                            || self.aircraft_stats_view
+                                            || self.aircraft_sonde,
                                     ),
                                     m.label,
                                     egui::vec2(COLUMN_W - 8.0, BUTTON_H),
@@ -390,6 +392,7 @@ impl super::SdroxideApp {
                                 .on_hover_text(mode_hover(m.mode));
                                 if b.clicked() {
                                     self.aircraft_view = m.mode;
+                                    self.aircraft_sonde = false;
                                     self.aircraft_cards = false;
                                     self.aircraft_watch_view = false;
                                     self.aircraft_stats_view = false;
@@ -400,6 +403,23 @@ impl super::SdroxideApp {
                                         self.state.active_freq_hz(),
                                     ));
                                 }
+                            }
+                            let b = crate::chrome::chip_sized(
+                                ui,
+                                self.aircraft_sonde,
+                                "SONDE",
+                                egui::vec2(COLUMN_W - 8.0, BUTTON_H),
+                            )
+                            .on_hover_text(tr!("aircraft-mode-sonde-hover"));
+                            if b.clicked() {
+                                self.aircraft_sonde = true;
+                                self.aircraft_cards = false;
+                                self.aircraft_watch_view = false;
+                                self.aircraft_stats_view = false;
+                                cmds.extend(super::sonde::button_commands(
+                                    &self.state.sonde,
+                                    self.state.active_vfo,
+                                ));
                             }
                             ui.add_space(6.0);
                             let n = self.aircraft_registry.len()
@@ -413,6 +433,7 @@ impl super::SdroxideApp {
                             .on_hover_text(tr!("aircraft-cards-hover"));
                             if b.clicked() {
                                 self.aircraft_cards = !self.aircraft_cards;
+                                self.aircraft_sonde = false;
                                 self.aircraft_watch_view = false;
                                 self.aircraft_stats_view = false;
                             }
@@ -431,6 +452,7 @@ impl super::SdroxideApp {
                             .on_hover_text(tr!("aircraft-watch-hover"));
                             if b.clicked() {
                                 self.aircraft_watch_view = !self.aircraft_watch_view;
+                                self.aircraft_sonde = false;
                                 self.aircraft_cards = false;
                             }
                             let b = crate::chrome::chip_sized(
@@ -442,6 +464,7 @@ impl super::SdroxideApp {
                             .on_hover_text(tr!("aircraft-stats-hover"));
                             if b.clicked() {
                                 self.aircraft_stats_view = !self.aircraft_stats_view;
+                                self.aircraft_sonde = false;
                                 self.aircraft_cards = false;
                             }
                             ui.add_space(6.0);
@@ -467,7 +490,9 @@ impl super::SdroxideApp {
             );
             ui.vertical(|ui| {
                 ui.set_min_width(ui.available_width());
-                if self.aircraft_watch_view {
+                if self.aircraft_sonde {
+                    self.aircraft_sonde_pane(ui, cmds, h);
+                } else if self.aircraft_watch_view {
                     self.aircraft_watch_pane(ui, h);
                 } else if self.aircraft_stats_view {
                     self.aircraft_stats_pane(ui, h);

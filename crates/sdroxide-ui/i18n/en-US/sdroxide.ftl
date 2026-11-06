@@ -9158,3 +9158,33 @@ topbar-apf-on-hover = CW peak filter: { $width } Hz wide, lifting the pitch { $g
 topbar-apf-hint = Centred on the CW pitch and follows it. Ahead of the AGC; the decoders still hear the signal as it arrived.
 
 topbar-apf-rig-audio-hover = CW peak filter — not on this radio: what you hear is the rig's own audio, and the filter works on audio demodulated here
+
+sondemap-no-sonde-yet = No radiosonde heard yet
+
+aircraft-mode-sonde-hover = Radiosondes (RS41, 400–406 MHz) — weather balloons, with their flight track
+
+sonde-decoding = DECODING
+
+sonde-decoding-off = DECODER OFF
+
+sonde-count = Sondes: { $n }
+
+sonde-frames = Frames: { $n }
+
+sonde-channel = Channel
+
+sonde-channel-hover = The sonde frequency to listen on (400–406 MHz). The radio is tuned there too, so the channel is inside the window.
+
+sonde-off-note = The radiosonde decoder is off. Press SONDE to start it.
+
+sonde-col-serial = Sonde
+
+sonde-col-alt = Altitude
+
+sonde-col-climb = Climb
+
+sonde-col-speed = Speed
+
+sonde-col-battery = Battery
+
+sonde-col-heard = Heard

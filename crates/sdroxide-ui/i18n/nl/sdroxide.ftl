@@ -9143,3 +9143,33 @@ topbar-apf-on-hover = CW-piekfilter: { $width } Hz breed, tilt de toonhoogte { $
 topbar-apf-hint = Gecentreerd op de CW-toonhoogte en volgt die. Vóór de AGC; de decoders horen het signaal nog zoals het binnenkwam.
 
 topbar-apf-rig-audio-hover = CW-piekfilter — niet op deze radio: wat u hoort is de eigen audio van het toestel, en het filter werkt op hier gedemoduleerde audio
+
+sondemap-no-sonde-yet = Nog geen radiosonde ontvangen
+
+aircraft-mode-sonde-hover = Radiosondes (RS41, 400–406 MHz) — weerballonnen, met hun vliegroute
+
+sonde-decoding = DECODEREN
+
+sonde-decoding-off = DECODER UIT
+
+sonde-count = Sondes: { $n }
+
+sonde-frames = Frames: { $n }
+
+sonde-channel = Kanaal
+
+sonde-channel-hover = De sondefrequentie waarop wordt geluisterd (400–406 MHz). De radio wordt er ook op afgestemd, zodat het kanaal in het venster ligt.
+
+sonde-off-note = De radiosonde-decoder staat uit. Druk op SONDE om hem te starten.
+
+sonde-col-serial = Sonde
+
+sonde-col-alt = Hoogte
+
+sonde-col-climb = Stijging
+
+sonde-col-speed = Snelheid
+
+sonde-col-battery = Batterij
+
+sonde-col-heard = Ontvangen

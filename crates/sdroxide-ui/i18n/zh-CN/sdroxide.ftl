@@ -9073,3 +9073,33 @@ topbar-apf-on-hover = CW 峰值滤波器：宽 { $width } Hz，将音调提升 {
 topbar-apf-hint = 以 CW 音调为中心并跟随它。位于 AGC 之前；解码器仍然听到原始信号。
 
 topbar-apf-rig-audio-hover = CW 峰值滤波器 — 此电台不可用：您听到的是电台自身的音频，而滤波器作用于这里解调的音频
+
+sondemap-no-sonde-yet = 尚未收到无线电探空仪
+
+aircraft-mode-sonde-hover = 无线电探空仪（RS41，400–406 MHz）— 气象气球及其飞行轨迹
+
+sonde-decoding = 解码中
+
+sonde-decoding-off = 解码器已关闭
+
+sonde-count = 探空仪：{ $n }
+
+sonde-frames = 帧：{ $n }
+
+sonde-channel = 信道
+
+sonde-channel-hover = 要监听的探空仪频率（400–406 MHz）。电台也会调谐到该频率，使信道位于窗口内。
+
+sonde-off-note = 无线电探空仪解码器已关闭。按 SONDE 启动。
+
+sonde-col-serial = 探空仪
+
+sonde-col-alt = 高度
+
+sonde-col-climb = 爬升率
+
+sonde-col-speed = 速度
+
+sonde-col-battery = 电池
+
+sonde-col-heard = 接收
