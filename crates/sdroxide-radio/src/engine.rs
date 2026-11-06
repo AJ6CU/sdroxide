@@ -8070,6 +8070,9 @@ impl Engine {
         }
         let (take, last) = vdl2_take(st.messages.len(), st.frames, self.vdl2_fed);
         self.vdl2_fed = Some(last);
+        if take > 0 {
+            info!(take, frames = st.frames, "VDL2 feed: sending {take} message(s) over the decoded-text UDP feed");
+        }
         for m in &st.messages[st.messages.len() - take..] {
             let text = m.summary();
             self.send_feed(FeedLine {
