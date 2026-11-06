@@ -23,11 +23,13 @@ pub enum SondeModel {
     M20,
     /// InterMet iMet-4.
     Imet4,
+    /// Meteo-Radiy MRZ.
+    Mrz,
 }
 
 impl SondeModel {
     /// Every model decoded, in the order a lane tries them.
-    pub const ALL: &'static [SondeModel] = &[SondeModel::Rs41, SondeModel::Dfm, SondeModel::M10, SondeModel::M20, SondeModel::Imet4];
+    pub const ALL: &'static [SondeModel] = &[SondeModel::Rs41, SondeModel::Dfm, SondeModel::M10, SondeModel::M20, SondeModel::Imet4, SondeModel::Mrz];
 
     /// The type as printed in the track table and sent to SondeHub.
     pub fn name(self) -> &'static str {
@@ -37,6 +39,7 @@ impl SondeModel {
             SondeModel::M10 => "M10",
             SondeModel::M20 => "M20",
             SondeModel::Imet4 => "iMet",
+            SondeModel::Mrz => "MRZ",
         }
     }
 }
@@ -103,6 +106,7 @@ pub fn decoder_for(
         SondeModel::M10 => Ok(Box::new(crate::m10::M10Decoder::new(input_rate, freq_offset_hz)?)),
         SondeModel::M20 => Ok(Box::new(crate::m20::M20Decoder::new(input_rate, freq_offset_hz)?)),
         SondeModel::Imet4 => Ok(Box::new(crate::imet::Imet4Decoder::new(input_rate, freq_offset_hz)?)),
+        SondeModel::Mrz => Ok(Box::new(crate::mrz::MrzDecoder::new(input_rate, freq_offset_hz)?)),
     }
 }
 
