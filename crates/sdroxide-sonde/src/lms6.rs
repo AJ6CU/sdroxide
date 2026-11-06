@@ -16,14 +16,16 @@
 //! rs1729/RS; the code polynomials, polarity and bit order were checked on a
 //! real recording (projecthorus sample set): the Viterbi decoder finishes
 //! with a path metric of 0 and every frame found passes its CRC. Hard
-//! decisions and no Reed-Solomon, so a block with bit errors is lost rather
-//! than repaired. No code of auto_rx, SDRangel or rs1729 (GPL) is used.
+//! decisions, then Reed-Solomon (255, 223) repairs up to 16 wrong bytes of a
+//! block (`rs255`); a block it cannot repair is still tried, the frame CRC
+//! decides. No code of auto_rx, SDRangel or rs1729 (GPL) is used.
 
 use sdroxide_dsp::Complex32;
 use xng_mode_sonde::GpsPos;
 
 use crate::fsk::{FskSlicer, Threshold};
 use crate::model::{Meteo, ModelDecoder, SondeFix, SondeModel};
+use crate::rs255::{self, Rs};
 
 const BAUD: f64 = 4800.0;
 const POLY_A: u32 = 0x4f;
@@ -186,6 +188,11 @@ pub struct Lms6Decoder {
     last_end: Option<usize>,
     /// Messages of consecutive blocks, joined.
     payload: Vec<u8>,
+    rs: Rs,
+    /// Whether the Reed-Solomon repair is applied (tests switch it off).
+    repair: bool,
+    /// Bytes the repair has set right, for the log and the tests.
+    pub repaired_bytes: usize,
 }
 
 impl Lms6Decoder {
@@ -200,6 +207,9 @@ impl Lms6Decoder {
             pending: None,
             last_end: None,
             payload: Vec::new(),
+            rs: Rs::new(),
+            repair: true,
+            repaired_bytes: 0,
         })
     }
 
@@ -250,10 +260,16 @@ impl Lms6Decoder {
             return;
         }
         // Bytes are sent least significant bit first.
-        let bytes: Vec<u8> = bits[..BLOCK_SYMBOLS / 2]
+        let mut bytes: Vec<u8> = bits[..BLOCK_SYMBOLS / 2]
             .chunks(8)
             .map(|c| c.iter().enumerate().fold(0u8, |a, (i, &b)| a | (b << i)))
             .collect();
+        // The 255 bytes after the sync word are a Reed-Solomon codeword.
+        if self.repair {
+            if let Some(n) = self.rs.correct(&mut bytes[4..4 + rs255::BLOCK]) {
+                self.repaired_bytes += n;
+            }
+        }
         // Messages of consecutive blocks join; a gap starts afresh.
         if self.last_end != Some(start) {
             self.payload.clear();
@@ -375,6 +391,7 @@ mod tests {
                 bits.push(((ASM >> i) & 1) as u8);
             }
             let mut block = msg.to_vec();
+            block.extend_from_slice(&Rs::new().parity(msg));
             block.resize(256, 0);
             for b in block {
                 for i in 0..8 {
@@ -422,6 +439,33 @@ mod tests {
                 assert_eq!(counters, vec![404, 405], "rate {rate} invert {invert}");
             }
         }
+    }
+
+    #[test]
+    fn a_burst_of_wrong_symbols_is_repaired_by_reed_solomon() {
+        let f1 = unhex(REAL);
+        let mut f2 = f1.clone();
+        f2[9] = f2[9].wrapping_add(1);
+        let crc = crc16(&f2[..FRAME_BYTES - 2]).to_be_bytes();
+        f2[FRAME_BYTES - 2..].copy_from_slice(&crc);
+        let mut sym = blocks(&[f1, f2]);
+        // 80 symbols of a block turned over: the Viterbi path wanders and leaves wrong bytes.
+        for s in &mut sym[1500..1580] {
+            *s ^= 1;
+        }
+        let run = |repair: bool| {
+            let mut d = Lms6Decoder::new(48_000.0, 0.0).unwrap();
+            d.repair = repair;
+            let mut fixes = Vec::new();
+            for chunk in modulate(&sym, 48_000.0, false).chunks(1000) {
+                fixes.extend(d.process(chunk));
+            }
+            (fixes.len(), d.repaired_bytes)
+        };
+        let (without, _) = run(false);
+        let (with, repaired) = run(true);
+        assert_eq!(with, 2, "both frames come back");
+        assert!(repaired > 0 && without < with, "without repair {without}, repaired {repaired} bytes");
     }
 
     #[test]
