@@ -24,7 +24,7 @@ and the [README](https://github.com/madmedicnl/sdroxide-brown#readme).
 - **PROGRAMS keeps its state on the station, not in the browser** — TOUT, the starred stations, the filters and sort, and the colours were written to the browser's own storage on the web client (and the favourites not at all), so after a restart the chip was off and the waterfall labels were gone. A client connected to a station now reads that state from it at start and writes every change back (`GET`/`POST /programs-state`, stored in `programs-state.json` in the station's config folder, behind the same sign-in as the sockets); the browser keeps none of it. A station that is still empty takes over what the client already had, once. The program on the radio's own machine keeps using its config file.
 
 ### Added
-- **Radiosonde Sippican Mk2a / LMS6-1680** — a sixth sonde type: 9600 baud FSK, CRC-checked sub-frames (id, place, altitude, velocities); checked on the sample sub-frames of rs1729, not on a recording. — F4NRM, PR #TBD
+- **Radiosonde Sippican Mk2a / LMS6-1680** — a sixth sonde type: 9600 baud FSK, CRC-checked sub-frames (id, place, altitude, velocities); checked on the sample sub-frames of rs1729, not on a recording. — F4NRM, PR #526
 - **Radiosonde InterMet iMet-54** — a fifth sonde type: 4798 baud FSK with Hamming-coded, CRC-checked frames (serial, place, altitude, temperature); checked on a real recording. — F4NRM, PR #520
 - **Radiosonde Meteosis MTS01** — a fourth sonde type: 1200 baud FSK with CRC-checked text frames (serial, place, altitude, battery, temperature); checked on a real recording. — F4NRM, PR #519
 - **Radiosonde LMS6-400** — a third sonde type beside the RS41 and M10: 4800 baud GFSK, a convolutional code and CRC-checked frames. — F4NRM, PR #515
