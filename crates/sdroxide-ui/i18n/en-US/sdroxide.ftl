@@ -9158,3 +9158,11 @@ topbar-apf-on-hover = CW peak filter: { $width } Hz wide, lifting the pitch { $g
 topbar-apf-hint = Centred on the CW pitch and follows it. Ahead of the AGC; the decoders still hear the signal as it arrived.
 
 topbar-apf-rig-audio-hover = CW peak filter — not on this radio: what you hear is the rig's own audio, and the filter works on audio demodulated here
+
+settings-audio-radio-out-level = TX mixer level
+
+settings-audio-radio-out-level-hint = ALSA playback level for the radio's output device. Raise it for a USB rig (SS9900v) so its VOX triggers. Linux only.
+
+settings-audio-radio-in-level = RX mixer level
+
+settings-audio-radio-in-level-hint = ALSA capture level for the radio's input device. Linux only.

@@ -9135,3 +9135,11 @@ topbar-apf-on-hover = CW tepe filtresi: { $width } Hz genişliğinde, tonu { $ga
 topbar-apf-hint = CW tonuna ortalanır ve onu izler. AGC'den önce; kod çözücüler sinyali geldiği gibi duymaya devam eder.
 
 topbar-apf-rig-audio-hover = CW tepe filtresi — bu telsizde yok: duyduğunuz cihazın kendi sesi, filtre ise burada demodüle edilen ses üzerinde çalışır
+
+settings-audio-radio-out-level = TX mikser seviyesi
+
+settings-audio-radio-out-level-hint = Radionun ses cikis cihazinin ALSA oynatma seviyesi. VOX'un tetiklenmesi icin USB rig (SS9900v) icin yukseltin. Sadece Linux.
+
+settings-audio-radio-in-level = RX mikser seviyesi
+
+settings-audio-radio-in-level-hint = Radionun ses giris cihazinin ALSA yakalama seviyesi. Sadece Linux.

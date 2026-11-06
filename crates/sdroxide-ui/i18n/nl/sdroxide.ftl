@@ -9143,3 +9143,11 @@ topbar-apf-on-hover = CW-piekfilter: { $width } Hz breed, tilt de toonhoogte { $
 topbar-apf-hint = Gecentreerd op de CW-toonhoogte en volgt die. Vóór de AGC; de decoders horen het signaal nog zoals het binnenkwam.
 
 topbar-apf-rig-audio-hover = CW-piekfilter — niet op deze radio: wat u hoort is de eigen audio van het toestel, en het filter werkt op hier gedemoduleerde audio
+
+settings-audio-radio-out-level = TX-mixerniveau
+
+settings-audio-radio-out-level-hint = ALSA-afspeelniveau van het audio-uitvoerapparaat van de radio. Verhoog voor een USB-rig (SS9900v) zodat de VOX triggert. Alleen Linux.
+
+settings-audio-radio-in-level = RX-mixerniveau
+
+settings-audio-radio-in-level-hint = ALSA-opnameniveau van het audio-invoerapparaat van de radio. Alleen Linux.

@@ -9135,3 +9135,11 @@ topbar-apf-on-hover = Filtro de pico CW: { $width } Hz de largura, realça o tom
 topbar-apf-hint = Centrado no tom de CW e o acompanha. Antes do AGC; os decodificadores ainda ouvem o sinal como chegou.
 
 topbar-apf-rig-audio-hover = Filtro de pico CW — não neste rádio: o que você ouve é o áudio do próprio equipamento, e o filtro atua no áudio demodulado aqui
+
+settings-audio-radio-out-level = Nivel do mixer TX
+
+settings-audio-radio-out-level-hint = Nivel de reproducao ALSA do dispositivo de saida de audio do radio. Aumente para um rig USB (SS9900v) para disparar seu VOX. Somente Linux.
+
+settings-audio-radio-in-level = Nivel do mixer RX
+
+settings-audio-radio-in-level-hint = Nivel de captura ALSA do dispositivo de entrada de audio do radio. Somente Linux.

@@ -10,3 +10,9 @@ sdroxide-dsp.workspace = true
 sdroxide-types.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
+
+# ALSA mixer control, used to set the USB sound card's playback/capture level
+# when it is opened as a radio interface (the card's own default is far too
+# low to trigger VOX). Linux only; on other platforms the calls are no-ops.
+[target.'cfg(target_os = "linux")'.dependencies]
+alsa = "0.11"

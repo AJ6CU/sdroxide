@@ -1733,6 +1733,14 @@ fn open_soapy_source(
 
 /// Build the CAT + sound-card source and its capabilities from radio.json.
 fn open_cat_source(radio: &RadioConfig) -> anyhow::Result<(Box<dyn IqSource>, DeviceCaps)> {
+    // Set the sound card's mixer level so a USB radio interface is loud enough
+    // to trigger its VOX and captures audio; best-effort, never fatal.
+    if let Some(name) = radio.radio_audio_out.as_deref() {
+        sdroxide_audio::set_mixer_level(name, true, radio.radio_audio_out_level.unwrap_or(80));
+    }
+    if let Some(name) = radio.radio_audio_in.as_deref() {
+        sdroxide_audio::set_mixer_level(name, false, radio.radio_audio_in_level.unwrap_or(80));
+    }
     let src = audio_cat_source::AudioCatSource::open(
         radio.cat.clone(),
         radio.radio_audio_in.as_deref(),
@@ -1756,6 +1764,12 @@ fn open_usb_audio_source(
     radio: &RadioConfig,
     center_hz: f64,
 ) -> anyhow::Result<(Box<dyn IqSource>, DeviceCaps)> {
+    if let Some(name) = radio.radio_audio_out.as_deref() {
+        sdroxide_audio::set_mixer_level(name, true, radio.radio_audio_out_level.unwrap_or(80));
+    }
+    if let Some(name) = radio.radio_audio_in.as_deref() {
+        sdroxide_audio::set_mixer_level(name, false, radio.radio_audio_in_level.unwrap_or(80));
+    }
     let src = usb_audio_source::UsbAudioSource::open(
         radio.radio_audio_in.as_deref(),
         radio.radio_audio_out.as_deref(),

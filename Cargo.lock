@@ -5396,6 +5396,7 @@ dependencies = [
 name = "sdroxide-audio"
 version = "2.2.0"
 dependencies = [
+ "alsa",
  "cpal",
  "rtrb",
  "sdroxide-dsp",
