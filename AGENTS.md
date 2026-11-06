@@ -194,6 +194,14 @@ one entry per work item.
   task, not only when the script fails.
 - Re-measurable numbers (crate version, PROTO_VERSION, open issues/PRs) must be
   kept current in TODO.md's state line and AGENTS.md.
+- **A project made of several PRs updates `TODO.md` only once, at the end.**
+  Each PR of the project is described on its own line (in the PR and in the
+  hand-off), but none of them touches `TODO.md`. When **all the PRs of the
+  project are merged**, a new PR made only for that updates `TODO.md` (and
+  `PROJECT-BOARD.md`) for the whole project. This avoids `TODO.md` conflicts
+  from one PR to the next. A change made of a single PR still updates `TODO.md`
+  in its own PR, as above; the "before starting" and "finished" rules above
+  apply to it unchanged.
 
 ## The wire
 
