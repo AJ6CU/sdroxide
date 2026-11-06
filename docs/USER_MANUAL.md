@@ -6274,7 +6274,7 @@ silent for a minute — and a table under the map gives its serial, altitude, cl
 speed, channel, battery, air temperature, humidity and pressure (when the model sends them) and when it was last heard. An RS41 gives temperature and humidity only after it has sent its calibration table, up to a minute after it is first heard; an iMet-4 gives all three at once. Hover a mark for the position and the
 distance from your station. *Export flight* under the table saves the selected sonde's
 flight (the newest if none is selected) as a **KML** track for Google Earth or a **CSV**
-table for a spreadsheet. The *Online (SondeHub)* box, off until you tick it, also
+table for a spreadsheet (with the air temperature, humidity and pressure heard at each point, empty when the sonde sent none). The *Online (SondeHub)* box, off until you tick it, also
 shows the sondes other stations have heard within 400 km (hollow blue diamonds): it only
 reads SondeHub's public list, sending your locator rounded to 0.1° and the radius, and
 uploads nothing; it needs the locator set in the digital-mode setup. The *Scan* box looks across the whole sample window for sonde
