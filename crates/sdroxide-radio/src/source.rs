@@ -938,6 +938,18 @@ pub trait IqSource: Send {
         None
     }
 
+    /// When a stored sound-card name no longer resolved but the same hardware
+    /// was found under a new ALSA card id, the name it was actually opened as —
+    /// so the caller can update the persisted config and the warning never
+    /// recurs. `None` when no rename happened (or the platform has no ALSA
+    /// card ids). Default: none.
+    fn renamed_rx(&self) -> Option<String> {
+        None
+    }
+    fn renamed_tx(&self) -> Option<String> {
+        None
+    }
+
     /// Whether this source is a stand-in for a radio that isn't actually
     /// connected — the placeholder used when the configured interface couldn't
     /// be opened at startup, or a network rig whose link has since dropped. The

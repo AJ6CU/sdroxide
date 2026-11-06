@@ -543,6 +543,7 @@ fn boot_radios(cli: &mut Cli, settings: &Settings) -> anyhow::Result<Vec<RadioBo
         let boot = if i == 0 {
             let initial_mode = cli.restore_session();
             let (source, caps) = open_source(cli, settings)?;
+            apply_renamed_audio_names(&sdroxide_config::Store::station(), source.as_ref());
             RadioBoot {
                 id: slot.id,
                 name: slot.name.clone(),
@@ -561,7 +562,10 @@ fn boot_radios(cli: &mut Cli, settings: &Settings) -> anyhow::Result<Vec<RadioBo
             let initial_mode = c.apply_session(session);
             let (source, caps) =
                 match open_converted_source(&store.load_radio_config(), &c, settings) {
-                    Ok(pair) => pair,
+                    Ok((source, caps)) => {
+                        apply_renamed_audio_names(&store, source.as_ref());
+                        (source, caps)
+                    }
                     Err(e) => {
                         // Names are often empty now (the tab derives one from
                         // the interface); the id is what the engine's own
@@ -666,6 +670,10 @@ fn reopen_factory_for(
                 )) as Box<dyn IqSource>,
                 synthetic_caps("No radio"),
             )),
+            Ok((source, caps)) => {
+                apply_renamed_audio_names(&store, source.as_ref());
+                Ok((source, caps))
+            }
             other => other,
         }
     })
@@ -1320,6 +1328,25 @@ fn open_source(cli: &Cli, settings: &Settings) -> anyhow::Result<(Box<dyn IqSour
 /// they tune, not the 28-32 MHz I.F. the radio is really on. Only the device's
 /// own published ranges are in the hardware's domain, and `shift_caps` moves
 /// those into the operator's before the stated ones replace them (issue #279).
+/// If the source found the radio's sound card under a new ALSA name (card id
+/// moved on USB re-enumeration), write that name back to `radio.json` so the
+/// stored name stops being stale and the "renamed" notice never recurs.
+fn apply_renamed_audio_names(store: &sdroxide_config::Store, source: &(dyn IqSource + '_)) {
+    let rx = source.renamed_rx();
+    let tx = source.renamed_tx();
+    if rx.is_none() && tx.is_none() {
+        return;
+    }
+    let mut cfg = store.load_radio_config();
+    if let Some(name) = rx {
+        cfg.radio_audio_in = Some(name);
+    }
+    if let Some(name) = tx {
+        cfg.radio_audio_out = Some(name);
+    }
+    let _ = store.save_radio_config(&cfg);
+}
+
 fn open_converted_source(
     radio: &RadioConfig,
     cli: &Cli,
