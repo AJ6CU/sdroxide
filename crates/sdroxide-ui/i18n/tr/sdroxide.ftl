@@ -9198,3 +9198,6 @@ sonde-col-temp = SÄ±c.
 sonde-col-humidity = Nem
 
 sonde-col-pressure = BasÄ±nÃ§
+
+settings-net-broadcast-import-needs-station = İçe aktarmak için bir istasyona bağlanın.
+
