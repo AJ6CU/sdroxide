@@ -1687,6 +1687,30 @@ fn vdl2_take(len: usize, frames: u64, last: Option<u64>) -> (usize, u64) {
     (new.min(len), frames)
 }
 
+/// How many of the newest entries of a bounded log a feed should send now, and
+/// the mark to remember.
+///
+/// `keys` is the log oldest first, one string per entry that identifies it (its
+/// time and its content). `mark` is the key of the newest entry already sent:
+/// `None` on the first status after the feed opens, which sends nothing and only
+/// takes the mark, so switching the feed on does not dump what was decoded
+/// before it existed. A log is rolling: entries leave at the front as new ones
+/// arrive, so a count would lose messages the moment the log is full — the mark
+/// is looked up instead, and what lies after it is new. A mark that is no longer
+/// in the log (it rolled out, or the log was cleared) means everything there
+/// arrived since.
+fn fresh_after_mark(keys: &[String], mark: &mut Option<String>) -> usize {
+    let new = match mark.as_deref() {
+        None => 0,
+        Some(m) => match keys.iter().rposition(|k| k == m) {
+            Some(i) => keys.len() - i - 1,
+            None => keys.len(),
+        },
+    };
+    *mark = Some(keys.last().cloned().unwrap_or_default());
+    new
+}
+
 /// The complete lines that are new in `text`, given the last buffer seen — and
 /// what to remember as seen.
 ///
@@ -3612,6 +3636,12 @@ struct Engine {
     /// arrives after the feed is opened, so switching it on does not dump the
     /// log that was decoded before it existed.
     vdl2_fed: Option<u64>,
+    /// The newest ACARS, DSC and HFDL entry already sent to the decoded-text
+    /// feed ([`fresh_after_mark`]); `None` until the feed has taken its first
+    /// mark.
+    acars_fed: Option<String>,
+    dsc_fed: Option<String>,
+    hfdl_fed: Option<String>,
     /// The band the last tick saw, so a crossing into another one can be told
     /// from the tuning about inside a band that goes on all session. See
     /// [`Engine::poll_band_change`].
@@ -5152,6 +5182,9 @@ fn engine_thread(
         decode_udp: String::new(),
         text_feed_seen: String::new(),
         vdl2_fed: None,
+        acars_fed: None,
+        dsc_fed: None,
+        hfdl_fed: None,
         rigctld: None,
         rigctld_cfg: RigctldConfig::default(),
         rigctld_err: None,
@@ -7954,6 +7987,9 @@ impl Engine {
         // inherit half a line from the one before it.
         self.text_feed_seen.clear();
         self.vdl2_fed = None;
+        self.acars_fed = None;
+        self.dsc_fed = None;
+        self.hfdl_fed = None;
     }
 
     fn send_feed(&self, line: FeedLine<'_>) {
@@ -8012,6 +8048,97 @@ impl Engine {
                 freq_hz: m.freq_hz,
                 audio_hz: None,
                 snr_db: Some(f64::from(m.snr_db)),
+                dt: None,
+                text: &text,
+            });
+        }
+    }
+
+    /// One line per ACARS message the HF/VHF ACARS window has decoded since the
+    /// feed opened. A frame whose block check failed is shown in the window but
+    /// not sent: a consumer cannot tell garbled text from a message. The
+    /// channel is the dial, as for a keyboard mode.
+    fn feed_acars(&mut self, st: &sdroxide_types::AcarsStatus, dial: f64) {
+        if self.decode_feed.is_none() {
+            return;
+        }
+        let keys: Vec<String> = st
+            .messages
+            .iter()
+            .map(|m| format!("{}|{}|{}|{}", m.at, m.address, m.label, m.text))
+            .collect();
+        let new = fresh_after_mark(&keys, &mut self.acars_fed);
+        for m in &st.messages[st.messages.len() - new..] {
+            if !m.crc_ok {
+                continue;
+            }
+            let text = format!("{} {} {}", m.address, m.label, m.text).trim().to_string();
+            self.send_feed(FeedLine {
+                unix: m.at,
+                kind: "decode",
+                mode: "ACARS",
+                dial_hz: dial,
+                freq_hz: dial,
+                audio_hz: None,
+                snr_db: None,
+                dt: None,
+                text: &text,
+            });
+        }
+    }
+
+    /// One line per DSC sequence heard since the feed opened, as the DSC window
+    /// summarises it (format, sender MMSI, and the target, or the nature and
+    /// position of a distress). The time is when it was heard, not the sender's.
+    fn feed_dsc(&mut self, st: &sdroxide_types::DscStatus, dial: f64) {
+        if self.decode_feed.is_none() {
+            return;
+        }
+        let keys: Vec<String> =
+            st.messages.iter().map(|h| format!("{}|{}", h.at, h.message.summary())).collect();
+        let new = fresh_after_mark(&keys, &mut self.dsc_fed);
+        for h in &st.messages[st.messages.len() - new..] {
+            let text = h.message.summary();
+            self.send_feed(FeedLine {
+                unix: h.at,
+                kind: "decode",
+                mode: "DSC",
+                dial_hz: dial,
+                freq_hz: dial,
+                audio_hz: None,
+                snr_db: None,
+                dt: None,
+                text: &text,
+            });
+        }
+    }
+
+    /// One line per HFDL event since the feed opened. The log arrives newest
+    /// first, so it is turned around before the mark is looked up. The channel
+    /// is the one the burst came in on, and the SNR is the demodulator's.
+    fn feed_hfdl(&mut self, st: &sdroxide_types::HfdlStatus, dial: f64) {
+        if self.decode_feed.is_none() {
+            return;
+        }
+        let oldest_first: Vec<&sdroxide_types::HfdlDecode> = st.log.iter().rev().collect();
+        let keys: Vec<String> = oldest_first
+            .iter()
+            .map(|e| format!("{}|{}|{}|{}", e.unix, e.freq_khz, e.kind, e.details))
+            .collect();
+        let new = fresh_after_mark(&keys, &mut self.hfdl_fed);
+        for e in &oldest_first[oldest_first.len() - new..] {
+            let text = match &e.gs {
+                Some(gs) => format!("{} {gs}", e.kind),
+                None => e.kind.clone(),
+            };
+            self.send_feed(FeedLine {
+                unix: e.unix,
+                kind: "decode",
+                mode: "HFDL",
+                dial_hz: dial,
+                freq_hz: f64::from(e.freq_khz) * 1000.0,
+                audio_hz: None,
+                snr_db: e.snr_db.map(f64::from),
                 dt: None,
                 text: &text,
             });
@@ -8191,6 +8318,12 @@ impl Engine {
                     // swapped back on the way out.
                     self.wsjtx_status(&s);
                     self.feed_text(&s, dial);
+                    if let Some(a) = &s.acars {
+                        self.feed_acars(a, dial);
+                    }
+                    if let Some(d) = &s.dsc {
+                        self.feed_dsc(d, dial);
+                    }
                     s.config.my_call = self.digi_config.my_call.clone();
                     s.config.my_grid = self.digi_config.my_grid.clone();
                     let _ = self.event_tx.send(RadioEvent::Ft8Status(s));
@@ -12754,6 +12887,8 @@ impl Engine {
     fn poll_hfdl(&mut self) {
         let Some(c) = self.hfdl.as_ref() else { return };
         let Some(status) = c.poll() else { return };
+        let dial = self.state.rx_freq_hz();
+        self.feed_hfdl(&status, dial);
         let _ = self.event_tx.send(RadioEvent::HfdlStatus(status));
     }
 
@@ -23656,6 +23791,45 @@ mod decode_feed_tests {
         // A restarted decoder counts from zero; the feed follows it down rather
         // than asking for a negative run of messages.
         assert_eq!(vdl2_take(10, 1, Some(5)), (0, 1));
+    }
+
+    fn keys(v: &[&str]) -> Vec<String> {
+        v.iter().map(|s| s.to_string()).collect()
+    }
+
+    /// The ACARS, DSC and HFDL feeds send what is new and no more, and a log that
+    /// is full — one entry leaves for each that arrives, so its length never
+    /// changes — must not silence them.
+    #[test]
+    fn a_full_rolling_log_still_feeds_its_new_entries() {
+        let mut mark = None;
+        // Opening the feed: nothing is sent, the mark is taken.
+        assert_eq!(fresh_after_mark(&keys(&["a", "b", "c"]), &mut mark), 0);
+        // Nothing new.
+        assert_eq!(fresh_after_mark(&keys(&["a", "b", "c"]), &mut mark), 0);
+        // Full log, one in and one out: the length is the same, one is new.
+        assert_eq!(fresh_after_mark(&keys(&["b", "c", "d"]), &mut mark), 1);
+        // Two at once.
+        assert_eq!(fresh_after_mark(&keys(&["d", "e", "f"]), &mut mark), 2);
+        // Rolled clean past the mark: everything there arrived since.
+        assert_eq!(fresh_after_mark(&keys(&["x", "y", "z"]), &mut mark), 3);
+        assert_eq!(fresh_after_mark(&keys(&["x", "y", "z"]), &mut mark), 0);
+    }
+
+    /// An empty log still takes the mark, so the first message after it is new
+    /// and not mistaken for what was there when the feed opened; a cleared log
+    /// starts over.
+    #[test]
+    fn an_empty_log_takes_the_mark_and_a_cleared_one_starts_over() {
+        let mut mark = None;
+        assert_eq!(fresh_after_mark(&[], &mut mark), 0);
+        assert_eq!(fresh_after_mark(&keys(&["a"]), &mut mark), 1);
+        assert_eq!(fresh_after_mark(&[], &mut mark), 0);
+        assert_eq!(
+            fresh_after_mark(&keys(&["a"]), &mut mark),
+            1,
+            "same text again after a clear is new"
+        );
     }
 
     /// The shape a consumer parses, pinned exactly — a field renamed or a

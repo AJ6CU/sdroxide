@@ -14149,12 +14149,18 @@ pipe-based consumer can read it as lines:
 - **text** — the message, or the decoded line with its trailing newline
   removed. Only **complete** lines are sent: a half-decoded word waits. A
   `vdl2` line carries the message as its window shows it.
+  The ACARS, DSC and HFDL windows feed it too, as `decode` lines whose **mode**
+  is `ACARS`, `DSC` or `HFDL`: ACARS gives the aircraft address, label and text
+  (a frame whose block check failed is not sent), DSC the summary the window
+  shows (format, sender MMSI, target or distress nature), HFDL the event kind
+  and ground station, with the burst's own **freq_hz** and **snr_db**. ACARS and
+  DSC carry the dial as **freq_hz**.
 
-A `vdl2` line is the one kind whose **freq_hz** is not the dial plus an audio
-offset: an aircraft's burst is on a fixed channel whatever this receiver is
-tuned to, so the channel is reported on its own and no `audio_hz` is sent. Only
-messages that arrive after the feed is switched on are sent, never the log that
-was decoded before it.
+A `vdl2` line, and an HFDL one, has a **freq_hz** that is not the dial plus an
+audio offset: an aircraft's burst is on a fixed channel whatever this receiver is
+tuned to, so the channel is reported on its own and no `audio_hz` is sent. HFDL
+does the same. For all of them only messages that arrive after the feed is
+switched on are sent, never the log that was decoded before it.
 
 A quick check from a shell on the same machine:
 
@@ -14163,8 +14169,8 @@ A quick check from a shell on the same machine:
 Everything is **output only** — nothing is read from this socket, so no program
 on it can tune or key the radio — and an address that cannot be resolved is said
 so in the log and leaves the feed off rather than failing silently. The wideband
-decoders (ACARS, HFDL, DSC, NAVTEX, AIS, APRS) keep their own windows and are
-not part of this feed yet; VDL2 is.
+decoders NAVTEX, AIS and APRS keep their own windows and are not part of this
+feed yet; VDL2, ACARS, DSC and HFDL are.
 
 ### 6.10 TLE: satellites and their frequencies
 
