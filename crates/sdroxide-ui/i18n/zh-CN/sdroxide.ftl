@@ -9073,3 +9073,11 @@ topbar-apf-on-hover = CW 峰值滤波器：宽 { $width } Hz，将音调提升 {
 topbar-apf-hint = 以 CW 音调为中心并跟随它。位于 AGC 之前；解码器仍然听到原始信号。
 
 topbar-apf-rig-audio-hover = CW 峰值滤波器 — 此电台不可用：您听到的是电台自身的音频，而滤波器作用于这里解调的音频
+
+settings-audio-radio-out-level = TX混音器电平
+
+settings-audio-radio-out-level-hint = 无线电音频输出设备的ALSA播放电平。为USB设备（SS9900v）提高以触发其VOX。仅Linux。
+
+settings-audio-radio-in-level = RX混音器电平
+
+settings-audio-radio-in-level-hint = 无线电音频输入设备的ALSA采集电平。仅Linux。

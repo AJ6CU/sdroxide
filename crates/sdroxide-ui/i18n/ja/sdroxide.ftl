@@ -9083,3 +9083,11 @@ topbar-apf-on-hover = CWピークフィルター：幅 { $width } Hz、ピッチ
 topbar-apf-hint = CWピッチを中心にし、ピッチに追従します。AGCの前段。デコーダーは届いたままの信号を受け取ります。
 
 topbar-apf-rig-audio-hover = CWピークフィルター — この無線機では使えません。聞こえているのは無線機自身の音声で、フィルターはここで復調した音声に働きます
+
+settings-audio-radio-out-level = TXミキサーレベル
+
+settings-audio-radio-out-level-hint = ラジオの音声出力デバイスのALSA再生レベル。VOXをトリガーするためUSBリグ（SS9900v）では上げてください。Linuxのみ。
+
+settings-audio-radio-in-level = RXミキサーレベル
+
+settings-audio-radio-in-level-hint = ラジオの音声入力デバイスのALSAキャプチャレベル。Linuxのみ。

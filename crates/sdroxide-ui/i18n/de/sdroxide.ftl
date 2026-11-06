@@ -9133,3 +9133,11 @@ topbar-apf-on-hover = CW-Peakfilter: { $width } Hz breit, hebt die Tonhöhe um {
 topbar-apf-hint = Auf der CW-Tonhöhe zentriert und folgt ihr. Vor der AGC; die Decoder hören das Signal weiterhin so, wie es ankam.
 
 topbar-apf-rig-audio-hover = CW-Peakfilter — nicht bei diesem Funkgerät: Sie hören das Audio des Geräts selbst, und der Filter arbeitet auf dem hier demodulierten Audio
+
+settings-audio-radio-out-level = TX-Mixer-Pegel
+
+settings-audio-radio-out-level-hint = ALSA-Wiedergabepegel des Audioausgabegerats des Funkgerats. Fur ein USB-Rig (SS9900v) anheben, damit dessen VOX auslost. Nur Linux.
+
+settings-audio-radio-in-level = RX-Mixer-Pegel
+
+settings-audio-radio-in-level-hint = ALSA-Aufnahmepegel des Audioeingabegerats des Funkgerats. Nur Linux.

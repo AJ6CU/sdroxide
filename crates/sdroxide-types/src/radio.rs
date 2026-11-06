@@ -7525,6 +7525,13 @@ pub struct RadioConfig {
     pub radio_audio_in: Option<String>,
     /// Sound-card device (cpal name) carrying the TX audio PC → radio.
     pub radio_audio_out: Option<String>,
+    /// ALSA mixer playback level (0..=100) applied to `radio_audio_out` when it
+    /// is opened, so a USB radio interface (SS9900v) is loud enough to trigger
+    /// its VOX. `None` = 80. Linux/ALSA only; ignored elsewhere.
+    pub radio_audio_out_level: Option<u8>,
+    /// ALSA mixer capture level (0..=100) applied to `radio_audio_in` when it
+    /// is opened. `None` = 80.
+    pub radio_audio_in_level: Option<u8>,
     /// A fixed gain, in dB, on everything this radio sends to the speakers.
     ///
     /// The AF volume rail's top is unity: it can turn a radio down and never
