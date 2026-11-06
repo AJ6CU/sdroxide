@@ -862,6 +862,8 @@ pub struct SdroxideApp {
     rec_popup_since: Option<f64>,
     /// Fade clock for the receive-tone (EQ) popup, like `rec_popup_since`.
     eq_popup_since: Option<f64>,
+    /// Fade clock for the CW peak (APF) popup, like `eq_popup_since`.
+    apf_popup_since: Option<f64>,
     /// When the running MP3 recording should stop, Unix UTC seconds, and the
     /// preset in **seconds** that asked for it — armed by the REC popup's
     /// "quick clip" and "stop after" chips. UI-owned: the engine's
@@ -2355,6 +2357,7 @@ impl SdroxideApp {
             nr_popup_since: None,
             rec_popup_since: None,
             eq_popup_since: None,
+            apf_popup_since: None,
             recording_stop_at: None,
             rec_clip: None,
             rec_gate_s: None,

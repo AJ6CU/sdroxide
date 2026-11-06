@@ -9117,3 +9117,19 @@ aircraft-track-kml = Spur speichern (KML)
 aircraft-track-kml-hover = Speichert die Positionen, die die Station für dieses Luftfahrzeug behalten hat, als KML-Spur für Google Earth, mit Zeit und Höhe. Eine lange Pause trennt die Linie.
 
 aircraft-track-kml-saved = { $name } gespeichert.
+
+topbar-changed-cw-peak = CW-Peak
+
+topbar-caption-cw-peak = CW-Peak
+
+topbar-apf-width = Breite
+
+topbar-apf-gain = Anhebung
+
+topbar-apf-off-hover = CW-Peakfilter (APF) — hebt das Signal auf der CW-Tonhöhe über das Rauschen und die Nachbarn. Zum Öffnen klicken
+
+topbar-apf-on-hover = CW-Peakfilter: { $width } Hz breit, hebt die Tonhöhe um { $gain } dB an. Für die Einstellungen klicken
+
+topbar-apf-hint = Auf der CW-Tonhöhe zentriert und folgt ihr. Vor der AGC; die Decoder hören das Signal weiterhin so, wie es ankam.
+
+topbar-apf-rig-audio-hover = CW-Peakfilter — nicht bei diesem Funkgerät: Sie hören das Audio des Geräts selbst, und der Filter arbeitet auf dem hier demodulierten Audio

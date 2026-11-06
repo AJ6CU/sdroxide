@@ -27,11 +27,11 @@ use sdroxide_digi::{
 };
 use sdroxide_drm::DrmDemod;
 use sdroxide_dsp::{
-    AdcMeter, Agc, AutoNotch, Binaural, Cessb, ComplexResampler, DcBlock, Ddc, Decimator,
-    DeepFilterNr, Demodulator, Duc, Modulator, MonoResampler, Nco, NeuralNr, NoiseBlanker, Nr2,
-    ParametricEq, ReplayBuffer, SpecBleachNr, SpectralNr, SpectrumAnalyzer, SpeechDetector,
-    StereoResampler, SubToneGen, ToneBurst, channel_target_at, hd_radio_is_am, make_demod,
-    make_modulator,
+    AdcMeter, Agc, AutoNotch, Binaural, Cessb, ComplexResampler, CwPeakFilter, DcBlock, Ddc,
+    Decimator, DeepFilterNr, Demodulator, Duc, Modulator, MonoResampler, Nco, NeuralNr,
+    NoiseBlanker, Nr2, ParametricEq, ReplayBuffer, SpecBleachNr, SpectralNr, SpectrumAnalyzer,
+    SpeechDetector, StereoResampler, SubToneGen, ToneBurst, channel_target_at, hd_radio_is_am,
+    make_demod, make_modulator,
 };
 use sdroxide_hfdl::HfdlController;
 use sdroxide_ism::{IsmAction, IsmController};
@@ -847,6 +847,10 @@ struct RxChain {
     /// Adaptive auto-notch (constant-tone canceller) on the listener audio.
     notch: AutoNotch,
     notch_on: bool,
+    /// The CW peak filter on the listener audio, ahead of the AGC — see
+    /// [`sdroxide_types::RxState::cw_peak`].
+    peak: CwPeakFilter,
+    peak_on: bool,
     /// Spectral noise reduction on the listener audio (after the digital tap).
     nr: SpectralNr,
     /// The libspecbleach port — the other classical engine.
@@ -910,6 +914,8 @@ impl RxChain {
             tap_gain: 1.0,
             notch: AutoNotch::new(),
             notch_on: false,
+            peak: CwPeakFilter::new(),
+            peak_on: false,
             nr: SpectralNr::new(),
             sbnr: SpecBleachNr::new(),
             nr2: Nr2::new(),
@@ -1088,6 +1094,29 @@ impl RxChain {
             );
             self.tap_out.clear();
             self.tap_out.extend(self.audio_buf.iter().map(|s| s * g));
+        }
+
+        // The CW peak filter: a narrow bell on the pitch, CW only. After the
+        // decoder's tap, so the decoders hear what arrived rather than the
+        // operator's filter, and AHEAD of the AGC, so a large lift is levelled
+        // rather than played louder. Centred on the middle of the passband,
+        // which is the sidetone pitch (`sync_cw_filter` keeps it there), so it
+        // follows the pitch. Retuned only when a number changes — see
+        // `CwPeakFilter::configure`.
+        let peak = rx.cw_peak;
+        let peak_on = peak.on && self.mode == Mode::Cw;
+        if peak_on != self.peak_on {
+            if peak_on {
+                self.peak.reset();
+            }
+            self.peak_on = peak_on;
+        }
+        if peak_on {
+            let centre = ((rx.filter_lo + rx.filter_hi) / 2.0).abs();
+            if centre > 0.0 {
+                self.peak.configure(centre, peak.width_hz, peak.gain_db, audio_rate);
+                self.peak.process(&mut self.audio_buf);
+            }
         }
 
         // FM skips the AGC entirely — a true unity bypass, not AgcMode::Off's
@@ -6138,6 +6167,8 @@ struct RigDigest {
     can_decimate: bool,
     /// The front-end gain's setting and range, by bit pattern.
     rf_gain: Option<(u64, u64, u64)>,
+    /// The CW peak filter: on, width and gain by bit pattern — `APF`.
+    cw_peak: Option<(bool, u32, u32)>,
     ranges: (usize, usize),
 }
 
@@ -6175,6 +6206,7 @@ impl RigDigest {
                 .rf_gain
                 .as_ref()
                 .map(|g| (g.value.to_bits(), g.min.to_bits(), g.max.to_bits())),
+            cw_peak: s.cw_peak.map(|p| (p.on, p.width_hz.to_bits(), p.gain_db.to_bits())),
             ranges: (s.rx_ranges.len(), s.tx_ranges.len()),
         }
     }
@@ -10089,6 +10121,13 @@ impl Engine {
             SetAutoNotch { rx, on } => {
                 self.state.rx[rx.index()].auto_notch = on;
                 self.remember_mode_setting(rx, |p| p.auto_notch = Some(on));
+            }
+            // Clamped on the way in: it is stored in `modeprofiles.json` and
+            // laid on the filter again at every mode change.
+            SetCwPeak { rx, peak } => {
+                let peak = peak.clamped();
+                self.state.rx[rx.index()].cw_peak = peak;
+                self.remember_mode_setting(rx, |p| p.cw_peak = Some(peak));
             }
             SetWfmStereo { rx, on } => {
                 self.state.rx[rx.index()].wfm_stereo = on;
@@ -14135,6 +14174,7 @@ impl Engine {
                 step: g.step_db,
                 value,
             }),
+            cw_peak: self.rigctld_cw_peak(),
             can_tx: self.caps.is_transmit_capable(),
             rx_ranges: self.caps.freq_ranges_rx.clone(),
             tx_ranges: self.caps.freq_ranges_tx.clone(),
@@ -14205,8 +14245,19 @@ impl Engine {
             rf_gain: self
                 .rigctld_rf_gain()
                 .map(|(g, value)| (value.to_bits(), g.min_db.to_bits(), g.max_db.to_bits())),
+            cw_peak: self
+                .rigctld_cw_peak()
+                .map(|p| (p.on, p.width_hz.to_bits(), p.gain_db.to_bits())),
             ranges: (self.caps.freq_ranges_rx.len(), self.caps.freq_ranges_tx.len()),
         }
+    }
+
+    /// The main receiver's CW peak filter, as rigctl's `APF` reports it — or
+    /// `None` where what is heard is the rig's own audio
+    /// ([`Self::filters_at_the_rig`]), which the filter never touches, so
+    /// `APF` is not offered at all.
+    fn rigctld_cw_peak(&self) -> Option<sdroxide_types::CwPeak> {
+        (!self.filters_at_the_rig()).then_some(self.state.rx[0].cw_peak)
     }
 
     /// The RX gain stage rigctl's `RF` level drives, and where it is set: the

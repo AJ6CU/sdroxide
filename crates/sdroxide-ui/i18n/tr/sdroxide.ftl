@@ -9119,3 +9119,19 @@ aircraft-track-kml = İzi kaydet (KML)
 aircraft-track-kml-hover = İstasyonun bu uçak için sakladığı konumları, zaman ve irtifa ile Google Earth için KML izi olarak kaydeder. Uzun bir sessizlik çizgiyi keser.
 
 aircraft-track-kml-saved = { $name } kaydedildi.
+
+topbar-changed-cw-peak = CW tepe
+
+topbar-caption-cw-peak = CW tepe
+
+topbar-apf-width = genişlik
+
+topbar-apf-gain = yükseltme
+
+topbar-apf-off-hover = CW tepe filtresi (APF) — CW tonundaki sinyali gürültünün ve komşularının üstüne çıkarır. Açmak için tıklayın
+
+topbar-apf-on-hover = CW tepe filtresi: { $width } Hz genişliğinde, tonu { $gain } dB yükseltiyor. Ayarları için tıklayın
+
+topbar-apf-hint = CW tonuna ortalanır ve onu izler. AGC'den önce; kod çözücüler sinyali geldiği gibi duymaya devam eder.
+
+topbar-apf-rig-audio-hover = CW tepe filtresi — bu telsizde yok: duyduğunuz cihazın kendi sesi, filtre ise burada demodüle edilen ses üzerinde çalışır

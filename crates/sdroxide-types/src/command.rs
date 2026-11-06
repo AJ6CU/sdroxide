@@ -1426,6 +1426,15 @@ pub enum Command {
     ///
     /// Appended for the usual reason — postcard numbers variants by position.
     ClearMemories,
+
+    /// Set a receiver's CW peak filter — see [`crate::RxState::cw_peak`].
+    /// Remembered for the mode in force, like the notch.
+    ///
+    /// Appended for the usual reason — postcard numbers variants by position.
+    SetCwPeak {
+        rx: RxId,
+        peak: crate::CwPeak,
+    },
 }
 
 /// What a [`Command::GetKnownCalls`] was answered with.

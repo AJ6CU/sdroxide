@@ -11,12 +11,14 @@
 //! a leading punctuation character — the command is echoed with its long name,
 //! every value is labelled, and the block always ends `RPRT n`.
 
-use sdroxide_types::{Command, Direction, NrLevel, NrStrength, RigctldConfig, RxId, Vfo};
+use sdroxide_types::{
+    Command, CwPeak, Direction, Mode, NrLevel, NrStrength, RigctldConfig, RxId, Vfo,
+};
 
 use crate::state::{
-    RigState, agc_from_hamlib, agc_to_hamlib, centred_on, decimation_for_span, filter_for,
-    from_hamlib_mode, nr_engine_for, nr_on_level, nr_strength_for, nr_to_hamlib, squelch_db_for,
-    to_hamlib_mode,
+    RigState, agc_from_hamlib, agc_to_hamlib, apf_level, apf_width_for, centred_on,
+    decimation_for_span, filter_for, from_hamlib_mode, nr_engine_for, nr_on_level, nr_strength_for,
+    nr_to_hamlib, squelch_db_for, to_hamlib_mode,
 };
 
 /// Hamlib error codes (`rig.h`), returned negated in `RPRT`.
@@ -76,6 +78,9 @@ mod rig_level {
     pub const AF: u64 = 1 << 3;
     pub const RF: u64 = 1 << 4;
     pub const SQL: u64 = 1 << 5;
+    /// `APF` — the audio peak filter, a float 0..1 (here its width, see
+    /// [`crate::state::apf_level`]).
+    pub const APF: u64 = 1 << 7;
     pub const NR: u64 = 1 << 8;
     pub const RFPOWER: u64 = 1 << 12;
     pub const MICGAIN: u64 = 1 << 13;
@@ -90,6 +95,8 @@ mod rig_func {
     pub const NB: u64 = 1 << 1;
     pub const ANF: u64 = 1 << 8;
     pub const NR: u64 = 1 << 9;
+    /// `APF` — the audio peak filter, on or off.
+    pub const APF: u64 = 1 << 11;
     pub const MUTE: u64 = 1 << 17;
 }
 
@@ -498,6 +505,15 @@ fn dispatch(
                 }
                 None => out.finish(ENAVAIL, true),
             },
+            // The CW peak filter's width, where the filter runs: 0.0 widest,
+            // 1.0 narrowest.
+            Some(l) if l == "APF" => match &st.cw_peak {
+                Some(p) => {
+                    out.value("Level Value", format!("{:.6}", apf_level(p)));
+                    out.finish(OK, true)
+                }
+                None => out.finish(ENAVAIL, true),
+            },
             Some(l) if l == "STRENGTH" => {
                 // Hamlib's STRENGTH is S-units above S9, in dB: S9 = -73 dBm.
                 out.value("Level Value", st.strength_dbm + 73);
@@ -564,6 +580,19 @@ fn dispatch(
                     }
                     None => out.finish(ENAVAIL, false),
                 },
+                // The width only; the lift stays the operator's. In CW alone:
+                // the setting is remembered per mode, and in any other it
+                // would land on a mode where the filter never runs.
+                ("APF", Some(v)) => match cw_peak_here(st) {
+                    Some(p) => {
+                        cmds.push(Command::SetCwPeak {
+                            rx: RxId::Main,
+                            peak: CwPeak { width_hz: apf_width_for(v), ..p },
+                        });
+                        out.finish(OK, false)
+                    }
+                    None => out.finish(ENAVAIL, false),
+                },
                 ("", _) => out.finish(EINVAL, false),
                 (_, None) => out.finish(EINVAL, false),
                 _ => out.finish(ENAVAIL, false),
@@ -576,6 +605,10 @@ fn dispatch(
                 "NR" => st.noise_reduction,
                 "ANF" => st.auto_notch,
                 "MUTE" => st.muted,
+                "APF" => match &st.cw_peak {
+                    Some(p) => p.on,
+                    None => return out.finish(ENAVAIL, true),
+                },
                 "" => return out.finish(EINVAL, true),
                 _ => return out.finish(ENAVAIL, true),
             };
@@ -597,6 +630,11 @@ fn dispatch(
                 }),
                 "ANF" => cmds.push(Command::SetAutoNotch { rx, on }),
                 "MUTE" => cmds.push(Command::SetMute { rx, muted: on }),
+                // CW only, for the reason `L APF` gives.
+                "APF" => match cw_peak_here(st) {
+                    Some(p) => cmds.push(Command::SetCwPeak { rx, peak: CwPeak { on, ..p } }),
+                    None => return out.finish(ENAVAIL, false),
+                },
                 "" => return out.finish(EINVAL, false),
                 _ => return out.finish(ENAVAIL, false),
             }
@@ -748,6 +786,13 @@ fn mode_filter(mode: sdroxide_types::Mode, w: i32, st: &RigState) -> (f32, f32) 
     if mode == sdroxide_types::Mode::Cw { centred_on(st.cw_pitch_hz, lo, hi) } else { (lo, hi) }
 }
 
+/// The CW peak filter a client may set: where it runs, and in CW. `None`
+/// elsewhere — the setting is remembered per mode, so in any other mode it would
+/// land on a mode where the filter never runs.
+fn cw_peak_here(st: &RigState) -> Option<CwPeak> {
+    st.cw_peak.filter(|_| st.mode == Mode::Cw)
+}
+
 fn set_mode(args: &[&str], st: &RigState, cmds: &mut Vec<Command>, out: Out) -> Reply {
     let Some(name) = args.first() else { return out.finish(EINVAL, false) };
     let Some(mode) = from_hamlib_mode(name) else { return out.finish(EINVAL, false) };
@@ -859,13 +904,22 @@ fn dump_state(st: &RigState, cfg: &RigctldConfig) -> String {
     s.push_str("0\n"); // attenuator list
 
     // get_func, set_func, get_level, set_level, get_parm, set_parm.
-    s.push_str(&format!("0x{FUNC_MASK:x}\n0x{FUNC_MASK:x}\n"));
+    // APF only where the CW peak filter runs: a rig that hands over its own
+    // demodulated audio has none.
+    let (apf_func, apf_lvl) =
+        if st.cw_peak.is_some() { (rig_func::APF, rig_level::APF) } else { (0, 0) };
+    let funcs = FUNC_MASK | apf_func;
+    s.push_str(&format!("0x{funcs:x}\n0x{funcs:x}\n"));
     // RF only where there is a gain stage to set: a client that sees it
     // advertised offers the control, and one refused every time looks broken.
     let rf = if st.rf_gain.is_some() { rig_level::RF } else { 0 };
     // The span likewise: an audio-mode rig has no decimation to set.
     let span = if st.can_decimate { rig_level::SPECTRUM_SPAN } else { 0 };
-    s.push_str(&format!("0x{:x}\n0x{:x}\n", LEVEL_GET | rf | span, LEVEL_SET | rf | span));
+    s.push_str(&format!(
+        "0x{:x}\n0x{:x}\n",
+        LEVEL_GET | rf | span | apf_lvl,
+        LEVEL_SET | rf | span | apf_lvl
+    ));
     s.push_str("0x0\n0x0\n"); // get/set parm
 
     // The trailing key=value block.
@@ -1429,6 +1483,65 @@ mod tests {
         let (get, set) = masks(&with_gain());
         assert_ne!(get & RF, 0, "RF not readable with a gain stage");
         assert_ne!(set & RF, 0, "RF not settable with a gain stage");
+    }
+
+    /// A receiver whose CW peak filter runs, in CW: 100 Hz wide (level 5/9),
+    /// lifting 6 dB, switched off.
+    fn with_apf() -> RigState {
+        RigState { mode: Mode::Cw, cw_peak: Some(CwPeak::default()), ..st() }
+    }
+
+    /// `APF` reads and sets the CW peak filter: the function is the switch,
+    /// the level the width, and the lift is left as the operator set it.
+    #[test]
+    fn apf_round_trips_in_cw() {
+        let s = with_apf();
+        let cfg = RigctldConfig::default();
+        assert_eq!(run_with("u APF", &s, &cfg).0, "0\n");
+        assert_eq!(run_with("l APF", &s, &cfg).0, "0.555556\n");
+        let on = CwPeak { on: true, ..CwPeak::default() };
+        assert_eq!(
+            run_with("U APF 1", &s, &cfg).1,
+            vec![Command::SetCwPeak { rx: RxId::Main, peak: on }]
+        );
+        let narrow = CwPeak { width_hz: 20.0, ..CwPeak::default() };
+        assert_eq!(
+            run_with("L APF 1", &s, &cfg).1,
+            vec![Command::SetCwPeak { rx: RxId::Main, peak: narrow }]
+        );
+    }
+
+    /// Outside CW the setting would land on a mode where the filter never
+    /// runs, so it is refused; where the filter does not run at all, `APF` is
+    /// neither answered nor advertised.
+    #[test]
+    fn apf_is_cw_only_and_absent_without_the_filter() {
+        let cfg = RigctldConfig::default();
+        let usb = RigState { mode: Mode::Usb, ..with_apf() };
+        assert_eq!(run_with("U APF 1", &usb, &cfg), ("RPRT -11\n".to_string(), Vec::new()));
+        assert_eq!(run_with("L APF 0.5", &usb, &cfg), ("RPRT -11\n".to_string(), Vec::new()));
+        assert_eq!(run("u APF").0, "RPRT -11\n");
+        assert_eq!(run("l APF").0, "RPRT -11\n");
+        assert_eq!(run("U APF 1"), ("RPRT -11\n".to_string(), Vec::new()));
+
+        let (func, level) = (1u64 << 11, 1u64 << 7);
+        let funcs = |d: &str| {
+            let lines: Vec<&str> = d.lines().collect();
+            let ops = lines.iter().position(|l| l.starts_with("vfo_ops=")).expect("vfo_ops");
+            let hex = |l: &str| u64::from_str_radix(l.trim_start_matches("0x"), 16).expect("hex");
+            (hex(lines[ops - 6]), hex(lines[ops - 5]))
+        };
+        let without = run("\\dump_state").0;
+        let (get, set) = level_masks(&without);
+        assert_eq!((get & level, set & level), (0, 0), "APF level without the filter");
+        let (get, set) = funcs(&without);
+        assert_eq!((get & func, set & func), (0, 0), "APF func without the filter");
+
+        let with = run_with("\\dump_state", &with_apf(), &cfg).0;
+        let (get, set) = level_masks(&with);
+        assert_eq!((get & level, set & level), (level, level));
+        let (get, set) = funcs(&with);
+        assert_eq!((get & func, set & func), (func, func));
     }
 
     #[test]

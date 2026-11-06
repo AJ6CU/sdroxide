@@ -1386,6 +1386,8 @@ impl Mode {
             // off and flat in every mode until they are.
             tone: Some(crate::TxEqState::default()),
             loudness: Some(false),
+            // The CW peak filter likewise: off, at its middling width and lift.
+            cw_peak: Some(crate::CwPeak::default()),
         }
     }
 

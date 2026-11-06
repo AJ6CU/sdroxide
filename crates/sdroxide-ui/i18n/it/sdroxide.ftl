@@ -9128,3 +9128,19 @@ aircraft-track-kml = Salva traccia (KML)
 aircraft-track-kml-hover = Salva le posizioni che la stazione ha conservato per questo aeromobile come traccia KML per Google Earth, con ora e quota. Un lungo silenzio interrompe la linea.
 
 aircraft-track-kml-saved = { $name } salvato.
+
+topbar-changed-cw-peak = picco CW
+
+topbar-caption-cw-peak = Picco CW
+
+topbar-apf-width = larghezza
+
+topbar-apf-gain = esaltazione
+
+topbar-apf-off-hover = Filtro di picco CW (APF) — solleva il segnale alla nota CW sopra il rumore e le stazioni vicine. Clicca per aprire
+
+topbar-apf-on-hover = Filtro di picco CW: largo { $width } Hz, solleva la nota di { $gain } dB. Clicca per le impostazioni
+
+topbar-apf-hint = Centrato sulla nota CW e la segue. Prima dell'AGC; i decodificatori sentono ancora il segnale così come è arrivato.
+
+topbar-apf-rig-audio-hover = Filtro di picco CW — non su questa radio: ciò che senti è l'audio dell'apparato stesso, e il filtro agisce sull'audio demodulato qui
