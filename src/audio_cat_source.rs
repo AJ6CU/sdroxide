@@ -1543,6 +1543,13 @@ impl IqSource for AudioCatSource {
         self.last_signal.filter(|(at, _)| at.elapsed() < self.signal_max_age).map(|(_, dbm)| dbm)
     }
 
+    fn smeter_during_tx(&self) -> bool {
+        // A CAT rig is polled for its S-meter on the control link even while it
+        // is keyed (see sdroxide_cat), so the reading stays meaningful on the
+        // air.
+        true
+    }
+
     fn tx_write_audio(&mut self, audio: &[f32]) -> Result<()> {
         let gain = self.tx_audio_gain;
         if gain == 1.0 {

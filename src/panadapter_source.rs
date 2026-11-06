@@ -622,6 +622,10 @@ impl IqSource for PanadapterSource {
         None
     }
 
+    fn smeter_during_tx(&self) -> bool {
+        self.ctrl.smeter_during_tx()
+    }
+
     /// The *receiver's*, not the transceiver's: what overflows is the converter
     /// the spectrum is coming out of, and the transceiver in this arrangement
     /// is not in that path at all.

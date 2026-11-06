@@ -3637,6 +3637,12 @@ fn serial_thread(
                 } else {
                     protocol.rx_telemetry_requests()
                 };
+                // While keyed, the rig's S-meter is still readable on the
+                // control link for the families that have one, so poll it too
+                // instead of leaving the needle at zero.
+                if on_air {
+                    reqs.extend(protocol.rx_telemetry_requests());
+                }
                 // ...and ask whether the rig has keyed itself. Not while we are
                 // the ones keying it: the answer would be our own key-down
                 // coming back, and the engine already knows about that.

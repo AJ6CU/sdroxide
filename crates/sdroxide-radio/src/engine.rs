@@ -6053,8 +6053,13 @@ fn engine_thread(
                     }
                 }
                 let (adc_peak_dbfs, adc_clip) = engine.adc.read();
+                let s_dbm = if engine.source.smeter_during_tx() {
+                    engine.source.rx_signal_dbm().unwrap_or(-127.0)
+                } else {
+                    -127.0
+                };
                 Some(Meters {
-                    s_dbm: -127.0,
+                    s_dbm,
                     pa_temp_c,
                     adc_peak_dbfs,
                     adc_clip,
