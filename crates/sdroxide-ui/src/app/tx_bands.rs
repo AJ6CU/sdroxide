@@ -198,12 +198,26 @@ impl SdroxideApp {
     }
 
     /// The notice for an unconfirmed list, or `None` when there is nothing to say.
+    ///
+    /// One banner for both lists: the transmit text, then the receive one when
+    /// the receive list is not confirmed either.
     pub(in crate::app) fn tx_bands_notice(&self) -> Option<String> {
-        match self.tx_bands_status() {
+        let tx = match self.tx_bands_status() {
             TxBands::Unconfirmed { carried_over: false } => Some(tr!("tx-bands-notice-new")),
             TxBands::Unconfirmed { carried_over: true } => Some(tr!("tx-bands-notice-carried")),
             _ => None,
+        };
+        let rx = self.rx_bands_unconfirmed().then(|| tr!("rx-bands-notice"));
+        match (tx, rx) {
+            (Some(t), Some(r)) => Some(format!("{t} {r}")),
+            (t, r) => t.or(r),
         }
+    }
+
+    /// Whether this radio's receive band list still waits for the operator.
+    /// Every radio has one, a receive-only one and a listening screen too.
+    pub(in crate::app) fn rx_bands_unconfirmed(&self) -> bool {
+        self.radio_cfg.as_ref().is_some_and(|c| !c.rx_bands_confirmed)
     }
 
     /// Warn, without ever touching the dial, when the frequency is outside the

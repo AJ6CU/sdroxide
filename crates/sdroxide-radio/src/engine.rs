@@ -591,6 +591,12 @@ pub struct EngineConfig {
     /// by default, and no command line option, setting or configuration file
     /// reaches it.
     pub tx_bands_open: bool,
+    /// Hold the operator's receive band list: a dial move onto a band that is
+    /// not ticked for reception, or onto any band while the list is not
+    /// confirmed, is refused and the radio stays where it was. **On in the
+    /// program** (`gui_main`, `server_main`); off by default, so the many tests
+    /// that tune freely do not each have to set a list up.
+    pub rx_bands_enforced: bool,
     /// Abort the over and latch out transmit when the rig reports an SWR at or
     /// above [`Self::swr_limit`]. Inert on rigs that do not measure SWR.
     pub swr_guard: bool,
@@ -658,6 +664,7 @@ impl Default for EngineConfig {
             tx_ham_only: true,
             cb_tx_allowed: false,
             tx_bands_open: false,
+            rx_bands_enforced: false,
             swr_guard: true,
             swr_limit: 2.5,
             reopen: None,
@@ -3218,6 +3225,11 @@ struct Engine {
     /// the same reason as `drive_trim`: a key-down cannot go back to the store.
     tx_band_enable: Vec<Band>,
     tx_bands_confirmed: bool,
+    /// The receive band list, held for the same reason, and whether it is
+    /// enforced at all ([`EngineConfig::rx_bands_enforced`]).
+    rx_band_enable: Vec<Band>,
+    rx_bands_confirmed: bool,
+    rx_bands_enforced: bool,
     /// [`EngineConfig::tx_bands_open`], for tests.
     tx_bands_open: bool,
     /// The operator's fixed receive-audio trim, in dB — the other part of
@@ -4922,6 +4934,15 @@ fn engine_thread(
         }
     }
 
+    // The same for reception: the bands the hardware publishes it reaches,
+    // ticked but not confirmed, so the operator checks the list once.
+    if radio_cfg.migrate_rx_bands(|hz| caps.may_rx_hz(hz)) {
+        info!("radio.json had no receive band list — filled it from the published range, unconfirmed");
+        if let Err(e) = engine_cfg.store.save_radio_config(&radio_cfg) {
+            warn!("saving the migrated receive bands: {e}");
+        }
+    }
+
     // The UDP audio sink, from the radio's own configuration. Set here rather
     // than where the mixer is built because the configuration is read here.
     if let Some(m) = mixer.as_mut() {
@@ -5106,6 +5127,9 @@ fn engine_thread(
         tx_drive_max: radio_cfg.tx_drive_ceiling(),
         tx_band_enable: radio_cfg.tx_band_enable.clone().unwrap_or_default(),
         tx_bands_confirmed: radio_cfg.tx_bands_confirmed,
+        rx_band_enable: radio_cfg.rx_band_enable.clone().unwrap_or_default(),
+        rx_bands_confirmed: radio_cfg.rx_bands_confirmed,
+        rx_bands_enforced: engine_cfg.rx_bands_enforced,
         rx_af_gain_db: radio_cfg.rx_audio_gain_db,
         swap_iq: radio_cfg.swaps_iq(),
         tx_center_hz: 0.0,
@@ -9929,8 +9953,16 @@ impl Engine {
             // `follow_dial` still keeps the window, so only the
             // rig-as-front-end case moves.
             SetVfo { vfo, hz } | TuneInSpan { vfo, hz } => {
-                self.stop_scan_for_operator();
                 let hz = hz.max(0.0);
+                // The receive band list: no order reaches the radio for a band
+                // that is off or unconfirmed, and it stays on its last
+                // frequency. No new message — the band notice the screen
+                // already raises says why.
+                if let Some(why) = self.rx_band_refusal(hz) {
+                    warn!("tune refused: {why:?} at {:.6} MHz", hz / 1e6);
+                    return;
+                }
+                self.stop_scan_for_operator();
                 match vfo {
                     Vfo::A => self.state.vfo_a_hz = hz,
                     Vfo::B => self.state.vfo_b_hz = hz,
@@ -9965,6 +9997,10 @@ impl Engine {
                 self.update_tuning();
             }
             TuneWidebandTo(hz) => {
+                if let Some(why) = self.rx_band_refusal(hz.max(0.0)) {
+                    warn!("tune refused: {why:?} at {:.6} MHz", hz / 1e6);
+                    return;
+                }
                 self.stop_scan_for_operator();
                 // The dial that puts the front end's *own centre* on `hz`,
                 // which is where a wideband lane's window is placed from. On a
@@ -10071,6 +10107,10 @@ impl Engine {
             SetSampleRate(_) => { /* needs stream re-open; deferred */ }
             SetDecimation(factor) => self.set_decimation(factor),
             SetBand(band) => {
+                if let Some(why) = self.rx_band_refusal_for(band) {
+                    warn!("band change refused: {why:?} for {}", band.label());
+                    return;
+                }
                 self.stop_scan_for_operator();
                 self.change_band(band);
             }
@@ -12047,6 +12087,8 @@ impl Engine {
                 self.drive_trim = cfg.tx_drive_trim.clone();
                 self.tx_band_enable = cfg.tx_band_enable.clone().unwrap_or_default();
                 self.tx_bands_confirmed = cfg.tx_bands_confirmed;
+                self.rx_band_enable = cfg.rx_band_enable.clone().unwrap_or_default();
+                self.rx_bands_confirmed = cfg.rx_bands_confirmed;
                 // And the ceiling beside it, live rather than at the next
                 // reopen: the operator setting one is very likely doing it
                 // because the radio is making too much power *now*.
@@ -17310,6 +17352,28 @@ impl Engine {
         }
         if !self.tx_band_enable.contains(&band) {
             return Some(TxBlock::BandOff(band));
+        }
+        None
+    }
+
+    /// Why the dial may not be moved to `hz` under the operator's receive band
+    /// list, or `None` when it may. The same rule as
+    /// [`sdroxide_types::RadioConfig::rx_block_reason`], on the copy the engine
+    /// holds. Always `None` when the list is not enforced (tests).
+    fn rx_band_refusal(&self, hz: f64) -> Option<sdroxide_types::RxBlock> {
+        self.rx_band_refusal_for(Band::containing(hz))
+    }
+
+    /// [`Self::rx_band_refusal`] for a band chosen by name (a band button).
+    fn rx_band_refusal_for(&self, band: Band) -> Option<sdroxide_types::RxBlock> {
+        if !self.rx_bands_enforced {
+            return None;
+        }
+        if !self.rx_bands_confirmed {
+            return Some(sdroxide_types::RxBlock::Unconfirmed);
+        }
+        if !self.rx_band_enable.contains(&band) {
+            return Some(sdroxide_types::RxBlock::BandOff(band));
         }
         None
     }

@@ -9067,6 +9067,30 @@ fn atsmini_band_menu(ui: &mut egui::Ui, state: &RadioState, cmds: &mut Vec<Comma
     );
 }
 
+/// What the top bar needs of the radio's receive band list, published once per
+/// frame by [`publish_rx_plan`]: whether it is confirmed, and the bands ticked.
+type RxPlan = Option<(bool, Vec<Band>)>;
+
+fn rx_plan_id() -> egui::Id {
+    egui::Id::new("rx-band-plan")
+}
+
+/// Publish this radio's receive band list for the band buttons drawn this frame.
+pub(in crate::app) fn publish_rx_plan(ctx: &egui::Context, cfg: Option<&sdroxide_types::RadioConfig>) {
+    let plan: RxPlan =
+        cfg.map(|c| (c.rx_bands_confirmed, c.rx_band_enable.clone().unwrap_or_default()));
+    ctx.data_mut(|d| d.insert_temp(rx_plan_id(), plan));
+}
+
+/// Whether the band's button is offered under the receive band list. Nothing
+/// published (no configuration yet) offers everything.
+fn rx_plan_allows(ctx: &egui::Context, band: Band) -> bool {
+    match ctx.data(|d| d.get_temp::<RxPlan>(rx_plan_id())).flatten() {
+        Some((confirmed, bands)) => confirmed && bands.contains(&band),
+        None => true,
+    }
+}
+
 /// One band chip, from the menu's state — the same chip the band pad and
 /// the wrapped rows draw, so the two cannot drift.
 #[allow(clippy::too_many_arguments)]
@@ -9098,7 +9122,11 @@ fn band_chip(
     // offering a band the radio turns out not to reach. Any *overlap*
     // is enough — a receiver that reaches into the band without
     // reaching either end of it still has the band (issue #272).
-    let enabled = caps.is_none_or(|c| b.edges().is_none_or(|(lo, hi)| c.may_rx_span(lo, hi)));
+    let reachable = caps.is_none_or(|c| b.edges().is_none_or(|(lo, hi)| c.may_rx_span(lo, hi)));
+    // And the operator's own receive band list: a band that is NO there, or a
+    // list nobody confirmed, is not offered (the engine would refuse it anyway).
+    let planned = rx_plan_allows(ui.ctx(), b);
+    let enabled = reachable && planned;
     let active = match std_hz {
         Some(hz) => (state.active_freq_hz() - hz).abs() < 500.0,
         None => state.band == b,
@@ -9144,7 +9172,11 @@ fn band_chip(
     let resp = if enabled {
         resp
     } else {
-        resp.on_disabled_hover_text(disabled_band_reason(b, caps, ranges_stated))
+        resp.on_disabled_hover_text(if reachable {
+            tr!("rx-bands-band-off")
+        } else {
+            disabled_band_reason(b, caps, ranges_stated)
+        })
     };
     if resp.clicked() {
         match digi_hz {
@@ -9437,8 +9469,9 @@ pub(in crate::app) fn band_keypad(
                     // why, for the same reason the list's chip does. In **MHz**
                     // the key is never grey: the digit is only a digit there, so
                     // an unreachable band has nothing to say about typing one.
-                    let reachable = caps
+                    let hardware = caps
                         .is_none_or(|c| band.edges().is_none_or(|(lo, hi)| c.may_rx_span(lo, hi)));
+                    let reachable = hardware && rx_plan_allows(ui.ctx(), band);
                     let enabled = pad.mode == KeypadMode::Mhz || reachable;
                     let label = egui::RichText::new(keypad_label(digit, band)).monospace();
                     let mut resp = ui
@@ -9455,11 +9488,11 @@ pub(in crate::app) fn band_keypad(
                         })
                         .inner;
                     if !reachable && pad.mode == KeypadMode::Bands {
-                        resp = resp.on_disabled_hover_text(disabled_band_reason(
-                            band,
-                            caps,
-                            ranges_stated,
-                        ));
+                        resp = resp.on_disabled_hover_text(if hardware {
+                            tr!("rx-bands-band-off")
+                        } else {
+                            disabled_band_reason(band, caps, ranges_stated)
+                        });
                     } else {
                         resp = resp.on_hover_text(match target {
                             Some(hz) => tr!(

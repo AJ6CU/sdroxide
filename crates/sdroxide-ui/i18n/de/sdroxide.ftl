@@ -9291,3 +9291,31 @@ vor-tune-hover = Dieses VOR in AM abstimmen
 tx-bands-power-hint = Die höchste Leistung auf diesem Band bei voll aufgedrehtem Drive, in Watt. Bei — lassen, wenn unbekannt.
 
 tx-bands-power-note = Optional. Ein Funkgerät ohne Leistungsmesser nutzt diese Werte, um seine Sendeleistung in Watt am S-Meter anzuzeigen; ohne sie zeigt es die Drive-Einstellung in Prozent.
+
+band-plan-title = Bandplan dieses Funkgeräts
+
+band-plan-col-tx = TX
+
+band-plan-col-rx = RX
+
+rx-bands-note = Stellen Sie RX nur für die Bänder auf JA, auf denen dieses Funkgerät hören soll. Das Gerät stimmt nie auf ein Band mit NEIN ab und überhaupt nicht, solange die RX-Liste nicht bestätigt ist. TX und RX sind getrennt: ein Band kann TX NEIN und RX JA sein.
+
+rx-bands-title = Empfangsbänder
+
+rx-bands-check-again = RX PRÜFEN
+
+rx-bands-check-again-hint = Nimmt die Bestätigung zurück, um die Empfangsliste erneut zu prüfen. Jede Änderung eines Bands macht das von selbst.
+
+rx-bands-confirmed = ✓ Empfangsbänder für dieses Funkgerät bestätigt
+
+rx-bands-ack = Ich habe diese Empfangsbänder mit meinem Funkgerät abgeglichen
+
+rx-bands-confirm = Diese Empfangsbänder bestätigen
+
+rx-bands-confirm-hint = Zuerst das Kästchen anhaken: die Bestätigung erfolgt einmal pro Funkgerät.
+
+rx-bands-notice = Empfangsbandliste nicht bestätigt: Das Funkgerät stimmt nicht ab, bis Sie die Empfangsbänder einmal geprüft und bestätigt haben.
+
+rx-bands-out-of-range = Der veröffentlichte Bereich dieses Funkgeräts reicht nicht bis zu diesem Band.
+
+rx-bands-band-off = Der Empfang ist auf diesem Band im Bandplan dieses Funkgeräts (Einstellungen) aus, oder die Empfangsliste ist noch nicht bestätigt.

@@ -1284,6 +1284,8 @@ impl eframe::App for SdroxideApp {
         // The transmit band list: why transmit is off at the dial, then the standing
         // request to check and confirm the list (never dismissable — it stays
         // until the operator has confirmed).
+        // The receive band list, for the band buttons drawn below.
+        super::top_bar::publish_rx_plan(ui.ctx(), self.radio_cfg.as_ref());
         let tx_msg = self.radio_notice.is_none().then(|| self.tx_band_msg.clone()).flatten();
         let tx_note = (self.radio_notice.is_none() && tx_msg.is_none())
             .then(|| self.tx_bands_notice())

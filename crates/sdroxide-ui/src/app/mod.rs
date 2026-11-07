@@ -7492,6 +7492,7 @@ mod tests {
         app.radio_cfg = Some(RadioConfig {
             tx_band_enable: Some(vec![Band::M80, Band::M40]),
             tx_bands_confirmed: true,
+            rx_bands_confirmed: true,
             ..RadioConfig::default()
         });
         let tune = |app: &mut SdroxideApp, hz: f64| {
@@ -7544,6 +7545,7 @@ mod tests {
         let cfg = RadioConfig {
             tx_band_enable: Some(vec![Band::M80]),
             tx_bands_confirmed: true,
+            rx_bands_confirmed: true,
             ..RadioConfig::default()
         };
         app.radio_cfg = Some(cfg.clone());
@@ -7561,5 +7563,47 @@ mod tests {
         assert_eq!(app.band_tx_pill(), None, "no band ticked");
         app.radio_cfg = Some(RadioConfig { hide_tx: true, ..cfg });
         assert_eq!(app.band_tx_pill(), None, "SWL");
+    }
+
+    /// One banner for both lists: TX only, RX only, both, or none.
+    #[test]
+    fn the_banner_covers_the_transmit_and_receive_lists() {
+        use crate::multi::frame_test_lock;
+        use sdroxide_types::{Band, RadioConfig};
+        let _guard = frame_test_lock();
+        let dir = std::env::temp_dir().join(format!("sdroxide-rx-notice-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        unsafe { std::env::set_var("SDROXIDE_CONFIG_DIR", &dir) };
+        let controller: Box<dyn RadioController> = Box::new(RecordingController::default());
+        let ctx = egui::Context::default();
+        crate::layout::set_tier(&ctx, crate::layout::Tier::Desktop);
+        let mut app = SdroxideApp::new_tab(&ctx, None, None, controller, 0, true);
+        app.caps = Some(sdroxide_types::DeviceCaps { tx_channels: 1, ..Default::default() });
+        let both = RadioConfig {
+            tx_band_enable: Some(vec![Band::M80]),
+            tx_bands_confirmed: true,
+            rx_band_enable: Some(vec![Band::M80]),
+            rx_bands_confirmed: true,
+            ..RadioConfig::default()
+        };
+        let set = |app: &mut SdroxideApp, tx: bool, rx: bool| {
+            app.radio_cfg = Some(RadioConfig {
+                tx_bands_confirmed: tx,
+                rx_bands_confirmed: rx,
+                ..both.clone()
+            });
+        };
+        set(&mut app, true, true);
+        assert_eq!(app.tx_bands_notice(), None, "both confirmed: nothing to say");
+        set(&mut app, true, false);
+        let rx_only = app.tx_bands_notice().expect("RX unconfirmed");
+        assert_eq!(rx_only, tr!("rx-bands-notice"));
+        set(&mut app, false, true);
+        let tx_only = app.tx_bands_notice().expect("TX unconfirmed");
+        assert_ne!(tx_only, rx_only);
+        set(&mut app, false, false);
+        let both_text = app.tx_bands_notice().expect("both unconfirmed");
+        assert!(both_text.starts_with(&tx_only) && both_text.ends_with(&rx_only));
     }
 }

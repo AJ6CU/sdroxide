@@ -61,6 +61,8 @@ fn build_controller(
         cb_tx_allowed: settings.cb_tx_allowed,
         // Production never bypasses the per-band TX list (tests only).
         tx_bands_open: false,
+        // The operator's receive band list is held in the real program.
+        rx_bands_enforced: true,
         swr_guard: settings.swr_guard,
         swr_limit: settings.swr_limit,
         reopen: boot.reopen,
