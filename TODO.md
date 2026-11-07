@@ -2,7 +2,7 @@
 
 Working queue. Rules in AGENTS.md. Last updated 2026-11-04.
 
-State: `main` at crate 2.3.0, PROTO_VERSION 271 (0x10F). Latest release v2.2.3.6.5_brown (pre-release); full release 2.3.0_brown due 2026-11-06 18:00 UTC. Open PRs: 1 (#516 sonde CSV, F4NRM). Open issues: 8 (re-measured 2026-11-06).
+State: `main` at crate 2.3.0, PROTO_VERSION 275 (0x5F). Latest release v2.2.3.6.5_brown (pre-release); full release 2.3.0_brown due 2026-11-06 18:00 UTC. Open PRs: 1 (#516 sonde CSV, F4NRM). Open issues: 8 (re-measured 2026-11-06).
 
 ## Task tracking rules
 
@@ -18,6 +18,8 @@ State: `main` at crate 2.3.0, PROTO_VERSION 271 (0x10F). Latest release v2.2.3.6
   kept current in the state line.
 
 ## Now
+- **Per-radio RX band plan 1/2: the foundation** (added by madmedicnl, owned by Claude): `RadioConfig` gains `rx_band_enable` and `rx_bands_confirmed` (mirror of the TX list, same rules, independent of it), with `rx_block_reason`, `set_rx_band` and `migrate_rx_bands` (default = the hardware's published range, "Other" included, left unconfirmed). Wire 274 -> **275** (`0x5F`). The engine does **not** enforce it yet: no visible change. Enforcement, the TX/RX settings table and the "Verify RX" banner come together in 2/2.
+- **Per-radio RX band plan 2/2: enforcement and settings UI** (added by madmedicnl, owned by Claude): to do, built on 1/2. An unconfirmed RX list blocks tuning like the TX one blocks keying; one banner for TX and/or RX to check; settings table with TX and RX menus per band; eleven languages.
 - S-meter during TX on CAT radios (added by Roy, owned by Roy) - PR #513 open.
 
 - **PR #493 â€” radiosondes 1/6: the RS41 decoder on its own lane** (added by F4NRM, owned by Claude): the AIRCRAFT hint promised radiosondes and nothing decoded them. `xng-mode-sonde` (clean-room, anchored on rs1729/RS) joins the workspace next to `xng-mode-hfdl`; new `sdroxide-sonde` crate (worker thread, bounded I/Q queue, one track per serial); engine lane `sonde_ddc` (48 kS/s, resampled onto the decoder's exact rate like HFDL), `Command::SetSondeConfig`, `sonde.json`, `RadioEvent::SondeStatus`. Not a `Mode`: the radio keeps its mode, so no CAT crate changes. Wire 269 â†’ **270** (`0x5A`), postcard round trip. Tests on synthetic GFSK IQ of the rs1729 frame (serial, position, altitude); not run on air here.

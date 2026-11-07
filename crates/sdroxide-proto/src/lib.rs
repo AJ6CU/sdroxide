@@ -2245,8 +2245,15 @@ use sdroxide_types::{
 /// log and the sonde tracks, which stayed on the station until now. Cached by
 /// the server and replayed on connect. A v273 peer has no variant to decode
 /// them into. `PROTO_VERSION` 273 → 274, `VERSION_BYTE` 0x5D → 0x5E.
-pub const PROTO_VERSION: u16 = 274;
-const VERSION_BYTE: u8 = 0x5E;
+///
+/// v275: **a receive band list per radio.** `RadioConfig` gains
+/// `rx_band_enable` and `rx_bands_confirmed` at its tail, the mirror of the
+/// transmit list. `RadioConfig` rides `ServerMsg::RadioConfig` and
+/// `Command::SetRadioConfig` whole, so the appended fields move its layout.
+/// `#[serde(default)]`, so a `radio.json` written before this loads unchanged.
+/// `PROTO_VERSION` 274 → 275, `VERSION_BYTE` 0x5E → 0x5F.
+pub const PROTO_VERSION: u16 = 275;
+const VERSION_BYTE: u8 = 0x5F;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -4061,6 +4068,15 @@ mod tests {
                     ps_frozen: false,
                 },
             },
+            // The last two fields in the struct: an `Option<Vec<Band>>` and a
+            // flag. Bands far apart in `Band`'s order, so a read a byte out of
+            // step cannot land on the right list by luck.
+            rx_band_enable: Some(vec![
+                sdroxide_types::Band::M160,
+                sdroxide_types::Band::M2,
+                sdroxide_types::Band::Gen,
+            ]),
+            rx_bands_confirmed: true,
             ..RadioConfig::default()
         };
 

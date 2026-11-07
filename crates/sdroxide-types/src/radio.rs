@@ -7905,6 +7905,33 @@ pub struct RadioConfig {
     /// the wire requires.
     #[serde(default)]
     pub tx_band_power_w: Vec<BandPower>,
+    /// The bands this radio may *receive* on, as the operator chose them: the
+    /// mirror of [`Self::tx_band_enable`], with the same rules and its own list,
+    /// independent of the transmit one (160 m can be TX off and RX on).
+    ///
+    /// `None` is a `radio.json` written before this existed, which the engine
+    /// fills from the bands the hardware publishes it can reach, "Other"
+    /// included, and leaves unconfirmed (see [`Self::rx_bands_confirmed`]).
+    /// Checked on the real dial frequency through [`Band::containing`].
+    ///
+    /// Per radio, on the server with the rest of `radio.json`, even when two
+    /// radios are coupled. Appended last, as the wire requires.
+    #[serde(default)]
+    pub rx_band_enable: Option<Vec<Band>>,
+    /// The operator has looked at [`Self::rx_band_enable`] and confirmed it.
+    /// Until then the radio does not tune (see [`Self::rx_block_reason`]).
+    /// Appended last, as the wire requires.
+    #[serde(default)]
+    pub rx_bands_confirmed: bool,
+}
+
+/// Why [`RadioConfig::rx_block_reason`] refuses a frequency.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize, Deserialize)]
+pub enum RxBlock {
+    /// The operator has not validated the receive band list yet.
+    Unconfirmed,
+    /// The frequency is in this band, which is not ticked for reception.
+    BandOff(Band),
 }
 
 /// Why [`RadioConfig::tx_block_reason`] refuses a frequency. Also what the
@@ -7990,6 +8017,66 @@ impl RadioConfig {
             .collect();
         self.tx_band_enable = Some(bands);
         self.tx_bands_confirmed = false;
+        true
+    }
+
+    /// Whether this radio may receive on `band`: validated, and listed.
+    pub fn rx_band_allowed(&self, band: Band) -> bool {
+        self.rx_bands_confirmed
+            && self.rx_band_enable.as_ref().is_some_and(|bands| bands.contains(&band))
+    }
+
+    /// Whether this radio may be tuned to `dial_hz`. The band is the one the
+    /// frequency is in, never the selector the operator last clicked.
+    pub fn rx_dial_allowed(&self, dial_hz: f64) -> bool {
+        self.rx_band_allowed(Band::containing(dial_hz))
+    }
+
+    /// Why this radio may not receive at `dial_hz`, or `None` when it may.
+    /// The same rule as [`Self::tx_block_reason`], on the receive list.
+    pub fn rx_block_reason(&self, dial_hz: f64) -> Option<RxBlock> {
+        if !self.rx_bands_confirmed {
+            return Some(RxBlock::Unconfirmed);
+        }
+        let band = Band::containing(dial_hz);
+        if self.rx_band_enable.as_ref().is_some_and(|b| b.contains(&band)) {
+            None
+        } else {
+            Some(RxBlock::BandOff(band))
+        }
+    }
+
+    /// Tick or untick one band of the receive list. A change withdraws the
+    /// confirmation, exactly as [`Self::set_tx_band`] does for transmit.
+    pub fn set_rx_band(&mut self, band: Band, on: bool) {
+        let bands = self.rx_band_enable.get_or_insert_with(Vec::new);
+        let had = bands.contains(&band);
+        bands.retain(|b| *b != band);
+        if on {
+            bands.push(band);
+        }
+        if had != on {
+            self.rx_bands_confirmed = false;
+        }
+    }
+
+    /// Fill in [`Self::rx_band_enable`] for a `radio.json` that predates it:
+    /// every band `may_rx` says the hardware reaches (its published range), plus
+    /// "Other" ([`Band::Gen`]) when it reaches anything, left unconfirmed.
+    /// Returns whether anything changed. A list that exists is never touched.
+    pub fn migrate_rx_bands(&mut self, may_rx: impl Fn(f64) -> bool) -> bool {
+        if self.rx_band_enable.is_some() {
+            return false;
+        }
+        let mut bands: Vec<Band> = Band::ALL
+            .into_iter()
+            .filter(|b| b.edges().is_some_and(|(lo, hi)| may_rx(lo) || may_rx(hi)))
+            .collect();
+        if !bands.is_empty() {
+            bands.push(Band::Gen);
+        }
+        self.rx_band_enable = Some(bands);
+        self.rx_bands_confirmed = false;
         true
     }
 
@@ -9630,5 +9717,91 @@ mod tests {
         assert_eq!(c.tx_band_enable, Some(vec![Band::M11]));
         c.set_tx_band(Band::M11, false);
         assert_eq!(c.tx_band_enable, Some(vec![]));
+    }
+
+    fn rx_list(bands: &[Band], confirmed: bool) -> RadioConfig {
+        RadioConfig {
+            rx_band_enable: Some(bands.to_vec()),
+            rx_bands_confirmed: confirmed,
+            ..RadioConfig::default()
+        }
+    }
+
+    #[test]
+    fn rx_is_allowed_only_on_ticked_and_validated_bands() {
+        let adsb = 1_090_000_000.0;
+        let c = rx_list(&[Band::M160, Band::Gen], true);
+        assert_eq!(c.rx_block_reason(1_850_000.0), None);
+        assert_eq!(c.rx_block_reason(adsb), None, "ADS-B falls on Other");
+        assert_eq!(c.rx_block_reason(7_074_000.0), Some(RxBlock::BandOff(Band::M40)));
+        let no_other = rx_list(&[Band::M160], true);
+        assert_eq!(no_other.rx_block_reason(adsb), Some(RxBlock::BandOff(Band::Gen)));
+        let unvalidated = rx_list(&[Band::M160], false);
+        assert_eq!(unvalidated.rx_block_reason(1_850_000.0), Some(RxBlock::Unconfirmed));
+        assert_eq!(RadioConfig::default().rx_block_reason(1_850_000.0), Some(RxBlock::Unconfirmed));
+        for hz in [1_850_000.0, 7_074_000.0, adsb] {
+            for c in [&c, &no_other, &unvalidated] {
+                assert_eq!(c.rx_block_reason(hz).is_none(), c.rx_dial_allowed(hz));
+            }
+        }
+    }
+
+    /// TX and RX lists are independent: 160 m TX off, RX on.
+    #[test]
+    fn rx_and_tx_lists_are_independent() {
+        let c = RadioConfig {
+            tx_band_enable: Some(vec![Band::M20]),
+            tx_bands_confirmed: true,
+            rx_band_enable: Some(vec![Band::M160]),
+            rx_bands_confirmed: true,
+            ..RadioConfig::default()
+        };
+        assert!(c.tx_block_reason(1_850_000.0).is_some());
+        assert_eq!(c.rx_block_reason(1_850_000.0), None);
+        assert_eq!(c.tx_block_reason(14_074_000.0), None);
+        assert!(c.rx_block_reason(14_074_000.0).is_some());
+    }
+
+    #[test]
+    fn set_rx_band_withdraws_confirmation_only_on_change() {
+        let mut c = rx_list(&[Band::M20], true);
+        c.set_rx_band(Band::M20, true);
+        assert!(c.rx_bands_confirmed, "unchanged list keeps its confirmation");
+        c.set_rx_band(Band::M40, true);
+        assert!(!c.rx_bands_confirmed, "a band added after the check");
+        c.rx_bands_confirmed = true;
+        c.set_rx_band(Band::M40, false);
+        assert!(!c.rx_bands_confirmed, "a band removed after the check");
+        assert_eq!(c.rx_band_enable, Some(vec![Band::M20]));
+    }
+
+    #[test]
+    fn migrate_rx_bands_reads_the_published_range() {
+        // A Pluto-like range: 70 MHz and up.
+        let mut pluto = RadioConfig::default();
+        assert!(pluto.migrate_rx_bands(|hz| hz >= 70e6));
+        let bands = pluto.rx_band_enable.clone().unwrap();
+        assert!(!bands.contains(&Band::M80) && !bands.contains(&Band::M20));
+        assert!(bands.contains(&Band::M2) && bands.contains(&Band::Gen));
+        assert!(!pluto.rx_bands_confirmed, "carried over, never confirmed");
+        assert!(!pluto.migrate_rx_bands(|_| true), "an existing list is left alone");
+        // An HF radio.
+        let mut hf = RadioConfig::default();
+        hf.migrate_rx_bands(|hz| hz < 30e6);
+        let bands = hf.rx_band_enable.unwrap();
+        assert!(bands.contains(&Band::M160) && bands.contains(&Band::Gen));
+        assert!(!bands.contains(&Band::M2));
+        // Reaches nothing: nothing ticked.
+        let mut none = RadioConfig::default();
+        none.migrate_rx_bands(|_| false);
+        assert_eq!(none.rx_band_enable, Some(vec![]));
+    }
+
+    /// A `radio.json` that predates the RX list loads, with no list.
+    #[test]
+    fn old_radio_json_has_no_rx_list() {
+        let c: RadioConfig = serde_json::from_str("{}").expect("loads");
+        assert_eq!(c.rx_band_enable, None);
+        assert!(!c.rx_bands_confirmed);
     }
 }
