@@ -9226,7 +9226,6 @@ settings-general-band-plan-built-in = Ingebouwd (IARU)
 
 settings-general-band-plan-germany-nrw = Duitsland (NRW, SWL)
 
-settings-general-band-plan-own = Eigen van de station
 
 settings-general-band-plan-hint = Kies een meegeleverd bandplan. Het vervangt bandplan.json; de ingebouwde IARU-tabellen blijven de standaard.
 
@@ -9307,4 +9306,37 @@ settings-general-band-plan-export-hint = Schrijf het plan dat in gebruik is naar
 
 settings-general-band-plan-imported = Bandplan geïmporteerd. Het station draait erop.
 
-settings-general-band-plan-import-not-a-plan = Dat bestand is geen bandplan — het kon niet worden gelezen. Er is niets gewijzigd.
+
+settings-general-band-plan-sdrpp-australia = Australia
+
+settings-general-band-plan-sdrpp-austria = Austria
+
+settings-general-band-plan-sdrpp-belgium = Belgium
+
+settings-general-band-plan-sdrpp-brazil = Brazil
+
+settings-general-band-plan-sdrpp-canada = Canada
+
+settings-general-band-plan-sdrpp-china = China
+
+settings-general-band-plan-sdrpp-france = France
+
+settings-general-band-plan-sdrpp-germany = Germany
+
+settings-general-band-plan-sdrpp-ireland = Ireland
+
+settings-general-band-plan-sdrpp-italy = Italy
+
+settings-general-band-plan-sdrpp-netherlands = Netherlands
+
+settings-general-band-plan-sdrpp-republic-of-korea = Republic of Korea
+
+settings-general-band-plan-sdrpp-russia = Russia
+
+settings-general-band-plan-sdrpp-slovakia = Slovakia
+
+settings-general-band-plan-sdrpp-turkey = Turkey
+
+settings-general-band-plan-sdrpp-united-kingdom = United Kingdom
+
+settings-general-band-plan-sdrpp-usa = USA

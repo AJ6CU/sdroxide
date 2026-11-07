@@ -1,0 +1,948 @@
+{
+  "readme": [
+    "Converted from SDR++ bandplan.",
+    "Edit, save, then press RELOAD BAND PLAN on the General tab."
+  ],
+  "region1": {
+    "bands": [
+      {
+        "band": "M2200",
+        "lo_mhz": 0.1357,
+        "hi_mhz": 0.1378
+      },
+      {
+        "band": "Mw",
+        "lo_mhz": 0.53,
+        "hi_mhz": 1.7
+      },
+      {
+        "band": "M60",
+        "lo_mhz": 5.351,
+        "hi_mhz": 5.366
+      },
+      {
+        "band": "M30",
+        "lo_mhz": 10.1,
+        "hi_mhz": 10.15
+      },
+      {
+        "band": "M20",
+        "lo_mhz": 14.0,
+        "hi_mhz": 14.35
+      },
+      {
+        "band": "M17",
+        "lo_mhz": 18.068,
+        "hi_mhz": 18.168
+      },
+      {
+        "band": "M15",
+        "lo_mhz": 21.0,
+        "hi_mhz": 21.45
+      },
+      {
+        "band": "M12",
+        "lo_mhz": 24.89,
+        "hi_mhz": 24.99
+      },
+      {
+        "band": "Cm33",
+        "lo_mhz": 902.0,
+        "hi_mhz": 928.0
+      },
+      {
+        "band": "Cm23",
+        "lo_mhz": 1240.0,
+        "hi_mhz": 1300.0
+      }
+    ],
+    "segments": [
+      {
+        "lo_mhz": 0.1357,
+        "hi_mhz": 0.1378,
+        "kind": "All",
+        "label": "2200m Ham Band"
+      },
+      {
+        "lo_mhz": 0.472,
+        "hi_mhz": 0.479,
+        "kind": "All",
+        "label": "630m Ham Band"
+      },
+      {
+        "lo_mhz": 0.53,
+        "hi_mhz": 1.7,
+        "kind": "Phone",
+        "label": "Mediumwave Broadcast"
+      },
+      {
+        "lo_mhz": 1.8,
+        "hi_mhz": 2.0,
+        "kind": "All",
+        "label": "160m Ham Band"
+      },
+      {
+        "lo_mhz": 2.3,
+        "hi_mhz": 2.468,
+        "kind": "Phone",
+        "label": "Shortwave Broadcast"
+      },
+      {
+        "lo_mhz": 3.2,
+        "hi_mhz": 3.4,
+        "kind": "Phone",
+        "label": "Shortwave Broadcast"
+      },
+      {
+        "lo_mhz": 3.5,
+        "hi_mhz": 4.0,
+        "kind": "All",
+        "label": "80m Ham Band"
+      },
+      {
+        "lo_mhz": 4.75,
+        "hi_mhz": 5.06,
+        "kind": "Phone",
+        "label": "Shortwave Broadcast"
+      },
+      {
+        "lo_mhz": 5.351,
+        "hi_mhz": 5.366,
+        "kind": "All",
+        "label": "60m Ham Band"
+      },
+      {
+        "lo_mhz": 5.9,
+        "hi_mhz": 6.2,
+        "kind": "Phone",
+        "label": "Shortwave Broadcast"
+      },
+      {
+        "lo_mhz": 7.0,
+        "hi_mhz": 7.3,
+        "kind": "All",
+        "label": "40m Ham Band"
+      },
+      {
+        "lo_mhz": 7.3,
+        "hi_mhz": 7.45,
+        "kind": "Phone",
+        "label": "Shortwave Broadcast"
+      },
+      {
+        "lo_mhz": 9.4,
+        "hi_mhz": 9.9,
+        "kind": "Phone",
+        "label": "Shortwave Broadcast"
+      },
+      {
+        "lo_mhz": 10.1,
+        "hi_mhz": 10.15,
+        "kind": "All",
+        "label": "30m Ham Band"
+      },
+      {
+        "lo_mhz": 11.6,
+        "hi_mhz": 12.1,
+        "kind": "Phone",
+        "label": "Shortwave Broadcast"
+      },
+      {
+        "lo_mhz": 13.57,
+        "hi_mhz": 13.87,
+        "kind": "Phone",
+        "label": "Shortwave Broadcast"
+      },
+      {
+        "lo_mhz": 14.0,
+        "hi_mhz": 14.35,
+        "kind": "All",
+        "label": "20m Ham Band"
+      },
+      {
+        "lo_mhz": 15.1,
+        "hi_mhz": 15.8,
+        "kind": "Phone",
+        "label": "Shortwave Broadcast"
+      },
+      {
+        "lo_mhz": 17.48,
+        "hi_mhz": 17.9,
+        "kind": "Phone",
+        "label": "Shortwave Broadcast"
+      },
+      {
+        "lo_mhz": 18.068,
+        "hi_mhz": 18.168,
+        "kind": "All",
+        "label": "17m Ham Band"
+      },
+      {
+        "lo_mhz": 18.9,
+        "hi_mhz": 19.02,
+        "kind": "Phone",
+        "label": "Shortwave Broadcast"
+      },
+      {
+        "lo_mhz": 21.0,
+        "hi_mhz": 21.45,
+        "kind": "All",
+        "label": "15m Ham Band"
+      },
+      {
+        "lo_mhz": 21.45,
+        "hi_mhz": 21.85,
+        "kind": "Phone",
+        "label": "Shortwave Broadcast"
+      },
+      {
+        "lo_mhz": 24.89,
+        "hi_mhz": 24.99,
+        "kind": "All",
+        "label": "12m Ham Band"
+      },
+      {
+        "lo_mhz": 25.67,
+        "hi_mhz": 26.1,
+        "kind": "Phone",
+        "label": "Shortwave Broadcast"
+      },
+      {
+        "lo_mhz": 26.96,
+        "hi_mhz": 27.41,
+        "kind": "All",
+        "label": "CB"
+      },
+      {
+        "lo_mhz": 28.0,
+        "hi_mhz": 29.75,
+        "kind": "All",
+        "label": "10m Ham Band"
+      },
+      {
+        "lo_mhz": 50.0,
+        "hi_mhz": 54.0,
+        "kind": "All",
+        "label": "6m Ham Band"
+      },
+      {
+        "lo_mhz": 54.0,
+        "hi_mhz": 72.0,
+        "kind": "Phone",
+        "label": "TV Channels 2-4"
+      },
+      {
+        "lo_mhz": 76.0,
+        "hi_mhz": 108.0,
+        "kind": "Phone",
+        "label": "FM Broadcast"
+      },
+      {
+        "lo_mhz": 108.0,
+        "hi_mhz": 117.0,
+        "kind": "Phone",
+        "label": "Air Band VOR/ILS"
+      },
+      {
+        "lo_mhz": 117.0,
+        "hi_mhz": 137.0,
+        "kind": "Phone",
+        "label": "Air Band Voice"
+      },
+      {
+        "lo_mhz": 144.0,
+        "hi_mhz": 148.0,
+        "kind": "All",
+        "label": "2m Ham Band"
+      },
+      {
+        "lo_mhz": 162.4,
+        "hi_mhz": 162.7,
+        "kind": "Phone",
+        "label": "Weatheradio"
+      },
+      {
+        "lo_mhz": 174.0,
+        "hi_mhz": 216.0,
+        "kind": "Phone",
+        "label": "TV Channels 7-13"
+      },
+      {
+        "lo_mhz": 222.0,
+        "hi_mhz": 225.0,
+        "kind": "All",
+        "label": "1.25m Ham Band"
+      },
+      {
+        "lo_mhz": 430.0,
+        "hi_mhz": 450.0,
+        "kind": "All",
+        "label": "70cm Ham Band"
+      },
+      {
+        "lo_mhz": 470.0,
+        "hi_mhz": 608.0,
+        "kind": "Phone",
+        "label": "TV Channels 14-36"
+      },
+      {
+        "lo_mhz": 614.0,
+        "hi_mhz": 806.0,
+        "kind": "Phone",
+        "label": "TV Channels 38-51"
+      },
+      {
+        "lo_mhz": 806.0,
+        "hi_mhz": 890.0,
+        "kind": "Phone",
+        "label": "Trunked Mobile"
+      },
+      {
+        "lo_mhz": 902.0,
+        "hi_mhz": 928.0,
+        "kind": "All",
+        "label": "33cm Ham Band"
+      },
+      {
+        "lo_mhz": 1240.0,
+        "hi_mhz": 1300.0,
+        "kind": "All",
+        "label": "23cm Ham Band"
+      },
+      {
+        "lo_mhz": 2300.0,
+        "hi_mhz": 2450.0,
+        "kind": "All",
+        "label": "13cm Ham Band"
+      }
+    ]
+  },
+  "region2": {
+    "bands": [
+      {
+        "band": "M2200",
+        "lo_mhz": 0.1357,
+        "hi_mhz": 0.1378
+      },
+      {
+        "band": "Mw",
+        "lo_mhz": 0.53,
+        "hi_mhz": 1.7
+      },
+      {
+        "band": "M60",
+        "lo_mhz": 5.351,
+        "hi_mhz": 5.366
+      },
+      {
+        "band": "M30",
+        "lo_mhz": 10.1,
+        "hi_mhz": 10.15
+      },
+      {
+        "band": "M20",
+        "lo_mhz": 14.0,
+        "hi_mhz": 14.35
+      },
+      {
+        "band": "M17",
+        "lo_mhz": 18.068,
+        "hi_mhz": 18.168
+      },
+      {
+        "band": "M15",
+        "lo_mhz": 21.0,
+        "hi_mhz": 21.45
+      },
+      {
+        "band": "M12",
+        "lo_mhz": 24.89,
+        "hi_mhz": 24.99
+      },
+      {
+        "band": "Cm33",
+        "lo_mhz": 902.0,
+        "hi_mhz": 928.0
+      },
+      {
+        "band": "Cm23",
+        "lo_mhz": 1240.0,
+        "hi_mhz": 1300.0
+      }
+    ],
+    "segments": [
+      {
+        "lo_mhz": 0.1357,
+        "hi_mhz": 0.1378,
+        "kind": "All",
+        "label": "2200m Ham Band"
+      },
+      {
+        "lo_mhz": 0.472,
+        "hi_mhz": 0.479,
+        "kind": "All",
+        "label": "630m Ham Band"
+      },
+      {
+        "lo_mhz": 0.53,
+        "hi_mhz": 1.7,
+        "kind": "Phone",
+        "label": "Mediumwave Broadcast"
+      },
+      {
+        "lo_mhz": 1.8,
+        "hi_mhz": 2.0,
+        "kind": "All",
+        "label": "160m Ham Band"
+      },
+      {
+        "lo_mhz": 2.3,
+        "hi_mhz": 2.468,
+        "kind": "Phone",
+        "label": "Shortwave Broadcast"
+      },
+      {
+        "lo_mhz": 3.2,
+        "hi_mhz": 3.4,
+        "kind": "Phone",
+        "label": "Shortwave Broadcast"
+      },
+      {
+        "lo_mhz": 3.5,
+        "hi_mhz": 4.0,
+        "kind": "All",
+        "label": "80m Ham Band"
+      },
+      {
+        "lo_mhz": 4.75,
+        "hi_mhz": 5.06,
+        "kind": "Phone",
+        "label": "Shortwave Broadcast"
+      },
+      {
+        "lo_mhz": 5.351,
+        "hi_mhz": 5.366,
+        "kind": "All",
+        "label": "60m Ham Band"
+      },
+      {
+        "lo_mhz": 5.9,
+        "hi_mhz": 6.2,
+        "kind": "Phone",
+        "label": "Shortwave Broadcast"
+      },
+      {
+        "lo_mhz": 7.0,
+        "hi_mhz": 7.3,
+        "kind": "All",
+        "label": "40m Ham Band"
+      },
+      {
+        "lo_mhz": 7.3,
+        "hi_mhz": 7.45,
+        "kind": "Phone",
+        "label": "Shortwave Broadcast"
+      },
+      {
+        "lo_mhz": 9.4,
+        "hi_mhz": 9.9,
+        "kind": "Phone",
+        "label": "Shortwave Broadcast"
+      },
+      {
+        "lo_mhz": 10.1,
+        "hi_mhz": 10.15,
+        "kind": "All",
+        "label": "30m Ham Band"
+      },
+      {
+        "lo_mhz": 11.6,
+        "hi_mhz": 12.1,
+        "kind": "Phone",
+        "label": "Shortwave Broadcast"
+      },
+      {
+        "lo_mhz": 13.57,
+        "hi_mhz": 13.87,
+        "kind": "Phone",
+        "label": "Shortwave Broadcast"
+      },
+      {
+        "lo_mhz": 14.0,
+        "hi_mhz": 14.35,
+        "kind": "All",
+        "label": "20m Ham Band"
+      },
+      {
+        "lo_mhz": 15.1,
+        "hi_mhz": 15.8,
+        "kind": "Phone",
+        "label": "Shortwave Broadcast"
+      },
+      {
+        "lo_mhz": 17.48,
+        "hi_mhz": 17.9,
+        "kind": "Phone",
+        "label": "Shortwave Broadcast"
+      },
+      {
+        "lo_mhz": 18.068,
+        "hi_mhz": 18.168,
+        "kind": "All",
+        "label": "17m Ham Band"
+      },
+      {
+        "lo_mhz": 18.9,
+        "hi_mhz": 19.02,
+        "kind": "Phone",
+        "label": "Shortwave Broadcast"
+      },
+      {
+        "lo_mhz": 21.0,
+        "hi_mhz": 21.45,
+        "kind": "All",
+        "label": "15m Ham Band"
+      },
+      {
+        "lo_mhz": 21.45,
+        "hi_mhz": 21.85,
+        "kind": "Phone",
+        "label": "Shortwave Broadcast"
+      },
+      {
+        "lo_mhz": 24.89,
+        "hi_mhz": 24.99,
+        "kind": "All",
+        "label": "12m Ham Band"
+      },
+      {
+        "lo_mhz": 25.67,
+        "hi_mhz": 26.1,
+        "kind": "Phone",
+        "label": "Shortwave Broadcast"
+      },
+      {
+        "lo_mhz": 26.96,
+        "hi_mhz": 27.41,
+        "kind": "All",
+        "label": "CB"
+      },
+      {
+        "lo_mhz": 28.0,
+        "hi_mhz": 29.75,
+        "kind": "All",
+        "label": "10m Ham Band"
+      },
+      {
+        "lo_mhz": 50.0,
+        "hi_mhz": 54.0,
+        "kind": "All",
+        "label": "6m Ham Band"
+      },
+      {
+        "lo_mhz": 54.0,
+        "hi_mhz": 72.0,
+        "kind": "Phone",
+        "label": "TV Channels 2-4"
+      },
+      {
+        "lo_mhz": 76.0,
+        "hi_mhz": 108.0,
+        "kind": "Phone",
+        "label": "FM Broadcast"
+      },
+      {
+        "lo_mhz": 108.0,
+        "hi_mhz": 117.0,
+        "kind": "Phone",
+        "label": "Air Band VOR/ILS"
+      },
+      {
+        "lo_mhz": 117.0,
+        "hi_mhz": 137.0,
+        "kind": "Phone",
+        "label": "Air Band Voice"
+      },
+      {
+        "lo_mhz": 144.0,
+        "hi_mhz": 148.0,
+        "kind": "All",
+        "label": "2m Ham Band"
+      },
+      {
+        "lo_mhz": 162.4,
+        "hi_mhz": 162.7,
+        "kind": "Phone",
+        "label": "Weatheradio"
+      },
+      {
+        "lo_mhz": 174.0,
+        "hi_mhz": 216.0,
+        "kind": "Phone",
+        "label": "TV Channels 7-13"
+      },
+      {
+        "lo_mhz": 222.0,
+        "hi_mhz": 225.0,
+        "kind": "All",
+        "label": "1.25m Ham Band"
+      },
+      {
+        "lo_mhz": 430.0,
+        "hi_mhz": 450.0,
+        "kind": "All",
+        "label": "70cm Ham Band"
+      },
+      {
+        "lo_mhz": 470.0,
+        "hi_mhz": 608.0,
+        "kind": "Phone",
+        "label": "TV Channels 14-36"
+      },
+      {
+        "lo_mhz": 614.0,
+        "hi_mhz": 806.0,
+        "kind": "Phone",
+        "label": "TV Channels 38-51"
+      },
+      {
+        "lo_mhz": 806.0,
+        "hi_mhz": 890.0,
+        "kind": "Phone",
+        "label": "Trunked Mobile"
+      },
+      {
+        "lo_mhz": 902.0,
+        "hi_mhz": 928.0,
+        "kind": "All",
+        "label": "33cm Ham Band"
+      },
+      {
+        "lo_mhz": 1240.0,
+        "hi_mhz": 1300.0,
+        "kind": "All",
+        "label": "23cm Ham Band"
+      },
+      {
+        "lo_mhz": 2300.0,
+        "hi_mhz": 2450.0,
+        "kind": "All",
+        "label": "13cm Ham Band"
+      }
+    ]
+  },
+  "region3": {
+    "bands": [
+      {
+        "band": "M2200",
+        "lo_mhz": 0.1357,
+        "hi_mhz": 0.1378
+      },
+      {
+        "band": "Mw",
+        "lo_mhz": 0.53,
+        "hi_mhz": 1.7
+      },
+      {
+        "band": "M60",
+        "lo_mhz": 5.351,
+        "hi_mhz": 5.366
+      },
+      {
+        "band": "M30",
+        "lo_mhz": 10.1,
+        "hi_mhz": 10.15
+      },
+      {
+        "band": "M20",
+        "lo_mhz": 14.0,
+        "hi_mhz": 14.35
+      },
+      {
+        "band": "M17",
+        "lo_mhz": 18.068,
+        "hi_mhz": 18.168
+      },
+      {
+        "band": "M15",
+        "lo_mhz": 21.0,
+        "hi_mhz": 21.45
+      },
+      {
+        "band": "M12",
+        "lo_mhz": 24.89,
+        "hi_mhz": 24.99
+      },
+      {
+        "band": "Cm33",
+        "lo_mhz": 902.0,
+        "hi_mhz": 928.0
+      },
+      {
+        "band": "Cm23",
+        "lo_mhz": 1240.0,
+        "hi_mhz": 1300.0
+      }
+    ],
+    "segments": [
+      {
+        "lo_mhz": 0.1357,
+        "hi_mhz": 0.1378,
+        "kind": "All",
+        "label": "2200m Ham Band"
+      },
+      {
+        "lo_mhz": 0.472,
+        "hi_mhz": 0.479,
+        "kind": "All",
+        "label": "630m Ham Band"
+      },
+      {
+        "lo_mhz": 0.53,
+        "hi_mhz": 1.7,
+        "kind": "Phone",
+        "label": "Mediumwave Broadcast"
+      },
+      {
+        "lo_mhz": 1.8,
+        "hi_mhz": 2.0,
+        "kind": "All",
+        "label": "160m Ham Band"
+      },
+      {
+        "lo_mhz": 2.3,
+        "hi_mhz": 2.468,
+        "kind": "Phone",
+        "label": "Shortwave Broadcast"
+      },
+      {
+        "lo_mhz": 3.2,
+        "hi_mhz": 3.4,
+        "kind": "Phone",
+        "label": "Shortwave Broadcast"
+      },
+      {
+        "lo_mhz": 3.5,
+        "hi_mhz": 4.0,
+        "kind": "All",
+        "label": "80m Ham Band"
+      },
+      {
+        "lo_mhz": 4.75,
+        "hi_mhz": 5.06,
+        "kind": "Phone",
+        "label": "Shortwave Broadcast"
+      },
+      {
+        "lo_mhz": 5.351,
+        "hi_mhz": 5.366,
+        "kind": "All",
+        "label": "60m Ham Band"
+      },
+      {
+        "lo_mhz": 5.9,
+        "hi_mhz": 6.2,
+        "kind": "Phone",
+        "label": "Shortwave Broadcast"
+      },
+      {
+        "lo_mhz": 7.0,
+        "hi_mhz": 7.3,
+        "kind": "All",
+        "label": "40m Ham Band"
+      },
+      {
+        "lo_mhz": 7.3,
+        "hi_mhz": 7.45,
+        "kind": "Phone",
+        "label": "Shortwave Broadcast"
+      },
+      {
+        "lo_mhz": 9.4,
+        "hi_mhz": 9.9,
+        "kind": "Phone",
+        "label": "Shortwave Broadcast"
+      },
+      {
+        "lo_mhz": 10.1,
+        "hi_mhz": 10.15,
+        "kind": "All",
+        "label": "30m Ham Band"
+      },
+      {
+        "lo_mhz": 11.6,
+        "hi_mhz": 12.1,
+        "kind": "Phone",
+        "label": "Shortwave Broadcast"
+      },
+      {
+        "lo_mhz": 13.57,
+        "hi_mhz": 13.87,
+        "kind": "Phone",
+        "label": "Shortwave Broadcast"
+      },
+      {
+        "lo_mhz": 14.0,
+        "hi_mhz": 14.35,
+        "kind": "All",
+        "label": "20m Ham Band"
+      },
+      {
+        "lo_mhz": 15.1,
+        "hi_mhz": 15.8,
+        "kind": "Phone",
+        "label": "Shortwave Broadcast"
+      },
+      {
+        "lo_mhz": 17.48,
+        "hi_mhz": 17.9,
+        "kind": "Phone",
+        "label": "Shortwave Broadcast"
+      },
+      {
+        "lo_mhz": 18.068,
+        "hi_mhz": 18.168,
+        "kind": "All",
+        "label": "17m Ham Band"
+      },
+      {
+        "lo_mhz": 18.9,
+        "hi_mhz": 19.02,
+        "kind": "Phone",
+        "label": "Shortwave Broadcast"
+      },
+      {
+        "lo_mhz": 21.0,
+        "hi_mhz": 21.45,
+        "kind": "All",
+        "label": "15m Ham Band"
+      },
+      {
+        "lo_mhz": 21.45,
+        "hi_mhz": 21.85,
+        "kind": "Phone",
+        "label": "Shortwave Broadcast"
+      },
+      {
+        "lo_mhz": 24.89,
+        "hi_mhz": 24.99,
+        "kind": "All",
+        "label": "12m Ham Band"
+      },
+      {
+        "lo_mhz": 25.67,
+        "hi_mhz": 26.1,
+        "kind": "Phone",
+        "label": "Shortwave Broadcast"
+      },
+      {
+        "lo_mhz": 26.96,
+        "hi_mhz": 27.41,
+        "kind": "All",
+        "label": "CB"
+      },
+      {
+        "lo_mhz": 28.0,
+        "hi_mhz": 29.75,
+        "kind": "All",
+        "label": "10m Ham Band"
+      },
+      {
+        "lo_mhz": 50.0,
+        "hi_mhz": 54.0,
+        "kind": "All",
+        "label": "6m Ham Band"
+      },
+      {
+        "lo_mhz": 54.0,
+        "hi_mhz": 72.0,
+        "kind": "Phone",
+        "label": "TV Channels 2-4"
+      },
+      {
+        "lo_mhz": 76.0,
+        "hi_mhz": 108.0,
+        "kind": "Phone",
+        "label": "FM Broadcast"
+      },
+      {
+        "lo_mhz": 108.0,
+        "hi_mhz": 117.0,
+        "kind": "Phone",
+        "label": "Air Band VOR/ILS"
+      },
+      {
+        "lo_mhz": 117.0,
+        "hi_mhz": 137.0,
+        "kind": "Phone",
+        "label": "Air Band Voice"
+      },
+      {
+        "lo_mhz": 144.0,
+        "hi_mhz": 148.0,
+        "kind": "All",
+        "label": "2m Ham Band"
+      },
+      {
+        "lo_mhz": 162.4,
+        "hi_mhz": 162.7,
+        "kind": "Phone",
+        "label": "Weatheradio"
+      },
+      {
+        "lo_mhz": 174.0,
+        "hi_mhz": 216.0,
+        "kind": "Phone",
+        "label": "TV Channels 7-13"
+      },
+      {
+        "lo_mhz": 222.0,
+        "hi_mhz": 225.0,
+        "kind": "All",
+        "label": "1.25m Ham Band"
+      },
+      {
+        "lo_mhz": 430.0,
+        "hi_mhz": 450.0,
+        "kind": "All",
+        "label": "70cm Ham Band"
+      },
+      {
+        "lo_mhz": 470.0,
+        "hi_mhz": 608.0,
+        "kind": "Phone",
+        "label": "TV Channels 14-36"
+      },
+      {
+        "lo_mhz": 614.0,
+        "hi_mhz": 806.0,
+        "kind": "Phone",
+        "label": "TV Channels 38-51"
+      },
+      {
+        "lo_mhz": 806.0,
+        "hi_mhz": 890.0,
+        "kind": "Phone",
+        "label": "Trunked Mobile"
+      },
+      {
+        "lo_mhz": 902.0,
+        "hi_mhz": 928.0,
+        "kind": "All",
+        "label": "33cm Ham Band"
+      },
+      {
+        "lo_mhz": 1240.0,
+        "hi_mhz": 1300.0,
+        "kind": "All",
+        "label": "23cm Ham Band"
+      },
+      {
+        "lo_mhz": 2300.0,
+        "hi_mhz": 2450.0,
+        "kind": "All",
+        "label": "13cm Ham Band"
+      }
+    ]
+  }
+}

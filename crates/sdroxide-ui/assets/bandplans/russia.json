@@ -1,0 +1,3204 @@
+{
+  "readme": [
+    "Converted from SDR++ bandplan.",
+    "Edit, save, then press RELOAD BAND PLAN on the General tab."
+  ],
+  "region1": {
+    "bands": [
+      {
+        "band": "M2200",
+        "lo_mhz": 0.1357,
+        "hi_mhz": 0.1378
+      },
+      {
+        "band": "Fm",
+        "lo_mhz": 87.5,
+        "hi_mhz": 108.0
+      }
+    ],
+    "segments": [
+      {
+        "lo_mhz": 0.1357,
+        "hi_mhz": 0.1378,
+        "kind": "All",
+        "label": "2200m"
+      },
+      {
+        "lo_mhz": 0.144,
+        "hi_mhz": 0.415,
+        "kind": "Phone",
+        "label": "LW"
+      },
+      {
+        "lo_mhz": 0.52,
+        "hi_mhz": 1.602,
+        "kind": "Phone",
+        "label": "MW"
+      },
+      {
+        "lo_mhz": 1.81,
+        "hi_mhz": 1.838,
+        "kind": "All",
+        "label": "160m CW"
+      },
+      {
+        "lo_mhz": 1.838,
+        "hi_mhz": 1.84,
+        "kind": "All",
+        "label": "160m NB"
+      },
+      {
+        "lo_mhz": 1.84,
+        "hi_mhz": 2.0,
+        "kind": "All",
+        "label": "160m"
+      },
+      {
+        "lo_mhz": 3.2,
+        "hi_mhz": 3.4,
+        "kind": "Phone",
+        "label": "SW 90m"
+      },
+      {
+        "lo_mhz": 3.5,
+        "hi_mhz": 3.51,
+        "kind": "All",
+        "label": "80m CW"
+      },
+      {
+        "lo_mhz": 3.51,
+        "hi_mhz": 3.56,
+        "kind": "All",
+        "label": "80m CW Contest"
+      },
+      {
+        "lo_mhz": 3.56,
+        "hi_mhz": 3.57,
+        "kind": "All",
+        "label": "80m CW"
+      },
+      {
+        "lo_mhz": 3.57,
+        "hi_mhz": 3.6,
+        "kind": "All",
+        "label": "80m NB"
+      },
+      {
+        "lo_mhz": 3.6,
+        "hi_mhz": 3.65,
+        "kind": "All",
+        "label": "80m SSB Contest"
+      },
+      {
+        "lo_mhz": 3.65,
+        "hi_mhz": 3.7,
+        "kind": "All",
+        "label": "80m"
+      },
+      {
+        "lo_mhz": 3.7,
+        "hi_mhz": 3.8,
+        "kind": "All",
+        "label": "80m SSB Contest"
+      },
+      {
+        "lo_mhz": 3.9,
+        "hi_mhz": 4.0,
+        "kind": "Phone",
+        "label": "SW 75m"
+      },
+      {
+        "lo_mhz": 4.75,
+        "hi_mhz": 5.06,
+        "kind": "Phone",
+        "label": "SW 60m"
+      },
+      {
+        "lo_mhz": 5.9,
+        "hi_mhz": 6.2,
+        "kind": "Phone",
+        "label": "SW 49m"
+      },
+      {
+        "lo_mhz": 7.0,
+        "hi_mhz": 7.04,
+        "kind": "All",
+        "label": "40m CW"
+      },
+      {
+        "lo_mhz": 7.04,
+        "hi_mhz": 7.05,
+        "kind": "All",
+        "label": "40m NB, Digi 500Hz"
+      },
+      {
+        "lo_mhz": 7.05,
+        "hi_mhz": 7.053,
+        "kind": "All",
+        "label": "40m Digi"
+      },
+      {
+        "lo_mhz": 7.053,
+        "hi_mhz": 7.2,
+        "kind": "All",
+        "label": "40m"
+      },
+      {
+        "lo_mhz": 9.5,
+        "hi_mhz": 9.9,
+        "kind": "Phone",
+        "label": "SW 31m"
+      },
+      {
+        "lo_mhz": 10.1,
+        "hi_mhz": 10.13,
+        "kind": "All",
+        "label": "30m CW"
+      },
+      {
+        "lo_mhz": 10.13,
+        "hi_mhz": 10.15,
+        "kind": "All",
+        "label": "30m NB"
+      },
+      {
+        "lo_mhz": 11.65,
+        "hi_mhz": 12.05,
+        "kind": "Phone",
+        "label": "SW 25m"
+      },
+      {
+        "lo_mhz": 13.6,
+        "hi_mhz": 13.8,
+        "kind": "Phone",
+        "label": "SW 22m"
+      },
+      {
+        "lo_mhz": 14.0,
+        "hi_mhz": 14.07,
+        "kind": "All",
+        "label": "20m CW"
+      },
+      {
+        "lo_mhz": 14.07,
+        "hi_mhz": 14.099,
+        "kind": "All",
+        "label": "20m NB"
+      },
+      {
+        "lo_mhz": 14.099,
+        "hi_mhz": 14.101,
+        "kind": "All",
+        "label": "20m Beacons"
+      },
+      {
+        "lo_mhz": 14.101,
+        "hi_mhz": 14.112,
+        "kind": "All",
+        "label": "20m Digi"
+      },
+      {
+        "lo_mhz": 14.112,
+        "hi_mhz": 14.35,
+        "kind": "All",
+        "label": "20m"
+      },
+      {
+        "lo_mhz": 15.1,
+        "hi_mhz": 15.6,
+        "kind": "Phone",
+        "label": "SW 19m"
+      },
+      {
+        "lo_mhz": 17.55,
+        "hi_mhz": 17.9,
+        "kind": "Phone",
+        "label": "SW 16m"
+      },
+      {
+        "lo_mhz": 18.068,
+        "hi_mhz": 18.095,
+        "kind": "All",
+        "label": "17m CW"
+      },
+      {
+        "lo_mhz": 18.095,
+        "hi_mhz": 18.109,
+        "kind": "All",
+        "label": "17m NB"
+      },
+      {
+        "lo_mhz": 18.109,
+        "hi_mhz": 18.111,
+        "kind": "All",
+        "label": "17m Beacons"
+      },
+      {
+        "lo_mhz": 18.111,
+        "hi_mhz": 18.12,
+        "kind": "All",
+        "label": "17m Digi"
+      },
+      {
+        "lo_mhz": 18.12,
+        "hi_mhz": 18.168,
+        "kind": "All",
+        "label": "17m"
+      },
+      {
+        "lo_mhz": 21.0,
+        "hi_mhz": 21.07,
+        "kind": "All",
+        "label": "15m CW"
+      },
+      {
+        "lo_mhz": 21.07,
+        "hi_mhz": 21.11,
+        "kind": "All",
+        "label": "15m NB Digi"
+      },
+      {
+        "lo_mhz": 21.11,
+        "hi_mhz": 21.12,
+        "kind": "All",
+        "label": "15m Digital"
+      },
+      {
+        "lo_mhz": 21.12,
+        "hi_mhz": 21.149,
+        "kind": "All",
+        "label": "15m NB"
+      },
+      {
+        "lo_mhz": 21.149,
+        "hi_mhz": 21.151,
+        "kind": "All",
+        "label": "15m Beacons"
+      },
+      {
+        "lo_mhz": 21.151,
+        "hi_mhz": 21.45,
+        "kind": "All",
+        "label": "15m"
+      },
+      {
+        "lo_mhz": 21.45,
+        "hi_mhz": 21.85,
+        "kind": "Phone",
+        "label": "SW 13m"
+      },
+      {
+        "lo_mhz": 24.89,
+        "hi_mhz": 24.915,
+        "kind": "All",
+        "label": "12m CW"
+      },
+      {
+        "lo_mhz": 24.915,
+        "hi_mhz": 24.929,
+        "kind": "All",
+        "label": "12m NB"
+      },
+      {
+        "lo_mhz": 24.929,
+        "hi_mhz": 24.931,
+        "kind": "All",
+        "label": "12m Beacons"
+      },
+      {
+        "lo_mhz": 24.931,
+        "hi_mhz": 24.99,
+        "kind": "All",
+        "label": "12m"
+      },
+      {
+        "lo_mhz": 25.65,
+        "hi_mhz": 26.1,
+        "kind": "Phone",
+        "label": "SW 11m"
+      },
+      {
+        "lo_mhz": 26.96,
+        "hi_mhz": 27.41,
+        "kind": "All",
+        "label": "CB"
+      },
+      {
+        "lo_mhz": 28.0,
+        "hi_mhz": 28.07,
+        "kind": "All",
+        "label": "10m CW"
+      },
+      {
+        "lo_mhz": 28.07,
+        "hi_mhz": 28.15,
+        "kind": "All",
+        "label": "10m NB Digital"
+      },
+      {
+        "lo_mhz": 28.15,
+        "hi_mhz": 28.19,
+        "kind": "All",
+        "label": "10m NB"
+      },
+      {
+        "lo_mhz": 28.19,
+        "hi_mhz": 28.199,
+        "kind": "All",
+        "label": "10m Regional Beacons"
+      },
+      {
+        "lo_mhz": 28.199,
+        "hi_mhz": 28.201,
+        "kind": "All",
+        "label": "10m International Beacons"
+      },
+      {
+        "lo_mhz": 28.201,
+        "hi_mhz": 28.225,
+        "kind": "All",
+        "label": "10m Beacons"
+      },
+      {
+        "lo_mhz": 28.225,
+        "hi_mhz": 28.3,
+        "kind": "All",
+        "label": "10m Wide Beacons"
+      },
+      {
+        "lo_mhz": 28.3,
+        "hi_mhz": 28.32,
+        "kind": "All",
+        "label": "10m Digi"
+      },
+      {
+        "lo_mhz": 28.32,
+        "hi_mhz": 29.0,
+        "kind": "All",
+        "label": "10m"
+      },
+      {
+        "lo_mhz": 29.0,
+        "hi_mhz": 29.1,
+        "kind": "All",
+        "label": "10m Wide"
+      },
+      {
+        "lo_mhz": 29.1,
+        "hi_mhz": 29.2,
+        "kind": "All",
+        "label": "10m FM Simplex"
+      },
+      {
+        "lo_mhz": 29.2,
+        "hi_mhz": 29.3,
+        "kind": "All",
+        "label": "10m Wide Digi"
+      },
+      {
+        "lo_mhz": 29.3,
+        "hi_mhz": 29.51,
+        "kind": "All",
+        "label": "10m Sat"
+      },
+      {
+        "lo_mhz": 29.51,
+        "hi_mhz": 29.52,
+        "kind": "All",
+        "label": "10m Guard Band"
+      },
+      {
+        "lo_mhz": 29.52,
+        "hi_mhz": 29.59,
+        "kind": "All",
+        "label": "10m FM Repeater IN"
+      },
+      {
+        "lo_mhz": 29.59,
+        "hi_mhz": 29.61,
+        "kind": "All",
+        "label": "10m FM Call"
+      },
+      {
+        "lo_mhz": 29.61,
+        "hi_mhz": 29.62,
+        "kind": "All",
+        "label": "10m FM Simplex Repeater"
+      },
+      {
+        "lo_mhz": 29.62,
+        "hi_mhz": 29.7,
+        "kind": "All",
+        "label": "10m FM Repeater OUT"
+      },
+      {
+        "lo_mhz": 65.9,
+        "hi_mhz": 74.0,
+        "kind": "Phone",
+        "label": "Broadcast FM(OIRT)"
+      },
+      {
+        "lo_mhz": 87.5,
+        "hi_mhz": 108.0,
+        "kind": "Phone",
+        "label": "Broadcast FM(CCIR)"
+      },
+      {
+        "lo_mhz": 108.0,
+        "hi_mhz": 118.0,
+        "kind": "Phone",
+        "label": "Air Band VOR/ILS"
+      },
+      {
+        "lo_mhz": 118.0,
+        "hi_mhz": 137.0,
+        "kind": "Phone",
+        "label": "Air Band Voice"
+      },
+      {
+        "lo_mhz": 137.0,
+        "hi_mhz": 138.0,
+        "kind": "Digi",
+        "label": "Polar Orbiting Satellites"
+      },
+      {
+        "lo_mhz": 144.035,
+        "hi_mhz": 144.11,
+        "kind": "All",
+        "label": "2m CW"
+      },
+      {
+        "lo_mhz": 144.11,
+        "hi_mhz": 144.18,
+        "kind": "All",
+        "label": "2m CW+Digi"
+      },
+      {
+        "lo_mhz": 144.18,
+        "hi_mhz": 144.36,
+        "kind": "All",
+        "label": "2m CW+SSB"
+      },
+      {
+        "lo_mhz": 144.36,
+        "hi_mhz": 144.4,
+        "kind": "All",
+        "label": "2m CW+SSB+Digi"
+      },
+      {
+        "lo_mhz": 144.4,
+        "hi_mhz": 144.49,
+        "kind": "All",
+        "label": "2m Beacons (CW+Digi)"
+      },
+      {
+        "lo_mhz": 144.5,
+        "hi_mhz": 144.794,
+        "kind": "All",
+        "label": "2m Wide Digi"
+      },
+      {
+        "lo_mhz": 144.794,
+        "hi_mhz": 144.99,
+        "kind": "All",
+        "label": "2m Digi"
+      },
+      {
+        "lo_mhz": 144.99,
+        "hi_mhz": 145.194,
+        "kind": "All",
+        "label": "2m FM Repeater IN"
+      },
+      {
+        "lo_mhz": 145.194,
+        "hi_mhz": 145.206,
+        "kind": "All",
+        "label": "2m FM Sat"
+      },
+      {
+        "lo_mhz": 145.206,
+        "hi_mhz": 145.594,
+        "kind": "All",
+        "label": "2m FM"
+      },
+      {
+        "lo_mhz": 145.594,
+        "hi_mhz": 145.7935,
+        "kind": "All",
+        "label": "2m FM Repeater OUT"
+      },
+      {
+        "lo_mhz": 145.7935,
+        "hi_mhz": 145.806,
+        "kind": "All",
+        "label": "2m FM Sat"
+      },
+      {
+        "lo_mhz": 145.806,
+        "hi_mhz": 146.0,
+        "kind": "All",
+        "label": "2m Sat"
+      },
+      {
+        "lo_mhz": 151.7125,
+        "hi_mhz": 156.0125,
+        "kind": "All",
+        "label": "Train communications"
+      },
+      {
+        "lo_mhz": 156.0,
+        "hi_mhz": 162.025,
+        "kind": "Phone",
+        "label": "Marine"
+      },
+      {
+        "lo_mhz": 225.0,
+        "hi_mhz": 240.0,
+        "kind": "Phone",
+        "label": "Military Air"
+      },
+      {
+        "lo_mhz": 240.0,
+        "hi_mhz": 270.0,
+        "kind": "Phone",
+        "label": "Military Sat / Military Air"
+      },
+      {
+        "lo_mhz": 270.0,
+        "hi_mhz": 380.0,
+        "kind": "Phone",
+        "label": "Military Air"
+      },
+      {
+        "lo_mhz": 430.0,
+        "hi_mhz": 432.025,
+        "kind": "All",
+        "label": "70cm"
+      },
+      {
+        "lo_mhz": 432.025,
+        "hi_mhz": 432.1,
+        "kind": "All",
+        "label": "70cm CW+Digi"
+      },
+      {
+        "lo_mhz": 432.1,
+        "hi_mhz": 432.4,
+        "kind": "All",
+        "label": "70cm CW+SSB+Digi"
+      },
+      {
+        "lo_mhz": 432.4,
+        "hi_mhz": 432.5,
+        "kind": "All",
+        "label": "70cm Beacons"
+      },
+      {
+        "lo_mhz": 432.5,
+        "hi_mhz": 433.0,
+        "kind": "All",
+        "label": "70cm"
+      },
+      {
+        "lo_mhz": 433.0,
+        "hi_mhz": 433.075,
+        "kind": "All",
+        "label": "70cm FM Repeaters in"
+      },
+      {
+        "lo_mhz": 433.075,
+        "hi_mhz": 433.6,
+        "kind": "All",
+        "label": "LPD / 70cm FM Repeaters in"
+      },
+      {
+        "lo_mhz": 433.6,
+        "hi_mhz": 434.0,
+        "kind": "All",
+        "label": "LPD / 70cm"
+      },
+      {
+        "lo_mhz": 434.0,
+        "hi_mhz": 434.1,
+        "kind": "All",
+        "label": "LPD / 70cm CW+Digi"
+      },
+      {
+        "lo_mhz": 434.1,
+        "hi_mhz": 434.6,
+        "kind": "All",
+        "label": "LPD / 70cm"
+      },
+      {
+        "lo_mhz": 434.6,
+        "hi_mhz": 434.775,
+        "kind": "All",
+        "label": "LPD / 70cm FM Repeaters out"
+      },
+      {
+        "lo_mhz": 434.775,
+        "hi_mhz": 435.0,
+        "kind": "All",
+        "label": "70cm FM Repeaters out"
+      },
+      {
+        "lo_mhz": 435.0,
+        "hi_mhz": 440.0,
+        "kind": "All",
+        "label": "70cm SAT"
+      },
+      {
+        "lo_mhz": 446.0,
+        "hi_mhz": 446.2,
+        "kind": "All",
+        "label": "PMR"
+      },
+      {
+        "lo_mhz": 451.0,
+        "hi_mhz": 456.0,
+        "kind": "Phone",
+        "label": "LTE-FDD-450 Uplink"
+      },
+      {
+        "lo_mhz": 461.0,
+        "hi_mhz": 466.0,
+        "kind": "Phone",
+        "label": "LTE-FDD-450 Downlink"
+      },
+      {
+        "lo_mhz": 470.0,
+        "hi_mhz": 790.0,
+        "kind": "Phone",
+        "label": "UHF TV"
+      },
+      {
+        "lo_mhz": 791.0,
+        "hi_mhz": 821.0,
+        "kind": "Phone",
+        "label": "LTE-800-FDD Downlink"
+      },
+      {
+        "lo_mhz": 832.0,
+        "hi_mhz": 862.0,
+        "kind": "Phone",
+        "label": "LTE-800-FDD Uplink"
+      },
+      {
+        "lo_mhz": 880.0,
+        "hi_mhz": 915.0,
+        "kind": "Phone",
+        "label": "GSM-900 Uplink"
+      },
+      {
+        "lo_mhz": 925.0,
+        "hi_mhz": 960.0,
+        "kind": "Phone",
+        "label": "GSM-900 Downlink"
+      },
+      {
+        "lo_mhz": 1000.0,
+        "hi_mhz": 1089.998,
+        "kind": "Phone",
+        "label": "L-Band"
+      },
+      {
+        "lo_mhz": 1089.998,
+        "hi_mhz": 1090.002,
+        "kind": "Phone",
+        "label": "ADS-B / L-Band"
+      },
+      {
+        "lo_mhz": 1090.002,
+        "hi_mhz": 1260.0,
+        "kind": "Phone",
+        "label": "L-Band"
+      },
+      {
+        "lo_mhz": 1260.0,
+        "hi_mhz": 1270.0,
+        "kind": "All",
+        "label": "23cm SAT / L-Band"
+      },
+      {
+        "lo_mhz": 1270.0,
+        "hi_mhz": 1290.994,
+        "kind": "All",
+        "label": "23cm / L-Band"
+      },
+      {
+        "lo_mhz": 1290.994,
+        "hi_mhz": 1291.481,
+        "kind": "All",
+        "label": "23cm FM Repeater IN / L-Band"
+      },
+      {
+        "lo_mhz": 1291.481,
+        "hi_mhz": 1296.0,
+        "kind": "All",
+        "label": "23cm / L-Band"
+      },
+      {
+        "lo_mhz": 1296.025,
+        "hi_mhz": 1296.15,
+        "kind": "All",
+        "label": "23cm CW+Digi / L-Band"
+      },
+      {
+        "lo_mhz": 1296.15,
+        "hi_mhz": 1296.8,
+        "kind": "All",
+        "label": "23cm / L-Band"
+      },
+      {
+        "lo_mhz": 1296.8,
+        "hi_mhz": 1296.994,
+        "kind": "All",
+        "label": "23cm Beacons (CW+Digi) / L-Band"
+      },
+      {
+        "lo_mhz": 1296.994,
+        "hi_mhz": 1297.49,
+        "kind": "All",
+        "label": "23cm FM Repeater OUT / L-Band"
+      },
+      {
+        "lo_mhz": 1297.49,
+        "hi_mhz": 1298.0,
+        "kind": "All",
+        "label": "23cm FM / L-Band"
+      },
+      {
+        "lo_mhz": 1298.0,
+        "hi_mhz": 1300.0,
+        "kind": "All",
+        "label": "23cm / L-Band"
+      },
+      {
+        "lo_mhz": 1300.0,
+        "hi_mhz": 1710.0,
+        "kind": "Phone",
+        "label": "L-Band"
+      },
+      {
+        "lo_mhz": 1710.0,
+        "hi_mhz": 1785.0,
+        "kind": "Phone",
+        "label": "DCS-1800 Uplink / L-Band"
+      },
+      {
+        "lo_mhz": 1785.0,
+        "hi_mhz": 1805.0,
+        "kind": "Phone",
+        "label": "L-Band"
+      },
+      {
+        "lo_mhz": 1805.0,
+        "hi_mhz": 1880.0,
+        "kind": "Phone",
+        "label": "DCS-1800 Downlink / L-Band"
+      },
+      {
+        "lo_mhz": 1880.0,
+        "hi_mhz": 1900.0,
+        "kind": "Phone",
+        "label": "DECT Phones / L-Band"
+      },
+      {
+        "lo_mhz": 1900.0,
+        "hi_mhz": 1920.0,
+        "kind": "Phone",
+        "label": "L-Band"
+      },
+      {
+        "lo_mhz": 1920.0,
+        "hi_mhz": 1980.0,
+        "kind": "Phone",
+        "label": "UMTS-FDD Uplink / L-Band"
+      },
+      {
+        "lo_mhz": 1980.0,
+        "hi_mhz": 2000.0,
+        "kind": "Phone",
+        "label": "L-Band"
+      },
+      {
+        "lo_mhz": 2000.0,
+        "hi_mhz": 2010.0,
+        "kind": "Phone",
+        "label": "S-Band"
+      },
+      {
+        "lo_mhz": 2010.0,
+        "hi_mhz": 2025.0,
+        "kind": "Phone",
+        "label": "UMTS-TDD / S-Band"
+      },
+      {
+        "lo_mhz": 2025.0,
+        "hi_mhz": 2110.0,
+        "kind": "Phone",
+        "label": "S-Band"
+      },
+      {
+        "lo_mhz": 2110.0,
+        "hi_mhz": 2170.0,
+        "kind": "Phone",
+        "label": "UMTS-FDD Downlink / S-Band"
+      },
+      {
+        "lo_mhz": 2170.0,
+        "hi_mhz": 2320.0,
+        "kind": "Phone",
+        "label": "S-Band"
+      },
+      {
+        "lo_mhz": 2320.0,
+        "hi_mhz": 2320.15,
+        "kind": "All",
+        "label": "13cm EME / S-Band"
+      },
+      {
+        "lo_mhz": 2320.15,
+        "hi_mhz": 2400.0,
+        "kind": "Phone",
+        "label": "S-Band"
+      },
+      {
+        "lo_mhz": 2400.0,
+        "hi_mhz": 2450.0,
+        "kind": "All",
+        "label": "13cm SAT / 2.4GHz WiFi / S-Band"
+      },
+      {
+        "lo_mhz": 2450.0,
+        "hi_mhz": 2483.5,
+        "kind": "Phone",
+        "label": "2.4GHz WiFi / S-Band"
+      },
+      {
+        "lo_mhz": 2483.5,
+        "hi_mhz": 2500.0,
+        "kind": "Phone",
+        "label": "S-Band"
+      },
+      {
+        "lo_mhz": 2500.0,
+        "hi_mhz": 2570.0,
+        "kind": "Phone",
+        "label": "LTE-FDD Uplink / S-Band"
+      },
+      {
+        "lo_mhz": 2570.0,
+        "hi_mhz": 2620.0,
+        "kind": "Phone",
+        "label": "LTE-TDD / S-Band"
+      },
+      {
+        "lo_mhz": 2620.0,
+        "hi_mhz": 2690.0,
+        "kind": "Phone",
+        "label": "LTE-FDD Downlink / S-Band"
+      },
+      {
+        "lo_mhz": 2690.0,
+        "hi_mhz": 4000.0,
+        "kind": "Phone",
+        "label": "S-Band"
+      },
+      {
+        "lo_mhz": 4000.0,
+        "hi_mhz": 5150.0,
+        "kind": "Phone",
+        "label": "C-Band"
+      },
+      {
+        "lo_mhz": 5150.0,
+        "hi_mhz": 5350.0,
+        "kind": "Phone",
+        "label": "5GHz WiFi / C-Band"
+      },
+      {
+        "lo_mhz": 5350.0,
+        "hi_mhz": 5650.0,
+        "kind": "Phone",
+        "label": "C-Band"
+      },
+      {
+        "lo_mhz": 5650.0,
+        "hi_mhz": 5670.0,
+        "kind": "All",
+        "label": "6cm CW+Digi / 5GHz WiFi / C-Band"
+      },
+      {
+        "lo_mhz": 5670.0,
+        "hi_mhz": 5725.0,
+        "kind": "Phone",
+        "label": "5GHz WiFi / C-Band"
+      },
+      {
+        "lo_mhz": 5725.0,
+        "hi_mhz": 5760.0,
+        "kind": "All",
+        "label": "6cm Digi / 5GHz WiFi / C-Band"
+      },
+      {
+        "lo_mhz": 5760.0,
+        "hi_mhz": 5762.0,
+        "kind": "Phone",
+        "label": "C-Band / 5GHz WiFi"
+      },
+      {
+        "lo_mhz": 5762.0,
+        "hi_mhz": 5790.0,
+        "kind": "All",
+        "label": "6cm Digi / 5GHz WiFi / C-Band"
+      },
+      {
+        "lo_mhz": 5790.0,
+        "hi_mhz": 5850.0,
+        "kind": "All",
+        "label": "6cm CW+Digi / 5GHz WiFi / C-Band"
+      },
+      {
+        "lo_mhz": 5850.0,
+        "hi_mhz": 8000.0,
+        "kind": "Phone",
+        "label": "C-Band"
+      },
+      {
+        "lo_mhz": 8000.0,
+        "hi_mhz": 10000.0,
+        "kind": "Phone",
+        "label": "X-Band"
+      },
+      {
+        "lo_mhz": 10000.0,
+        "hi_mhz": 10150.0,
+        "kind": "All",
+        "label": "3cm CW+Digi / X-Band"
+      },
+      {
+        "lo_mhz": 10150.0,
+        "hi_mhz": 10250.0,
+        "kind": "All",
+        "label": "3cm / X-Band"
+      },
+      {
+        "lo_mhz": 10250.0,
+        "hi_mhz": 10350.0,
+        "kind": "All",
+        "label": "3cm CW+Digi / X-Band"
+      },
+      {
+        "lo_mhz": 10350.0,
+        "hi_mhz": 10368.0,
+        "kind": "All",
+        "label": "3cm / X-Band"
+      },
+      {
+        "lo_mhz": 10368.0,
+        "hi_mhz": 10370.0,
+        "kind": "All",
+        "label": "3cm CW+Digi / X-Band"
+      },
+      {
+        "lo_mhz": 10370.0,
+        "hi_mhz": 10450.0,
+        "kind": "All",
+        "label": "3cm / X-Band"
+      },
+      {
+        "lo_mhz": 10450.0,
+        "hi_mhz": 10500.0,
+        "kind": "All",
+        "label": "3cm SAT / X-Band"
+      },
+      {
+        "lo_mhz": 10500.0,
+        "hi_mhz": 12000.0,
+        "kind": "Phone",
+        "label": "X-Band"
+      },
+      {
+        "lo_mhz": 24000.0,
+        "hi_mhz": 24048.0,
+        "kind": "All",
+        "label": "1.2cm SAT"
+      },
+      {
+        "lo_mhz": 24048.0,
+        "hi_mhz": 24050.0,
+        "kind": "All",
+        "label": "1.2cm Digi"
+      },
+      {
+        "lo_mhz": 24050.0,
+        "hi_mhz": 24250.0,
+        "kind": "All",
+        "label": "1.2cm"
+      },
+      {
+        "lo_mhz": 47002.0,
+        "hi_mhz": 47200.0,
+        "kind": "All",
+        "label": "6mm"
+      },
+      {
+        "lo_mhz": 76000.0,
+        "hi_mhz": 78000.0,
+        "kind": "All",
+        "label": "4mm"
+      },
+      {
+        "lo_mhz": 122251.0,
+        "hi_mhz": 123000.0,
+        "kind": "All",
+        "label": "2.5mm"
+      },
+      {
+        "lo_mhz": 134001.0,
+        "hi_mhz": 141000.0,
+        "kind": "All",
+        "label": "2mm"
+      },
+      {
+        "lo_mhz": 241000.0,
+        "hi_mhz": 250000.0,
+        "kind": "All",
+        "label": "1mm"
+      }
+    ]
+  },
+  "region2": {
+    "bands": [
+      {
+        "band": "M2200",
+        "lo_mhz": 0.1357,
+        "hi_mhz": 0.1378
+      },
+      {
+        "band": "Fm",
+        "lo_mhz": 87.5,
+        "hi_mhz": 108.0
+      }
+    ],
+    "segments": [
+      {
+        "lo_mhz": 0.1357,
+        "hi_mhz": 0.1378,
+        "kind": "All",
+        "label": "2200m"
+      },
+      {
+        "lo_mhz": 0.144,
+        "hi_mhz": 0.415,
+        "kind": "Phone",
+        "label": "LW"
+      },
+      {
+        "lo_mhz": 0.52,
+        "hi_mhz": 1.602,
+        "kind": "Phone",
+        "label": "MW"
+      },
+      {
+        "lo_mhz": 1.81,
+        "hi_mhz": 1.838,
+        "kind": "All",
+        "label": "160m CW"
+      },
+      {
+        "lo_mhz": 1.838,
+        "hi_mhz": 1.84,
+        "kind": "All",
+        "label": "160m NB"
+      },
+      {
+        "lo_mhz": 1.84,
+        "hi_mhz": 2.0,
+        "kind": "All",
+        "label": "160m"
+      },
+      {
+        "lo_mhz": 3.2,
+        "hi_mhz": 3.4,
+        "kind": "Phone",
+        "label": "SW 90m"
+      },
+      {
+        "lo_mhz": 3.5,
+        "hi_mhz": 3.51,
+        "kind": "All",
+        "label": "80m CW"
+      },
+      {
+        "lo_mhz": 3.51,
+        "hi_mhz": 3.56,
+        "kind": "All",
+        "label": "80m CW Contest"
+      },
+      {
+        "lo_mhz": 3.56,
+        "hi_mhz": 3.57,
+        "kind": "All",
+        "label": "80m CW"
+      },
+      {
+        "lo_mhz": 3.57,
+        "hi_mhz": 3.6,
+        "kind": "All",
+        "label": "80m NB"
+      },
+      {
+        "lo_mhz": 3.6,
+        "hi_mhz": 3.65,
+        "kind": "All",
+        "label": "80m SSB Contest"
+      },
+      {
+        "lo_mhz": 3.65,
+        "hi_mhz": 3.7,
+        "kind": "All",
+        "label": "80m"
+      },
+      {
+        "lo_mhz": 3.7,
+        "hi_mhz": 3.8,
+        "kind": "All",
+        "label": "80m SSB Contest"
+      },
+      {
+        "lo_mhz": 3.9,
+        "hi_mhz": 4.0,
+        "kind": "Phone",
+        "label": "SW 75m"
+      },
+      {
+        "lo_mhz": 4.75,
+        "hi_mhz": 5.06,
+        "kind": "Phone",
+        "label": "SW 60m"
+      },
+      {
+        "lo_mhz": 5.9,
+        "hi_mhz": 6.2,
+        "kind": "Phone",
+        "label": "SW 49m"
+      },
+      {
+        "lo_mhz": 7.0,
+        "hi_mhz": 7.04,
+        "kind": "All",
+        "label": "40m CW"
+      },
+      {
+        "lo_mhz": 7.04,
+        "hi_mhz": 7.05,
+        "kind": "All",
+        "label": "40m NB, Digi 500Hz"
+      },
+      {
+        "lo_mhz": 7.05,
+        "hi_mhz": 7.053,
+        "kind": "All",
+        "label": "40m Digi"
+      },
+      {
+        "lo_mhz": 7.053,
+        "hi_mhz": 7.2,
+        "kind": "All",
+        "label": "40m"
+      },
+      {
+        "lo_mhz": 9.5,
+        "hi_mhz": 9.9,
+        "kind": "Phone",
+        "label": "SW 31m"
+      },
+      {
+        "lo_mhz": 10.1,
+        "hi_mhz": 10.13,
+        "kind": "All",
+        "label": "30m CW"
+      },
+      {
+        "lo_mhz": 10.13,
+        "hi_mhz": 10.15,
+        "kind": "All",
+        "label": "30m NB"
+      },
+      {
+        "lo_mhz": 11.65,
+        "hi_mhz": 12.05,
+        "kind": "Phone",
+        "label": "SW 25m"
+      },
+      {
+        "lo_mhz": 13.6,
+        "hi_mhz": 13.8,
+        "kind": "Phone",
+        "label": "SW 22m"
+      },
+      {
+        "lo_mhz": 14.0,
+        "hi_mhz": 14.07,
+        "kind": "All",
+        "label": "20m CW"
+      },
+      {
+        "lo_mhz": 14.07,
+        "hi_mhz": 14.099,
+        "kind": "All",
+        "label": "20m NB"
+      },
+      {
+        "lo_mhz": 14.099,
+        "hi_mhz": 14.101,
+        "kind": "All",
+        "label": "20m Beacons"
+      },
+      {
+        "lo_mhz": 14.101,
+        "hi_mhz": 14.112,
+        "kind": "All",
+        "label": "20m Digi"
+      },
+      {
+        "lo_mhz": 14.112,
+        "hi_mhz": 14.35,
+        "kind": "All",
+        "label": "20m"
+      },
+      {
+        "lo_mhz": 15.1,
+        "hi_mhz": 15.6,
+        "kind": "Phone",
+        "label": "SW 19m"
+      },
+      {
+        "lo_mhz": 17.55,
+        "hi_mhz": 17.9,
+        "kind": "Phone",
+        "label": "SW 16m"
+      },
+      {
+        "lo_mhz": 18.068,
+        "hi_mhz": 18.095,
+        "kind": "All",
+        "label": "17m CW"
+      },
+      {
+        "lo_mhz": 18.095,
+        "hi_mhz": 18.109,
+        "kind": "All",
+        "label": "17m NB"
+      },
+      {
+        "lo_mhz": 18.109,
+        "hi_mhz": 18.111,
+        "kind": "All",
+        "label": "17m Beacons"
+      },
+      {
+        "lo_mhz": 18.111,
+        "hi_mhz": 18.12,
+        "kind": "All",
+        "label": "17m Digi"
+      },
+      {
+        "lo_mhz": 18.12,
+        "hi_mhz": 18.168,
+        "kind": "All",
+        "label": "17m"
+      },
+      {
+        "lo_mhz": 21.0,
+        "hi_mhz": 21.07,
+        "kind": "All",
+        "label": "15m CW"
+      },
+      {
+        "lo_mhz": 21.07,
+        "hi_mhz": 21.11,
+        "kind": "All",
+        "label": "15m NB Digi"
+      },
+      {
+        "lo_mhz": 21.11,
+        "hi_mhz": 21.12,
+        "kind": "All",
+        "label": "15m Digital"
+      },
+      {
+        "lo_mhz": 21.12,
+        "hi_mhz": 21.149,
+        "kind": "All",
+        "label": "15m NB"
+      },
+      {
+        "lo_mhz": 21.149,
+        "hi_mhz": 21.151,
+        "kind": "All",
+        "label": "15m Beacons"
+      },
+      {
+        "lo_mhz": 21.151,
+        "hi_mhz": 21.45,
+        "kind": "All",
+        "label": "15m"
+      },
+      {
+        "lo_mhz": 21.45,
+        "hi_mhz": 21.85,
+        "kind": "Phone",
+        "label": "SW 13m"
+      },
+      {
+        "lo_mhz": 24.89,
+        "hi_mhz": 24.915,
+        "kind": "All",
+        "label": "12m CW"
+      },
+      {
+        "lo_mhz": 24.915,
+        "hi_mhz": 24.929,
+        "kind": "All",
+        "label": "12m NB"
+      },
+      {
+        "lo_mhz": 24.929,
+        "hi_mhz": 24.931,
+        "kind": "All",
+        "label": "12m Beacons"
+      },
+      {
+        "lo_mhz": 24.931,
+        "hi_mhz": 24.99,
+        "kind": "All",
+        "label": "12m"
+      },
+      {
+        "lo_mhz": 25.65,
+        "hi_mhz": 26.1,
+        "kind": "Phone",
+        "label": "SW 11m"
+      },
+      {
+        "lo_mhz": 26.96,
+        "hi_mhz": 27.41,
+        "kind": "All",
+        "label": "CB"
+      },
+      {
+        "lo_mhz": 28.0,
+        "hi_mhz": 28.07,
+        "kind": "All",
+        "label": "10m CW"
+      },
+      {
+        "lo_mhz": 28.07,
+        "hi_mhz": 28.15,
+        "kind": "All",
+        "label": "10m NB Digital"
+      },
+      {
+        "lo_mhz": 28.15,
+        "hi_mhz": 28.19,
+        "kind": "All",
+        "label": "10m NB"
+      },
+      {
+        "lo_mhz": 28.19,
+        "hi_mhz": 28.199,
+        "kind": "All",
+        "label": "10m Regional Beacons"
+      },
+      {
+        "lo_mhz": 28.199,
+        "hi_mhz": 28.201,
+        "kind": "All",
+        "label": "10m International Beacons"
+      },
+      {
+        "lo_mhz": 28.201,
+        "hi_mhz": 28.225,
+        "kind": "All",
+        "label": "10m Beacons"
+      },
+      {
+        "lo_mhz": 28.225,
+        "hi_mhz": 28.3,
+        "kind": "All",
+        "label": "10m Wide Beacons"
+      },
+      {
+        "lo_mhz": 28.3,
+        "hi_mhz": 28.32,
+        "kind": "All",
+        "label": "10m Digi"
+      },
+      {
+        "lo_mhz": 28.32,
+        "hi_mhz": 29.0,
+        "kind": "All",
+        "label": "10m"
+      },
+      {
+        "lo_mhz": 29.0,
+        "hi_mhz": 29.1,
+        "kind": "All",
+        "label": "10m Wide"
+      },
+      {
+        "lo_mhz": 29.1,
+        "hi_mhz": 29.2,
+        "kind": "All",
+        "label": "10m FM Simplex"
+      },
+      {
+        "lo_mhz": 29.2,
+        "hi_mhz": 29.3,
+        "kind": "All",
+        "label": "10m Wide Digi"
+      },
+      {
+        "lo_mhz": 29.3,
+        "hi_mhz": 29.51,
+        "kind": "All",
+        "label": "10m Sat"
+      },
+      {
+        "lo_mhz": 29.51,
+        "hi_mhz": 29.52,
+        "kind": "All",
+        "label": "10m Guard Band"
+      },
+      {
+        "lo_mhz": 29.52,
+        "hi_mhz": 29.59,
+        "kind": "All",
+        "label": "10m FM Repeater IN"
+      },
+      {
+        "lo_mhz": 29.59,
+        "hi_mhz": 29.61,
+        "kind": "All",
+        "label": "10m FM Call"
+      },
+      {
+        "lo_mhz": 29.61,
+        "hi_mhz": 29.62,
+        "kind": "All",
+        "label": "10m FM Simplex Repeater"
+      },
+      {
+        "lo_mhz": 29.62,
+        "hi_mhz": 29.7,
+        "kind": "All",
+        "label": "10m FM Repeater OUT"
+      },
+      {
+        "lo_mhz": 65.9,
+        "hi_mhz": 74.0,
+        "kind": "Phone",
+        "label": "Broadcast FM(OIRT)"
+      },
+      {
+        "lo_mhz": 87.5,
+        "hi_mhz": 108.0,
+        "kind": "Phone",
+        "label": "Broadcast FM(CCIR)"
+      },
+      {
+        "lo_mhz": 108.0,
+        "hi_mhz": 118.0,
+        "kind": "Phone",
+        "label": "Air Band VOR/ILS"
+      },
+      {
+        "lo_mhz": 118.0,
+        "hi_mhz": 137.0,
+        "kind": "Phone",
+        "label": "Air Band Voice"
+      },
+      {
+        "lo_mhz": 137.0,
+        "hi_mhz": 138.0,
+        "kind": "Digi",
+        "label": "Polar Orbiting Satellites"
+      },
+      {
+        "lo_mhz": 144.035,
+        "hi_mhz": 144.11,
+        "kind": "All",
+        "label": "2m CW"
+      },
+      {
+        "lo_mhz": 144.11,
+        "hi_mhz": 144.18,
+        "kind": "All",
+        "label": "2m CW+Digi"
+      },
+      {
+        "lo_mhz": 144.18,
+        "hi_mhz": 144.36,
+        "kind": "All",
+        "label": "2m CW+SSB"
+      },
+      {
+        "lo_mhz": 144.36,
+        "hi_mhz": 144.4,
+        "kind": "All",
+        "label": "2m CW+SSB+Digi"
+      },
+      {
+        "lo_mhz": 144.4,
+        "hi_mhz": 144.49,
+        "kind": "All",
+        "label": "2m Beacons (CW+Digi)"
+      },
+      {
+        "lo_mhz": 144.5,
+        "hi_mhz": 144.794,
+        "kind": "All",
+        "label": "2m Wide Digi"
+      },
+      {
+        "lo_mhz": 144.794,
+        "hi_mhz": 144.99,
+        "kind": "All",
+        "label": "2m Digi"
+      },
+      {
+        "lo_mhz": 144.99,
+        "hi_mhz": 145.194,
+        "kind": "All",
+        "label": "2m FM Repeater IN"
+      },
+      {
+        "lo_mhz": 145.194,
+        "hi_mhz": 145.206,
+        "kind": "All",
+        "label": "2m FM Sat"
+      },
+      {
+        "lo_mhz": 145.206,
+        "hi_mhz": 145.594,
+        "kind": "All",
+        "label": "2m FM"
+      },
+      {
+        "lo_mhz": 145.594,
+        "hi_mhz": 145.7935,
+        "kind": "All",
+        "label": "2m FM Repeater OUT"
+      },
+      {
+        "lo_mhz": 145.7935,
+        "hi_mhz": 145.806,
+        "kind": "All",
+        "label": "2m FM Sat"
+      },
+      {
+        "lo_mhz": 145.806,
+        "hi_mhz": 146.0,
+        "kind": "All",
+        "label": "2m Sat"
+      },
+      {
+        "lo_mhz": 151.7125,
+        "hi_mhz": 156.0125,
+        "kind": "All",
+        "label": "Train communications"
+      },
+      {
+        "lo_mhz": 156.0,
+        "hi_mhz": 162.025,
+        "kind": "Phone",
+        "label": "Marine"
+      },
+      {
+        "lo_mhz": 225.0,
+        "hi_mhz": 240.0,
+        "kind": "Phone",
+        "label": "Military Air"
+      },
+      {
+        "lo_mhz": 240.0,
+        "hi_mhz": 270.0,
+        "kind": "Phone",
+        "label": "Military Sat / Military Air"
+      },
+      {
+        "lo_mhz": 270.0,
+        "hi_mhz": 380.0,
+        "kind": "Phone",
+        "label": "Military Air"
+      },
+      {
+        "lo_mhz": 430.0,
+        "hi_mhz": 432.025,
+        "kind": "All",
+        "label": "70cm"
+      },
+      {
+        "lo_mhz": 432.025,
+        "hi_mhz": 432.1,
+        "kind": "All",
+        "label": "70cm CW+Digi"
+      },
+      {
+        "lo_mhz": 432.1,
+        "hi_mhz": 432.4,
+        "kind": "All",
+        "label": "70cm CW+SSB+Digi"
+      },
+      {
+        "lo_mhz": 432.4,
+        "hi_mhz": 432.5,
+        "kind": "All",
+        "label": "70cm Beacons"
+      },
+      {
+        "lo_mhz": 432.5,
+        "hi_mhz": 433.0,
+        "kind": "All",
+        "label": "70cm"
+      },
+      {
+        "lo_mhz": 433.0,
+        "hi_mhz": 433.075,
+        "kind": "All",
+        "label": "70cm FM Repeaters in"
+      },
+      {
+        "lo_mhz": 433.075,
+        "hi_mhz": 433.6,
+        "kind": "All",
+        "label": "LPD / 70cm FM Repeaters in"
+      },
+      {
+        "lo_mhz": 433.6,
+        "hi_mhz": 434.0,
+        "kind": "All",
+        "label": "LPD / 70cm"
+      },
+      {
+        "lo_mhz": 434.0,
+        "hi_mhz": 434.1,
+        "kind": "All",
+        "label": "LPD / 70cm CW+Digi"
+      },
+      {
+        "lo_mhz": 434.1,
+        "hi_mhz": 434.6,
+        "kind": "All",
+        "label": "LPD / 70cm"
+      },
+      {
+        "lo_mhz": 434.6,
+        "hi_mhz": 434.775,
+        "kind": "All",
+        "label": "LPD / 70cm FM Repeaters out"
+      },
+      {
+        "lo_mhz": 434.775,
+        "hi_mhz": 435.0,
+        "kind": "All",
+        "label": "70cm FM Repeaters out"
+      },
+      {
+        "lo_mhz": 435.0,
+        "hi_mhz": 440.0,
+        "kind": "All",
+        "label": "70cm SAT"
+      },
+      {
+        "lo_mhz": 446.0,
+        "hi_mhz": 446.2,
+        "kind": "All",
+        "label": "PMR"
+      },
+      {
+        "lo_mhz": 451.0,
+        "hi_mhz": 456.0,
+        "kind": "Phone",
+        "label": "LTE-FDD-450 Uplink"
+      },
+      {
+        "lo_mhz": 461.0,
+        "hi_mhz": 466.0,
+        "kind": "Phone",
+        "label": "LTE-FDD-450 Downlink"
+      },
+      {
+        "lo_mhz": 470.0,
+        "hi_mhz": 790.0,
+        "kind": "Phone",
+        "label": "UHF TV"
+      },
+      {
+        "lo_mhz": 791.0,
+        "hi_mhz": 821.0,
+        "kind": "Phone",
+        "label": "LTE-800-FDD Downlink"
+      },
+      {
+        "lo_mhz": 832.0,
+        "hi_mhz": 862.0,
+        "kind": "Phone",
+        "label": "LTE-800-FDD Uplink"
+      },
+      {
+        "lo_mhz": 880.0,
+        "hi_mhz": 915.0,
+        "kind": "Phone",
+        "label": "GSM-900 Uplink"
+      },
+      {
+        "lo_mhz": 925.0,
+        "hi_mhz": 960.0,
+        "kind": "Phone",
+        "label": "GSM-900 Downlink"
+      },
+      {
+        "lo_mhz": 1000.0,
+        "hi_mhz": 1089.998,
+        "kind": "Phone",
+        "label": "L-Band"
+      },
+      {
+        "lo_mhz": 1089.998,
+        "hi_mhz": 1090.002,
+        "kind": "Phone",
+        "label": "ADS-B / L-Band"
+      },
+      {
+        "lo_mhz": 1090.002,
+        "hi_mhz": 1260.0,
+        "kind": "Phone",
+        "label": "L-Band"
+      },
+      {
+        "lo_mhz": 1260.0,
+        "hi_mhz": 1270.0,
+        "kind": "All",
+        "label": "23cm SAT / L-Band"
+      },
+      {
+        "lo_mhz": 1270.0,
+        "hi_mhz": 1290.994,
+        "kind": "All",
+        "label": "23cm / L-Band"
+      },
+      {
+        "lo_mhz": 1290.994,
+        "hi_mhz": 1291.481,
+        "kind": "All",
+        "label": "23cm FM Repeater IN / L-Band"
+      },
+      {
+        "lo_mhz": 1291.481,
+        "hi_mhz": 1296.0,
+        "kind": "All",
+        "label": "23cm / L-Band"
+      },
+      {
+        "lo_mhz": 1296.025,
+        "hi_mhz": 1296.15,
+        "kind": "All",
+        "label": "23cm CW+Digi / L-Band"
+      },
+      {
+        "lo_mhz": 1296.15,
+        "hi_mhz": 1296.8,
+        "kind": "All",
+        "label": "23cm / L-Band"
+      },
+      {
+        "lo_mhz": 1296.8,
+        "hi_mhz": 1296.994,
+        "kind": "All",
+        "label": "23cm Beacons (CW+Digi) / L-Band"
+      },
+      {
+        "lo_mhz": 1296.994,
+        "hi_mhz": 1297.49,
+        "kind": "All",
+        "label": "23cm FM Repeater OUT / L-Band"
+      },
+      {
+        "lo_mhz": 1297.49,
+        "hi_mhz": 1298.0,
+        "kind": "All",
+        "label": "23cm FM / L-Band"
+      },
+      {
+        "lo_mhz": 1298.0,
+        "hi_mhz": 1300.0,
+        "kind": "All",
+        "label": "23cm / L-Band"
+      },
+      {
+        "lo_mhz": 1300.0,
+        "hi_mhz": 1710.0,
+        "kind": "Phone",
+        "label": "L-Band"
+      },
+      {
+        "lo_mhz": 1710.0,
+        "hi_mhz": 1785.0,
+        "kind": "Phone",
+        "label": "DCS-1800 Uplink / L-Band"
+      },
+      {
+        "lo_mhz": 1785.0,
+        "hi_mhz": 1805.0,
+        "kind": "Phone",
+        "label": "L-Band"
+      },
+      {
+        "lo_mhz": 1805.0,
+        "hi_mhz": 1880.0,
+        "kind": "Phone",
+        "label": "DCS-1800 Downlink / L-Band"
+      },
+      {
+        "lo_mhz": 1880.0,
+        "hi_mhz": 1900.0,
+        "kind": "Phone",
+        "label": "DECT Phones / L-Band"
+      },
+      {
+        "lo_mhz": 1900.0,
+        "hi_mhz": 1920.0,
+        "kind": "Phone",
+        "label": "L-Band"
+      },
+      {
+        "lo_mhz": 1920.0,
+        "hi_mhz": 1980.0,
+        "kind": "Phone",
+        "label": "UMTS-FDD Uplink / L-Band"
+      },
+      {
+        "lo_mhz": 1980.0,
+        "hi_mhz": 2000.0,
+        "kind": "Phone",
+        "label": "L-Band"
+      },
+      {
+        "lo_mhz": 2000.0,
+        "hi_mhz": 2010.0,
+        "kind": "Phone",
+        "label": "S-Band"
+      },
+      {
+        "lo_mhz": 2010.0,
+        "hi_mhz": 2025.0,
+        "kind": "Phone",
+        "label": "UMTS-TDD / S-Band"
+      },
+      {
+        "lo_mhz": 2025.0,
+        "hi_mhz": 2110.0,
+        "kind": "Phone",
+        "label": "S-Band"
+      },
+      {
+        "lo_mhz": 2110.0,
+        "hi_mhz": 2170.0,
+        "kind": "Phone",
+        "label": "UMTS-FDD Downlink / S-Band"
+      },
+      {
+        "lo_mhz": 2170.0,
+        "hi_mhz": 2320.0,
+        "kind": "Phone",
+        "label": "S-Band"
+      },
+      {
+        "lo_mhz": 2320.0,
+        "hi_mhz": 2320.15,
+        "kind": "All",
+        "label": "13cm EME / S-Band"
+      },
+      {
+        "lo_mhz": 2320.15,
+        "hi_mhz": 2400.0,
+        "kind": "Phone",
+        "label": "S-Band"
+      },
+      {
+        "lo_mhz": 2400.0,
+        "hi_mhz": 2450.0,
+        "kind": "All",
+        "label": "13cm SAT / 2.4GHz WiFi / S-Band"
+      },
+      {
+        "lo_mhz": 2450.0,
+        "hi_mhz": 2483.5,
+        "kind": "Phone",
+        "label": "2.4GHz WiFi / S-Band"
+      },
+      {
+        "lo_mhz": 2483.5,
+        "hi_mhz": 2500.0,
+        "kind": "Phone",
+        "label": "S-Band"
+      },
+      {
+        "lo_mhz": 2500.0,
+        "hi_mhz": 2570.0,
+        "kind": "Phone",
+        "label": "LTE-FDD Uplink / S-Band"
+      },
+      {
+        "lo_mhz": 2570.0,
+        "hi_mhz": 2620.0,
+        "kind": "Phone",
+        "label": "LTE-TDD / S-Band"
+      },
+      {
+        "lo_mhz": 2620.0,
+        "hi_mhz": 2690.0,
+        "kind": "Phone",
+        "label": "LTE-FDD Downlink / S-Band"
+      },
+      {
+        "lo_mhz": 2690.0,
+        "hi_mhz": 4000.0,
+        "kind": "Phone",
+        "label": "S-Band"
+      },
+      {
+        "lo_mhz": 4000.0,
+        "hi_mhz": 5150.0,
+        "kind": "Phone",
+        "label": "C-Band"
+      },
+      {
+        "lo_mhz": 5150.0,
+        "hi_mhz": 5350.0,
+        "kind": "Phone",
+        "label": "5GHz WiFi / C-Band"
+      },
+      {
+        "lo_mhz": 5350.0,
+        "hi_mhz": 5650.0,
+        "kind": "Phone",
+        "label": "C-Band"
+      },
+      {
+        "lo_mhz": 5650.0,
+        "hi_mhz": 5670.0,
+        "kind": "All",
+        "label": "6cm CW+Digi / 5GHz WiFi / C-Band"
+      },
+      {
+        "lo_mhz": 5670.0,
+        "hi_mhz": 5725.0,
+        "kind": "Phone",
+        "label": "5GHz WiFi / C-Band"
+      },
+      {
+        "lo_mhz": 5725.0,
+        "hi_mhz": 5760.0,
+        "kind": "All",
+        "label": "6cm Digi / 5GHz WiFi / C-Band"
+      },
+      {
+        "lo_mhz": 5760.0,
+        "hi_mhz": 5762.0,
+        "kind": "Phone",
+        "label": "C-Band / 5GHz WiFi"
+      },
+      {
+        "lo_mhz": 5762.0,
+        "hi_mhz": 5790.0,
+        "kind": "All",
+        "label": "6cm Digi / 5GHz WiFi / C-Band"
+      },
+      {
+        "lo_mhz": 5790.0,
+        "hi_mhz": 5850.0,
+        "kind": "All",
+        "label": "6cm CW+Digi / 5GHz WiFi / C-Band"
+      },
+      {
+        "lo_mhz": 5850.0,
+        "hi_mhz": 8000.0,
+        "kind": "Phone",
+        "label": "C-Band"
+      },
+      {
+        "lo_mhz": 8000.0,
+        "hi_mhz": 10000.0,
+        "kind": "Phone",
+        "label": "X-Band"
+      },
+      {
+        "lo_mhz": 10000.0,
+        "hi_mhz": 10150.0,
+        "kind": "All",
+        "label": "3cm CW+Digi / X-Band"
+      },
+      {
+        "lo_mhz": 10150.0,
+        "hi_mhz": 10250.0,
+        "kind": "All",
+        "label": "3cm / X-Band"
+      },
+      {
+        "lo_mhz": 10250.0,
+        "hi_mhz": 10350.0,
+        "kind": "All",
+        "label": "3cm CW+Digi / X-Band"
+      },
+      {
+        "lo_mhz": 10350.0,
+        "hi_mhz": 10368.0,
+        "kind": "All",
+        "label": "3cm / X-Band"
+      },
+      {
+        "lo_mhz": 10368.0,
+        "hi_mhz": 10370.0,
+        "kind": "All",
+        "label": "3cm CW+Digi / X-Band"
+      },
+      {
+        "lo_mhz": 10370.0,
+        "hi_mhz": 10450.0,
+        "kind": "All",
+        "label": "3cm / X-Band"
+      },
+      {
+        "lo_mhz": 10450.0,
+        "hi_mhz": 10500.0,
+        "kind": "All",
+        "label": "3cm SAT / X-Band"
+      },
+      {
+        "lo_mhz": 10500.0,
+        "hi_mhz": 12000.0,
+        "kind": "Phone",
+        "label": "X-Band"
+      },
+      {
+        "lo_mhz": 24000.0,
+        "hi_mhz": 24048.0,
+        "kind": "All",
+        "label": "1.2cm SAT"
+      },
+      {
+        "lo_mhz": 24048.0,
+        "hi_mhz": 24050.0,
+        "kind": "All",
+        "label": "1.2cm Digi"
+      },
+      {
+        "lo_mhz": 24050.0,
+        "hi_mhz": 24250.0,
+        "kind": "All",
+        "label": "1.2cm"
+      },
+      {
+        "lo_mhz": 47002.0,
+        "hi_mhz": 47200.0,
+        "kind": "All",
+        "label": "6mm"
+      },
+      {
+        "lo_mhz": 76000.0,
+        "hi_mhz": 78000.0,
+        "kind": "All",
+        "label": "4mm"
+      },
+      {
+        "lo_mhz": 122251.0,
+        "hi_mhz": 123000.0,
+        "kind": "All",
+        "label": "2.5mm"
+      },
+      {
+        "lo_mhz": 134001.0,
+        "hi_mhz": 141000.0,
+        "kind": "All",
+        "label": "2mm"
+      },
+      {
+        "lo_mhz": 241000.0,
+        "hi_mhz": 250000.0,
+        "kind": "All",
+        "label": "1mm"
+      }
+    ]
+  },
+  "region3": {
+    "bands": [
+      {
+        "band": "M2200",
+        "lo_mhz": 0.1357,
+        "hi_mhz": 0.1378
+      },
+      {
+        "band": "Fm",
+        "lo_mhz": 87.5,
+        "hi_mhz": 108.0
+      }
+    ],
+    "segments": [
+      {
+        "lo_mhz": 0.1357,
+        "hi_mhz": 0.1378,
+        "kind": "All",
+        "label": "2200m"
+      },
+      {
+        "lo_mhz": 0.144,
+        "hi_mhz": 0.415,
+        "kind": "Phone",
+        "label": "LW"
+      },
+      {
+        "lo_mhz": 0.52,
+        "hi_mhz": 1.602,
+        "kind": "Phone",
+        "label": "MW"
+      },
+      {
+        "lo_mhz": 1.81,
+        "hi_mhz": 1.838,
+        "kind": "All",
+        "label": "160m CW"
+      },
+      {
+        "lo_mhz": 1.838,
+        "hi_mhz": 1.84,
+        "kind": "All",
+        "label": "160m NB"
+      },
+      {
+        "lo_mhz": 1.84,
+        "hi_mhz": 2.0,
+        "kind": "All",
+        "label": "160m"
+      },
+      {
+        "lo_mhz": 3.2,
+        "hi_mhz": 3.4,
+        "kind": "Phone",
+        "label": "SW 90m"
+      },
+      {
+        "lo_mhz": 3.5,
+        "hi_mhz": 3.51,
+        "kind": "All",
+        "label": "80m CW"
+      },
+      {
+        "lo_mhz": 3.51,
+        "hi_mhz": 3.56,
+        "kind": "All",
+        "label": "80m CW Contest"
+      },
+      {
+        "lo_mhz": 3.56,
+        "hi_mhz": 3.57,
+        "kind": "All",
+        "label": "80m CW"
+      },
+      {
+        "lo_mhz": 3.57,
+        "hi_mhz": 3.6,
+        "kind": "All",
+        "label": "80m NB"
+      },
+      {
+        "lo_mhz": 3.6,
+        "hi_mhz": 3.65,
+        "kind": "All",
+        "label": "80m SSB Contest"
+      },
+      {
+        "lo_mhz": 3.65,
+        "hi_mhz": 3.7,
+        "kind": "All",
+        "label": "80m"
+      },
+      {
+        "lo_mhz": 3.7,
+        "hi_mhz": 3.8,
+        "kind": "All",
+        "label": "80m SSB Contest"
+      },
+      {
+        "lo_mhz": 3.9,
+        "hi_mhz": 4.0,
+        "kind": "Phone",
+        "label": "SW 75m"
+      },
+      {
+        "lo_mhz": 4.75,
+        "hi_mhz": 5.06,
+        "kind": "Phone",
+        "label": "SW 60m"
+      },
+      {
+        "lo_mhz": 5.9,
+        "hi_mhz": 6.2,
+        "kind": "Phone",
+        "label": "SW 49m"
+      },
+      {
+        "lo_mhz": 7.0,
+        "hi_mhz": 7.04,
+        "kind": "All",
+        "label": "40m CW"
+      },
+      {
+        "lo_mhz": 7.04,
+        "hi_mhz": 7.05,
+        "kind": "All",
+        "label": "40m NB, Digi 500Hz"
+      },
+      {
+        "lo_mhz": 7.05,
+        "hi_mhz": 7.053,
+        "kind": "All",
+        "label": "40m Digi"
+      },
+      {
+        "lo_mhz": 7.053,
+        "hi_mhz": 7.2,
+        "kind": "All",
+        "label": "40m"
+      },
+      {
+        "lo_mhz": 9.5,
+        "hi_mhz": 9.9,
+        "kind": "Phone",
+        "label": "SW 31m"
+      },
+      {
+        "lo_mhz": 10.1,
+        "hi_mhz": 10.13,
+        "kind": "All",
+        "label": "30m CW"
+      },
+      {
+        "lo_mhz": 10.13,
+        "hi_mhz": 10.15,
+        "kind": "All",
+        "label": "30m NB"
+      },
+      {
+        "lo_mhz": 11.65,
+        "hi_mhz": 12.05,
+        "kind": "Phone",
+        "label": "SW 25m"
+      },
+      {
+        "lo_mhz": 13.6,
+        "hi_mhz": 13.8,
+        "kind": "Phone",
+        "label": "SW 22m"
+      },
+      {
+        "lo_mhz": 14.0,
+        "hi_mhz": 14.07,
+        "kind": "All",
+        "label": "20m CW"
+      },
+      {
+        "lo_mhz": 14.07,
+        "hi_mhz": 14.099,
+        "kind": "All",
+        "label": "20m NB"
+      },
+      {
+        "lo_mhz": 14.099,
+        "hi_mhz": 14.101,
+        "kind": "All",
+        "label": "20m Beacons"
+      },
+      {
+        "lo_mhz": 14.101,
+        "hi_mhz": 14.112,
+        "kind": "All",
+        "label": "20m Digi"
+      },
+      {
+        "lo_mhz": 14.112,
+        "hi_mhz": 14.35,
+        "kind": "All",
+        "label": "20m"
+      },
+      {
+        "lo_mhz": 15.1,
+        "hi_mhz": 15.6,
+        "kind": "Phone",
+        "label": "SW 19m"
+      },
+      {
+        "lo_mhz": 17.55,
+        "hi_mhz": 17.9,
+        "kind": "Phone",
+        "label": "SW 16m"
+      },
+      {
+        "lo_mhz": 18.068,
+        "hi_mhz": 18.095,
+        "kind": "All",
+        "label": "17m CW"
+      },
+      {
+        "lo_mhz": 18.095,
+        "hi_mhz": 18.109,
+        "kind": "All",
+        "label": "17m NB"
+      },
+      {
+        "lo_mhz": 18.109,
+        "hi_mhz": 18.111,
+        "kind": "All",
+        "label": "17m Beacons"
+      },
+      {
+        "lo_mhz": 18.111,
+        "hi_mhz": 18.12,
+        "kind": "All",
+        "label": "17m Digi"
+      },
+      {
+        "lo_mhz": 18.12,
+        "hi_mhz": 18.168,
+        "kind": "All",
+        "label": "17m"
+      },
+      {
+        "lo_mhz": 21.0,
+        "hi_mhz": 21.07,
+        "kind": "All",
+        "label": "15m CW"
+      },
+      {
+        "lo_mhz": 21.07,
+        "hi_mhz": 21.11,
+        "kind": "All",
+        "label": "15m NB Digi"
+      },
+      {
+        "lo_mhz": 21.11,
+        "hi_mhz": 21.12,
+        "kind": "All",
+        "label": "15m Digital"
+      },
+      {
+        "lo_mhz": 21.12,
+        "hi_mhz": 21.149,
+        "kind": "All",
+        "label": "15m NB"
+      },
+      {
+        "lo_mhz": 21.149,
+        "hi_mhz": 21.151,
+        "kind": "All",
+        "label": "15m Beacons"
+      },
+      {
+        "lo_mhz": 21.151,
+        "hi_mhz": 21.45,
+        "kind": "All",
+        "label": "15m"
+      },
+      {
+        "lo_mhz": 21.45,
+        "hi_mhz": 21.85,
+        "kind": "Phone",
+        "label": "SW 13m"
+      },
+      {
+        "lo_mhz": 24.89,
+        "hi_mhz": 24.915,
+        "kind": "All",
+        "label": "12m CW"
+      },
+      {
+        "lo_mhz": 24.915,
+        "hi_mhz": 24.929,
+        "kind": "All",
+        "label": "12m NB"
+      },
+      {
+        "lo_mhz": 24.929,
+        "hi_mhz": 24.931,
+        "kind": "All",
+        "label": "12m Beacons"
+      },
+      {
+        "lo_mhz": 24.931,
+        "hi_mhz": 24.99,
+        "kind": "All",
+        "label": "12m"
+      },
+      {
+        "lo_mhz": 25.65,
+        "hi_mhz": 26.1,
+        "kind": "Phone",
+        "label": "SW 11m"
+      },
+      {
+        "lo_mhz": 26.96,
+        "hi_mhz": 27.41,
+        "kind": "All",
+        "label": "CB"
+      },
+      {
+        "lo_mhz": 28.0,
+        "hi_mhz": 28.07,
+        "kind": "All",
+        "label": "10m CW"
+      },
+      {
+        "lo_mhz": 28.07,
+        "hi_mhz": 28.15,
+        "kind": "All",
+        "label": "10m NB Digital"
+      },
+      {
+        "lo_mhz": 28.15,
+        "hi_mhz": 28.19,
+        "kind": "All",
+        "label": "10m NB"
+      },
+      {
+        "lo_mhz": 28.19,
+        "hi_mhz": 28.199,
+        "kind": "All",
+        "label": "10m Regional Beacons"
+      },
+      {
+        "lo_mhz": 28.199,
+        "hi_mhz": 28.201,
+        "kind": "All",
+        "label": "10m International Beacons"
+      },
+      {
+        "lo_mhz": 28.201,
+        "hi_mhz": 28.225,
+        "kind": "All",
+        "label": "10m Beacons"
+      },
+      {
+        "lo_mhz": 28.225,
+        "hi_mhz": 28.3,
+        "kind": "All",
+        "label": "10m Wide Beacons"
+      },
+      {
+        "lo_mhz": 28.3,
+        "hi_mhz": 28.32,
+        "kind": "All",
+        "label": "10m Digi"
+      },
+      {
+        "lo_mhz": 28.32,
+        "hi_mhz": 29.0,
+        "kind": "All",
+        "label": "10m"
+      },
+      {
+        "lo_mhz": 29.0,
+        "hi_mhz": 29.1,
+        "kind": "All",
+        "label": "10m Wide"
+      },
+      {
+        "lo_mhz": 29.1,
+        "hi_mhz": 29.2,
+        "kind": "All",
+        "label": "10m FM Simplex"
+      },
+      {
+        "lo_mhz": 29.2,
+        "hi_mhz": 29.3,
+        "kind": "All",
+        "label": "10m Wide Digi"
+      },
+      {
+        "lo_mhz": 29.3,
+        "hi_mhz": 29.51,
+        "kind": "All",
+        "label": "10m Sat"
+      },
+      {
+        "lo_mhz": 29.51,
+        "hi_mhz": 29.52,
+        "kind": "All",
+        "label": "10m Guard Band"
+      },
+      {
+        "lo_mhz": 29.52,
+        "hi_mhz": 29.59,
+        "kind": "All",
+        "label": "10m FM Repeater IN"
+      },
+      {
+        "lo_mhz": 29.59,
+        "hi_mhz": 29.61,
+        "kind": "All",
+        "label": "10m FM Call"
+      },
+      {
+        "lo_mhz": 29.61,
+        "hi_mhz": 29.62,
+        "kind": "All",
+        "label": "10m FM Simplex Repeater"
+      },
+      {
+        "lo_mhz": 29.62,
+        "hi_mhz": 29.7,
+        "kind": "All",
+        "label": "10m FM Repeater OUT"
+      },
+      {
+        "lo_mhz": 65.9,
+        "hi_mhz": 74.0,
+        "kind": "Phone",
+        "label": "Broadcast FM(OIRT)"
+      },
+      {
+        "lo_mhz": 87.5,
+        "hi_mhz": 108.0,
+        "kind": "Phone",
+        "label": "Broadcast FM(CCIR)"
+      },
+      {
+        "lo_mhz": 108.0,
+        "hi_mhz": 118.0,
+        "kind": "Phone",
+        "label": "Air Band VOR/ILS"
+      },
+      {
+        "lo_mhz": 118.0,
+        "hi_mhz": 137.0,
+        "kind": "Phone",
+        "label": "Air Band Voice"
+      },
+      {
+        "lo_mhz": 137.0,
+        "hi_mhz": 138.0,
+        "kind": "Digi",
+        "label": "Polar Orbiting Satellites"
+      },
+      {
+        "lo_mhz": 144.035,
+        "hi_mhz": 144.11,
+        "kind": "All",
+        "label": "2m CW"
+      },
+      {
+        "lo_mhz": 144.11,
+        "hi_mhz": 144.18,
+        "kind": "All",
+        "label": "2m CW+Digi"
+      },
+      {
+        "lo_mhz": 144.18,
+        "hi_mhz": 144.36,
+        "kind": "All",
+        "label": "2m CW+SSB"
+      },
+      {
+        "lo_mhz": 144.36,
+        "hi_mhz": 144.4,
+        "kind": "All",
+        "label": "2m CW+SSB+Digi"
+      },
+      {
+        "lo_mhz": 144.4,
+        "hi_mhz": 144.49,
+        "kind": "All",
+        "label": "2m Beacons (CW+Digi)"
+      },
+      {
+        "lo_mhz": 144.5,
+        "hi_mhz": 144.794,
+        "kind": "All",
+        "label": "2m Wide Digi"
+      },
+      {
+        "lo_mhz": 144.794,
+        "hi_mhz": 144.99,
+        "kind": "All",
+        "label": "2m Digi"
+      },
+      {
+        "lo_mhz": 144.99,
+        "hi_mhz": 145.194,
+        "kind": "All",
+        "label": "2m FM Repeater IN"
+      },
+      {
+        "lo_mhz": 145.194,
+        "hi_mhz": 145.206,
+        "kind": "All",
+        "label": "2m FM Sat"
+      },
+      {
+        "lo_mhz": 145.206,
+        "hi_mhz": 145.594,
+        "kind": "All",
+        "label": "2m FM"
+      },
+      {
+        "lo_mhz": 145.594,
+        "hi_mhz": 145.7935,
+        "kind": "All",
+        "label": "2m FM Repeater OUT"
+      },
+      {
+        "lo_mhz": 145.7935,
+        "hi_mhz": 145.806,
+        "kind": "All",
+        "label": "2m FM Sat"
+      },
+      {
+        "lo_mhz": 145.806,
+        "hi_mhz": 146.0,
+        "kind": "All",
+        "label": "2m Sat"
+      },
+      {
+        "lo_mhz": 151.7125,
+        "hi_mhz": 156.0125,
+        "kind": "All",
+        "label": "Train communications"
+      },
+      {
+        "lo_mhz": 156.0,
+        "hi_mhz": 162.025,
+        "kind": "Phone",
+        "label": "Marine"
+      },
+      {
+        "lo_mhz": 225.0,
+        "hi_mhz": 240.0,
+        "kind": "Phone",
+        "label": "Military Air"
+      },
+      {
+        "lo_mhz": 240.0,
+        "hi_mhz": 270.0,
+        "kind": "Phone",
+        "label": "Military Sat / Military Air"
+      },
+      {
+        "lo_mhz": 270.0,
+        "hi_mhz": 380.0,
+        "kind": "Phone",
+        "label": "Military Air"
+      },
+      {
+        "lo_mhz": 430.0,
+        "hi_mhz": 432.025,
+        "kind": "All",
+        "label": "70cm"
+      },
+      {
+        "lo_mhz": 432.025,
+        "hi_mhz": 432.1,
+        "kind": "All",
+        "label": "70cm CW+Digi"
+      },
+      {
+        "lo_mhz": 432.1,
+        "hi_mhz": 432.4,
+        "kind": "All",
+        "label": "70cm CW+SSB+Digi"
+      },
+      {
+        "lo_mhz": 432.4,
+        "hi_mhz": 432.5,
+        "kind": "All",
+        "label": "70cm Beacons"
+      },
+      {
+        "lo_mhz": 432.5,
+        "hi_mhz": 433.0,
+        "kind": "All",
+        "label": "70cm"
+      },
+      {
+        "lo_mhz": 433.0,
+        "hi_mhz": 433.075,
+        "kind": "All",
+        "label": "70cm FM Repeaters in"
+      },
+      {
+        "lo_mhz": 433.075,
+        "hi_mhz": 433.6,
+        "kind": "All",
+        "label": "LPD / 70cm FM Repeaters in"
+      },
+      {
+        "lo_mhz": 433.6,
+        "hi_mhz": 434.0,
+        "kind": "All",
+        "label": "LPD / 70cm"
+      },
+      {
+        "lo_mhz": 434.0,
+        "hi_mhz": 434.1,
+        "kind": "All",
+        "label": "LPD / 70cm CW+Digi"
+      },
+      {
+        "lo_mhz": 434.1,
+        "hi_mhz": 434.6,
+        "kind": "All",
+        "label": "LPD / 70cm"
+      },
+      {
+        "lo_mhz": 434.6,
+        "hi_mhz": 434.775,
+        "kind": "All",
+        "label": "LPD / 70cm FM Repeaters out"
+      },
+      {
+        "lo_mhz": 434.775,
+        "hi_mhz": 435.0,
+        "kind": "All",
+        "label": "70cm FM Repeaters out"
+      },
+      {
+        "lo_mhz": 435.0,
+        "hi_mhz": 440.0,
+        "kind": "All",
+        "label": "70cm SAT"
+      },
+      {
+        "lo_mhz": 446.0,
+        "hi_mhz": 446.2,
+        "kind": "All",
+        "label": "PMR"
+      },
+      {
+        "lo_mhz": 451.0,
+        "hi_mhz": 456.0,
+        "kind": "Phone",
+        "label": "LTE-FDD-450 Uplink"
+      },
+      {
+        "lo_mhz": 461.0,
+        "hi_mhz": 466.0,
+        "kind": "Phone",
+        "label": "LTE-FDD-450 Downlink"
+      },
+      {
+        "lo_mhz": 470.0,
+        "hi_mhz": 790.0,
+        "kind": "Phone",
+        "label": "UHF TV"
+      },
+      {
+        "lo_mhz": 791.0,
+        "hi_mhz": 821.0,
+        "kind": "Phone",
+        "label": "LTE-800-FDD Downlink"
+      },
+      {
+        "lo_mhz": 832.0,
+        "hi_mhz": 862.0,
+        "kind": "Phone",
+        "label": "LTE-800-FDD Uplink"
+      },
+      {
+        "lo_mhz": 880.0,
+        "hi_mhz": 915.0,
+        "kind": "Phone",
+        "label": "GSM-900 Uplink"
+      },
+      {
+        "lo_mhz": 925.0,
+        "hi_mhz": 960.0,
+        "kind": "Phone",
+        "label": "GSM-900 Downlink"
+      },
+      {
+        "lo_mhz": 1000.0,
+        "hi_mhz": 1089.998,
+        "kind": "Phone",
+        "label": "L-Band"
+      },
+      {
+        "lo_mhz": 1089.998,
+        "hi_mhz": 1090.002,
+        "kind": "Phone",
+        "label": "ADS-B / L-Band"
+      },
+      {
+        "lo_mhz": 1090.002,
+        "hi_mhz": 1260.0,
+        "kind": "Phone",
+        "label": "L-Band"
+      },
+      {
+        "lo_mhz": 1260.0,
+        "hi_mhz": 1270.0,
+        "kind": "All",
+        "label": "23cm SAT / L-Band"
+      },
+      {
+        "lo_mhz": 1270.0,
+        "hi_mhz": 1290.994,
+        "kind": "All",
+        "label": "23cm / L-Band"
+      },
+      {
+        "lo_mhz": 1290.994,
+        "hi_mhz": 1291.481,
+        "kind": "All",
+        "label": "23cm FM Repeater IN / L-Band"
+      },
+      {
+        "lo_mhz": 1291.481,
+        "hi_mhz": 1296.0,
+        "kind": "All",
+        "label": "23cm / L-Band"
+      },
+      {
+        "lo_mhz": 1296.025,
+        "hi_mhz": 1296.15,
+        "kind": "All",
+        "label": "23cm CW+Digi / L-Band"
+      },
+      {
+        "lo_mhz": 1296.15,
+        "hi_mhz": 1296.8,
+        "kind": "All",
+        "label": "23cm / L-Band"
+      },
+      {
+        "lo_mhz": 1296.8,
+        "hi_mhz": 1296.994,
+        "kind": "All",
+        "label": "23cm Beacons (CW+Digi) / L-Band"
+      },
+      {
+        "lo_mhz": 1296.994,
+        "hi_mhz": 1297.49,
+        "kind": "All",
+        "label": "23cm FM Repeater OUT / L-Band"
+      },
+      {
+        "lo_mhz": 1297.49,
+        "hi_mhz": 1298.0,
+        "kind": "All",
+        "label": "23cm FM / L-Band"
+      },
+      {
+        "lo_mhz": 1298.0,
+        "hi_mhz": 1300.0,
+        "kind": "All",
+        "label": "23cm / L-Band"
+      },
+      {
+        "lo_mhz": 1300.0,
+        "hi_mhz": 1710.0,
+        "kind": "Phone",
+        "label": "L-Band"
+      },
+      {
+        "lo_mhz": 1710.0,
+        "hi_mhz": 1785.0,
+        "kind": "Phone",
+        "label": "DCS-1800 Uplink / L-Band"
+      },
+      {
+        "lo_mhz": 1785.0,
+        "hi_mhz": 1805.0,
+        "kind": "Phone",
+        "label": "L-Band"
+      },
+      {
+        "lo_mhz": 1805.0,
+        "hi_mhz": 1880.0,
+        "kind": "Phone",
+        "label": "DCS-1800 Downlink / L-Band"
+      },
+      {
+        "lo_mhz": 1880.0,
+        "hi_mhz": 1900.0,
+        "kind": "Phone",
+        "label": "DECT Phones / L-Band"
+      },
+      {
+        "lo_mhz": 1900.0,
+        "hi_mhz": 1920.0,
+        "kind": "Phone",
+        "label": "L-Band"
+      },
+      {
+        "lo_mhz": 1920.0,
+        "hi_mhz": 1980.0,
+        "kind": "Phone",
+        "label": "UMTS-FDD Uplink / L-Band"
+      },
+      {
+        "lo_mhz": 1980.0,
+        "hi_mhz": 2000.0,
+        "kind": "Phone",
+        "label": "L-Band"
+      },
+      {
+        "lo_mhz": 2000.0,
+        "hi_mhz": 2010.0,
+        "kind": "Phone",
+        "label": "S-Band"
+      },
+      {
+        "lo_mhz": 2010.0,
+        "hi_mhz": 2025.0,
+        "kind": "Phone",
+        "label": "UMTS-TDD / S-Band"
+      },
+      {
+        "lo_mhz": 2025.0,
+        "hi_mhz": 2110.0,
+        "kind": "Phone",
+        "label": "S-Band"
+      },
+      {
+        "lo_mhz": 2110.0,
+        "hi_mhz": 2170.0,
+        "kind": "Phone",
+        "label": "UMTS-FDD Downlink / S-Band"
+      },
+      {
+        "lo_mhz": 2170.0,
+        "hi_mhz": 2320.0,
+        "kind": "Phone",
+        "label": "S-Band"
+      },
+      {
+        "lo_mhz": 2320.0,
+        "hi_mhz": 2320.15,
+        "kind": "All",
+        "label": "13cm EME / S-Band"
+      },
+      {
+        "lo_mhz": 2320.15,
+        "hi_mhz": 2400.0,
+        "kind": "Phone",
+        "label": "S-Band"
+      },
+      {
+        "lo_mhz": 2400.0,
+        "hi_mhz": 2450.0,
+        "kind": "All",
+        "label": "13cm SAT / 2.4GHz WiFi / S-Band"
+      },
+      {
+        "lo_mhz": 2450.0,
+        "hi_mhz": 2483.5,
+        "kind": "Phone",
+        "label": "2.4GHz WiFi / S-Band"
+      },
+      {
+        "lo_mhz": 2483.5,
+        "hi_mhz": 2500.0,
+        "kind": "Phone",
+        "label": "S-Band"
+      },
+      {
+        "lo_mhz": 2500.0,
+        "hi_mhz": 2570.0,
+        "kind": "Phone",
+        "label": "LTE-FDD Uplink / S-Band"
+      },
+      {
+        "lo_mhz": 2570.0,
+        "hi_mhz": 2620.0,
+        "kind": "Phone",
+        "label": "LTE-TDD / S-Band"
+      },
+      {
+        "lo_mhz": 2620.0,
+        "hi_mhz": 2690.0,
+        "kind": "Phone",
+        "label": "LTE-FDD Downlink / S-Band"
+      },
+      {
+        "lo_mhz": 2690.0,
+        "hi_mhz": 4000.0,
+        "kind": "Phone",
+        "label": "S-Band"
+      },
+      {
+        "lo_mhz": 4000.0,
+        "hi_mhz": 5150.0,
+        "kind": "Phone",
+        "label": "C-Band"
+      },
+      {
+        "lo_mhz": 5150.0,
+        "hi_mhz": 5350.0,
+        "kind": "Phone",
+        "label": "5GHz WiFi / C-Band"
+      },
+      {
+        "lo_mhz": 5350.0,
+        "hi_mhz": 5650.0,
+        "kind": "Phone",
+        "label": "C-Band"
+      },
+      {
+        "lo_mhz": 5650.0,
+        "hi_mhz": 5670.0,
+        "kind": "All",
+        "label": "6cm CW+Digi / 5GHz WiFi / C-Band"
+      },
+      {
+        "lo_mhz": 5670.0,
+        "hi_mhz": 5725.0,
+        "kind": "Phone",
+        "label": "5GHz WiFi / C-Band"
+      },
+      {
+        "lo_mhz": 5725.0,
+        "hi_mhz": 5760.0,
+        "kind": "All",
+        "label": "6cm Digi / 5GHz WiFi / C-Band"
+      },
+      {
+        "lo_mhz": 5760.0,
+        "hi_mhz": 5762.0,
+        "kind": "Phone",
+        "label": "C-Band / 5GHz WiFi"
+      },
+      {
+        "lo_mhz": 5762.0,
+        "hi_mhz": 5790.0,
+        "kind": "All",
+        "label": "6cm Digi / 5GHz WiFi / C-Band"
+      },
+      {
+        "lo_mhz": 5790.0,
+        "hi_mhz": 5850.0,
+        "kind": "All",
+        "label": "6cm CW+Digi / 5GHz WiFi / C-Band"
+      },
+      {
+        "lo_mhz": 5850.0,
+        "hi_mhz": 8000.0,
+        "kind": "Phone",
+        "label": "C-Band"
+      },
+      {
+        "lo_mhz": 8000.0,
+        "hi_mhz": 10000.0,
+        "kind": "Phone",
+        "label": "X-Band"
+      },
+      {
+        "lo_mhz": 10000.0,
+        "hi_mhz": 10150.0,
+        "kind": "All",
+        "label": "3cm CW+Digi / X-Band"
+      },
+      {
+        "lo_mhz": 10150.0,
+        "hi_mhz": 10250.0,
+        "kind": "All",
+        "label": "3cm / X-Band"
+      },
+      {
+        "lo_mhz": 10250.0,
+        "hi_mhz": 10350.0,
+        "kind": "All",
+        "label": "3cm CW+Digi / X-Band"
+      },
+      {
+        "lo_mhz": 10350.0,
+        "hi_mhz": 10368.0,
+        "kind": "All",
+        "label": "3cm / X-Band"
+      },
+      {
+        "lo_mhz": 10368.0,
+        "hi_mhz": 10370.0,
+        "kind": "All",
+        "label": "3cm CW+Digi / X-Band"
+      },
+      {
+        "lo_mhz": 10370.0,
+        "hi_mhz": 10450.0,
+        "kind": "All",
+        "label": "3cm / X-Band"
+      },
+      {
+        "lo_mhz": 10450.0,
+        "hi_mhz": 10500.0,
+        "kind": "All",
+        "label": "3cm SAT / X-Band"
+      },
+      {
+        "lo_mhz": 10500.0,
+        "hi_mhz": 12000.0,
+        "kind": "Phone",
+        "label": "X-Band"
+      },
+      {
+        "lo_mhz": 24000.0,
+        "hi_mhz": 24048.0,
+        "kind": "All",
+        "label": "1.2cm SAT"
+      },
+      {
+        "lo_mhz": 24048.0,
+        "hi_mhz": 24050.0,
+        "kind": "All",
+        "label": "1.2cm Digi"
+      },
+      {
+        "lo_mhz": 24050.0,
+        "hi_mhz": 24250.0,
+        "kind": "All",
+        "label": "1.2cm"
+      },
+      {
+        "lo_mhz": 47002.0,
+        "hi_mhz": 47200.0,
+        "kind": "All",
+        "label": "6mm"
+      },
+      {
+        "lo_mhz": 76000.0,
+        "hi_mhz": 78000.0,
+        "kind": "All",
+        "label": "4mm"
+      },
+      {
+        "lo_mhz": 122251.0,
+        "hi_mhz": 123000.0,
+        "kind": "All",
+        "label": "2.5mm"
+      },
+      {
+        "lo_mhz": 134001.0,
+        "hi_mhz": 141000.0,
+        "kind": "All",
+        "label": "2mm"
+      },
+      {
+        "lo_mhz": 241000.0,
+        "hi_mhz": 250000.0,
+        "kind": "All",
+        "label": "1mm"
+      }
+    ]
+  }
+}

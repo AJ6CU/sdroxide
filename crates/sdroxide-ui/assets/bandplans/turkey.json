@@ -1,0 +1,1029 @@
+{
+  "readme": [
+    "Converted from SDR++ bandplan.",
+    "Edit, save, then press RELOAD BAND PLAN on the General tab."
+  ],
+  "region1": {
+    "bands": [
+      {
+        "band": "M2200",
+        "lo_mhz": 0.1357,
+        "hi_mhz": 0.1378
+      },
+      {
+        "band": "M80",
+        "lo_mhz": 3.5,
+        "hi_mhz": 3.8
+      },
+      {
+        "band": "M60",
+        "lo_mhz": 5.3515,
+        "hi_mhz": 5.3665
+      },
+      {
+        "band": "M40",
+        "lo_mhz": 7.0,
+        "hi_mhz": 7.2
+      },
+      {
+        "band": "M30",
+        "lo_mhz": 10.1,
+        "hi_mhz": 10.15
+      },
+      {
+        "band": "M20",
+        "lo_mhz": 14.0,
+        "hi_mhz": 14.35
+      },
+      {
+        "band": "M17",
+        "lo_mhz": 18.068,
+        "hi_mhz": 18.168
+      },
+      {
+        "band": "M15",
+        "lo_mhz": 21.0,
+        "hi_mhz": 21.45
+      },
+      {
+        "band": "M12",
+        "lo_mhz": 24.89,
+        "hi_mhz": 24.99
+      },
+      {
+        "band": "M10",
+        "lo_mhz": 28.0,
+        "hi_mhz": 29.7
+      },
+      {
+        "band": "Fm",
+        "lo_mhz": 87.5,
+        "hi_mhz": 108.0
+      },
+      {
+        "band": "M2",
+        "lo_mhz": 144.0,
+        "hi_mhz": 146.0
+      },
+      {
+        "band": "Cm23",
+        "lo_mhz": 1240.0,
+        "hi_mhz": 1300.0
+      }
+    ],
+    "segments": [
+      {
+        "lo_mhz": 0.1357,
+        "hi_mhz": 0.1378,
+        "kind": "All",
+        "label": "LW"
+      },
+      {
+        "lo_mhz": 0.472,
+        "hi_mhz": 0.479,
+        "kind": "All",
+        "label": "630m"
+      },
+      {
+        "lo_mhz": 1.81,
+        "hi_mhz": 1.85,
+        "kind": "All",
+        "label": "160m"
+      },
+      {
+        "lo_mhz": 3.5,
+        "hi_mhz": 3.8,
+        "kind": "All",
+        "label": "80m"
+      },
+      {
+        "lo_mhz": 5.3515,
+        "hi_mhz": 5.3665,
+        "kind": "All",
+        "label": "60m"
+      },
+      {
+        "lo_mhz": 7.0,
+        "hi_mhz": 7.2,
+        "kind": "All",
+        "label": "40m"
+      },
+      {
+        "lo_mhz": 10.1,
+        "hi_mhz": 10.15,
+        "kind": "All",
+        "label": "30m"
+      },
+      {
+        "lo_mhz": 14.0,
+        "hi_mhz": 14.35,
+        "kind": "All",
+        "label": "20m"
+      },
+      {
+        "lo_mhz": 18.068,
+        "hi_mhz": 18.168,
+        "kind": "All",
+        "label": "17m"
+      },
+      {
+        "lo_mhz": 21.0,
+        "hi_mhz": 21.45,
+        "kind": "All",
+        "label": "15m"
+      },
+      {
+        "lo_mhz": 24.89,
+        "hi_mhz": 24.99,
+        "kind": "All",
+        "label": "12m"
+      },
+      {
+        "lo_mhz": 26.565,
+        "hi_mhz": 27.405,
+        "kind": "All",
+        "label": "CB"
+      },
+      {
+        "lo_mhz": 27.75,
+        "hi_mhz": 28.0,
+        "kind": "All",
+        "label": "Pagers"
+      },
+      {
+        "lo_mhz": 28.0,
+        "hi_mhz": 29.7,
+        "kind": "All",
+        "label": "10m"
+      },
+      {
+        "lo_mhz": 50.03,
+        "hi_mhz": 51.0,
+        "kind": "All",
+        "label": "6m"
+      },
+      {
+        "lo_mhz": 87.5,
+        "hi_mhz": 108.0,
+        "kind": "Phone",
+        "label": "FM"
+      },
+      {
+        "lo_mhz": 108.0,
+        "hi_mhz": 117.975,
+        "kind": "Phone",
+        "label": "Airband VOR/ILS"
+      },
+      {
+        "lo_mhz": 117.975,
+        "hi_mhz": 137.0,
+        "kind": "Phone",
+        "label": "Airband Voice"
+      },
+      {
+        "lo_mhz": 144.0,
+        "hi_mhz": 146.0,
+        "kind": "All",
+        "label": "2m"
+      },
+      {
+        "lo_mhz": 167.0,
+        "hi_mhz": 167.1,
+        "kind": "All",
+        "label": "Pagers"
+      },
+      {
+        "lo_mhz": 169.4,
+        "hi_mhz": 169.475,
+        "kind": "All",
+        "label": "Sayac Okuma"
+      },
+      {
+        "lo_mhz": 173.8825,
+        "hi_mhz": 174.0,
+        "kind": "All",
+        "label": "Public announcement systems"
+      },
+      {
+        "lo_mhz": 174.0,
+        "hi_mhz": 216.0,
+        "kind": "Phone",
+        "label": "DVB-T"
+      },
+      {
+        "lo_mhz": 216.0,
+        "hi_mhz": 233.0,
+        "kind": "Phone",
+        "label": "T-DAB"
+      },
+      {
+        "lo_mhz": 328.6,
+        "hi_mhz": 335.4,
+        "kind": "Phone",
+        "label": "ILS-Glide Path"
+      },
+      {
+        "lo_mhz": 380.0,
+        "hi_mhz": 385.0,
+        "kind": "All",
+        "label": "Public Safety/Emergency"
+      },
+      {
+        "lo_mhz": 390.0,
+        "hi_mhz": 395.0,
+        "kind": "All",
+        "label": "Public Safety/Emergency"
+      },
+      {
+        "lo_mhz": 430.2,
+        "hi_mhz": 430.7,
+        "kind": "All",
+        "label": "70cm"
+      },
+      {
+        "lo_mhz": 431.55,
+        "hi_mhz": 431.825,
+        "kind": "All",
+        "label": "70cm-RepeaterRX"
+      },
+      {
+        "lo_mhz": 432.0,
+        "hi_mhz": 432.975,
+        "kind": "All",
+        "label": "70cm"
+      },
+      {
+        "lo_mhz": 433.4,
+        "hi_mhz": 434.0,
+        "kind": "All",
+        "label": "70cm"
+      },
+      {
+        "lo_mhz": 435.0,
+        "hi_mhz": 438.0,
+        "kind": "All",
+        "label": "70cm"
+      },
+      {
+        "lo_mhz": 439.15,
+        "hi_mhz": 439.425,
+        "kind": "All",
+        "label": "70cm-RepeaterTX"
+      },
+      {
+        "lo_mhz": 445.25,
+        "hi_mhz": 445.4625,
+        "kind": "All",
+        "label": "Public announcement systems"
+      },
+      {
+        "lo_mhz": 446.0063,
+        "hi_mhz": 446.1969,
+        "kind": "All",
+        "label": "PMR446"
+      },
+      {
+        "lo_mhz": 865.0,
+        "hi_mhz": 868.0,
+        "kind": "All",
+        "label": "RFID"
+      },
+      {
+        "lo_mhz": 916.1,
+        "hi_mhz": 918.9,
+        "kind": "All",
+        "label": "RFID"
+      },
+      {
+        "lo_mhz": 1240.0,
+        "hi_mhz": 1300.0,
+        "kind": "All",
+        "label": "23cm"
+      },
+      {
+        "lo_mhz": 1880.0,
+        "hi_mhz": 1900.0,
+        "kind": "All",
+        "label": "DECT"
+      },
+      {
+        "lo_mhz": 5650.0,
+        "hi_mhz": 5670.0,
+        "kind": "All",
+        "label": "5GHz"
+      },
+      {
+        "lo_mhz": 5820.0,
+        "hi_mhz": 5850.0,
+        "kind": "All",
+        "label": "5GHz"
+      },
+      {
+        "lo_mhz": 24000.0,
+        "hi_mhz": 24050.0,
+        "kind": "All",
+        "label": "24GHz"
+      },
+      {
+        "lo_mhz": 47000.0,
+        "hi_mhz": 47200.0,
+        "kind": "All",
+        "label": "47GHz"
+      },
+      {
+        "lo_mhz": 104500.0,
+        "hi_mhz": 104520.0,
+        "kind": "All",
+        "label": "3cm"
+      },
+      {
+        "lo_mhz": 134000.0,
+        "hi_mhz": 142000.0,
+        "kind": "All",
+        "label": "134GHz"
+      }
+    ]
+  },
+  "region2": {
+    "bands": [
+      {
+        "band": "M2200",
+        "lo_mhz": 0.1357,
+        "hi_mhz": 0.1378
+      },
+      {
+        "band": "M80",
+        "lo_mhz": 3.5,
+        "hi_mhz": 3.8
+      },
+      {
+        "band": "M60",
+        "lo_mhz": 5.3515,
+        "hi_mhz": 5.3665
+      },
+      {
+        "band": "M40",
+        "lo_mhz": 7.0,
+        "hi_mhz": 7.2
+      },
+      {
+        "band": "M30",
+        "lo_mhz": 10.1,
+        "hi_mhz": 10.15
+      },
+      {
+        "band": "M20",
+        "lo_mhz": 14.0,
+        "hi_mhz": 14.35
+      },
+      {
+        "band": "M17",
+        "lo_mhz": 18.068,
+        "hi_mhz": 18.168
+      },
+      {
+        "band": "M15",
+        "lo_mhz": 21.0,
+        "hi_mhz": 21.45
+      },
+      {
+        "band": "M12",
+        "lo_mhz": 24.89,
+        "hi_mhz": 24.99
+      },
+      {
+        "band": "M10",
+        "lo_mhz": 28.0,
+        "hi_mhz": 29.7
+      },
+      {
+        "band": "Fm",
+        "lo_mhz": 87.5,
+        "hi_mhz": 108.0
+      },
+      {
+        "band": "M2",
+        "lo_mhz": 144.0,
+        "hi_mhz": 146.0
+      },
+      {
+        "band": "Cm23",
+        "lo_mhz": 1240.0,
+        "hi_mhz": 1300.0
+      }
+    ],
+    "segments": [
+      {
+        "lo_mhz": 0.1357,
+        "hi_mhz": 0.1378,
+        "kind": "All",
+        "label": "LW"
+      },
+      {
+        "lo_mhz": 0.472,
+        "hi_mhz": 0.479,
+        "kind": "All",
+        "label": "630m"
+      },
+      {
+        "lo_mhz": 1.81,
+        "hi_mhz": 1.85,
+        "kind": "All",
+        "label": "160m"
+      },
+      {
+        "lo_mhz": 3.5,
+        "hi_mhz": 3.8,
+        "kind": "All",
+        "label": "80m"
+      },
+      {
+        "lo_mhz": 5.3515,
+        "hi_mhz": 5.3665,
+        "kind": "All",
+        "label": "60m"
+      },
+      {
+        "lo_mhz": 7.0,
+        "hi_mhz": 7.2,
+        "kind": "All",
+        "label": "40m"
+      },
+      {
+        "lo_mhz": 10.1,
+        "hi_mhz": 10.15,
+        "kind": "All",
+        "label": "30m"
+      },
+      {
+        "lo_mhz": 14.0,
+        "hi_mhz": 14.35,
+        "kind": "All",
+        "label": "20m"
+      },
+      {
+        "lo_mhz": 18.068,
+        "hi_mhz": 18.168,
+        "kind": "All",
+        "label": "17m"
+      },
+      {
+        "lo_mhz": 21.0,
+        "hi_mhz": 21.45,
+        "kind": "All",
+        "label": "15m"
+      },
+      {
+        "lo_mhz": 24.89,
+        "hi_mhz": 24.99,
+        "kind": "All",
+        "label": "12m"
+      },
+      {
+        "lo_mhz": 26.565,
+        "hi_mhz": 27.405,
+        "kind": "All",
+        "label": "CB"
+      },
+      {
+        "lo_mhz": 27.75,
+        "hi_mhz": 28.0,
+        "kind": "All",
+        "label": "Pagers"
+      },
+      {
+        "lo_mhz": 28.0,
+        "hi_mhz": 29.7,
+        "kind": "All",
+        "label": "10m"
+      },
+      {
+        "lo_mhz": 50.03,
+        "hi_mhz": 51.0,
+        "kind": "All",
+        "label": "6m"
+      },
+      {
+        "lo_mhz": 87.5,
+        "hi_mhz": 108.0,
+        "kind": "Phone",
+        "label": "FM"
+      },
+      {
+        "lo_mhz": 108.0,
+        "hi_mhz": 117.975,
+        "kind": "Phone",
+        "label": "Airband VOR/ILS"
+      },
+      {
+        "lo_mhz": 117.975,
+        "hi_mhz": 137.0,
+        "kind": "Phone",
+        "label": "Airband Voice"
+      },
+      {
+        "lo_mhz": 144.0,
+        "hi_mhz": 146.0,
+        "kind": "All",
+        "label": "2m"
+      },
+      {
+        "lo_mhz": 167.0,
+        "hi_mhz": 167.1,
+        "kind": "All",
+        "label": "Pagers"
+      },
+      {
+        "lo_mhz": 169.4,
+        "hi_mhz": 169.475,
+        "kind": "All",
+        "label": "Sayac Okuma"
+      },
+      {
+        "lo_mhz": 173.8825,
+        "hi_mhz": 174.0,
+        "kind": "All",
+        "label": "Public announcement systems"
+      },
+      {
+        "lo_mhz": 174.0,
+        "hi_mhz": 216.0,
+        "kind": "Phone",
+        "label": "DVB-T"
+      },
+      {
+        "lo_mhz": 216.0,
+        "hi_mhz": 233.0,
+        "kind": "Phone",
+        "label": "T-DAB"
+      },
+      {
+        "lo_mhz": 328.6,
+        "hi_mhz": 335.4,
+        "kind": "Phone",
+        "label": "ILS-Glide Path"
+      },
+      {
+        "lo_mhz": 380.0,
+        "hi_mhz": 385.0,
+        "kind": "All",
+        "label": "Public Safety/Emergency"
+      },
+      {
+        "lo_mhz": 390.0,
+        "hi_mhz": 395.0,
+        "kind": "All",
+        "label": "Public Safety/Emergency"
+      },
+      {
+        "lo_mhz": 430.2,
+        "hi_mhz": 430.7,
+        "kind": "All",
+        "label": "70cm"
+      },
+      {
+        "lo_mhz": 431.55,
+        "hi_mhz": 431.825,
+        "kind": "All",
+        "label": "70cm-RepeaterRX"
+      },
+      {
+        "lo_mhz": 432.0,
+        "hi_mhz": 432.975,
+        "kind": "All",
+        "label": "70cm"
+      },
+      {
+        "lo_mhz": 433.4,
+        "hi_mhz": 434.0,
+        "kind": "All",
+        "label": "70cm"
+      },
+      {
+        "lo_mhz": 435.0,
+        "hi_mhz": 438.0,
+        "kind": "All",
+        "label": "70cm"
+      },
+      {
+        "lo_mhz": 439.15,
+        "hi_mhz": 439.425,
+        "kind": "All",
+        "label": "70cm-RepeaterTX"
+      },
+      {
+        "lo_mhz": 445.25,
+        "hi_mhz": 445.4625,
+        "kind": "All",
+        "label": "Public announcement systems"
+      },
+      {
+        "lo_mhz": 446.0063,
+        "hi_mhz": 446.1969,
+        "kind": "All",
+        "label": "PMR446"
+      },
+      {
+        "lo_mhz": 865.0,
+        "hi_mhz": 868.0,
+        "kind": "All",
+        "label": "RFID"
+      },
+      {
+        "lo_mhz": 916.1,
+        "hi_mhz": 918.9,
+        "kind": "All",
+        "label": "RFID"
+      },
+      {
+        "lo_mhz": 1240.0,
+        "hi_mhz": 1300.0,
+        "kind": "All",
+        "label": "23cm"
+      },
+      {
+        "lo_mhz": 1880.0,
+        "hi_mhz": 1900.0,
+        "kind": "All",
+        "label": "DECT"
+      },
+      {
+        "lo_mhz": 5650.0,
+        "hi_mhz": 5670.0,
+        "kind": "All",
+        "label": "5GHz"
+      },
+      {
+        "lo_mhz": 5820.0,
+        "hi_mhz": 5850.0,
+        "kind": "All",
+        "label": "5GHz"
+      },
+      {
+        "lo_mhz": 24000.0,
+        "hi_mhz": 24050.0,
+        "kind": "All",
+        "label": "24GHz"
+      },
+      {
+        "lo_mhz": 47000.0,
+        "hi_mhz": 47200.0,
+        "kind": "All",
+        "label": "47GHz"
+      },
+      {
+        "lo_mhz": 104500.0,
+        "hi_mhz": 104520.0,
+        "kind": "All",
+        "label": "3cm"
+      },
+      {
+        "lo_mhz": 134000.0,
+        "hi_mhz": 142000.0,
+        "kind": "All",
+        "label": "134GHz"
+      }
+    ]
+  },
+  "region3": {
+    "bands": [
+      {
+        "band": "M2200",
+        "lo_mhz": 0.1357,
+        "hi_mhz": 0.1378
+      },
+      {
+        "band": "M80",
+        "lo_mhz": 3.5,
+        "hi_mhz": 3.8
+      },
+      {
+        "band": "M60",
+        "lo_mhz": 5.3515,
+        "hi_mhz": 5.3665
+      },
+      {
+        "band": "M40",
+        "lo_mhz": 7.0,
+        "hi_mhz": 7.2
+      },
+      {
+        "band": "M30",
+        "lo_mhz": 10.1,
+        "hi_mhz": 10.15
+      },
+      {
+        "band": "M20",
+        "lo_mhz": 14.0,
+        "hi_mhz": 14.35
+      },
+      {
+        "band": "M17",
+        "lo_mhz": 18.068,
+        "hi_mhz": 18.168
+      },
+      {
+        "band": "M15",
+        "lo_mhz": 21.0,
+        "hi_mhz": 21.45
+      },
+      {
+        "band": "M12",
+        "lo_mhz": 24.89,
+        "hi_mhz": 24.99
+      },
+      {
+        "band": "M10",
+        "lo_mhz": 28.0,
+        "hi_mhz": 29.7
+      },
+      {
+        "band": "Fm",
+        "lo_mhz": 87.5,
+        "hi_mhz": 108.0
+      },
+      {
+        "band": "M2",
+        "lo_mhz": 144.0,
+        "hi_mhz": 146.0
+      },
+      {
+        "band": "Cm23",
+        "lo_mhz": 1240.0,
+        "hi_mhz": 1300.0
+      }
+    ],
+    "segments": [
+      {
+        "lo_mhz": 0.1357,
+        "hi_mhz": 0.1378,
+        "kind": "All",
+        "label": "LW"
+      },
+      {
+        "lo_mhz": 0.472,
+        "hi_mhz": 0.479,
+        "kind": "All",
+        "label": "630m"
+      },
+      {
+        "lo_mhz": 1.81,
+        "hi_mhz": 1.85,
+        "kind": "All",
+        "label": "160m"
+      },
+      {
+        "lo_mhz": 3.5,
+        "hi_mhz": 3.8,
+        "kind": "All",
+        "label": "80m"
+      },
+      {
+        "lo_mhz": 5.3515,
+        "hi_mhz": 5.3665,
+        "kind": "All",
+        "label": "60m"
+      },
+      {
+        "lo_mhz": 7.0,
+        "hi_mhz": 7.2,
+        "kind": "All",
+        "label": "40m"
+      },
+      {
+        "lo_mhz": 10.1,
+        "hi_mhz": 10.15,
+        "kind": "All",
+        "label": "30m"
+      },
+      {
+        "lo_mhz": 14.0,
+        "hi_mhz": 14.35,
+        "kind": "All",
+        "label": "20m"
+      },
+      {
+        "lo_mhz": 18.068,
+        "hi_mhz": 18.168,
+        "kind": "All",
+        "label": "17m"
+      },
+      {
+        "lo_mhz": 21.0,
+        "hi_mhz": 21.45,
+        "kind": "All",
+        "label": "15m"
+      },
+      {
+        "lo_mhz": 24.89,
+        "hi_mhz": 24.99,
+        "kind": "All",
+        "label": "12m"
+      },
+      {
+        "lo_mhz": 26.565,
+        "hi_mhz": 27.405,
+        "kind": "All",
+        "label": "CB"
+      },
+      {
+        "lo_mhz": 27.75,
+        "hi_mhz": 28.0,
+        "kind": "All",
+        "label": "Pagers"
+      },
+      {
+        "lo_mhz": 28.0,
+        "hi_mhz": 29.7,
+        "kind": "All",
+        "label": "10m"
+      },
+      {
+        "lo_mhz": 50.03,
+        "hi_mhz": 51.0,
+        "kind": "All",
+        "label": "6m"
+      },
+      {
+        "lo_mhz": 87.5,
+        "hi_mhz": 108.0,
+        "kind": "Phone",
+        "label": "FM"
+      },
+      {
+        "lo_mhz": 108.0,
+        "hi_mhz": 117.975,
+        "kind": "Phone",
+        "label": "Airband VOR/ILS"
+      },
+      {
+        "lo_mhz": 117.975,
+        "hi_mhz": 137.0,
+        "kind": "Phone",
+        "label": "Airband Voice"
+      },
+      {
+        "lo_mhz": 144.0,
+        "hi_mhz": 146.0,
+        "kind": "All",
+        "label": "2m"
+      },
+      {
+        "lo_mhz": 167.0,
+        "hi_mhz": 167.1,
+        "kind": "All",
+        "label": "Pagers"
+      },
+      {
+        "lo_mhz": 169.4,
+        "hi_mhz": 169.475,
+        "kind": "All",
+        "label": "Sayac Okuma"
+      },
+      {
+        "lo_mhz": 173.8825,
+        "hi_mhz": 174.0,
+        "kind": "All",
+        "label": "Public announcement systems"
+      },
+      {
+        "lo_mhz": 174.0,
+        "hi_mhz": 216.0,
+        "kind": "Phone",
+        "label": "DVB-T"
+      },
+      {
+        "lo_mhz": 216.0,
+        "hi_mhz": 233.0,
+        "kind": "Phone",
+        "label": "T-DAB"
+      },
+      {
+        "lo_mhz": 328.6,
+        "hi_mhz": 335.4,
+        "kind": "Phone",
+        "label": "ILS-Glide Path"
+      },
+      {
+        "lo_mhz": 380.0,
+        "hi_mhz": 385.0,
+        "kind": "All",
+        "label": "Public Safety/Emergency"
+      },
+      {
+        "lo_mhz": 390.0,
+        "hi_mhz": 395.0,
+        "kind": "All",
+        "label": "Public Safety/Emergency"
+      },
+      {
+        "lo_mhz": 430.2,
+        "hi_mhz": 430.7,
+        "kind": "All",
+        "label": "70cm"
+      },
+      {
+        "lo_mhz": 431.55,
+        "hi_mhz": 431.825,
+        "kind": "All",
+        "label": "70cm-RepeaterRX"
+      },
+      {
+        "lo_mhz": 432.0,
+        "hi_mhz": 432.975,
+        "kind": "All",
+        "label": "70cm"
+      },
+      {
+        "lo_mhz": 433.4,
+        "hi_mhz": 434.0,
+        "kind": "All",
+        "label": "70cm"
+      },
+      {
+        "lo_mhz": 435.0,
+        "hi_mhz": 438.0,
+        "kind": "All",
+        "label": "70cm"
+      },
+      {
+        "lo_mhz": 439.15,
+        "hi_mhz": 439.425,
+        "kind": "All",
+        "label": "70cm-RepeaterTX"
+      },
+      {
+        "lo_mhz": 445.25,
+        "hi_mhz": 445.4625,
+        "kind": "All",
+        "label": "Public announcement systems"
+      },
+      {
+        "lo_mhz": 446.0063,
+        "hi_mhz": 446.1969,
+        "kind": "All",
+        "label": "PMR446"
+      },
+      {
+        "lo_mhz": 865.0,
+        "hi_mhz": 868.0,
+        "kind": "All",
+        "label": "RFID"
+      },
+      {
+        "lo_mhz": 916.1,
+        "hi_mhz": 918.9,
+        "kind": "All",
+        "label": "RFID"
+      },
+      {
+        "lo_mhz": 1240.0,
+        "hi_mhz": 1300.0,
+        "kind": "All",
+        "label": "23cm"
+      },
+      {
+        "lo_mhz": 1880.0,
+        "hi_mhz": 1900.0,
+        "kind": "All",
+        "label": "DECT"
+      },
+      {
+        "lo_mhz": 5650.0,
+        "hi_mhz": 5670.0,
+        "kind": "All",
+        "label": "5GHz"
+      },
+      {
+        "lo_mhz": 5820.0,
+        "hi_mhz": 5850.0,
+        "kind": "All",
+        "label": "5GHz"
+      },
+      {
+        "lo_mhz": 24000.0,
+        "hi_mhz": 24050.0,
+        "kind": "All",
+        "label": "24GHz"
+      },
+      {
+        "lo_mhz": 47000.0,
+        "hi_mhz": 47200.0,
+        "kind": "All",
+        "label": "47GHz"
+      },
+      {
+        "lo_mhz": 104500.0,
+        "hi_mhz": 104520.0,
+        "kind": "All",
+        "label": "3cm"
+      },
+      {
+        "lo_mhz": 134000.0,
+        "hi_mhz": 142000.0,
+        "kind": "All",
+        "label": "134GHz"
+      }
+    ]
+  }
+}

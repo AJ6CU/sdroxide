@@ -9166,7 +9166,6 @@ settings-general-band-plan-built-in = 内蔵IARU
 
 settings-general-band-plan-germany-nrw = ドイツ（NRW、SWL）
 
-settings-general-band-plan-own = 局独自
 
 settings-general-band-plan-hint = 同梱のバンドプランを選択します。bandplan.json を置き換えますが、内蔵IARUテーブルが常に既定です。
 
@@ -9247,4 +9246,37 @@ settings-general-band-plan-export-hint = 使用中のプランを JSON ファイ
 
 settings-general-band-plan-imported = バンドプランをインポートしました。この局はそのプランで動作しています。
 
-settings-general-band-plan-import-not-a-plan = このファイルはバンドプランではありません — 読み取れませんでした。何も変更していません。
+
+settings-general-band-plan-sdrpp-australia = Australia
+
+settings-general-band-plan-sdrpp-austria = Austria
+
+settings-general-band-plan-sdrpp-belgium = Belgium
+
+settings-general-band-plan-sdrpp-brazil = Brazil
+
+settings-general-band-plan-sdrpp-canada = Canada
+
+settings-general-band-plan-sdrpp-china = China
+
+settings-general-band-plan-sdrpp-france = France
+
+settings-general-band-plan-sdrpp-germany = Germany
+
+settings-general-band-plan-sdrpp-ireland = Ireland
+
+settings-general-band-plan-sdrpp-italy = Italy
+
+settings-general-band-plan-sdrpp-netherlands = Netherlands
+
+settings-general-band-plan-sdrpp-republic-of-korea = Republic of Korea
+
+settings-general-band-plan-sdrpp-russia = Russia
+
+settings-general-band-plan-sdrpp-slovakia = Slovakia
+
+settings-general-band-plan-sdrpp-turkey = Turkey
+
+settings-general-band-plan-sdrpp-united-kingdom = United Kingdom
+
+settings-general-band-plan-sdrpp-usa = USA

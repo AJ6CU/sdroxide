@@ -1,0 +1,1119 @@
+{
+  "readme": [
+    "Converted from SDR++ bandplan.",
+    "Edit, save, then press RELOAD BAND PLAN on the General tab."
+  ],
+  "region1": {
+    "bands": [
+      {
+        "band": "M2200",
+        "lo_mhz": 0.1357,
+        "hi_mhz": 0.1378
+      },
+      {
+        "band": "Mw",
+        "lo_mhz": 0.5265,
+        "hi_mhz": 1.6065
+      },
+      {
+        "band": "M160",
+        "lo_mhz": 1.81,
+        "hi_mhz": 2.0
+      },
+      {
+        "band": "M80",
+        "lo_mhz": 3.5,
+        "hi_mhz": 3.8
+      },
+      {
+        "band": "M60",
+        "lo_mhz": 5.3515,
+        "hi_mhz": 5.3665
+      },
+      {
+        "band": "M40",
+        "lo_mhz": 7.0,
+        "hi_mhz": 7.2
+      },
+      {
+        "band": "M30",
+        "lo_mhz": 10.1,
+        "hi_mhz": 10.15
+      },
+      {
+        "band": "M20",
+        "lo_mhz": 14.0,
+        "hi_mhz": 14.35
+      },
+      {
+        "band": "M17",
+        "lo_mhz": 18.068,
+        "hi_mhz": 18.168
+      },
+      {
+        "band": "M15",
+        "lo_mhz": 21.0,
+        "hi_mhz": 21.45
+      },
+      {
+        "band": "M12",
+        "lo_mhz": 24.89,
+        "hi_mhz": 24.99
+      },
+      {
+        "band": "M10",
+        "lo_mhz": 28.0,
+        "hi_mhz": 29.7
+      },
+      {
+        "band": "M6",
+        "lo_mhz": 50.0,
+        "hi_mhz": 52.0
+      },
+      {
+        "band": "Fm",
+        "lo_mhz": 87.5,
+        "hi_mhz": 108.0
+      },
+      {
+        "band": "M2",
+        "lo_mhz": 144.0,
+        "hi_mhz": 146.0
+      },
+      {
+        "band": "M70",
+        "lo_mhz": 430.0,
+        "hi_mhz": 440.0
+      },
+      {
+        "band": "Cm23",
+        "lo_mhz": 1240.0,
+        "hi_mhz": 1300.0
+      },
+      {
+        "band": "Cm6",
+        "lo_mhz": 5650.0,
+        "hi_mhz": 5850.0
+      },
+      {
+        "band": "Cm3",
+        "lo_mhz": 10000.0,
+        "hi_mhz": 10500.0
+      }
+    ],
+    "segments": [
+      {
+        "lo_mhz": 0.1357,
+        "hi_mhz": 0.1378,
+        "kind": "All",
+        "label": "2200m - Amateur"
+      },
+      {
+        "lo_mhz": 0.472,
+        "hi_mhz": 0.479,
+        "kind": "All",
+        "label": "630m - Amateur"
+      },
+      {
+        "lo_mhz": 0.501,
+        "hi_mhz": 0.504,
+        "kind": "All",
+        "label": "600m - Amateur"
+      },
+      {
+        "lo_mhz": 0.5265,
+        "hi_mhz": 1.6065,
+        "kind": "Phone",
+        "label": "AM Broadcast"
+      },
+      {
+        "lo_mhz": 1.81,
+        "hi_mhz": 2.0,
+        "kind": "All",
+        "label": "160m - Amateur"
+      },
+      {
+        "lo_mhz": 3.5,
+        "hi_mhz": 3.8,
+        "kind": "All",
+        "label": "80m - Amateur"
+      },
+      {
+        "lo_mhz": 5.3515,
+        "hi_mhz": 5.3665,
+        "kind": "All",
+        "label": "60m - Amateur"
+      },
+      {
+        "lo_mhz": 5.95,
+        "hi_mhz": 6.2,
+        "kind": "Phone",
+        "label": "AM Broadcast"
+      },
+      {
+        "lo_mhz": 7.0,
+        "hi_mhz": 7.2,
+        "kind": "All",
+        "label": "40m - Amateur"
+      },
+      {
+        "lo_mhz": 7.2,
+        "hi_mhz": 7.3,
+        "kind": "Phone",
+        "label": "AM Broadcast"
+      },
+      {
+        "lo_mhz": 9.5,
+        "hi_mhz": 9.9,
+        "kind": "Phone",
+        "label": "AM Broadcast"
+      },
+      {
+        "lo_mhz": 10.1,
+        "hi_mhz": 10.15,
+        "kind": "All",
+        "label": "30m - Amateur"
+      },
+      {
+        "lo_mhz": 11.65,
+        "hi_mhz": 12.05,
+        "kind": "Phone",
+        "label": "AM Broadcast"
+      },
+      {
+        "lo_mhz": 13.6,
+        "hi_mhz": 13.8,
+        "kind": "Phone",
+        "label": "AM Broadcast"
+      },
+      {
+        "lo_mhz": 14.0,
+        "hi_mhz": 14.35,
+        "kind": "All",
+        "label": "20m - Amateur"
+      },
+      {
+        "lo_mhz": 15.1,
+        "hi_mhz": 15.6,
+        "kind": "Phone",
+        "label": "AM Broadcast"
+      },
+      {
+        "lo_mhz": 17.55,
+        "hi_mhz": 17.9,
+        "kind": "Phone",
+        "label": "AM Broadcast"
+      },
+      {
+        "lo_mhz": 18.068,
+        "hi_mhz": 18.168,
+        "kind": "All",
+        "label": "17m - Amateur"
+      },
+      {
+        "lo_mhz": 21.0,
+        "hi_mhz": 21.45,
+        "kind": "All",
+        "label": "15m - Amateur"
+      },
+      {
+        "lo_mhz": 21.45,
+        "hi_mhz": 21.85,
+        "kind": "Phone",
+        "label": "AM Broadcast"
+      },
+      {
+        "lo_mhz": 24.89,
+        "hi_mhz": 24.99,
+        "kind": "All",
+        "label": "12m - Amateur"
+      },
+      {
+        "lo_mhz": 25.67,
+        "hi_mhz": 26.1,
+        "kind": "Phone",
+        "label": "AM Broadcast"
+      },
+      {
+        "lo_mhz": 26.96,
+        "hi_mhz": 27.41,
+        "kind": "All",
+        "label": "11m - Citizen Band"
+      },
+      {
+        "lo_mhz": 28.0,
+        "hi_mhz": 29.7,
+        "kind": "All",
+        "label": "10m - Amateur"
+      },
+      {
+        "lo_mhz": 40.66,
+        "hi_mhz": 40.69,
+        "kind": "All",
+        "label": "8m - Amateur"
+      },
+      {
+        "lo_mhz": 50.0,
+        "hi_mhz": 52.0,
+        "kind": "All",
+        "label": "6m - Amateur"
+      },
+      {
+        "lo_mhz": 69.945,
+        "hi_mhz": 69.955,
+        "kind": "All",
+        "label": "4m - Amateur"
+      },
+      {
+        "lo_mhz": 70.19,
+        "hi_mhz": 70.4125,
+        "kind": "All",
+        "label": "4m - Amateur"
+      },
+      {
+        "lo_mhz": 87.5,
+        "hi_mhz": 108.0,
+        "kind": "Phone",
+        "label": "FM Broadcast"
+      },
+      {
+        "lo_mhz": 137.0,
+        "hi_mhz": 138.0,
+        "kind": "Digi",
+        "label": "Space Exploration / Meteorology Sat. / S-PCS"
+      },
+      {
+        "lo_mhz": 144.0,
+        "hi_mhz": 146.0,
+        "kind": "All",
+        "label": "2m - Amateur"
+      },
+      {
+        "lo_mhz": 174.0,
+        "hi_mhz": 223.0,
+        "kind": "Phone",
+        "label": "T-DAB Broadcast"
+      },
+      {
+        "lo_mhz": 430.0,
+        "hi_mhz": 440.0,
+        "kind": "All",
+        "label": "70cm - Amateur"
+      },
+      {
+        "lo_mhz": 446.0,
+        "hi_mhz": 446.2,
+        "kind": "All",
+        "label": "PMR446"
+      },
+      {
+        "lo_mhz": 470.0,
+        "hi_mhz": 790.0,
+        "kind": "Phone",
+        "label": "DVB-T - Broadcast"
+      },
+      {
+        "lo_mhz": 1240.0,
+        "hi_mhz": 1300.0,
+        "kind": "All",
+        "label": "23cm - Amateur"
+      },
+      {
+        "lo_mhz": 2300.0,
+        "hi_mhz": 2450.0,
+        "kind": "All",
+        "label": "13cm - Amateur"
+      },
+      {
+        "lo_mhz": 5650.0,
+        "hi_mhz": 5850.0,
+        "kind": "All",
+        "label": "6cm - Amateur"
+      },
+      {
+        "lo_mhz": 10000.0,
+        "hi_mhz": 10500.0,
+        "kind": "All",
+        "label": "3cm - Amateur"
+      },
+      {
+        "lo_mhz": 24000.0,
+        "hi_mhz": 24250.0,
+        "kind": "All",
+        "label": "1.25cm - Amateur"
+      },
+      {
+        "lo_mhz": 47000.0,
+        "hi_mhz": 47200.0,
+        "kind": "All",
+        "label": "6mm - Amateur"
+      },
+      {
+        "lo_mhz": 75500.0,
+        "hi_mhz": 81000.0,
+        "kind": "All",
+        "label": "4mm - Amateur"
+      },
+      {
+        "lo_mhz": 122250.0,
+        "hi_mhz": 123000.0,
+        "kind": "All",
+        "label": "2.5mm - Amateur"
+      },
+      {
+        "lo_mhz": 142000.0,
+        "hi_mhz": 149000.0,
+        "kind": "All",
+        "label": "2mm - Amateur"
+      },
+      {
+        "lo_mhz": 241000.0,
+        "hi_mhz": 250000.0,
+        "kind": "All",
+        "label": "1mm - Amateur"
+      }
+    ]
+  },
+  "region2": {
+    "bands": [
+      {
+        "band": "M2200",
+        "lo_mhz": 0.1357,
+        "hi_mhz": 0.1378
+      },
+      {
+        "band": "Mw",
+        "lo_mhz": 0.5265,
+        "hi_mhz": 1.6065
+      },
+      {
+        "band": "M160",
+        "lo_mhz": 1.81,
+        "hi_mhz": 2.0
+      },
+      {
+        "band": "M80",
+        "lo_mhz": 3.5,
+        "hi_mhz": 3.8
+      },
+      {
+        "band": "M60",
+        "lo_mhz": 5.3515,
+        "hi_mhz": 5.3665
+      },
+      {
+        "band": "M40",
+        "lo_mhz": 7.0,
+        "hi_mhz": 7.2
+      },
+      {
+        "band": "M30",
+        "lo_mhz": 10.1,
+        "hi_mhz": 10.15
+      },
+      {
+        "band": "M20",
+        "lo_mhz": 14.0,
+        "hi_mhz": 14.35
+      },
+      {
+        "band": "M17",
+        "lo_mhz": 18.068,
+        "hi_mhz": 18.168
+      },
+      {
+        "band": "M15",
+        "lo_mhz": 21.0,
+        "hi_mhz": 21.45
+      },
+      {
+        "band": "M12",
+        "lo_mhz": 24.89,
+        "hi_mhz": 24.99
+      },
+      {
+        "band": "M10",
+        "lo_mhz": 28.0,
+        "hi_mhz": 29.7
+      },
+      {
+        "band": "M6",
+        "lo_mhz": 50.0,
+        "hi_mhz": 52.0
+      },
+      {
+        "band": "Fm",
+        "lo_mhz": 87.5,
+        "hi_mhz": 108.0
+      },
+      {
+        "band": "M2",
+        "lo_mhz": 144.0,
+        "hi_mhz": 146.0
+      },
+      {
+        "band": "M70",
+        "lo_mhz": 430.0,
+        "hi_mhz": 440.0
+      },
+      {
+        "band": "Cm23",
+        "lo_mhz": 1240.0,
+        "hi_mhz": 1300.0
+      },
+      {
+        "band": "Cm6",
+        "lo_mhz": 5650.0,
+        "hi_mhz": 5850.0
+      },
+      {
+        "band": "Cm3",
+        "lo_mhz": 10000.0,
+        "hi_mhz": 10500.0
+      }
+    ],
+    "segments": [
+      {
+        "lo_mhz": 0.1357,
+        "hi_mhz": 0.1378,
+        "kind": "All",
+        "label": "2200m - Amateur"
+      },
+      {
+        "lo_mhz": 0.472,
+        "hi_mhz": 0.479,
+        "kind": "All",
+        "label": "630m - Amateur"
+      },
+      {
+        "lo_mhz": 0.501,
+        "hi_mhz": 0.504,
+        "kind": "All",
+        "label": "600m - Amateur"
+      },
+      {
+        "lo_mhz": 0.5265,
+        "hi_mhz": 1.6065,
+        "kind": "Phone",
+        "label": "AM Broadcast"
+      },
+      {
+        "lo_mhz": 1.81,
+        "hi_mhz": 2.0,
+        "kind": "All",
+        "label": "160m - Amateur"
+      },
+      {
+        "lo_mhz": 3.5,
+        "hi_mhz": 3.8,
+        "kind": "All",
+        "label": "80m - Amateur"
+      },
+      {
+        "lo_mhz": 5.3515,
+        "hi_mhz": 5.3665,
+        "kind": "All",
+        "label": "60m - Amateur"
+      },
+      {
+        "lo_mhz": 5.95,
+        "hi_mhz": 6.2,
+        "kind": "Phone",
+        "label": "AM Broadcast"
+      },
+      {
+        "lo_mhz": 7.0,
+        "hi_mhz": 7.2,
+        "kind": "All",
+        "label": "40m - Amateur"
+      },
+      {
+        "lo_mhz": 7.2,
+        "hi_mhz": 7.3,
+        "kind": "Phone",
+        "label": "AM Broadcast"
+      },
+      {
+        "lo_mhz": 9.5,
+        "hi_mhz": 9.9,
+        "kind": "Phone",
+        "label": "AM Broadcast"
+      },
+      {
+        "lo_mhz": 10.1,
+        "hi_mhz": 10.15,
+        "kind": "All",
+        "label": "30m - Amateur"
+      },
+      {
+        "lo_mhz": 11.65,
+        "hi_mhz": 12.05,
+        "kind": "Phone",
+        "label": "AM Broadcast"
+      },
+      {
+        "lo_mhz": 13.6,
+        "hi_mhz": 13.8,
+        "kind": "Phone",
+        "label": "AM Broadcast"
+      },
+      {
+        "lo_mhz": 14.0,
+        "hi_mhz": 14.35,
+        "kind": "All",
+        "label": "20m - Amateur"
+      },
+      {
+        "lo_mhz": 15.1,
+        "hi_mhz": 15.6,
+        "kind": "Phone",
+        "label": "AM Broadcast"
+      },
+      {
+        "lo_mhz": 17.55,
+        "hi_mhz": 17.9,
+        "kind": "Phone",
+        "label": "AM Broadcast"
+      },
+      {
+        "lo_mhz": 18.068,
+        "hi_mhz": 18.168,
+        "kind": "All",
+        "label": "17m - Amateur"
+      },
+      {
+        "lo_mhz": 21.0,
+        "hi_mhz": 21.45,
+        "kind": "All",
+        "label": "15m - Amateur"
+      },
+      {
+        "lo_mhz": 21.45,
+        "hi_mhz": 21.85,
+        "kind": "Phone",
+        "label": "AM Broadcast"
+      },
+      {
+        "lo_mhz": 24.89,
+        "hi_mhz": 24.99,
+        "kind": "All",
+        "label": "12m - Amateur"
+      },
+      {
+        "lo_mhz": 25.67,
+        "hi_mhz": 26.1,
+        "kind": "Phone",
+        "label": "AM Broadcast"
+      },
+      {
+        "lo_mhz": 26.96,
+        "hi_mhz": 27.41,
+        "kind": "All",
+        "label": "11m - Citizen Band"
+      },
+      {
+        "lo_mhz": 28.0,
+        "hi_mhz": 29.7,
+        "kind": "All",
+        "label": "10m - Amateur"
+      },
+      {
+        "lo_mhz": 40.66,
+        "hi_mhz": 40.69,
+        "kind": "All",
+        "label": "8m - Amateur"
+      },
+      {
+        "lo_mhz": 50.0,
+        "hi_mhz": 52.0,
+        "kind": "All",
+        "label": "6m - Amateur"
+      },
+      {
+        "lo_mhz": 69.945,
+        "hi_mhz": 69.955,
+        "kind": "All",
+        "label": "4m - Amateur"
+      },
+      {
+        "lo_mhz": 70.19,
+        "hi_mhz": 70.4125,
+        "kind": "All",
+        "label": "4m - Amateur"
+      },
+      {
+        "lo_mhz": 87.5,
+        "hi_mhz": 108.0,
+        "kind": "Phone",
+        "label": "FM Broadcast"
+      },
+      {
+        "lo_mhz": 137.0,
+        "hi_mhz": 138.0,
+        "kind": "Digi",
+        "label": "Space Exploration / Meteorology Sat. / S-PCS"
+      },
+      {
+        "lo_mhz": 144.0,
+        "hi_mhz": 146.0,
+        "kind": "All",
+        "label": "2m - Amateur"
+      },
+      {
+        "lo_mhz": 174.0,
+        "hi_mhz": 223.0,
+        "kind": "Phone",
+        "label": "T-DAB Broadcast"
+      },
+      {
+        "lo_mhz": 430.0,
+        "hi_mhz": 440.0,
+        "kind": "All",
+        "label": "70cm - Amateur"
+      },
+      {
+        "lo_mhz": 446.0,
+        "hi_mhz": 446.2,
+        "kind": "All",
+        "label": "PMR446"
+      },
+      {
+        "lo_mhz": 470.0,
+        "hi_mhz": 790.0,
+        "kind": "Phone",
+        "label": "DVB-T - Broadcast"
+      },
+      {
+        "lo_mhz": 1240.0,
+        "hi_mhz": 1300.0,
+        "kind": "All",
+        "label": "23cm - Amateur"
+      },
+      {
+        "lo_mhz": 2300.0,
+        "hi_mhz": 2450.0,
+        "kind": "All",
+        "label": "13cm - Amateur"
+      },
+      {
+        "lo_mhz": 5650.0,
+        "hi_mhz": 5850.0,
+        "kind": "All",
+        "label": "6cm - Amateur"
+      },
+      {
+        "lo_mhz": 10000.0,
+        "hi_mhz": 10500.0,
+        "kind": "All",
+        "label": "3cm - Amateur"
+      },
+      {
+        "lo_mhz": 24000.0,
+        "hi_mhz": 24250.0,
+        "kind": "All",
+        "label": "1.25cm - Amateur"
+      },
+      {
+        "lo_mhz": 47000.0,
+        "hi_mhz": 47200.0,
+        "kind": "All",
+        "label": "6mm - Amateur"
+      },
+      {
+        "lo_mhz": 75500.0,
+        "hi_mhz": 81000.0,
+        "kind": "All",
+        "label": "4mm - Amateur"
+      },
+      {
+        "lo_mhz": 122250.0,
+        "hi_mhz": 123000.0,
+        "kind": "All",
+        "label": "2.5mm - Amateur"
+      },
+      {
+        "lo_mhz": 142000.0,
+        "hi_mhz": 149000.0,
+        "kind": "All",
+        "label": "2mm - Amateur"
+      },
+      {
+        "lo_mhz": 241000.0,
+        "hi_mhz": 250000.0,
+        "kind": "All",
+        "label": "1mm - Amateur"
+      }
+    ]
+  },
+  "region3": {
+    "bands": [
+      {
+        "band": "M2200",
+        "lo_mhz": 0.1357,
+        "hi_mhz": 0.1378
+      },
+      {
+        "band": "Mw",
+        "lo_mhz": 0.5265,
+        "hi_mhz": 1.6065
+      },
+      {
+        "band": "M160",
+        "lo_mhz": 1.81,
+        "hi_mhz": 2.0
+      },
+      {
+        "band": "M80",
+        "lo_mhz": 3.5,
+        "hi_mhz": 3.8
+      },
+      {
+        "band": "M60",
+        "lo_mhz": 5.3515,
+        "hi_mhz": 5.3665
+      },
+      {
+        "band": "M40",
+        "lo_mhz": 7.0,
+        "hi_mhz": 7.2
+      },
+      {
+        "band": "M30",
+        "lo_mhz": 10.1,
+        "hi_mhz": 10.15
+      },
+      {
+        "band": "M20",
+        "lo_mhz": 14.0,
+        "hi_mhz": 14.35
+      },
+      {
+        "band": "M17",
+        "lo_mhz": 18.068,
+        "hi_mhz": 18.168
+      },
+      {
+        "band": "M15",
+        "lo_mhz": 21.0,
+        "hi_mhz": 21.45
+      },
+      {
+        "band": "M12",
+        "lo_mhz": 24.89,
+        "hi_mhz": 24.99
+      },
+      {
+        "band": "M10",
+        "lo_mhz": 28.0,
+        "hi_mhz": 29.7
+      },
+      {
+        "band": "M6",
+        "lo_mhz": 50.0,
+        "hi_mhz": 52.0
+      },
+      {
+        "band": "Fm",
+        "lo_mhz": 87.5,
+        "hi_mhz": 108.0
+      },
+      {
+        "band": "M2",
+        "lo_mhz": 144.0,
+        "hi_mhz": 146.0
+      },
+      {
+        "band": "M70",
+        "lo_mhz": 430.0,
+        "hi_mhz": 440.0
+      },
+      {
+        "band": "Cm23",
+        "lo_mhz": 1240.0,
+        "hi_mhz": 1300.0
+      },
+      {
+        "band": "Cm6",
+        "lo_mhz": 5650.0,
+        "hi_mhz": 5850.0
+      },
+      {
+        "band": "Cm3",
+        "lo_mhz": 10000.0,
+        "hi_mhz": 10500.0
+      }
+    ],
+    "segments": [
+      {
+        "lo_mhz": 0.1357,
+        "hi_mhz": 0.1378,
+        "kind": "All",
+        "label": "2200m - Amateur"
+      },
+      {
+        "lo_mhz": 0.472,
+        "hi_mhz": 0.479,
+        "kind": "All",
+        "label": "630m - Amateur"
+      },
+      {
+        "lo_mhz": 0.501,
+        "hi_mhz": 0.504,
+        "kind": "All",
+        "label": "600m - Amateur"
+      },
+      {
+        "lo_mhz": 0.5265,
+        "hi_mhz": 1.6065,
+        "kind": "Phone",
+        "label": "AM Broadcast"
+      },
+      {
+        "lo_mhz": 1.81,
+        "hi_mhz": 2.0,
+        "kind": "All",
+        "label": "160m - Amateur"
+      },
+      {
+        "lo_mhz": 3.5,
+        "hi_mhz": 3.8,
+        "kind": "All",
+        "label": "80m - Amateur"
+      },
+      {
+        "lo_mhz": 5.3515,
+        "hi_mhz": 5.3665,
+        "kind": "All",
+        "label": "60m - Amateur"
+      },
+      {
+        "lo_mhz": 5.95,
+        "hi_mhz": 6.2,
+        "kind": "Phone",
+        "label": "AM Broadcast"
+      },
+      {
+        "lo_mhz": 7.0,
+        "hi_mhz": 7.2,
+        "kind": "All",
+        "label": "40m - Amateur"
+      },
+      {
+        "lo_mhz": 7.2,
+        "hi_mhz": 7.3,
+        "kind": "Phone",
+        "label": "AM Broadcast"
+      },
+      {
+        "lo_mhz": 9.5,
+        "hi_mhz": 9.9,
+        "kind": "Phone",
+        "label": "AM Broadcast"
+      },
+      {
+        "lo_mhz": 10.1,
+        "hi_mhz": 10.15,
+        "kind": "All",
+        "label": "30m - Amateur"
+      },
+      {
+        "lo_mhz": 11.65,
+        "hi_mhz": 12.05,
+        "kind": "Phone",
+        "label": "AM Broadcast"
+      },
+      {
+        "lo_mhz": 13.6,
+        "hi_mhz": 13.8,
+        "kind": "Phone",
+        "label": "AM Broadcast"
+      },
+      {
+        "lo_mhz": 14.0,
+        "hi_mhz": 14.35,
+        "kind": "All",
+        "label": "20m - Amateur"
+      },
+      {
+        "lo_mhz": 15.1,
+        "hi_mhz": 15.6,
+        "kind": "Phone",
+        "label": "AM Broadcast"
+      },
+      {
+        "lo_mhz": 17.55,
+        "hi_mhz": 17.9,
+        "kind": "Phone",
+        "label": "AM Broadcast"
+      },
+      {
+        "lo_mhz": 18.068,
+        "hi_mhz": 18.168,
+        "kind": "All",
+        "label": "17m - Amateur"
+      },
+      {
+        "lo_mhz": 21.0,
+        "hi_mhz": 21.45,
+        "kind": "All",
+        "label": "15m - Amateur"
+      },
+      {
+        "lo_mhz": 21.45,
+        "hi_mhz": 21.85,
+        "kind": "Phone",
+        "label": "AM Broadcast"
+      },
+      {
+        "lo_mhz": 24.89,
+        "hi_mhz": 24.99,
+        "kind": "All",
+        "label": "12m - Amateur"
+      },
+      {
+        "lo_mhz": 25.67,
+        "hi_mhz": 26.1,
+        "kind": "Phone",
+        "label": "AM Broadcast"
+      },
+      {
+        "lo_mhz": 26.96,
+        "hi_mhz": 27.41,
+        "kind": "All",
+        "label": "11m - Citizen Band"
+      },
+      {
+        "lo_mhz": 28.0,
+        "hi_mhz": 29.7,
+        "kind": "All",
+        "label": "10m - Amateur"
+      },
+      {
+        "lo_mhz": 40.66,
+        "hi_mhz": 40.69,
+        "kind": "All",
+        "label": "8m - Amateur"
+      },
+      {
+        "lo_mhz": 50.0,
+        "hi_mhz": 52.0,
+        "kind": "All",
+        "label": "6m - Amateur"
+      },
+      {
+        "lo_mhz": 69.945,
+        "hi_mhz": 69.955,
+        "kind": "All",
+        "label": "4m - Amateur"
+      },
+      {
+        "lo_mhz": 70.19,
+        "hi_mhz": 70.4125,
+        "kind": "All",
+        "label": "4m - Amateur"
+      },
+      {
+        "lo_mhz": 87.5,
+        "hi_mhz": 108.0,
+        "kind": "Phone",
+        "label": "FM Broadcast"
+      },
+      {
+        "lo_mhz": 137.0,
+        "hi_mhz": 138.0,
+        "kind": "Digi",
+        "label": "Space Exploration / Meteorology Sat. / S-PCS"
+      },
+      {
+        "lo_mhz": 144.0,
+        "hi_mhz": 146.0,
+        "kind": "All",
+        "label": "2m - Amateur"
+      },
+      {
+        "lo_mhz": 174.0,
+        "hi_mhz": 223.0,
+        "kind": "Phone",
+        "label": "T-DAB Broadcast"
+      },
+      {
+        "lo_mhz": 430.0,
+        "hi_mhz": 440.0,
+        "kind": "All",
+        "label": "70cm - Amateur"
+      },
+      {
+        "lo_mhz": 446.0,
+        "hi_mhz": 446.2,
+        "kind": "All",
+        "label": "PMR446"
+      },
+      {
+        "lo_mhz": 470.0,
+        "hi_mhz": 790.0,
+        "kind": "Phone",
+        "label": "DVB-T - Broadcast"
+      },
+      {
+        "lo_mhz": 1240.0,
+        "hi_mhz": 1300.0,
+        "kind": "All",
+        "label": "23cm - Amateur"
+      },
+      {
+        "lo_mhz": 2300.0,
+        "hi_mhz": 2450.0,
+        "kind": "All",
+        "label": "13cm - Amateur"
+      },
+      {
+        "lo_mhz": 5650.0,
+        "hi_mhz": 5850.0,
+        "kind": "All",
+        "label": "6cm - Amateur"
+      },
+      {
+        "lo_mhz": 10000.0,
+        "hi_mhz": 10500.0,
+        "kind": "All",
+        "label": "3cm - Amateur"
+      },
+      {
+        "lo_mhz": 24000.0,
+        "hi_mhz": 24250.0,
+        "kind": "All",
+        "label": "1.25cm - Amateur"
+      },
+      {
+        "lo_mhz": 47000.0,
+        "hi_mhz": 47200.0,
+        "kind": "All",
+        "label": "6mm - Amateur"
+      },
+      {
+        "lo_mhz": 75500.0,
+        "hi_mhz": 81000.0,
+        "kind": "All",
+        "label": "4mm - Amateur"
+      },
+      {
+        "lo_mhz": 122250.0,
+        "hi_mhz": 123000.0,
+        "kind": "All",
+        "label": "2.5mm - Amateur"
+      },
+      {
+        "lo_mhz": 142000.0,
+        "hi_mhz": 149000.0,
+        "kind": "All",
+        "label": "2mm - Amateur"
+      },
+      {
+        "lo_mhz": 241000.0,
+        "hi_mhz": 250000.0,
+        "kind": "All",
+        "label": "1mm - Amateur"
+      }
+    ]
+  }
+}

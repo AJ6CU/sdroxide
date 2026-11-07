@@ -1,0 +1,1764 @@
+{
+  "readme": [
+    "Converted from SDR++ bandplan.",
+    "Edit, save, then press RELOAD BAND PLAN on the General tab."
+  ],
+  "region1": {
+    "bands": [
+      {
+        "band": "M2200",
+        "lo_mhz": 0.1355,
+        "hi_mhz": 0.1378
+      },
+      {
+        "band": "M60",
+        "lo_mhz": 5.3515,
+        "hi_mhz": 5.3665
+      },
+      {
+        "band": "M40",
+        "lo_mhz": 7.0,
+        "hi_mhz": 7.2
+      },
+      {
+        "band": "M30",
+        "lo_mhz": 10.1,
+        "hi_mhz": 10.15
+      },
+      {
+        "band": "M20",
+        "lo_mhz": 14.0,
+        "hi_mhz": 14.35
+      },
+      {
+        "band": "M17",
+        "lo_mhz": 18.068,
+        "hi_mhz": 18.168
+      },
+      {
+        "band": "M15",
+        "lo_mhz": 21.0,
+        "hi_mhz": 21.45
+      },
+      {
+        "band": "M12",
+        "lo_mhz": 24.89,
+        "hi_mhz": 24.99
+      },
+      {
+        "band": "M10",
+        "lo_mhz": 28.0,
+        "hi_mhz": 29.7
+      },
+      {
+        "band": "M2",
+        "lo_mhz": 144.0,
+        "hi_mhz": 146.0
+      },
+      {
+        "band": "Cm23",
+        "lo_mhz": 1240.0,
+        "hi_mhz": 1300.0
+      },
+      {
+        "band": "Cm9",
+        "lo_mhz": 3400.0,
+        "hi_mhz": 3475.0
+      },
+      {
+        "band": "Cm6",
+        "lo_mhz": 5650.0,
+        "hi_mhz": 5850.0
+      },
+      {
+        "band": "Cm3",
+        "lo_mhz": 10000.0,
+        "hi_mhz": 10500.0
+      }
+    ],
+    "segments": [
+      {
+        "lo_mhz": 0.1355,
+        "hi_mhz": 0.1378,
+        "kind": "All",
+        "label": "137KHz - Radioamateur"
+      },
+      {
+        "lo_mhz": 0.1485,
+        "hi_mhz": 0.519,
+        "kind": "Phone",
+        "label": "Grande ondes"
+      },
+      {
+        "lo_mhz": 0.472,
+        "hi_mhz": 0.479,
+        "kind": "All",
+        "label": "472KHz - Radioamateur"
+      },
+      {
+        "lo_mhz": 0.52,
+        "hi_mhz": 1.705,
+        "kind": "Phone",
+        "label": "Ondes moyennes (AM Broadcast)"
+      },
+      {
+        "lo_mhz": 1.607,
+        "hi_mhz": 1.81,
+        "kind": "Phone",
+        "label": "Marine - HF"
+      },
+      {
+        "lo_mhz": 1.81,
+        "hi_mhz": 1.85,
+        "kind": "All",
+        "label": "160m - Radioamateur"
+      },
+      {
+        "lo_mhz": 2.3,
+        "hi_mhz": 2.5,
+        "kind": "Phone",
+        "label": "120m - radiodiffusion"
+      },
+      {
+        "lo_mhz": 2.5,
+        "hi_mhz": 2.85,
+        "kind": "Phone",
+        "label": "Marine - HF"
+      },
+      {
+        "lo_mhz": 2.85,
+        "hi_mhz": 3.155,
+        "kind": "Phone",
+        "label": "Aviation - HF"
+      },
+      {
+        "lo_mhz": 3.155,
+        "hi_mhz": 3.4,
+        "kind": "Phone",
+        "label": "Marine - HF"
+      },
+      {
+        "lo_mhz": 3.2,
+        "hi_mhz": 3.4,
+        "kind": "Phone",
+        "label": "90m - radiodiffusion"
+      },
+      {
+        "lo_mhz": 3.4,
+        "hi_mhz": 3.5,
+        "kind": "Phone",
+        "label": "Aviation - HF"
+      },
+      {
+        "lo_mhz": 3.5,
+        "hi_mhz": 3.6,
+        "kind": "Phone",
+        "label": "Marine - HF"
+      },
+      {
+        "lo_mhz": 3.6,
+        "hi_mhz": 3.8,
+        "kind": "All",
+        "label": "80m - Radioamateur"
+      },
+      {
+        "lo_mhz": 3.9,
+        "hi_mhz": 4.0,
+        "kind": "Phone",
+        "label": "75m - radiodiffusion"
+      },
+      {
+        "lo_mhz": 4.065,
+        "hi_mhz": 4.44,
+        "kind": "Phone",
+        "label": "Marine - HF"
+      },
+      {
+        "lo_mhz": 4.65,
+        "hi_mhz": 4.75,
+        "kind": "Phone",
+        "label": "Aviation - HF"
+      },
+      {
+        "lo_mhz": 4.75,
+        "hi_mhz": 4.995,
+        "kind": "Phone",
+        "label": "60m - radiodiffusion"
+      },
+      {
+        "lo_mhz": 5.005,
+        "hi_mhz": 5.06,
+        "kind": "Phone",
+        "label": "60m - radiodiffusion"
+      },
+      {
+        "lo_mhz": 5.3515,
+        "hi_mhz": 5.3665,
+        "kind": "All",
+        "label": "60m - Radioamateur"
+      },
+      {
+        "lo_mhz": 5.45,
+        "hi_mhz": 5.73,
+        "kind": "Phone",
+        "label": "Aviation - HF"
+      },
+      {
+        "lo_mhz": 5.9,
+        "hi_mhz": 6.2,
+        "kind": "Phone",
+        "label": "49m - radiodiffusion"
+      },
+      {
+        "lo_mhz": 6.2,
+        "hi_mhz": 6.525,
+        "kind": "Phone",
+        "label": "Marine - HF"
+      },
+      {
+        "lo_mhz": 6.525,
+        "hi_mhz": 6.765,
+        "kind": "Phone",
+        "label": "Aviation - HF"
+      },
+      {
+        "lo_mhz": 7.0,
+        "hi_mhz": 7.2,
+        "kind": "All",
+        "label": "40m - Radioamateur"
+      },
+      {
+        "lo_mhz": 7.2,
+        "hi_mhz": 7.45,
+        "kind": "Phone",
+        "label": "41m - radiodiffusion"
+      },
+      {
+        "lo_mhz": 8.195,
+        "hi_mhz": 8.815,
+        "kind": "Phone",
+        "label": "Marine - HF"
+      },
+      {
+        "lo_mhz": 8.815,
+        "hi_mhz": 9.04,
+        "kind": "Phone",
+        "label": "Aviation - HF"
+      },
+      {
+        "lo_mhz": 9.4,
+        "hi_mhz": 9.9,
+        "kind": "Phone",
+        "label": "31m - radiodiffusion"
+      },
+      {
+        "lo_mhz": 10.005,
+        "hi_mhz": 10.1,
+        "kind": "Phone",
+        "label": "Aviation - HF"
+      },
+      {
+        "lo_mhz": 10.1,
+        "hi_mhz": 10.15,
+        "kind": "All",
+        "label": "30m - Radioamateur"
+      },
+      {
+        "lo_mhz": 11.175,
+        "hi_mhz": 11.4,
+        "kind": "Phone",
+        "label": "Aviation - HF"
+      },
+      {
+        "lo_mhz": 11.6,
+        "hi_mhz": 12.1,
+        "kind": "Phone",
+        "label": "25m - radiodiffusion"
+      },
+      {
+        "lo_mhz": 12.23,
+        "hi_mhz": 13.2,
+        "kind": "Phone",
+        "label": "Marine - HF"
+      },
+      {
+        "lo_mhz": 13.2,
+        "hi_mhz": 13.36,
+        "kind": "Phone",
+        "label": "Aviation - HF"
+      },
+      {
+        "lo_mhz": 13.57,
+        "hi_mhz": 13.87,
+        "kind": "Phone",
+        "label": "21m - radiodiffusion"
+      },
+      {
+        "lo_mhz": 14.0,
+        "hi_mhz": 14.35,
+        "kind": "All",
+        "label": "20m - Radioamateur"
+      },
+      {
+        "lo_mhz": 15.01,
+        "hi_mhz": 15.1,
+        "kind": "Phone",
+        "label": "Aviation - HF"
+      },
+      {
+        "lo_mhz": 15.1,
+        "hi_mhz": 15.8,
+        "kind": "Phone",
+        "label": "19m - radiodiffusion"
+      },
+      {
+        "lo_mhz": 16.36,
+        "hi_mhz": 17.41,
+        "kind": "Phone",
+        "label": "Marine - HF"
+      },
+      {
+        "lo_mhz": 17.48,
+        "hi_mhz": 17.9,
+        "kind": "Phone",
+        "label": "16m - radiodiffusion"
+      },
+      {
+        "lo_mhz": 17.9,
+        "hi_mhz": 18.03,
+        "kind": "Phone",
+        "label": "Aviation - HF"
+      },
+      {
+        "lo_mhz": 18.068,
+        "hi_mhz": 18.168,
+        "kind": "All",
+        "label": "17m - Radioamateur"
+      },
+      {
+        "lo_mhz": 18.78,
+        "hi_mhz": 18.9,
+        "kind": "Phone",
+        "label": "Marine - HF"
+      },
+      {
+        "lo_mhz": 18.9,
+        "hi_mhz": 19.02,
+        "kind": "Phone",
+        "label": "15m - radiodiffusion"
+      },
+      {
+        "lo_mhz": 19.68,
+        "hi_mhz": 19.8,
+        "kind": "Phone",
+        "label": "Marine - HF"
+      },
+      {
+        "lo_mhz": 21.0,
+        "hi_mhz": 21.45,
+        "kind": "All",
+        "label": "15m - Radioamateur"
+      },
+      {
+        "lo_mhz": 21.45,
+        "hi_mhz": 21.85,
+        "kind": "Phone",
+        "label": "13 m\u00e8tres - radiodiffusion"
+      },
+      {
+        "lo_mhz": 21.925,
+        "hi_mhz": 22.0,
+        "kind": "Phone",
+        "label": "Aviation - HF"
+      },
+      {
+        "lo_mhz": 22.0,
+        "hi_mhz": 22.855,
+        "kind": "Phone",
+        "label": "Marine - HF"
+      },
+      {
+        "lo_mhz": 23.2,
+        "hi_mhz": 23.35,
+        "kind": "Phone",
+        "label": "Aviation - HF"
+      },
+      {
+        "lo_mhz": 24.89,
+        "hi_mhz": 24.99,
+        "kind": "All",
+        "label": "12m - Radioamateur"
+      },
+      {
+        "lo_mhz": 25.07,
+        "hi_mhz": 25.21,
+        "kind": "Phone",
+        "label": "Marine - HF"
+      },
+      {
+        "lo_mhz": 25.67,
+        "hi_mhz": 26.1,
+        "kind": "Phone",
+        "label": "11m - radiodiffusion"
+      },
+      {
+        "lo_mhz": 26.1,
+        "hi_mhz": 26.175,
+        "kind": "Phone",
+        "label": "Marine - HF"
+      },
+      {
+        "lo_mhz": 26.96,
+        "hi_mhz": 27.41,
+        "kind": "All",
+        "label": "11m - CB"
+      },
+      {
+        "lo_mhz": 28.0,
+        "hi_mhz": 29.7,
+        "kind": "All",
+        "label": "10m - Radioamateur"
+      },
+      {
+        "lo_mhz": 50.0,
+        "hi_mhz": 54.0,
+        "kind": "All",
+        "label": "6m - Radioamateur"
+      },
+      {
+        "lo_mhz": 80.0,
+        "hi_mhz": 108.0,
+        "kind": "Phone",
+        "label": "Radiodiffusion - Bande FM"
+      },
+      {
+        "lo_mhz": 108.0,
+        "hi_mhz": 118.0,
+        "kind": "Phone",
+        "label": "Aviation - VOR/ILS"
+      },
+      {
+        "lo_mhz": 118.0,
+        "hi_mhz": 137.0,
+        "kind": "Phone",
+        "label": "Aviation - Voix"
+      },
+      {
+        "lo_mhz": 137.0,
+        "hi_mhz": 138.0,
+        "kind": "Digi",
+        "label": "Polar Orbiting Satellites"
+      },
+      {
+        "lo_mhz": 144.0,
+        "hi_mhz": 146.0,
+        "kind": "All",
+        "label": "2m - Radioamateur"
+      },
+      {
+        "lo_mhz": 156.0,
+        "hi_mhz": 162.025,
+        "kind": "Phone",
+        "label": "Marine"
+      },
+      {
+        "lo_mhz": 162.3625,
+        "hi_mhz": 162.5875,
+        "kind": "Phone",
+        "label": "NOAA Weather Radio"
+      },
+      {
+        "lo_mhz": 174.0,
+        "hi_mhz": 223.0,
+        "kind": "Phone",
+        "label": "Radiodiffusion - Bande DAB"
+      },
+      {
+        "lo_mhz": 225.0,
+        "hi_mhz": 380.0,
+        "kind": "Phone",
+        "label": "Military Aviation"
+      },
+      {
+        "lo_mhz": 240.0,
+        "hi_mhz": 270.0,
+        "kind": "Phone",
+        "label": "Satellite militaire"
+      },
+      {
+        "lo_mhz": 380.0,
+        "hi_mhz": 400.0,
+        "kind": "Phone",
+        "label": "Police (TETRAPOL)"
+      },
+      {
+        "lo_mhz": 420.0,
+        "hi_mhz": 450.0,
+        "kind": "All",
+        "label": "70cm - Radioamateur"
+      },
+      {
+        "lo_mhz": 446.0,
+        "hi_mhz": 446.2,
+        "kind": "All",
+        "label": "PMR446"
+      },
+      {
+        "lo_mhz": 470.0,
+        "hi_mhz": 694.0,
+        "kind": "Phone",
+        "label": "TNT (DVB-T)"
+      },
+      {
+        "lo_mhz": 1240.0,
+        "hi_mhz": 1300.0,
+        "kind": "All",
+        "label": "23cm - Radioamateur"
+      },
+      {
+        "lo_mhz": 1452.0,
+        "hi_mhz": 1492.0,
+        "kind": "Phone",
+        "label": "Radiodiffusion - Bande DAB"
+      },
+      {
+        "lo_mhz": 2300.0,
+        "hi_mhz": 2450.0,
+        "kind": "All",
+        "label": "13cm - Radioamateur"
+      },
+      {
+        "lo_mhz": 3400.0,
+        "hi_mhz": 3475.0,
+        "kind": "All",
+        "label": "9cm - Radioamateur"
+      },
+      {
+        "lo_mhz": 5650.0,
+        "hi_mhz": 5850.0,
+        "kind": "All",
+        "label": "6cm - Radioamateur"
+      },
+      {
+        "lo_mhz": 5650.0,
+        "hi_mhz": 5850.0,
+        "kind": "All",
+        "label": "5,650GHz - Radioamateur"
+      },
+      {
+        "lo_mhz": 10000.0,
+        "hi_mhz": 10500.0,
+        "kind": "All",
+        "label": "3cm - Radioamateur"
+      },
+      {
+        "lo_mhz": 24000.0,
+        "hi_mhz": 24250.0,
+        "kind": "All",
+        "label": "12mm - Radioamateur"
+      },
+      {
+        "lo_mhz": 47000.0,
+        "hi_mhz": 47200.0,
+        "kind": "All",
+        "label": "6mm - Radioamateur"
+      },
+      {
+        "lo_mhz": 75500.0,
+        "hi_mhz": 81500.0,
+        "kind": "All",
+        "label": "4mm - Radioamateur"
+      },
+      {
+        "lo_mhz": 122250.0,
+        "hi_mhz": 123000.0,
+        "kind": "All",
+        "label": "2,5mm - Radioamateur"
+      },
+      {
+        "lo_mhz": 134000.0,
+        "hi_mhz": 141000.0,
+        "kind": "All",
+        "label": "2mm - Radioamateur"
+      },
+      {
+        "lo_mhz": 241000.0,
+        "hi_mhz": 250000.0,
+        "kind": "All",
+        "label": "1mm - Radioamateur"
+      }
+    ]
+  },
+  "region2": {
+    "bands": [
+      {
+        "band": "M2200",
+        "lo_mhz": 0.1355,
+        "hi_mhz": 0.1378
+      },
+      {
+        "band": "M60",
+        "lo_mhz": 5.3515,
+        "hi_mhz": 5.3665
+      },
+      {
+        "band": "M40",
+        "lo_mhz": 7.0,
+        "hi_mhz": 7.2
+      },
+      {
+        "band": "M30",
+        "lo_mhz": 10.1,
+        "hi_mhz": 10.15
+      },
+      {
+        "band": "M20",
+        "lo_mhz": 14.0,
+        "hi_mhz": 14.35
+      },
+      {
+        "band": "M17",
+        "lo_mhz": 18.068,
+        "hi_mhz": 18.168
+      },
+      {
+        "band": "M15",
+        "lo_mhz": 21.0,
+        "hi_mhz": 21.45
+      },
+      {
+        "band": "M12",
+        "lo_mhz": 24.89,
+        "hi_mhz": 24.99
+      },
+      {
+        "band": "M10",
+        "lo_mhz": 28.0,
+        "hi_mhz": 29.7
+      },
+      {
+        "band": "M2",
+        "lo_mhz": 144.0,
+        "hi_mhz": 146.0
+      },
+      {
+        "band": "Cm23",
+        "lo_mhz": 1240.0,
+        "hi_mhz": 1300.0
+      },
+      {
+        "band": "Cm9",
+        "lo_mhz": 3400.0,
+        "hi_mhz": 3475.0
+      },
+      {
+        "band": "Cm6",
+        "lo_mhz": 5650.0,
+        "hi_mhz": 5850.0
+      },
+      {
+        "band": "Cm3",
+        "lo_mhz": 10000.0,
+        "hi_mhz": 10500.0
+      }
+    ],
+    "segments": [
+      {
+        "lo_mhz": 0.1355,
+        "hi_mhz": 0.1378,
+        "kind": "All",
+        "label": "137KHz - Radioamateur"
+      },
+      {
+        "lo_mhz": 0.1485,
+        "hi_mhz": 0.519,
+        "kind": "Phone",
+        "label": "Grande ondes"
+      },
+      {
+        "lo_mhz": 0.472,
+        "hi_mhz": 0.479,
+        "kind": "All",
+        "label": "472KHz - Radioamateur"
+      },
+      {
+        "lo_mhz": 0.52,
+        "hi_mhz": 1.705,
+        "kind": "Phone",
+        "label": "Ondes moyennes (AM Broadcast)"
+      },
+      {
+        "lo_mhz": 1.607,
+        "hi_mhz": 1.81,
+        "kind": "Phone",
+        "label": "Marine - HF"
+      },
+      {
+        "lo_mhz": 1.81,
+        "hi_mhz": 1.85,
+        "kind": "All",
+        "label": "160m - Radioamateur"
+      },
+      {
+        "lo_mhz": 2.3,
+        "hi_mhz": 2.5,
+        "kind": "Phone",
+        "label": "120m - radiodiffusion"
+      },
+      {
+        "lo_mhz": 2.5,
+        "hi_mhz": 2.85,
+        "kind": "Phone",
+        "label": "Marine - HF"
+      },
+      {
+        "lo_mhz": 2.85,
+        "hi_mhz": 3.155,
+        "kind": "Phone",
+        "label": "Aviation - HF"
+      },
+      {
+        "lo_mhz": 3.155,
+        "hi_mhz": 3.4,
+        "kind": "Phone",
+        "label": "Marine - HF"
+      },
+      {
+        "lo_mhz": 3.2,
+        "hi_mhz": 3.4,
+        "kind": "Phone",
+        "label": "90m - radiodiffusion"
+      },
+      {
+        "lo_mhz": 3.4,
+        "hi_mhz": 3.5,
+        "kind": "Phone",
+        "label": "Aviation - HF"
+      },
+      {
+        "lo_mhz": 3.5,
+        "hi_mhz": 3.6,
+        "kind": "Phone",
+        "label": "Marine - HF"
+      },
+      {
+        "lo_mhz": 3.6,
+        "hi_mhz": 3.8,
+        "kind": "All",
+        "label": "80m - Radioamateur"
+      },
+      {
+        "lo_mhz": 3.9,
+        "hi_mhz": 4.0,
+        "kind": "Phone",
+        "label": "75m - radiodiffusion"
+      },
+      {
+        "lo_mhz": 4.065,
+        "hi_mhz": 4.44,
+        "kind": "Phone",
+        "label": "Marine - HF"
+      },
+      {
+        "lo_mhz": 4.65,
+        "hi_mhz": 4.75,
+        "kind": "Phone",
+        "label": "Aviation - HF"
+      },
+      {
+        "lo_mhz": 4.75,
+        "hi_mhz": 4.995,
+        "kind": "Phone",
+        "label": "60m - radiodiffusion"
+      },
+      {
+        "lo_mhz": 5.005,
+        "hi_mhz": 5.06,
+        "kind": "Phone",
+        "label": "60m - radiodiffusion"
+      },
+      {
+        "lo_mhz": 5.3515,
+        "hi_mhz": 5.3665,
+        "kind": "All",
+        "label": "60m - Radioamateur"
+      },
+      {
+        "lo_mhz": 5.45,
+        "hi_mhz": 5.73,
+        "kind": "Phone",
+        "label": "Aviation - HF"
+      },
+      {
+        "lo_mhz": 5.9,
+        "hi_mhz": 6.2,
+        "kind": "Phone",
+        "label": "49m - radiodiffusion"
+      },
+      {
+        "lo_mhz": 6.2,
+        "hi_mhz": 6.525,
+        "kind": "Phone",
+        "label": "Marine - HF"
+      },
+      {
+        "lo_mhz": 6.525,
+        "hi_mhz": 6.765,
+        "kind": "Phone",
+        "label": "Aviation - HF"
+      },
+      {
+        "lo_mhz": 7.0,
+        "hi_mhz": 7.2,
+        "kind": "All",
+        "label": "40m - Radioamateur"
+      },
+      {
+        "lo_mhz": 7.2,
+        "hi_mhz": 7.45,
+        "kind": "Phone",
+        "label": "41m - radiodiffusion"
+      },
+      {
+        "lo_mhz": 8.195,
+        "hi_mhz": 8.815,
+        "kind": "Phone",
+        "label": "Marine - HF"
+      },
+      {
+        "lo_mhz": 8.815,
+        "hi_mhz": 9.04,
+        "kind": "Phone",
+        "label": "Aviation - HF"
+      },
+      {
+        "lo_mhz": 9.4,
+        "hi_mhz": 9.9,
+        "kind": "Phone",
+        "label": "31m - radiodiffusion"
+      },
+      {
+        "lo_mhz": 10.005,
+        "hi_mhz": 10.1,
+        "kind": "Phone",
+        "label": "Aviation - HF"
+      },
+      {
+        "lo_mhz": 10.1,
+        "hi_mhz": 10.15,
+        "kind": "All",
+        "label": "30m - Radioamateur"
+      },
+      {
+        "lo_mhz": 11.175,
+        "hi_mhz": 11.4,
+        "kind": "Phone",
+        "label": "Aviation - HF"
+      },
+      {
+        "lo_mhz": 11.6,
+        "hi_mhz": 12.1,
+        "kind": "Phone",
+        "label": "25m - radiodiffusion"
+      },
+      {
+        "lo_mhz": 12.23,
+        "hi_mhz": 13.2,
+        "kind": "Phone",
+        "label": "Marine - HF"
+      },
+      {
+        "lo_mhz": 13.2,
+        "hi_mhz": 13.36,
+        "kind": "Phone",
+        "label": "Aviation - HF"
+      },
+      {
+        "lo_mhz": 13.57,
+        "hi_mhz": 13.87,
+        "kind": "Phone",
+        "label": "21m - radiodiffusion"
+      },
+      {
+        "lo_mhz": 14.0,
+        "hi_mhz": 14.35,
+        "kind": "All",
+        "label": "20m - Radioamateur"
+      },
+      {
+        "lo_mhz": 15.01,
+        "hi_mhz": 15.1,
+        "kind": "Phone",
+        "label": "Aviation - HF"
+      },
+      {
+        "lo_mhz": 15.1,
+        "hi_mhz": 15.8,
+        "kind": "Phone",
+        "label": "19m - radiodiffusion"
+      },
+      {
+        "lo_mhz": 16.36,
+        "hi_mhz": 17.41,
+        "kind": "Phone",
+        "label": "Marine - HF"
+      },
+      {
+        "lo_mhz": 17.48,
+        "hi_mhz": 17.9,
+        "kind": "Phone",
+        "label": "16m - radiodiffusion"
+      },
+      {
+        "lo_mhz": 17.9,
+        "hi_mhz": 18.03,
+        "kind": "Phone",
+        "label": "Aviation - HF"
+      },
+      {
+        "lo_mhz": 18.068,
+        "hi_mhz": 18.168,
+        "kind": "All",
+        "label": "17m - Radioamateur"
+      },
+      {
+        "lo_mhz": 18.78,
+        "hi_mhz": 18.9,
+        "kind": "Phone",
+        "label": "Marine - HF"
+      },
+      {
+        "lo_mhz": 18.9,
+        "hi_mhz": 19.02,
+        "kind": "Phone",
+        "label": "15m - radiodiffusion"
+      },
+      {
+        "lo_mhz": 19.68,
+        "hi_mhz": 19.8,
+        "kind": "Phone",
+        "label": "Marine - HF"
+      },
+      {
+        "lo_mhz": 21.0,
+        "hi_mhz": 21.45,
+        "kind": "All",
+        "label": "15m - Radioamateur"
+      },
+      {
+        "lo_mhz": 21.45,
+        "hi_mhz": 21.85,
+        "kind": "Phone",
+        "label": "13 m\u00e8tres - radiodiffusion"
+      },
+      {
+        "lo_mhz": 21.925,
+        "hi_mhz": 22.0,
+        "kind": "Phone",
+        "label": "Aviation - HF"
+      },
+      {
+        "lo_mhz": 22.0,
+        "hi_mhz": 22.855,
+        "kind": "Phone",
+        "label": "Marine - HF"
+      },
+      {
+        "lo_mhz": 23.2,
+        "hi_mhz": 23.35,
+        "kind": "Phone",
+        "label": "Aviation - HF"
+      },
+      {
+        "lo_mhz": 24.89,
+        "hi_mhz": 24.99,
+        "kind": "All",
+        "label": "12m - Radioamateur"
+      },
+      {
+        "lo_mhz": 25.07,
+        "hi_mhz": 25.21,
+        "kind": "Phone",
+        "label": "Marine - HF"
+      },
+      {
+        "lo_mhz": 25.67,
+        "hi_mhz": 26.1,
+        "kind": "Phone",
+        "label": "11m - radiodiffusion"
+      },
+      {
+        "lo_mhz": 26.1,
+        "hi_mhz": 26.175,
+        "kind": "Phone",
+        "label": "Marine - HF"
+      },
+      {
+        "lo_mhz": 26.96,
+        "hi_mhz": 27.41,
+        "kind": "All",
+        "label": "11m - CB"
+      },
+      {
+        "lo_mhz": 28.0,
+        "hi_mhz": 29.7,
+        "kind": "All",
+        "label": "10m - Radioamateur"
+      },
+      {
+        "lo_mhz": 50.0,
+        "hi_mhz": 54.0,
+        "kind": "All",
+        "label": "6m - Radioamateur"
+      },
+      {
+        "lo_mhz": 80.0,
+        "hi_mhz": 108.0,
+        "kind": "Phone",
+        "label": "Radiodiffusion - Bande FM"
+      },
+      {
+        "lo_mhz": 108.0,
+        "hi_mhz": 118.0,
+        "kind": "Phone",
+        "label": "Aviation - VOR/ILS"
+      },
+      {
+        "lo_mhz": 118.0,
+        "hi_mhz": 137.0,
+        "kind": "Phone",
+        "label": "Aviation - Voix"
+      },
+      {
+        "lo_mhz": 137.0,
+        "hi_mhz": 138.0,
+        "kind": "Digi",
+        "label": "Polar Orbiting Satellites"
+      },
+      {
+        "lo_mhz": 144.0,
+        "hi_mhz": 146.0,
+        "kind": "All",
+        "label": "2m - Radioamateur"
+      },
+      {
+        "lo_mhz": 156.0,
+        "hi_mhz": 162.025,
+        "kind": "Phone",
+        "label": "Marine"
+      },
+      {
+        "lo_mhz": 162.3625,
+        "hi_mhz": 162.5875,
+        "kind": "Phone",
+        "label": "NOAA Weather Radio"
+      },
+      {
+        "lo_mhz": 174.0,
+        "hi_mhz": 223.0,
+        "kind": "Phone",
+        "label": "Radiodiffusion - Bande DAB"
+      },
+      {
+        "lo_mhz": 225.0,
+        "hi_mhz": 380.0,
+        "kind": "Phone",
+        "label": "Military Aviation"
+      },
+      {
+        "lo_mhz": 240.0,
+        "hi_mhz": 270.0,
+        "kind": "Phone",
+        "label": "Satellite militaire"
+      },
+      {
+        "lo_mhz": 380.0,
+        "hi_mhz": 400.0,
+        "kind": "Phone",
+        "label": "Police (TETRAPOL)"
+      },
+      {
+        "lo_mhz": 420.0,
+        "hi_mhz": 450.0,
+        "kind": "All",
+        "label": "70cm - Radioamateur"
+      },
+      {
+        "lo_mhz": 446.0,
+        "hi_mhz": 446.2,
+        "kind": "All",
+        "label": "PMR446"
+      },
+      {
+        "lo_mhz": 470.0,
+        "hi_mhz": 694.0,
+        "kind": "Phone",
+        "label": "TNT (DVB-T)"
+      },
+      {
+        "lo_mhz": 1240.0,
+        "hi_mhz": 1300.0,
+        "kind": "All",
+        "label": "23cm - Radioamateur"
+      },
+      {
+        "lo_mhz": 1452.0,
+        "hi_mhz": 1492.0,
+        "kind": "Phone",
+        "label": "Radiodiffusion - Bande DAB"
+      },
+      {
+        "lo_mhz": 2300.0,
+        "hi_mhz": 2450.0,
+        "kind": "All",
+        "label": "13cm - Radioamateur"
+      },
+      {
+        "lo_mhz": 3400.0,
+        "hi_mhz": 3475.0,
+        "kind": "All",
+        "label": "9cm - Radioamateur"
+      },
+      {
+        "lo_mhz": 5650.0,
+        "hi_mhz": 5850.0,
+        "kind": "All",
+        "label": "6cm - Radioamateur"
+      },
+      {
+        "lo_mhz": 5650.0,
+        "hi_mhz": 5850.0,
+        "kind": "All",
+        "label": "5,650GHz - Radioamateur"
+      },
+      {
+        "lo_mhz": 10000.0,
+        "hi_mhz": 10500.0,
+        "kind": "All",
+        "label": "3cm - Radioamateur"
+      },
+      {
+        "lo_mhz": 24000.0,
+        "hi_mhz": 24250.0,
+        "kind": "All",
+        "label": "12mm - Radioamateur"
+      },
+      {
+        "lo_mhz": 47000.0,
+        "hi_mhz": 47200.0,
+        "kind": "All",
+        "label": "6mm - Radioamateur"
+      },
+      {
+        "lo_mhz": 75500.0,
+        "hi_mhz": 81500.0,
+        "kind": "All",
+        "label": "4mm - Radioamateur"
+      },
+      {
+        "lo_mhz": 122250.0,
+        "hi_mhz": 123000.0,
+        "kind": "All",
+        "label": "2,5mm - Radioamateur"
+      },
+      {
+        "lo_mhz": 134000.0,
+        "hi_mhz": 141000.0,
+        "kind": "All",
+        "label": "2mm - Radioamateur"
+      },
+      {
+        "lo_mhz": 241000.0,
+        "hi_mhz": 250000.0,
+        "kind": "All",
+        "label": "1mm - Radioamateur"
+      }
+    ]
+  },
+  "region3": {
+    "bands": [
+      {
+        "band": "M2200",
+        "lo_mhz": 0.1355,
+        "hi_mhz": 0.1378
+      },
+      {
+        "band": "M60",
+        "lo_mhz": 5.3515,
+        "hi_mhz": 5.3665
+      },
+      {
+        "band": "M40",
+        "lo_mhz": 7.0,
+        "hi_mhz": 7.2
+      },
+      {
+        "band": "M30",
+        "lo_mhz": 10.1,
+        "hi_mhz": 10.15
+      },
+      {
+        "band": "M20",
+        "lo_mhz": 14.0,
+        "hi_mhz": 14.35
+      },
+      {
+        "band": "M17",
+        "lo_mhz": 18.068,
+        "hi_mhz": 18.168
+      },
+      {
+        "band": "M15",
+        "lo_mhz": 21.0,
+        "hi_mhz": 21.45
+      },
+      {
+        "band": "M12",
+        "lo_mhz": 24.89,
+        "hi_mhz": 24.99
+      },
+      {
+        "band": "M10",
+        "lo_mhz": 28.0,
+        "hi_mhz": 29.7
+      },
+      {
+        "band": "M2",
+        "lo_mhz": 144.0,
+        "hi_mhz": 146.0
+      },
+      {
+        "band": "Cm23",
+        "lo_mhz": 1240.0,
+        "hi_mhz": 1300.0
+      },
+      {
+        "band": "Cm9",
+        "lo_mhz": 3400.0,
+        "hi_mhz": 3475.0
+      },
+      {
+        "band": "Cm6",
+        "lo_mhz": 5650.0,
+        "hi_mhz": 5850.0
+      },
+      {
+        "band": "Cm3",
+        "lo_mhz": 10000.0,
+        "hi_mhz": 10500.0
+      }
+    ],
+    "segments": [
+      {
+        "lo_mhz": 0.1355,
+        "hi_mhz": 0.1378,
+        "kind": "All",
+        "label": "137KHz - Radioamateur"
+      },
+      {
+        "lo_mhz": 0.1485,
+        "hi_mhz": 0.519,
+        "kind": "Phone",
+        "label": "Grande ondes"
+      },
+      {
+        "lo_mhz": 0.472,
+        "hi_mhz": 0.479,
+        "kind": "All",
+        "label": "472KHz - Radioamateur"
+      },
+      {
+        "lo_mhz": 0.52,
+        "hi_mhz": 1.705,
+        "kind": "Phone",
+        "label": "Ondes moyennes (AM Broadcast)"
+      },
+      {
+        "lo_mhz": 1.607,
+        "hi_mhz": 1.81,
+        "kind": "Phone",
+        "label": "Marine - HF"
+      },
+      {
+        "lo_mhz": 1.81,
+        "hi_mhz": 1.85,
+        "kind": "All",
+        "label": "160m - Radioamateur"
+      },
+      {
+        "lo_mhz": 2.3,
+        "hi_mhz": 2.5,
+        "kind": "Phone",
+        "label": "120m - radiodiffusion"
+      },
+      {
+        "lo_mhz": 2.5,
+        "hi_mhz": 2.85,
+        "kind": "Phone",
+        "label": "Marine - HF"
+      },
+      {
+        "lo_mhz": 2.85,
+        "hi_mhz": 3.155,
+        "kind": "Phone",
+        "label": "Aviation - HF"
+      },
+      {
+        "lo_mhz": 3.155,
+        "hi_mhz": 3.4,
+        "kind": "Phone",
+        "label": "Marine - HF"
+      },
+      {
+        "lo_mhz": 3.2,
+        "hi_mhz": 3.4,
+        "kind": "Phone",
+        "label": "90m - radiodiffusion"
+      },
+      {
+        "lo_mhz": 3.4,
+        "hi_mhz": 3.5,
+        "kind": "Phone",
+        "label": "Aviation - HF"
+      },
+      {
+        "lo_mhz": 3.5,
+        "hi_mhz": 3.6,
+        "kind": "Phone",
+        "label": "Marine - HF"
+      },
+      {
+        "lo_mhz": 3.6,
+        "hi_mhz": 3.8,
+        "kind": "All",
+        "label": "80m - Radioamateur"
+      },
+      {
+        "lo_mhz": 3.9,
+        "hi_mhz": 4.0,
+        "kind": "Phone",
+        "label": "75m - radiodiffusion"
+      },
+      {
+        "lo_mhz": 4.065,
+        "hi_mhz": 4.44,
+        "kind": "Phone",
+        "label": "Marine - HF"
+      },
+      {
+        "lo_mhz": 4.65,
+        "hi_mhz": 4.75,
+        "kind": "Phone",
+        "label": "Aviation - HF"
+      },
+      {
+        "lo_mhz": 4.75,
+        "hi_mhz": 4.995,
+        "kind": "Phone",
+        "label": "60m - radiodiffusion"
+      },
+      {
+        "lo_mhz": 5.005,
+        "hi_mhz": 5.06,
+        "kind": "Phone",
+        "label": "60m - radiodiffusion"
+      },
+      {
+        "lo_mhz": 5.3515,
+        "hi_mhz": 5.3665,
+        "kind": "All",
+        "label": "60m - Radioamateur"
+      },
+      {
+        "lo_mhz": 5.45,
+        "hi_mhz": 5.73,
+        "kind": "Phone",
+        "label": "Aviation - HF"
+      },
+      {
+        "lo_mhz": 5.9,
+        "hi_mhz": 6.2,
+        "kind": "Phone",
+        "label": "49m - radiodiffusion"
+      },
+      {
+        "lo_mhz": 6.2,
+        "hi_mhz": 6.525,
+        "kind": "Phone",
+        "label": "Marine - HF"
+      },
+      {
+        "lo_mhz": 6.525,
+        "hi_mhz": 6.765,
+        "kind": "Phone",
+        "label": "Aviation - HF"
+      },
+      {
+        "lo_mhz": 7.0,
+        "hi_mhz": 7.2,
+        "kind": "All",
+        "label": "40m - Radioamateur"
+      },
+      {
+        "lo_mhz": 7.2,
+        "hi_mhz": 7.45,
+        "kind": "Phone",
+        "label": "41m - radiodiffusion"
+      },
+      {
+        "lo_mhz": 8.195,
+        "hi_mhz": 8.815,
+        "kind": "Phone",
+        "label": "Marine - HF"
+      },
+      {
+        "lo_mhz": 8.815,
+        "hi_mhz": 9.04,
+        "kind": "Phone",
+        "label": "Aviation - HF"
+      },
+      {
+        "lo_mhz": 9.4,
+        "hi_mhz": 9.9,
+        "kind": "Phone",
+        "label": "31m - radiodiffusion"
+      },
+      {
+        "lo_mhz": 10.005,
+        "hi_mhz": 10.1,
+        "kind": "Phone",
+        "label": "Aviation - HF"
+      },
+      {
+        "lo_mhz": 10.1,
+        "hi_mhz": 10.15,
+        "kind": "All",
+        "label": "30m - Radioamateur"
+      },
+      {
+        "lo_mhz": 11.175,
+        "hi_mhz": 11.4,
+        "kind": "Phone",
+        "label": "Aviation - HF"
+      },
+      {
+        "lo_mhz": 11.6,
+        "hi_mhz": 12.1,
+        "kind": "Phone",
+        "label": "25m - radiodiffusion"
+      },
+      {
+        "lo_mhz": 12.23,
+        "hi_mhz": 13.2,
+        "kind": "Phone",
+        "label": "Marine - HF"
+      },
+      {
+        "lo_mhz": 13.2,
+        "hi_mhz": 13.36,
+        "kind": "Phone",
+        "label": "Aviation - HF"
+      },
+      {
+        "lo_mhz": 13.57,
+        "hi_mhz": 13.87,
+        "kind": "Phone",
+        "label": "21m - radiodiffusion"
+      },
+      {
+        "lo_mhz": 14.0,
+        "hi_mhz": 14.35,
+        "kind": "All",
+        "label": "20m - Radioamateur"
+      },
+      {
+        "lo_mhz": 15.01,
+        "hi_mhz": 15.1,
+        "kind": "Phone",
+        "label": "Aviation - HF"
+      },
+      {
+        "lo_mhz": 15.1,
+        "hi_mhz": 15.8,
+        "kind": "Phone",
+        "label": "19m - radiodiffusion"
+      },
+      {
+        "lo_mhz": 16.36,
+        "hi_mhz": 17.41,
+        "kind": "Phone",
+        "label": "Marine - HF"
+      },
+      {
+        "lo_mhz": 17.48,
+        "hi_mhz": 17.9,
+        "kind": "Phone",
+        "label": "16m - radiodiffusion"
+      },
+      {
+        "lo_mhz": 17.9,
+        "hi_mhz": 18.03,
+        "kind": "Phone",
+        "label": "Aviation - HF"
+      },
+      {
+        "lo_mhz": 18.068,
+        "hi_mhz": 18.168,
+        "kind": "All",
+        "label": "17m - Radioamateur"
+      },
+      {
+        "lo_mhz": 18.78,
+        "hi_mhz": 18.9,
+        "kind": "Phone",
+        "label": "Marine - HF"
+      },
+      {
+        "lo_mhz": 18.9,
+        "hi_mhz": 19.02,
+        "kind": "Phone",
+        "label": "15m - radiodiffusion"
+      },
+      {
+        "lo_mhz": 19.68,
+        "hi_mhz": 19.8,
+        "kind": "Phone",
+        "label": "Marine - HF"
+      },
+      {
+        "lo_mhz": 21.0,
+        "hi_mhz": 21.45,
+        "kind": "All",
+        "label": "15m - Radioamateur"
+      },
+      {
+        "lo_mhz": 21.45,
+        "hi_mhz": 21.85,
+        "kind": "Phone",
+        "label": "13 m\u00e8tres - radiodiffusion"
+      },
+      {
+        "lo_mhz": 21.925,
+        "hi_mhz": 22.0,
+        "kind": "Phone",
+        "label": "Aviation - HF"
+      },
+      {
+        "lo_mhz": 22.0,
+        "hi_mhz": 22.855,
+        "kind": "Phone",
+        "label": "Marine - HF"
+      },
+      {
+        "lo_mhz": 23.2,
+        "hi_mhz": 23.35,
+        "kind": "Phone",
+        "label": "Aviation - HF"
+      },
+      {
+        "lo_mhz": 24.89,
+        "hi_mhz": 24.99,
+        "kind": "All",
+        "label": "12m - Radioamateur"
+      },
+      {
+        "lo_mhz": 25.07,
+        "hi_mhz": 25.21,
+        "kind": "Phone",
+        "label": "Marine - HF"
+      },
+      {
+        "lo_mhz": 25.67,
+        "hi_mhz": 26.1,
+        "kind": "Phone",
+        "label": "11m - radiodiffusion"
+      },
+      {
+        "lo_mhz": 26.1,
+        "hi_mhz": 26.175,
+        "kind": "Phone",
+        "label": "Marine - HF"
+      },
+      {
+        "lo_mhz": 26.96,
+        "hi_mhz": 27.41,
+        "kind": "All",
+        "label": "11m - CB"
+      },
+      {
+        "lo_mhz": 28.0,
+        "hi_mhz": 29.7,
+        "kind": "All",
+        "label": "10m - Radioamateur"
+      },
+      {
+        "lo_mhz": 50.0,
+        "hi_mhz": 54.0,
+        "kind": "All",
+        "label": "6m - Radioamateur"
+      },
+      {
+        "lo_mhz": 80.0,
+        "hi_mhz": 108.0,
+        "kind": "Phone",
+        "label": "Radiodiffusion - Bande FM"
+      },
+      {
+        "lo_mhz": 108.0,
+        "hi_mhz": 118.0,
+        "kind": "Phone",
+        "label": "Aviation - VOR/ILS"
+      },
+      {
+        "lo_mhz": 118.0,
+        "hi_mhz": 137.0,
+        "kind": "Phone",
+        "label": "Aviation - Voix"
+      },
+      {
+        "lo_mhz": 137.0,
+        "hi_mhz": 138.0,
+        "kind": "Digi",
+        "label": "Polar Orbiting Satellites"
+      },
+      {
+        "lo_mhz": 144.0,
+        "hi_mhz": 146.0,
+        "kind": "All",
+        "label": "2m - Radioamateur"
+      },
+      {
+        "lo_mhz": 156.0,
+        "hi_mhz": 162.025,
+        "kind": "Phone",
+        "label": "Marine"
+      },
+      {
+        "lo_mhz": 162.3625,
+        "hi_mhz": 162.5875,
+        "kind": "Phone",
+        "label": "NOAA Weather Radio"
+      },
+      {
+        "lo_mhz": 174.0,
+        "hi_mhz": 223.0,
+        "kind": "Phone",
+        "label": "Radiodiffusion - Bande DAB"
+      },
+      {
+        "lo_mhz": 225.0,
+        "hi_mhz": 380.0,
+        "kind": "Phone",
+        "label": "Military Aviation"
+      },
+      {
+        "lo_mhz": 240.0,
+        "hi_mhz": 270.0,
+        "kind": "Phone",
+        "label": "Satellite militaire"
+      },
+      {
+        "lo_mhz": 380.0,
+        "hi_mhz": 400.0,
+        "kind": "Phone",
+        "label": "Police (TETRAPOL)"
+      },
+      {
+        "lo_mhz": 420.0,
+        "hi_mhz": 450.0,
+        "kind": "All",
+        "label": "70cm - Radioamateur"
+      },
+      {
+        "lo_mhz": 446.0,
+        "hi_mhz": 446.2,
+        "kind": "All",
+        "label": "PMR446"
+      },
+      {
+        "lo_mhz": 470.0,
+        "hi_mhz": 694.0,
+        "kind": "Phone",
+        "label": "TNT (DVB-T)"
+      },
+      {
+        "lo_mhz": 1240.0,
+        "hi_mhz": 1300.0,
+        "kind": "All",
+        "label": "23cm - Radioamateur"
+      },
+      {
+        "lo_mhz": 1452.0,
+        "hi_mhz": 1492.0,
+        "kind": "Phone",
+        "label": "Radiodiffusion - Bande DAB"
+      },
+      {
+        "lo_mhz": 2300.0,
+        "hi_mhz": 2450.0,
+        "kind": "All",
+        "label": "13cm - Radioamateur"
+      },
+      {
+        "lo_mhz": 3400.0,
+        "hi_mhz": 3475.0,
+        "kind": "All",
+        "label": "9cm - Radioamateur"
+      },
+      {
+        "lo_mhz": 5650.0,
+        "hi_mhz": 5850.0,
+        "kind": "All",
+        "label": "6cm - Radioamateur"
+      },
+      {
+        "lo_mhz": 5650.0,
+        "hi_mhz": 5850.0,
+        "kind": "All",
+        "label": "5,650GHz - Radioamateur"
+      },
+      {
+        "lo_mhz": 10000.0,
+        "hi_mhz": 10500.0,
+        "kind": "All",
+        "label": "3cm - Radioamateur"
+      },
+      {
+        "lo_mhz": 24000.0,
+        "hi_mhz": 24250.0,
+        "kind": "All",
+        "label": "12mm - Radioamateur"
+      },
+      {
+        "lo_mhz": 47000.0,
+        "hi_mhz": 47200.0,
+        "kind": "All",
+        "label": "6mm - Radioamateur"
+      },
+      {
+        "lo_mhz": 75500.0,
+        "hi_mhz": 81500.0,
+        "kind": "All",
+        "label": "4mm - Radioamateur"
+      },
+      {
+        "lo_mhz": 122250.0,
+        "hi_mhz": 123000.0,
+        "kind": "All",
+        "label": "2,5mm - Radioamateur"
+      },
+      {
+        "lo_mhz": 134000.0,
+        "hi_mhz": 141000.0,
+        "kind": "All",
+        "label": "2mm - Radioamateur"
+      },
+      {
+        "lo_mhz": 241000.0,
+        "hi_mhz": 250000.0,
+        "kind": "All",
+        "label": "1mm - Radioamateur"
+      }
+    ]
+  }
+}
