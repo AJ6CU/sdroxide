@@ -369,6 +369,23 @@ impl SdroxideApp {
             let names = [
                 tr!("settings-general-band-plan-built-in"),
                 tr!("settings-general-band-plan-germany-nrw"),
+                tr!("settings-general-band-plan-sdrpp-australia"),
+                tr!("settings-general-band-plan-sdrpp-austria"),
+                tr!("settings-general-band-plan-sdrpp-belgium"),
+                tr!("settings-general-band-plan-sdrpp-brazil"),
+                tr!("settings-general-band-plan-sdrpp-canada"),
+                tr!("settings-general-band-plan-sdrpp-china"),
+                tr!("settings-general-band-plan-sdrpp-france"),
+                tr!("settings-general-band-plan-sdrpp-germany"),
+                tr!("settings-general-band-plan-sdrpp-ireland"),
+                tr!("settings-general-band-plan-sdrpp-italy"),
+                tr!("settings-general-band-plan-sdrpp-netherlands"),
+                tr!("settings-general-band-plan-sdrpp-republic-of-korea"),
+                tr!("settings-general-band-plan-sdrpp-russia"),
+                tr!("settings-general-band-plan-sdrpp-slovakia"),
+                tr!("settings-general-band-plan-sdrpp-turkey"),
+                tr!("settings-general-band-plan-sdrpp-united-kingdom"),
+                tr!("settings-general-band-plan-sdrpp-usa"),
             ];
             let mut choice = current;
             ui.horizontal_wrapped(|ui| {
