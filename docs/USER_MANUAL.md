@@ -8314,8 +8314,8 @@ one and in a browser:
   a file you can choose, download and share. A plan with that name is replaced and its
   old file kept once as `<name>.json.bak`. It does not change what runs.
 - **RESTORE SHIPPED PLANS** puts back the plans that came with the program: one that was
-  deleted is written again, one that was edited is replaced (your version kept once as
-  `.bak`). If the plan that runs is one of them, it is re-read at once — and if it
+  deleted, or that a later version added, is written again; one that was edited is
+  replaced (your version kept once as `.bak`). If the plan that runs is one of them, it is re-read at once — and if it
   differs, that is a change of plan like any other.
 
 **A plan for one radio.** At a station with several radios each radio can run a plan
@@ -8361,6 +8361,20 @@ tune or transmit until you have looked at them and confirmed them again, and the
 notice bar says why. Choosing the plan that is already running changes nothing.
 The same holds across a restart: if the plan the station runs at start-up is not
 the one the lists were confirmed against, they start unconfirmed.
+
+**Plans that come with the program.** The first time the station makes its library it
+copies in twenty-one plans, which never replace a file of yours afterwards and can be
+deleted like any other: **Germany (NRW)** and **Germany (bandplan)** — two German
+plans of our own format with their own allocations — and national band lists for
+Australia, Austria, Belgium, Brazil, Canada, China (Mainland), France, Indonesia, Ireland,
+Italy, the Netherlands, the Republic of Korea, Russia, Slovakia, Turkey, the United
+Kingdom and the United States, plus a **Worldwide** list and **QO-100**. The national
+lists are converted band lists (*A list of bands*, above): they change what the waterfall
+strip draws and names and **never the transmit lockout**, which stays the built-in IARU
+one — narrow it in a plan of your own, with your licence in front of you. A few
+numbers that were plainly wrong in the lists as published (a digit too many, a row
+ending before it starts) were corrected by hand or left out. The program's own plans
+are not licence limits: the regional allocation is not your licence.
 
 A plan named in `config.toml` whose file has gone, or that will not parse as JSON,
 runs the built-in tables for that session and says so; the name and the file are
