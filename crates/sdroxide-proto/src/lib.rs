@@ -2238,8 +2238,15 @@ use sdroxide_types::{
 /// `ServerMsg::RadioConfig` and `Command::SetRadioConfig` whole, so the appended
 /// field moves its layout. `#[serde(default)]`, so a `radio.json` written before
 /// this loads unchanged. `PROTO_VERSION` 272 → 273, `VERSION_BYTE` 0x5C → 0x5D.
-pub const PROTO_VERSION: u16 = 273;
-const VERSION_BYTE: u8 = 0x5D;
+///
+/// v274: **QO-100, HFDL and radiosonde read-outs reach remote and web clients.**
+/// `ServerMsg` gains `Qo100Status`, `HfdlStatus` and `SondeStatus(Box<..>)`,
+/// appended last in that order. They carried the beacon lock, the HFDL decode
+/// log and the sonde tracks, which stayed on the station until now. Cached by
+/// the server and replayed on connect. A v273 peer has no variant to decode
+/// them into. `PROTO_VERSION` 273 → 274, `VERSION_BYTE` 0x5D → 0x5E.
+pub const PROTO_VERSION: u16 = 274;
+const VERSION_BYTE: u8 = 0x5E;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -2826,6 +2833,15 @@ pub enum ServerMsg {
     /// it is not. A whole snapshot, twice a second while it runs — see
     /// [`sdroxide_types::VorStatus`]. Appended last.
     VorStatus(Box<sdroxide_types::VorStatus>),
+    /// The QO-100 beacon tracker: lock, measured offset and the auto-apply
+    /// bookkeeping. A whole snapshot. Appended last.
+    Qo100Status(sdroxide_types::Qo100Status),
+    /// The HFDL decoder: level, counters and the rolling decode log, a whole
+    /// snapshot each time. Appended last.
+    HfdlStatus(sdroxide_types::HfdlStatus),
+    /// The radiosonde decoder: level and the sondes heard with their tracks,
+    /// a whole snapshot each time. Appended last.
+    SondeStatus(Box<sdroxide_types::SondeStatus>),
 }
 
 /// What [`ServerMsg::ClientSettings`] carries.
@@ -3581,6 +3597,35 @@ mod tests {
             },
         ] {
             let m = ServerMsg::VorStatus(Box::new(st));
+            let back: ServerMsg = decode(&encode(&m).unwrap()).unwrap();
+            assert_eq!(back, m);
+        }
+    }
+
+    /// The QO-100, HFDL and radiosonde read-outs ride the wire whole, and the
+    /// three are the last variants, so a slip in a discriminant shows here.
+    #[test]
+    fn the_qo100_hfdl_and_sonde_statuses_round_trip() {
+        let q = ServerMsg::Qo100Status(sdroxide_types::Qo100Status {
+            running: true,
+            locked: true,
+            offset_hz: -1234.5,
+            blocks_tried: 12,
+            blocks_locked: 9,
+            ..Default::default()
+        });
+        let h = ServerMsg::HfdlStatus(sdroxide_types::HfdlStatus {
+            running: true,
+            level_dbfs: -71.5,
+            bursts: 40,
+            decodes: 3,
+            ..Default::default()
+        });
+        let s = ServerMsg::SondeStatus(Box::new(sdroxide_types::SondeStatus {
+            running: true,
+            ..Default::default()
+        }));
+        for m in [q, h, s] {
             let back: ServerMsg = decode(&encode(&m).unwrap()).unwrap();
             assert_eq!(back, m);
         }

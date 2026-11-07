@@ -3509,7 +3509,6 @@ qo100-write-converter-lnb-offset-puts = Write the converter/LNB offset that puts
 qo100-write-converter-lnb-offset-puts-2 = Write the converter/LNB offset that puts the tracker's estimate onto 10489.750 MHz, and reopen the receiver — the same brief interruption Settings ▸ Radio ▸ Apply makes
 qo100-waiting-second-crc-valid-frame = Waiting for a second CRC-valid frame before offering to write this — one lock alone could be a chance match
 qo100-write-corrected-converter-lnb-offset = Write the corrected converter/LNB offset and reopen the receiver — a brief interruption, the same one Settings ▸ Radio ▸ Apply makes
-qo100-decoder-runs-receiving-station-readout = decoder runs on the receiving station — its readout is not sent to remote clients
 qo100-starting = starting…
 qo100-searching-first-window-fills-after = searching — the first window fills after about 24 s, then repeats
 

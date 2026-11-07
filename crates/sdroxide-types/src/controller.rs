@@ -324,10 +324,7 @@ pub enum RadioEvent {
     /// [`RadioEvent::IsmStatus`] follows — settings travel separately, in
     /// [`crate::RadioState::qo100`].
     ///
-    /// Native-engine only for now: bridging this to a remote/WASM client
-    /// would mean a matching variant in `sdroxide_proto::ServerMsg`, the way
-    /// `IsmStatus` has one — not done yet, since every station this shipped
-    /// for runs its own hardware locally.
+    /// Bridged to remote and web clients as `ServerMsg::Qo100Status`.
     Qo100Status(crate::Qo100Status),
     /// What the HFDL (ARINC 635) channel decoder has made of the tuned
     /// channel: burst level, how many bursts carried recognized events, and
@@ -336,12 +333,10 @@ pub enum RadioEvent {
     /// [`RadioEvent::Qo100Status`] follows — settings travel separately, in
     /// [`crate::RadioState::hfdl`].
     ///
-    /// Native-engine only for now, like [`RadioEvent::Qo100Status`]: bridging
-    /// this to a remote/WASM client would mean a matching variant in
-    /// `sdroxide_proto::ServerMsg` — not done yet.
+    /// Bridged to remote and web clients as `ServerMsg::HfdlStatus`.
     HfdlStatus(crate::HfdlStatus),
     /// The radiosonde decoder's level and the sondes it has heard, with their
-    /// tracks. Native-engine only, like [`RadioEvent::HfdlStatus`].
+    /// tracks. Bridged to remote and web clients as `ServerMsg::SondeStatus`.
     SondeStatus(Box<crate::SondeStatus>),
     /// The VOR beacon the receiver is parked on: radial, ident and how well the
     /// two 30 Hz signals are heard. Rides `ServerMsg::VorStatus`.

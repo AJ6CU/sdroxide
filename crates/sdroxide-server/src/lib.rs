@@ -291,6 +291,12 @@ pub(crate) struct Latest {
     /// the puce empty in front of a working lane for up to half a second, or
     /// for ever when the lane only speaks on a change.
     pub vor_status: Option<Box<sdroxide_types::VorStatus>>,
+    /// The QO-100 tracker, the HFDL log and the radiosonde tracks: standing
+    /// conditions like the VOR read-out, replayed on connect so a client that
+    /// attached late is not blank until the decoder next speaks.
+    pub qo100_status: Option<sdroxide_types::Qo100Status>,
+    pub hfdl_status: Option<sdroxide_types::HfdlStatus>,
+    pub sonde_status: Option<Box<sdroxide_types::SondeStatus>>,
     /// What the DRM decoder has made of the broadcast currently tuned. Replayed
     /// on connect for the same reason as `rds`: a station's label and the
     /// transmission's parameters are standing conditions, and a client that
@@ -1254,15 +1260,18 @@ fn handle_event(shared: &Shared, ev: RadioEvent) {
                 Some(ServerMsg::AisStatus(st))
             }
             RadioEvent::DabStatus(st) => Some(ServerMsg::DabStatus(st)),
-            // Native-only for now: every station this shipped for runs its
-            // own hardware locally, so there is no `ServerMsg` variant for
-            // this yet — see `RadioEvent::Qo100Status`'s own doc.
-            RadioEvent::Qo100Status(_) => None,
-            // Native-only for the same reason as QO-100 above — the live HFDL
-            // decode log is engine-internal, bridged nowhere yet.
-            RadioEvent::HfdlStatus(_) => None,
-            // ...and the radiosonde tracks, for the same reason.
-            RadioEvent::SondeStatus(_) => None,
+            RadioEvent::Qo100Status(st) => {
+                latest.qo100_status = Some(st.clone());
+                Some(ServerMsg::Qo100Status(st))
+            }
+            RadioEvent::HfdlStatus(st) => {
+                latest.hfdl_status = Some(st.clone());
+                Some(ServerMsg::HfdlStatus(st))
+            }
+            RadioEvent::SondeStatus(st) => {
+                latest.sonde_status = Some(st.clone());
+                Some(ServerMsg::SondeStatus(st))
+            }
             RadioEvent::VorStatus(st) => {
                 latest.vor_status = Some(st.clone());
                 Some(ServerMsg::VorStatus(st))
@@ -1389,7 +1398,7 @@ fn handle_event(shared: &Shared, ev: RadioEvent) {
             // whichever screen, but only the station connects, so a remote
             // screen has no other way to learn whether they work.
             RadioEvent::PictureUpload(st) => Some(ServerMsg::PictureUpload(st)),
-            // Native-only, like `Qo100Status`: the ATS Mini's memory table is
+            // Native-only: the ATS Mini's memory table is
             // answered on the machine the radio is attached to and is not on
             // the wire.
             RadioEvent::AtsMiniMemories(_) => None,

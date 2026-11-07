@@ -3507,7 +3507,6 @@ qo100-write-converter-lnb-offset-puts = Écrire le décalage du convertisseur/LN
 qo100-write-converter-lnb-offset-puts-2 = Écrire le décalage du convertisseur/LNB qui amène l'estimation du suiveur sur 10489,750 MHz, et rouvrir le récepteur — la même brève interruption que fait Réglages ▸ Radio ▸ Appliquer
 qo100-waiting-second-crc-valid-frame = En attente d'une seconde trame au CRC valide avant de proposer d'écrire ceci — un seul verrouillage pourrait être une coïncidence
 qo100-write-corrected-converter-lnb-offset = Écrire le décalage corrigé du convertisseur/LNB et rouvrir le récepteur — une brève interruption, la même que fait Réglages ▸ Radio ▸ Appliquer
-qo100-decoder-runs-receiving-station-readout = le décodeur tourne sur la station réceptrice — son affichage n'est pas envoyé aux clients distants
 qo100-starting = démarrage…
 qo100-searching-first-window-fills-after = recherche — la première fenêtre se remplit après environ 24 s, puis se répète
 

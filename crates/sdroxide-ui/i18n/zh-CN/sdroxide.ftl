@@ -3481,7 +3481,6 @@ qo100-write-converter-lnb-offset-puts = 写入变频器/LNB 偏移，使信标�
 qo100-write-converter-lnb-offset-puts-2 = 写入变频器/LNB 偏移，使跟踪器的估计值对应到 10489.750 MHz，然后重新打开接收机——与“设置 ▸ 电台 ▸ 应用”所造成的短暂中断相同
 qo100-waiting-second-crc-valid-frame = 等待第二个 CRC 校验通过的帧，然后才提供写入此项——仅一次锁定可能只是偶然匹配
 qo100-write-corrected-converter-lnb-offset = 写入校正后的变频器/LNB 偏移并重新打开接收机——短暂中断，与“设置 ▸ 电台 ▸ 应用”所造成的相同
-qo100-decoder-runs-receiving-station-readout = 解码器在接收电台上运行——其读数不会发送给远程客户端
 qo100-starting = 正在启动……
 qo100-searching-first-window-fills-after = 正在搜索——第一个窗口约 24 秒后填满，然后重复
 

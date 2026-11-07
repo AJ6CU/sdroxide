@@ -3509,7 +3509,6 @@ qo100-write-converter-lnb-offset-puts = Grava o deslocamento do conversor/LNB qu
 qo100-write-converter-lnb-offset-puts-2 = Grava o deslocamento do conversor/LNB que coloca a estimativa do rastreador em 10489,750 MHz, e reabre o receptor — a mesma breve interrupção que Configurações ▸ Rádio ▸ Aplicar causa
 qo100-waiting-second-crc-valid-frame = Aguardando um segundo quadro com CRC válido antes de oferecer para gravar isto — um travamento sozinho pode ser uma coincidência
 qo100-write-corrected-converter-lnb-offset = Grava o deslocamento corrigido do conversor/LNB e reabre o receptor — uma breve interrupção, a mesma que Configurações ▸ Rádio ▸ Aplicar causa
-qo100-decoder-runs-receiving-station-readout = o decodificador roda na estação receptora — sua leitura não é enviada a clientes remotos
 qo100-starting = iniciando…
 qo100-searching-first-window-fills-after = pesquisando — a primeira janela se completa em cerca de 24 s, depois se repete
 

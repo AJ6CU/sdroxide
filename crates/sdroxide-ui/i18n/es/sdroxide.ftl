@@ -3493,7 +3493,6 @@ qo100-write-converter-lnb-offset-puts = Escribe el desplazamiento de conversor/L
 qo100-write-converter-lnb-offset-puts-2 = Escribe el desplazamiento de conversor/LNB que lleva a 10489,750 MHz la estimación del seguidor, y reabre el receptor — la misma breve interrupción que produce Ajustes ▸ Radio ▸ Aplicar
 qo100-waiting-second-crc-valid-frame = Esperando una segunda trama con CRC válido antes de ofrecer escribir esto — un solo enganche podría ser una coincidencia
 qo100-write-corrected-converter-lnb-offset = Escribe el desplazamiento de conversor/LNB corregido y reabre el receptor — una breve interrupción, la misma que produce Ajustes ▸ Radio ▸ Aplicar
-qo100-decoder-runs-receiving-station-readout = el decodificador se ejecuta en la estación receptora — su lectura no se envía a los clientes remotos
 qo100-starting = iniciando…
 qo100-searching-first-window-fills-after = buscando — la primera ventana se llena tras unos 24 s, luego se repite
 
