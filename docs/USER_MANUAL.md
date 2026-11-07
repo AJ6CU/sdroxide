@@ -8295,7 +8295,7 @@ to the screen's own disk, because the plans are kept **on the station**:
   still: edit the file in the `bandplans` folder, save, click, done.
 
 **Changing the plan means checking the band lists again.** The TX and the RX band
-lists ([§6.2](#62-radio)) were confirmed against one plan, and a different plan
+lists ([§6.2](#62-radio-choosing-and-configuring-the-rig)) were confirmed against one plan, and a different plan
 can put a band edge somewhere else or take a band away. So whenever the station
 starts running a plan other than the one it was running — choosing one, going
 back to the built-in tables, reloading a file you edited so that it differs — the
