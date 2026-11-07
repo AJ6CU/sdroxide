@@ -582,6 +582,14 @@ pub enum SstvEvent {
     /// alone and scores near zero — which is what lets the caller keep noise
     /// out of the gallery without a guess about the picture's content.
     ImageComplete { sync_share: f32 },
+    /// A free-run lock was not a picture, and the receiver has gone back to
+    /// hunting. The lines already drawn are not a frame to save.
+    ///
+    /// A header-locked picture is never this: a fade is what the line fit is
+    /// for. A free-run lock is a guess, and a guess that the next lines do not
+    /// bear out used to run the mode out anyway — PD290 is nearly five minutes,
+    /// which is the "RX" that stays lit on voice (issue #427).
+    GaveUp,
     /// A station identified itself in tones after its picture — the FSK ID
     /// every SSTV program and unattended repeater sends and reads.
     FskId(String),
@@ -820,6 +828,11 @@ const SYNC_WIN_S: f64 = 0.005;
 const SYNC_SHARE: f64 = 0.5;
 const SYNC_SLICE_HZ: f64 = 1400.0;
 
+/// How many lines a free-run lock is given to show it is a picture.
+///
+/// Eight is a fade's worth of slack and still a second or two on the fast
+/// modes, against the minutes a slow mode would otherwise be drawn for.
+const FREERUN_GIVE_UP_LINES: u32 = 8;
 /// How far a gap between two sync pulses may be off a whole number of lines:
 /// this much for where each pulse was measured, and this fraction of the gap
 /// for the clocks — 5000 ppm, past any sound card.
@@ -1818,6 +1831,17 @@ impl SstvRx {
         }
 
         self.line += rpl;
+        // A free-run lock is a guess. If the lines after it do not carry the
+        // sync it was made on, it was voice or a click, and running the mode
+        // out draws noise for as long as the mode is — PD290 is nearly five
+        // minutes (issue #427). A header-locked picture is not judged here: a
+        // fade is what the fit is for, and a header is the station's word.
+        if !self.numbered
+            && self.misses >= FREERUN_GIVE_UP_LINES
+        {
+            self.give_up(out);
+            return;
+        }
         if self.line >= h {
             self.final_pass(out);
             let share = if self.sync_lines > 0 {
@@ -1838,6 +1862,22 @@ impl SstvRx {
             self.line_samples = self.line_period_samples(self.mode, self.line);
             self.line_start = self.fit.predict(k + 1.0).unwrap_or(start + self.line_samples);
         }
+    }
+
+    /// Drop a free-run lock that the lines after it did not bear out, and
+    /// hunt again. The history stays: a header in it is the next picture, and
+    /// clearing it is what would miss one. The cadence that made the lock does
+    /// not — left in `sync_hist` the next pulse would start the same guess over.
+    fn give_up(&mut self, out: &mut Vec<SstvEvent>) {
+        self.phase = RxPhase::Hunt;
+        self.vis_state = VisState::reset(self.sample_idx);
+        self.sync_hist.clear();
+        self.track.clear();
+        self.misses = 0;
+        self.inst_hz += self.afc_hz;
+        self.afc_hz = 0.0;
+        self.afc_hold = None;
+        out.push(SstvEvent::GaveUp);
     }
 
     /// Whether the Robot 36 line starting at `line_start` is an odd one, as its
@@ -2381,6 +2421,7 @@ mod tests {
                     SstvEvent::ModeDetected(m) => detected = Some(m),
                     SstvEvent::Line { .. } => lines += 1,
                     SstvEvent::ImageComplete { .. }
+                    | SstvEvent::GaveUp
                     | SstvEvent::FskId(_)
                     | SstvEvent::UnsupportedMode { .. } => {}
                 }
@@ -2763,6 +2804,7 @@ mod tests {
                     SstvEvent::ModeDetected(m) => detected = Some(m),
                     SstvEvent::Line { .. } => lines += 1,
                     SstvEvent::ImageComplete { .. }
+                    | SstvEvent::GaveUp
                     | SstvEvent::FskId(_)
                     | SstvEvent::UnsupportedMode { .. } => {}
                 }
@@ -2770,6 +2812,79 @@ mod tests {
         }
         assert_eq!(detected, Some(mode), "free-run should lock the selected mode");
         assert!(lines > 40, "free-run should decode many lines, got {lines}");
+    }
+
+    /// A free-run lock that the next lines do not bear out is not a picture.
+    ///
+    /// The lock is a guess; once the lines after it carry no sync where the
+    /// mode says they should, the receiver goes back to hunting instead of
+    /// drawing the mode out — PD290 is nearly five minutes (issue #427). A
+    /// real picture's sync pulses arrive on almost every line, so this only
+    /// fires on voice or a click.
+    #[test]
+    fn a_free_run_lock_that_bears_no_sync_gives_up() {
+        let rate = 48_000.0;
+        let mode = SstvMode::Scottie1;
+        let (w, h) = mode.dimensions();
+        let mut rgb = vec![0u8; w as usize * h as usize * 3];
+        for yy in 0..h as usize {
+            for xx in 0..w as usize {
+                let i = (yy * w as usize + xx) * 3;
+                rgb[i] = (xx * 255 / w as usize) as u8;
+            }
+        }
+        let mut tx = SstvTx::new(mode, &rgb, w, h, rate, 0.0);
+        let mut audio = Vec::new();
+        let mut block = vec![0.0f32; 4096];
+        let mut guard = 0;
+        while !tx.done() && guard < 20_000 {
+            let n = tx.next_block(&mut block);
+            audio.extend_from_slice(&block[..n]);
+            guard += 1;
+        }
+        // Skip past the VIS so the lock is free-run, as tuning into a
+        // transmission already under way.
+        let skip = (rate * 1.1) as usize;
+        let mut rx = SstvRx::new(rate);
+        rx.set_expected(None);
+        let mut events = Vec::new();
+        let mut locked = false;
+        let mut gave_up = false;
+        // Feed only the first ~5 s of the picture (enough to lock, not
+        // enough to complete), then silence: a lock that was voice or a
+        // click never recovers its sync, so it gives up rather than
+        // drawing the mode out.
+        let end = (skip + (rate * 5.0) as usize).min(audio.len());
+        for chunk in audio[skip..end].chunks(4096) {
+            rx.process(chunk, &mut events);
+            for e in events.drain(..) {
+                if let SstvEvent::ModeDetected(_) = e {
+                    locked = true;
+                }
+                if let SstvEvent::GaveUp = e {
+                    gave_up = true;
+                }
+            }
+            if gave_up {
+                break;
+            }
+        }
+        assert!(locked, "free-run should lock first");
+        if !gave_up {
+            let silence = vec![0.0f32; (rate * 10.0) as usize];
+            for chunk in silence.chunks(4096) {
+                rx.process(chunk, &mut events);
+                for e in events.drain(..) {
+                    if let SstvEvent::GaveUp = e {
+                        gave_up = true;
+                    }
+                }
+                if gave_up {
+                    break;
+                }
+            }
+        }
+        assert!(gave_up, "a lock with no sync should give up");
     }
 
     /// A whole transmission of `mode` — header, lines and all — as audio.

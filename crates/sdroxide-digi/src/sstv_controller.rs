@@ -304,6 +304,14 @@ impl DigiEngine for SstvController {
                     self.unsupported = Some(label);
                     self.status_dirty = true;
                 }
+                SstvEvent::GaveUp => {
+                    self.not_saved = Some(sdroxide_types::SstvDrop::NotAPicture);
+                    self.rx_active = false;
+                    self.rx_image.clear();
+                    self.image_id = self.image_id.wrapping_add(1);
+                    self.detected = None;
+                    self.status_dirty = true;
+                }
                 SstvEvent::ImageComplete { sync_share } => {
                     // **Not everything that decodes is a picture.** A frame the
                     // receiver locked onto noise draws itself and would be
