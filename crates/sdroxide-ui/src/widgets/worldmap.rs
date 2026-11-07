@@ -86,6 +86,16 @@ impl Default for MapView {
 }
 
 impl MapView {
+    /// Start over from the auto-fit if the view has gone non-finite. NaN
+    /// survives every clamp and ease, so one bad input event — the kind a
+    /// resume from sleep can deliver — left the map dead for good, double-click
+    /// included (upstream #656).
+    pub(crate) fn sanitize(&mut self) {
+        if !(self.clat.is_finite() && self.clon.is_finite() && self.lon_span.is_finite()) {
+            *self = MapView::default();
+        }
+    }
+
     /// The latitude window this zoom covers on a map of the given aspect
     /// (height/width) — the projection is linear in both axes.
     pub(crate) fn lat_span(&self, aspect: f64) -> f64 {
@@ -401,8 +411,24 @@ pub(crate) fn draw_base(
     lat_span: f64,
     map: &theme::MapPalette,
 ) -> f32 {
+    draw_base_cities(p, rect, clat, clon, lon_span, lat_span, map, theme::map_cities())
+}
+
+/// [`draw_base`] for a map with a cities switch of its own: `cities` instead
+/// of the shared setting.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn draw_base_cities(
+    p: &eframe::egui::Painter,
+    rect: eframe::egui::Rect,
+    clat: f64,
+    clon: f64,
+    lon_span: f64,
+    lat_span: f64,
+    map: &theme::MapPalette,
+    cities: bool,
+) -> f32 {
     let dot_r = draw_ground(p, rect, clat, clon, lon_span, lat_span, map);
-    if theme::map_cities() {
+    if cities {
         draw_cities(p, rect, clat, clon, lon_span, lat_span, dot_r, map);
     }
     dot_r

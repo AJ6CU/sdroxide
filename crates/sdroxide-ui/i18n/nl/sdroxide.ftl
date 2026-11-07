@@ -3885,33 +3885,34 @@ fsq-add = Toevoegen
 
 ## publicsdr (src/app/publicsdr.rs)
 
-publicsdr-tab = + TAB
-publicsdr-open-receiver-new-radio-own = Open deze ontvanger als nieuwe radio, in een eigen tabblad
-publicsdr-point-radio-receiver-replacing-whatever = Richt *deze* radio op de ontvanger, ter vervanging van de interface waarop hij nu staat — er wordt eerst nogmaals om bevestiging gevraagd, omdat dat het instellen van een hele radio is
 publicsdr-not-stated = niet opgegeven
-publicsdr-replace = VERVANGEN
-publicsdr-point-radio-you-are-receiver = Richt de radio waarop je zit op deze ontvanger
-publicsdr-tab-instead = + TAB IN PLAATS DAARVAN
-publicsdr-open-receiver-another-radio-leave = Open de ontvanger als een andere radio en laat deze met rust
-publicsdr-cancel = ANNULEREN
 publicsdr-public-sdrs = PUBLIEKE SDR'S
 publicsdr-available = BESCHIKBAAR
 publicsdr-hide-receivers-are-full-ones = Verberg ontvangers die vol zijn, en die waarvan de beheerder geen kanalen heeft geopend voor andere apps dan een browser
 publicsdr-band = IN BAND
 publicsdr-only-receivers-cover-current-dial = Alleen ontvangers die de huidige afstemfrequentie dekken
 publicsdr-low-bw = LAGE BW
-publicsdr-take-spyserver-low-bandwidth-shape = Neem een SpyServer in zijn lage-bandbreedtevorm: een smal I/Q-venster dat de afstemming volgt plus het eigen bandoverzicht van de server, in plaats van megabits aan breedband-I/Q. Geen effect op een KiwiSDR, die maar één vorm heeft.
-publicsdr-refresh = ⟳ VERVERSEN
-publicsdr-fetch-both-directories-again = Haal beide mappen opnieuw op
+publicsdr-map-cities = STEDEN
+publicsdr-map-cities-tip = Steden op deze kaart, aan of uit.
+publicsdr-view-list = LIJST
+publicsdr-view-map = KAART
+publicsdr-view-map-tip = Dezelfde ontvangers op een wereldkaart. Klik op een punt om alle ontvangers eronder te kiezen.
+publicsdr-map-pick = Klik op een punt om de ontvangers eronder te kiezen.
+publicsdr-map-names = NAMEN
+publicsdr-map-names-tip = Toon de namen van de ontvangers op de kaart. Uit: alleen de gekozen ontvangers krijgen een naam.
+publicsdr-check-online = ONLINE
+publicsdr-check-silent = STIL
+publicsdr-check-waiting = CONTROLE…
+publicsdr-check-no-answer = Geen antwoord binnen 20 seconden.
+publicsdr-take-spyserver-low-bandwidth-shape = Een SpyServer in zijn vorm met lage bandbreedte nemen: een smal I/Q-venster dat de dial volgt plus de eigen bandweergave van de server, in plaats van megabits aan breedband-I/Q. Geen effect op een KiwiSDR, die maar de ene vorm heeft.
+publicsdr-refresh = ⟳ VERNIEUWEN
+publicsdr-fetch-both-directories-again = Beide mappen opnieuw ophalen
 publicsdr-name-place-antenna-band = naam, plaats, antenne, band
 publicsdr-clear-search = Wis de zoekopdracht
 publicsdr-fetching-receiver-lists = De ontvangerlijsten worden opgehaald…
 publicsdr-machine-radio-attached-does-not = De machine waaraan deze radio hangt beantwoordt geen apparaatvragen, dus hij kan de lijsten ook niet ophalen.
 publicsdr-no-match = geen overeenkomst
-publicsdr-nothing-matches-try-turning-filter = niets komt overeen — probeer een filterchip weer aan te zetten
-publicsdr-radio = deze radio
-publicsdr-radio-s-configuration-has-not = De configuratie van deze radio is nog niet aangekomen van de machine waarop hij staat, dus er is niets om op de ontvanger te richten — neem hem in plaats daarvan met + TAB.
-publicsdr-position-not-published-so-nothing = {" "}Zijn positie is niet gepubliceerd, dus niets wat hij hoort wordt gerapporteerd.
+publicsdr-nothing-matches-try-turning-filter = niets past — probeer een filter weer aan te zetten
 
 ## hd (src/app/hd.rs)
 
@@ -4718,14 +4719,7 @@ publicsdr-antenna =
 publicsdr-receivers-fetched-ago = { $entries } ontvangers · { $per_net } · opgehaald { $age } geleden
 publicsdr-showing-search-narrow = toont { $shown } van { $n } — zoek om te verfijnen
 publicsdr-match = { $n } treffer
-publicsdr-replace-taking-receiver-points-same =
-    { $this } vervangen door { $entry }?
-
-    { $this2 } staat op { $iface }. Als je deze ontvanger neemt, wijst hetzelfde tabblad voortaan naar { $address }, wordt het hernoemd naar “{ $entry2 }” en blijft de afstemming beperkt tot het { $range_label } dat de ontvanger publiceert — hier wordt niets verzonden.
-
-    De instellingen van { $iface2 } blijven zoals ze zijn, net als de bereiken die ervoor zijn opgegeven: als je in Instellingen → Radio weer naar de interface terugschakelt, is de radio weer zoals hij was.
-publicsdr-receptions-will-reported = {" "}Ontvangsten worden gemeld vanaf { $value }.
-publicsdr-pointing-radio = Deze radio richten op { $entry }…{ $site }
+publicsdr-map-status = { $shown } op de kaart · { $unplaced } zonder positie
 publicsdr-opening-another-radio = { $entry } openen als een andere radio…
 
 ## qo100: messages with values (src/app/qo100.rs)
@@ -5041,7 +5035,6 @@ cat-family-rs-hfiq = RS-HFIQ
 cat-family-tr-usdx = (tr)uSDX
 cat-family-rigctld = Hamlib rigctld (netwerk)
 cat-family-flrig = flrig (netwerk)
-publicsdr-its-interface = zijn interface
 
 ## Values from sdroxide-types drawn on chips, menus and lists (src/i18n/labels.rs).
 agc-mode-off = Uit
@@ -7657,7 +7650,6 @@ net-wavelog-no-station-location = geen stationslocatie om van te downloaden — 
 
 publicsdr-could-not-connect = kon niet verbinden in deze sessie
 
-publicsdr-use-chip = GEBRUIK
 
 weather-title = WEERRAPPORTEN
 
@@ -9065,7 +9057,6 @@ publicsdr-mine = MIJN
 
 publicsdr-mine-hint = Alleen de ontvangers die je hebt gemarkeerd
 
-publicsdr-mine-empty = Nog niets gemarkeerd — het ☆ op een rij bewaart die ontvanger hier.
 
 publicsdr-star-receiver = Deze ontvanger in MIJN bewaren
 

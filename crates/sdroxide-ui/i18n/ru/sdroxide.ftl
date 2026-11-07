@@ -3895,21 +3895,25 @@ fsq-add = Добавить
 
 ## publicsdr (src/app/publicsdr.rs)
 
-publicsdr-tab = + ВКЛАДКА
-publicsdr-open-receiver-new-radio-own = Открыть этот приёмник как новое радио, на собственной вкладке
-publicsdr-point-radio-receiver-replacing-whatever = Направить *это* радио на приёмник, заменив интерфейс, на котором оно сейчас, — спрашивается ещё раз, потому что это настройка целого радио
 publicsdr-not-stated = не указано
-publicsdr-replace = ЗАМЕНИТЬ
-publicsdr-point-radio-you-are-receiver = Направить радио, на котором вы сидите, на этот приёмник
-publicsdr-tab-instead = + ВКЛАДКА ВМЕСТО ЭТОГО
-publicsdr-open-receiver-another-radio-leave = Открыть приёмник как другое радио и не трогать это
-publicsdr-cancel = ОТМЕНА
 publicsdr-public-sdrs = ПУБЛИЧНЫЕ SDR
 publicsdr-available = ДОСТУПНО
 publicsdr-hide-receivers-are-full-ones = Скрыть приёмники, которые заняты, и те, чей оператор не открыл никаких каналов для приложений, кроме браузера
 publicsdr-band = В ДИАПАЗОНЕ
 publicsdr-only-receivers-cover-current-dial = Только приёмники, которые покрывают текущую частоту шкалы
 publicsdr-low-bw = НИЗКАЯ ПОЛОСА
+publicsdr-map-cities = ГОРОДА
+publicsdr-map-cities-tip = Города на этой карте: показать или скрыть.
+publicsdr-view-list = СПИСОК
+publicsdr-view-map = КАРТА
+publicsdr-view-map-tip = Те же приёмники на карте мира. Щелчок по точке выбирает все приёмники под ней.
+publicsdr-map-pick = Щёлкните по точке, чтобы выбрать приёмники под ней.
+publicsdr-map-names = ИМЕНА
+publicsdr-map-names-tip = Показывать названия приёмников на карте. Выкл.: подписаны только выбранные.
+publicsdr-check-online = В СЕТИ
+publicsdr-check-silent = МОЛЧИТ
+publicsdr-check-waiting = ПРОВЕРКА…
+publicsdr-check-no-answer = Нет ответа в течение 20 секунд.
 publicsdr-take-spyserver-low-bandwidth-shape = Брать SpyServer в его форме низкой полосы: узкое окно I/Q, которое следует за шкалой, плюс собственный вид диапазона сервера, вместо мегабит широкополосного I/Q. На KiwiSDR это ничего не меняет — у него только одна форма.
 publicsdr-refresh = ⟳ ОБНОВИТЬ
 publicsdr-fetch-both-directories-again = Загрузить оба каталога заново
@@ -3919,9 +3923,6 @@ publicsdr-fetching-receiver-lists = Загрузка списков приёмн
 publicsdr-machine-radio-attached-does-not = Машина, к которой подключено это радио, не отвечает на вопросы об устройствах, поэтому она тоже не может загрузить списки.
 publicsdr-no-match = совпадений нет
 publicsdr-nothing-matches-try-turning-filter = ничто не совпадает — попробуйте снова включить один из фильтров
-publicsdr-radio = это радио
-publicsdr-radio-s-configuration-has-not = Конфигурация этого радио ещё не пришла с машины, к которой оно подключено, поэтому направлять на приёмник нечего — возьмите его через + ВКЛАДКА.
-publicsdr-position-not-published-so-nothing = {" "}Его позиция не опубликована, поэтому ничего из того, что оно слышит, не будет сообщено.
 
 ## hd (src/app/hd.rs)
 
@@ -4731,14 +4732,7 @@ publicsdr-antenna =
 publicsdr-receivers-fetched-ago = приёмников: { $entries } · { $per_net } · загружено { $age } назад
 publicsdr-showing-search-narrow = показано { $shown } из { $n } — поиском сузьте список
 publicsdr-match = совпадений: { $n }
-publicsdr-replace-taking-receiver-points-same =
-    Заменить { $this } на { $entry }?
-
-    { $this2 } is on { $iface }. Taking this receiver points the same tab at { $address } instead, renames it “{ $entry2 }”, and holds the dial to the { $range_label } the receiver publishes — nothing here transmits.
-
-    The { $iface2 } settings stay where they are, and so do the ranges stated for them: switching the interface back in Settings → Radio brings the radio back as it was.
-publicsdr-receptions-will-reported = {" "}Приёмы будут сообщаться из { $value }.
-publicsdr-pointing-radio = Направляю это радио на { $entry }…{ $site }
+publicsdr-map-status = на карте: { $shown } · без координат: { $unplaced }
 publicsdr-opening-another-radio = Открываю { $entry } как другое радио…
 
 ## qo100: messages with values (src/app/qo100.rs)
@@ -5046,7 +5040,6 @@ cat-family-rs-hfiq = RS-HFIQ
 cat-family-tr-usdx = (tr)uSDX
 cat-family-rigctld = Hamlib rigctld (сеть)
 cat-family-flrig = flrig (сеть)
-publicsdr-its-interface = его интерфейс
 
 ## Values from sdroxide-types drawn on chips, menus and lists (src/i18n/labels.rs).
 agc-mode-off = Выкл.
@@ -7660,7 +7653,6 @@ net-wavelog-no-station-location = нет места станции для ска
 
 publicsdr-could-not-connect = не удалось подключиться в этом сеансе
 
-publicsdr-use-chip = USE
 
 weather-title = СВОДКИ ПОГОДЫ
 
@@ -9072,7 +9064,6 @@ publicsdr-mine = МОИ
 
 publicsdr-mine-hint = Только отмеченные вами приёмники
 
-publicsdr-mine-empty = Пока ничего не отмечено — ☆ в строке оставит этот приёмник здесь.
 
 publicsdr-star-receiver = Сохранить этот приёмник в МОИ
 

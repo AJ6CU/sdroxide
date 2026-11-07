@@ -2297,8 +2297,15 @@ use sdroxide_types::{
 /// "X is not used on Y" in the operator's language (it was an English notice
 /// that a remote screen never received). `PROTO_VERSION` 280 → 281,
 /// `VERSION_BYTE` 0x64 → 0x65.
-pub const PROTO_VERSION: u16 = 281;
-const VERSION_BYTE: u8 = 0x65;
+///
+/// v282: the public-SDR map's receiver check.
+/// [`sdroxide_types::DeviceProbe`] gains `PublicSdrCheck { network, address }`
+/// and [`sdroxide_types::ProbeAnswer`] gains `PublicSdrCheck`, which carries
+/// the address back so several checks in flight each find their row. Both
+/// appended last; a v281 peer has no name for either.
+/// `PROTO_VERSION` 281 → 282, `VERSION_BYTE` 0x65 → 0x66.
+pub const PROTO_VERSION: u16 = 282;
+const VERSION_BYTE: u8 = 0x66;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -3599,7 +3606,7 @@ mod tests {
             ServerMsg::TxRefused(w, hz) => assert_eq!((w, hz), (why, 7_074_000.0)),
             _ => panic!("TxRefused did not round-trip"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (281, 0x65));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (282, 0x66));
         // v280: the CB refusal is a new tail variant of `TxBlock`; the ones
         // before it keep their positions.
         let cb = ServerMsg::TxRefused(sdroxide_types::TxBlock::CbOff, 27_185_000.0);
@@ -3655,7 +3662,7 @@ mod tests {
             }
             other => panic!("the answer did not round-trip: {other:?}"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (281, 0x65));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (282, 0x66));
     }
 
     /// The VOR read-out rides the wire whole, locked or not, and the message is
