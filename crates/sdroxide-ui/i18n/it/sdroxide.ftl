@@ -9227,6 +9227,7 @@ settings-general-band-plan-built-in = IARU integrato
 
 settings-general-band-plan-germany-nrw = Germania (NRW, SWL)
 
+settings-general-band-plan-own = Proprio della stazione
 
 settings-general-band-plan-hint = Scegli un piano bande fornito. Sostituisce bandplan.json; le tabelle IARU integrate restano il valore predefinito.
 
@@ -9307,37 +9308,4 @@ settings-general-band-plan-export-hint = Scrive il piano in uso in un file JSON,
 
 settings-general-band-plan-imported = Piano di banda importato. La stazione lo sta usando.
 
-
-settings-general-band-plan-sdrpp-australia = Australia
-
-settings-general-band-plan-sdrpp-austria = Austria
-
-settings-general-band-plan-sdrpp-belgium = Belgium
-
-settings-general-band-plan-sdrpp-brazil = Brazil
-
-settings-general-band-plan-sdrpp-canada = Canada
-
-settings-general-band-plan-sdrpp-china = China
-
-settings-general-band-plan-sdrpp-france = France
-
-settings-general-band-plan-sdrpp-germany = Germany
-
-settings-general-band-plan-sdrpp-ireland = Ireland
-
-settings-general-band-plan-sdrpp-italy = Italy
-
-settings-general-band-plan-sdrpp-netherlands = Netherlands
-
-settings-general-band-plan-sdrpp-republic-of-korea = Republic of Korea
-
-settings-general-band-plan-sdrpp-russia = Russia
-
-settings-general-band-plan-sdrpp-slovakia = Slovakia
-
-settings-general-band-plan-sdrpp-turkey = Turkey
-
-settings-general-band-plan-sdrpp-united-kingdom = United Kingdom
-
-settings-general-band-plan-sdrpp-usa = USA
+settings-general-band-plan-import-not-a-plan = Quel file non è un piano di banda: non è stato possibile leggerlo. Non è cambiato nulla.

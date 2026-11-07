@@ -20,24 +20,6 @@ use sdroxide_types::BandPlan;
 /// 694–2200 MHz utility bands.
 pub const GERMANY_NRW: &str = include_str!("../../assets/bandplans/bandplan-de-nrw.json");
 
-// SDR++ converted presets
-pub const SDRPP_AUSTRALIA: &str = include_str!("../../assets/bandplans/australia.json");
-pub const SDRPP_AUSTRIA: &str = include_str!("../../assets/bandplans/austria.json");
-pub const SDRPP_BELGIUM: &str = include_str!("../../assets/bandplans/belgium.json");
-pub const SDRPP_BRAZIL: &str = include_str!("../../assets/bandplans/brazil.json");
-pub const SDRPP_CANADA: &str = include_str!("../../assets/bandplans/canada.json");
-pub const SDRPP_CHINA: &str = include_str!("../../assets/bandplans/china.json");
-pub const SDRPP_FRANCE: &str = include_str!("../../assets/bandplans/france.json");
-pub const SDRPP_GERMANY: &str = include_str!("../../assets/bandplans/germany.json");
-pub const SDRPP_IRELAND: &str = include_str!("../../assets/bandplans/ireland.json");
-pub const SDRPP_ITALY: &str = include_str!("../../assets/bandplans/italy.json");
-pub const SDRPP_NETHERLANDS: &str = include_str!("../../assets/bandplans/netherlands.json");
-pub const SDRPP_REPUBLIC_OF_KOREA: &str = include_str!("../../assets/bandplans/republic-of-korea.json");
-pub const SDRPP_RUSSIA: &str = include_str!("../../assets/bandplans/russia.json");
-pub const SDRPP_SLOVAKIA: &str = include_str!("../../assets/bandplans/slovakia.json");
-pub const SDRPP_TURKEY: &str = include_str!("../../assets/bandplans/turkey.json");
-pub const SDRPP_UNITED_KINGDOM: &str = include_str!("../../assets/bandplans/united-kingdom.json");
-pub const SDRPP_USA: &str = include_str!("../../assets/bandplans/usa.json");
 /// A band plan parsed from the text of a JSON file — a shipped preset or one
 /// the operator imported — or `None` when it does not fit this build's plan.
 pub fn parse_plan(json: &str) -> Option<BandPlan> {
@@ -46,10 +28,6 @@ pub fn parse_plan(json: &str) -> Option<BandPlan> {
         return None;
     }
     Some(plan)
-<<<<<<< HEAD
-    serde_json::from_str::<BandPlan>(json).ok()
-=======
->>>>>>> 0ca4fe3 (fix(bandplan): validate on import, backup previous, reset TX bands, ImportBandPlan command (#546 feedback))
 }
 
 /// Whether `plan` is exactly the Germany (NRW) preset, so the chooser can name
@@ -69,7 +47,7 @@ pub fn is_germany_nrw(plan: &BandPlan) -> bool {
 /// to them, never the opening position. "Station's own" is not an entry — it
 /// is what the chooser says when the operator holds a hand-edited or imported
 /// plan, and there is nothing to write for it.
-pub const CHOICES: usize = 19;
+pub const CHOICES: usize = 2;
 
 /// Which chooser entry `plan` is on: 0 built-in, 1 Germany (NRW), 2 the
 /// station's own.
@@ -78,42 +56,8 @@ pub fn choice_of(plan: &BandPlan) -> usize {
         0
     } else if is_germany_nrw(plan) {
         1
-    } else if parse_plan(SDRPP_AUSTRALIA).as_ref() == Some(plan) {
-        2
-    } else if parse_plan(SDRPP_AUSTRIA).as_ref() == Some(plan) {
-        3
-    } else if parse_plan(SDRPP_BELGIUM).as_ref() == Some(plan) {
-        4
-    } else if parse_plan(SDRPP_BRAZIL).as_ref() == Some(plan) {
-        5
-    } else if parse_plan(SDRPP_CANADA).as_ref() == Some(plan) {
-        6
-    } else if parse_plan(SDRPP_CHINA).as_ref() == Some(plan) {
-        7
-    } else if parse_plan(SDRPP_FRANCE).as_ref() == Some(plan) {
-        8
-    } else if parse_plan(SDRPP_GERMANY).as_ref() == Some(plan) {
-        9
-    } else if parse_plan(SDRPP_IRELAND).as_ref() == Some(plan) {
-        10
-    } else if parse_plan(SDRPP_ITALY).as_ref() == Some(plan) {
-        11
-    } else if parse_plan(SDRPP_NETHERLANDS).as_ref() == Some(plan) {
-        12
-    } else if parse_plan(SDRPP_REPUBLIC_OF_KOREA).as_ref() == Some(plan) {
-        13
-    } else if parse_plan(SDRPP_RUSSIA).as_ref() == Some(plan) {
-        14
-    } else if parse_plan(SDRPP_SLOVAKIA).as_ref() == Some(plan) {
-        15
-    } else if parse_plan(SDRPP_TURKEY).as_ref() == Some(plan) {
-        16
-    } else if parse_plan(SDRPP_UNITED_KINGDOM).as_ref() == Some(plan) {
-        17
-    } else if parse_plan(SDRPP_USA).as_ref() == Some(plan) {
-        18
     } else {
-        19
+        2
     }
 }
 
@@ -123,23 +67,6 @@ pub fn plan_for_choice(choice: usize) -> Option<BandPlan> {
     match choice {
         0 => Some(BandPlan::default()),
         1 => parse_plan(GERMANY_NRW),
-        2 => parse_plan(SDRPP_AUSTRALIA),
-        3 => parse_plan(SDRPP_AUSTRIA),
-        4 => parse_plan(SDRPP_BELGIUM),
-        5 => parse_plan(SDRPP_BRAZIL),
-        6 => parse_plan(SDRPP_CANADA),
-        7 => parse_plan(SDRPP_CHINA),
-        8 => parse_plan(SDRPP_FRANCE),
-        9 => parse_plan(SDRPP_GERMANY),
-        10 => parse_plan(SDRPP_IRELAND),
-        11 => parse_plan(SDRPP_ITALY),
-        12 => parse_plan(SDRPP_NETHERLANDS),
-        13 => parse_plan(SDRPP_REPUBLIC_OF_KOREA),
-        14 => parse_plan(SDRPP_RUSSIA),
-        15 => parse_plan(SDRPP_SLOVAKIA),
-        16 => parse_plan(SDRPP_TURKEY),
-        17 => parse_plan(SDRPP_UNITED_KINGDOM),
-        18 => parse_plan(SDRPP_USA),
         _ => None,
     }
 }

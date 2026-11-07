@@ -9156,6 +9156,7 @@ settings-general-band-plan-built-in = 内置IARU
 
 settings-general-band-plan-germany-nrw = 德国（NRW，SWL）
 
+settings-general-band-plan-own = 本站自有
 
 settings-general-band-plan-hint = 选择一个随附的波段计划。它会替换 bandplan.json；内置IARU表始终是默认值。
 
@@ -9236,37 +9237,4 @@ settings-general-band-plan-export-hint = 将正在使用的计划写入 JSON 文
 
 settings-general-band-plan-imported = 波段计划已导入，本电台正在使用它。
 
-
-settings-general-band-plan-sdrpp-australia = Australia
-
-settings-general-band-plan-sdrpp-austria = Austria
-
-settings-general-band-plan-sdrpp-belgium = Belgium
-
-settings-general-band-plan-sdrpp-brazil = Brazil
-
-settings-general-band-plan-sdrpp-canada = Canada
-
-settings-general-band-plan-sdrpp-china = China
-
-settings-general-band-plan-sdrpp-france = France
-
-settings-general-band-plan-sdrpp-germany = Germany
-
-settings-general-band-plan-sdrpp-ireland = Ireland
-
-settings-general-band-plan-sdrpp-italy = Italy
-
-settings-general-band-plan-sdrpp-netherlands = Netherlands
-
-settings-general-band-plan-sdrpp-republic-of-korea = Republic of Korea
-
-settings-general-band-plan-sdrpp-russia = Russia
-
-settings-general-band-plan-sdrpp-slovakia = Slovakia
-
-settings-general-band-plan-sdrpp-turkey = Turkey
-
-settings-general-band-plan-sdrpp-united-kingdom = United Kingdom
-
-settings-general-band-plan-sdrpp-usa = USA
+settings-general-band-plan-import-not-a-plan = 该文件不是波段计划——无法解析。未做任何更改。
