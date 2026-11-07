@@ -10,6 +10,7 @@
     "Edit, save, then press RELOAD BAND PLAN on the General tab — no restart. Delete this file to get the built-in IARU tables back; a fresh one is written on the next reload or start.",
     "A file sdroxide cannot parse is left exactly as it is and the built-in tables are used for that session, so a typo costs nothing. A single row that says something impossible is dropped and named in the notice bar; the rest of the file still applies."
   ],
+  "meta": {"name": "Germany (NRW)", "country": "Germany", "author": "F4NRM"},
   "region1": {
     "bands": [
       {"band": "Mw", "lo_mhz": 0.472, "hi_mhz": 0.479},

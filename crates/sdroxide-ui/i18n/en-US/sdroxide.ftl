@@ -571,8 +571,6 @@ settings-general-extra-gain-everything-radio-sends =
 
     Go up 6 dB at a time. Too much clips — the audio is limited at full scale rather than allowed to wrap round, so overdoing it sounds harsh rather than loud. Recordings are taken ahead of this and are not affected.
 settings-general-reload-band-plan = RELOAD BAND PLAN
-settings-general-re-read-bandplan-json-machine = Re-read bandplan.json on the machine the radio is attached to and apply it — band edges, sub-segments and skimmer windows — without restarting.
-settings-general-running-station-s-own-band = Running on the station's own band plan.
 settings-general-running-built-iaru-tables = Running on the built-in IARU tables.
 settings-general-settings-file = Settings file
 settings-general-settings-are-machine-radio-attached = The settings are on the machine the radio is attached to. Export them there.
@@ -635,7 +633,6 @@ settings-net-checking = checking…
 
 settings-amp-connected-to = Connected to the { $model }
 settings-controls-last-midi = Last message: { $message }  value { $value }
-settings-general-band-plan-file = Every band edge and sub-segment comes from { $path }, written from the built-in IARU tables the first time and yours to edit after that — narrow a band to your licence and sdroxide will refuse to transmit outside it. Frequencies are in MHz; delete the file for a fresh copy of the defaults. This is the regional allocation, not your licence: your own conditions may be narrower, and national plans differ inside a region.
 settings-general-exported = Exported { $note } — choose where to save it.
 settings-general-export-failed = Export failed: { $error }
 settings-general-import-failed = Import failed: { $error }
@@ -658,7 +655,6 @@ settings-add-radio-here-station-you = Add a radio — here, or on a station you 
 
 ## Settings window, General, continued
 
-settings-general-every-band-edge-sub-segment = Every band edge and sub-segment comes from bandplan.json on the machine the radio is attached to. This is the regional allocation, not your licence: your own conditions may be narrower, and national plans differ inside a region.
 
 ## Settings window, picture upload (src/app/settings/picup.rs)
 
@@ -9239,11 +9235,8 @@ settings-general-band-plan = Band plan
 
 settings-general-band-plan-built-in = Built-in IARU
 
-settings-general-band-plan-germany-nrw = Germany (NRW, SWL)
 
-settings-general-band-plan-own = Station's own
 
-settings-general-band-plan-hint = Choose a shipped band plan. It replaces bandplan.json; the built-in IARU tables are always the default.
 
 sonde-card-source = Source
 
@@ -9344,3 +9337,21 @@ rx-bands-notice = Receive band list not confirmed: the radio will not tune until
 rx-bands-out-of-range = This radio's published range does not reach this band.
 
 rx-bands-band-off = Receive is off on this band in this radio's band plan (Settings), or the receive list is not confirmed yet.
+
+settings-general-re-read-band-plan-file = Read the chosen plan's file again on the machine the radio is attached to and apply it — band edges, sub-segments and skimmer windows — without restarting.
+
+settings-general-running-band-plan = Running on the band plan “{ $name }”.
+
+settings-general-band-plan-choose-hint = Choose a band plan from the station's library. The built-in IARU tables are the default. Running a different plan means the TX and RX band lists have to be checked and confirmed again.
+
+settings-general-band-plan-import = IMPORT BAND PLAN
+
+settings-general-band-plan-import-hint = Add a band plan file to the station's library. It is checked first and only added — choose it in the list to run it.
+
+settings-general-band-plan-reset = BACK TO BUILT-IN IARU
+
+settings-general-band-plan-reset-hint = Run the built-in IARU tables again. The TX and RX band lists then have to be checked and confirmed again.
+
+settings-general-band-plan-folder = The plans are the files in { $path } on the machine the radio is attached to, yours to add to and delete from. Narrow a band to your licence and sdroxide will refuse to transmit outside it. Frequencies are in MHz. This is the regional allocation, not your licence: your own conditions may be narrower, and national plans differ inside a region.
+
+settings-general-band-plan-station-folder = The plans are kept on the machine the radio is attached to. Narrow a band to your licence and sdroxide will refuse to transmit outside it. This is the regional allocation, not your licence: your own conditions may be narrower, and national plans differ inside a region.

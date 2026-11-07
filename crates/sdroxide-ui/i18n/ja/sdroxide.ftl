@@ -568,8 +568,6 @@ settings-general-extra-gain-everything-radio-sends =
 
     Go up 6 dB at a time. Too much clips — the audio is limited at full scale rather than allowed to wrap round, so overdoing it sounds harsh rather than loud. Recordings are taken ahead of this and are not affected.
 settings-general-reload-band-plan = バンドプランを再読み込み
-settings-general-re-read-bandplan-json-machine = 無線機が接続されているマシンの bandplan.json を読み直して適用します。バンド端、サブセグメント、スキマーの待ち受け範囲を、再起動せずに反映します。
-settings-general-running-station-s-own-band = ステーション独自のバンドプランで動作中です。
 settings-general-running-built-iaru-tables = 内蔵の IARU 表で動作中です。
 settings-general-settings-file = 設定ファイル
 settings-general-settings-are-machine-radio-attached = 設定は無線機が接続されているマシン上にあります。そこで書き出してください。
@@ -632,7 +630,6 @@ settings-net-checking = 確認中…
 
 settings-amp-connected-to = { $model } に接続されています
 settings-controls-last-midi = 最後のメッセージ: { $message }  値 { $value }
-settings-general-band-plan-file = すべてのバンド端とサブセグメントは { $path } から取得されます。初回は内蔵の IARU 表から書き出され、その後は編集できます。バンドを自分の免許の範囲に狭めると、sdroxide はその外への送信を拒否します。周波数は MHz 単位です。既定値の新しいコピーを得るには、このファイルを削除してください。これは地域の割り当てであり、あなたの免許ではありません。個々の条件はより狭い場合があり、同じ地域内でも国によって計画が異なります。
 settings-general-exported = { $note } を書き出しました。保存先を選んでください。
 settings-general-export-failed = 書き出しに失敗しました: { $error }
 settings-general-import-failed = 読み込みに失敗しました: { $error }
@@ -655,7 +652,6 @@ settings-add-radio-here-station-you = 無線機を追加 — ここ、または�
 
 ## Settings window, General, continued
 
-settings-general-every-band-edge-sub-segment = すべてのバンド端とサブセグメントは、無線機が接続されているマシンの bandplan.json から取得されます。これは地域の割り当てであり、あなたの免許ではありません。個々の条件はより狭い場合があり、同じ地域内でも国によって計画が異なります。
 
 ## Settings window, picture upload (src/app/settings/picup.rs)
 
@@ -9164,11 +9160,8 @@ settings-general-band-plan = バンドプラン
 
 settings-general-band-plan-built-in = 内蔵IARU
 
-settings-general-band-plan-germany-nrw = ドイツ（NRW、SWL）
 
-settings-general-band-plan-own = 局独自
 
-settings-general-band-plan-hint = 同梱のバンドプランを選択します。bandplan.json を置き換えますが、内蔵IARUテーブルが常に既定です。
 
 sonde-card-source = ソース
 
@@ -9269,3 +9262,21 @@ rx-bands-notice = 受信バンドのリストが未確認です。受信バン�
 rx-bands-out-of-range = この無線機の公表範囲はこのバンドに届きません。
 
 rx-bands-band-off = この無線機のバンドプランでは、このバンドの受信がオフです（設定）。または受信リストがまだ確認されていません。
+
+settings-general-re-read-band-plan-file = 選択中のプランのファイルを無線機が接続されているマシンで読み直し、再起動せずに適用します（バンド端、サブセグメント、スキマーのウィンドウ）。
+
+settings-general-running-band-plan = 使用中のバンドプラン：「{ $name }」
+
+settings-general-band-plan-choose-hint = 局のライブラリからバンドプランを選びます。既定は内蔵のIARUテーブルです。別のプランを使うと、TXとRXのバンドリストを再確認して承認し直す必要があります。
+
+settings-general-band-plan-import = プランをインポート
+
+settings-general-band-plan-import-hint = バンドプランのファイルを局のライブラリに追加します。先に検査され、追加されるだけです。使うにはリストから選んでください。
+
+settings-general-band-plan-reset = 内蔵IARUに戻す
+
+settings-general-band-plan-reset-hint = 内蔵のIARUテーブルに戻します。その後、TXとRXのバンドリストを再確認して承認し直す必要があります。
+
+settings-general-band-plan-folder = プランは、無線機が接続されているマシンの { $path } にあるファイルです。追加・削除できます。バンドをライセンスの範囲に狭めると、sdroxideはその外での送信を拒否します。周波数はMHz単位です。これは地域の割り当てであり、あなたのライセンスではありません。実際の条件はより狭い場合があり、国別のプランは地域内でも異なります。
+
+settings-general-band-plan-station-folder = プランは、無線機が接続されているマシンに保存されます。バンドをライセンスの範囲に狭めると、sdroxideはその外での送信を拒否します。これは地域の割り当てであり、あなたのライセンスではありません。実際の条件はより狭い場合があり、国別のプランは地域内でも異なります。

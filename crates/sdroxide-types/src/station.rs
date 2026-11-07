@@ -107,4 +107,15 @@ pub struct StationConfig {
     ///
     /// Appended last, for the usual reason.
     pub picture_upload: crate::PictureUploadConfig,
+    /// The plans in the station's `bandplans` folder, for the plan manager.
+    /// Built on the engine's machine, so a browser or a remote screen lists
+    /// what the station has rather than what its own disk holds.
+    ///
+    /// Appended last, for the usual reason.
+    pub band_plans: Vec<crate::PlanInfo>,
+    /// Which of those the station runs, by [`crate::PlanInfo::file`]; `None`
+    /// is the built-in IARU tables, the default.
+    ///
+    /// Appended last, for the usual reason.
+    pub band_plan_name: Option<String>,
 }

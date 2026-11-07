@@ -566,8 +566,6 @@ settings-general-extra-gain-everything-radio-sends =
 
     Montez par paliers de 6 dB. Trop fort écrête — l'audio est limité à la pleine échelle au lieu de déborder, donc en exagérer sonne dur plutôt que fort. Les enregistrements sont pris en amont de ce gain et ne sont pas affectés.
 settings-general-reload-band-plan = RECHARGER LE PLAN DE BANDE
-settings-general-re-read-bandplan-json-machine = Relire bandplan.json sur la machine à laquelle la radio est reliée et l'appliquer — limites de bandes, sous-segments et fenêtres des skimmers — sans redémarrer.
-settings-general-running-station-s-own-band = Fonctionne avec le plan de bande propre à la station.
 settings-general-running-built-iaru-tables = Fonctionne avec les tables UIR intégrées.
 settings-general-settings-file = Fichier de réglages
 settings-general-settings-are-machine-radio-attached = Les réglages se trouvent sur la machine à laquelle la radio est reliée. Exportez-les depuis là.
@@ -630,7 +628,6 @@ settings-net-checking = vérification…
 
 settings-amp-connected-to = Connecté au { $model }
 settings-controls-last-midi = Dernier message : { $message }  valeur { $value }
-settings-general-band-plan-file = Chaque limite de bande et chaque sous-segment viennent de { $path }, écrit à partir des tables UIR intégrées la première fois, et qui vous appartient à modifier ensuite — resserrez une bande à votre licence et sdroxide refusera d'émettre en dehors. Les fréquences sont en MHz ; supprimez le fichier pour obtenir une copie neuve des valeurs par défaut. Il s'agit de l'attribution régionale, pas de votre licence : vos propres conditions peuvent être plus étroites, et les plans nationaux diffèrent à l'intérieur d'une région.
 settings-general-exported = { $note } exporté — choisissez où l'enregistrer.
 settings-general-export-failed = Échec de l'export : { $error }
 settings-general-import-failed = Échec de l'import : { $error }
@@ -653,7 +650,6 @@ settings-add-radio-here-station-you = Ajouter une radio — ici, ou sur une stat
 
 ## Settings window, General, continued
 
-settings-general-every-band-edge-sub-segment = Chaque limite de bande et chaque sous-segment viennent de bandplan.json sur la machine à laquelle la radio est reliée. Il s'agit de l'attribution régionale, pas de votre licence : vos propres conditions peuvent être plus étroites, et les plans nationaux diffèrent à l'intérieur d'une région.
 
 ## Settings window, picture upload (src/app/settings/picup.rs)
 
@@ -9227,11 +9223,8 @@ settings-general-band-plan = Plan de bandes
 
 settings-general-band-plan-built-in = IARU intégré
 
-settings-general-band-plan-germany-nrw = Allemagne (NRW, SWL)
 
-settings-general-band-plan-own = Propre à la station
 
-settings-general-band-plan-hint = Choisissez un plan de bandes fourni. Il remplace bandplan.json ; les tables IARU intégrées restent la valeur par défaut.
 
 sonde-card-source = Source
 
@@ -9332,3 +9325,21 @@ rx-bands-notice = Liste des bandes de réception non validée : la radio ne s'ac
 rx-bands-out-of-range = La plage publiée de cette radio n'atteint pas cette bande.
 
 rx-bands-band-off = La réception est coupée sur cette bande dans le plan de bandes de cette radio (Réglages), ou la liste de réception n'est pas encore validée.
+
+settings-general-re-read-band-plan-file = Relire le fichier du plan choisi sur la machine à laquelle la radio est reliée et l'appliquer — limites de bande, sous-segments et fenêtres des skimmers — sans redémarrer.
+
+settings-general-running-band-plan = Plan de bandes en service : « { $name } ».
+
+settings-general-band-plan-choose-hint = Choisissez un plan de bandes dans la bibliothèque de la station. Les tables IARU intégrées sont le défaut. Changer de plan oblige à revérifier et reconfirmer les listes de bandes TX et RX.
+
+settings-general-band-plan-import = IMPORTER UN PLAN
+
+settings-general-band-plan-import-hint = Ajoute un fichier de plan de bandes à la bibliothèque de la station. Il est vérifié d'abord et seulement ajouté — choisissez-le dans la liste pour l'utiliser.
+
+settings-general-band-plan-reset = RETOUR À L'IARU INTÉGRÉ
+
+settings-general-band-plan-reset-hint = Remet en service les tables IARU intégrées. Les listes de bandes TX et RX devront alors être revérifiées et reconfirmées.
+
+settings-general-band-plan-folder = Les plans sont les fichiers de { $path } sur la machine à laquelle la radio est reliée ; vous pouvez en ajouter et en supprimer. Réduisez une bande à votre licence et sdroxide refusera d'émettre en dehors. Fréquences en MHz. C'est l'allocation régionale, pas votre licence : vos conditions peuvent être plus étroites, et les plans nationaux diffèrent au sein d'une région.
+
+settings-general-band-plan-station-folder = Les plans sont conservés sur la machine à laquelle la radio est reliée. Réduisez une bande à votre licence et sdroxide refusera d'émettre en dehors. C'est l'allocation régionale, pas votre licence : vos conditions peuvent être plus étroites, et les plans nationaux diffèrent au sein d'une région.

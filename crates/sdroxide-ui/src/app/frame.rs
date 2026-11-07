@@ -957,6 +957,7 @@ impl eframe::App for SdroxideApp {
         // A channel list chosen in the memories window: parsed here and sent
         // to the engine, which owns the list and the numbering in it.
         self.poll_chirp_import(&mut cmds);
+        self.poll_band_plan_import(&mut cmds);
         // A "stop after" deadline armed in the REC popup: stop the MP3
         // recording once it passes (issue #520).
         self.poll_recording_timer(&mut cmds);
@@ -4614,9 +4615,17 @@ impl SdroxideApp {
                     // previous plan, and this bundle arrives on every
                     // station-config edit — a password change must not cost an
                     // allocation that is never freed.
-                    if sdroxide_types::band_plan() != &c.band_plan {
+                    // The plan's name rides with it, and the same plan may come
+                    // under a new name, which the equality alone does not see.
+                    if sdroxide_types::band_plan() != &c.band_plan
+                        || sdroxide_types::band_plan().meta() != c.band_plan.meta()
+                    {
                         sdroxide_types::set_band_plan(c.band_plan.clone());
                     }
+                    // The library and the choice are the station's, announced
+                    // with every bundle: the list this client chooses from.
+                    self.band_plans = c.band_plans.clone();
+                    self.band_plan_name = c.band_plan_name.clone();
                     // The operator's own additions to the modes' frequency
                     // tables, on the same terms and for the same reason: the
                     // station owns the list, and this client draws the picker

@@ -566,8 +566,6 @@ settings-general-extra-gain-everything-radio-sends =
 
     In Schritten von 6 dB erhöhen. Zu viel übersteuert — das Audio wird bei Vollaussteuerung begrenzt statt umzuspringen, daher klingt Übertreiben eher scharf als laut. Aufnahmen werden vor dieser Verstärkung gemacht und sind nicht betroffen.
 settings-general-reload-band-plan = BANDPLAN NEU LADEN
-settings-general-re-read-bandplan-json-machine = bandplan.json auf dem Rechner, an dem das Funkgerät angeschlossen ist, erneut einlesen und anwenden — Bandgrenzen, Teilabschnitte und Skimmer-Fenster — ohne Neustart.
-settings-general-running-station-s-own-band = Läuft mit dem eigenen Bandplan der Station.
 settings-general-running-built-iaru-tables = Läuft mit den eingebauten IARU-Tabellen.
 settings-general-settings-file = Einstellungsdatei
 settings-general-settings-are-machine-radio-attached = Die Einstellungen liegen auf dem Rechner, an dem das Funkgerät angeschlossen ist. Dort exportieren.
@@ -630,7 +628,6 @@ settings-net-checking = prüft…
 
 settings-amp-connected-to = Verbunden mit dem { $model }
 settings-controls-last-midi = Letzte Meldung: { $message }  Wert { $value }
-settings-general-band-plan-file = Jede Bandgrenze und jeder Teilabschnitt stammt aus { $path }, beim ersten Mal aus den eingebauten IARU-Tabellen geschrieben und danach von Ihnen zu bearbeiten — engen Sie ein Band auf Ihre Lizenz ein, und sdroxide verweigert das Senden außerhalb davon. Frequenzen sind in MHz; löschen Sie die Datei für eine frische Kopie der Standardwerte. Dies ist die regionale Zuteilung, nicht Ihre Lizenz: Ihre eigenen Bedingungen können enger sein, und nationale Pläne unterscheiden sich innerhalb einer Region.
 settings-general-exported = { $note } exportiert — wählen Sie, wo Sie es speichern wollen.
 settings-general-export-failed = Export fehlgeschlagen: { $error }
 settings-general-import-failed = Import fehlgeschlagen: { $error }
@@ -652,7 +649,6 @@ settings-add-radio-here-station-you = Ein Funkgerät hinzufügen — hier oder a
 
 ## Settings window, General, continued
 
-settings-general-every-band-edge-sub-segment = Jede Bandgrenze und jeder Teilabschnitt stammt aus bandplan.json auf dem Rechner, an dem das Funkgerät angeschlossen ist. Dies ist die regionale Zuteilung, nicht Ihre Lizenz: Ihre eigenen Bedingungen können enger sein, und nationale Pläne unterscheiden sich innerhalb einer Region.
 
 ## Settings window, picture upload (src/app/settings/picup.rs)
 
@@ -9214,11 +9210,8 @@ settings-general-band-plan = Bandplan
 
 settings-general-band-plan-built-in = Integriert (IARU)
 
-settings-general-band-plan-germany-nrw = Deutschland (NRW, SWL)
 
-settings-general-band-plan-own = Eigener der Station
 
-settings-general-band-plan-hint = Einen mitgelieferten Bandplan wählen. Er ersetzt bandplan.json; die integrierten IARU-Tabellen bleiben die Vorgabe.
 
 sonde-card-source = Quelle
 
@@ -9319,3 +9312,21 @@ rx-bands-notice = Empfangsbandliste nicht bestätigt: Das Funkgerät stimmt nich
 rx-bands-out-of-range = Der veröffentlichte Bereich dieses Funkgeräts reicht nicht bis zu diesem Band.
 
 rx-bands-band-off = Der Empfang ist auf diesem Band im Bandplan dieses Funkgeräts (Einstellungen) aus, oder die Empfangsliste ist noch nicht bestätigt.
+
+settings-general-re-read-band-plan-file = Liest die Datei des gewählten Plans auf dem Rechner, an dem das Funkgerät hängt, neu ein und wendet sie an — Bandgrenzen, Teilbereiche und Skimmer-Fenster — ohne Neustart.
+
+settings-general-running-band-plan = Es läuft der Bandplan „{ $name }“.
+
+settings-general-band-plan-choose-hint = Wähle einen Bandplan aus der Bibliothek der Station. Die eingebauten IARU-Tabellen sind der Standard. Ein anderer Plan bedeutet, dass die TX- und RX-Bandlisten erneut geprüft und bestätigt werden müssen.
+
+settings-general-band-plan-import = BANDPLAN IMPORTIEREN
+
+settings-general-band-plan-import-hint = Fügt der Bibliothek der Station eine Bandplan-Datei hinzu. Sie wird zuerst geprüft und nur hinzugefügt — wähle sie in der Liste, um sie zu verwenden.
+
+settings-general-band-plan-reset = ZURÜCK ZU EINGEBAUTEM IARU
+
+settings-general-band-plan-reset-hint = Verwendet wieder die eingebauten IARU-Tabellen. Die TX- und RX-Bandlisten müssen dann erneut geprüft und bestätigt werden.
+
+settings-general-band-plan-folder = Die Pläne sind die Dateien in { $path } auf dem Rechner, an dem das Funkgerät hängt; du kannst welche hinzufügen und löschen. Schränke ein Band auf deine Lizenz ein, und sdroxide verweigert das Senden außerhalb. Frequenzen in MHz. Das ist die regionale Zuweisung, nicht deine Lizenz: Deine Bedingungen können enger sein, und nationale Pläne weichen innerhalb einer Region ab.
+
+settings-general-band-plan-station-folder = Die Pläne liegen auf dem Rechner, an dem das Funkgerät hängt. Schränke ein Band auf deine Lizenz ein, und sdroxide verweigert das Senden außerhalb. Das ist die regionale Zuweisung, nicht deine Lizenz: Deine Bedingungen können enger sein, und nationale Pläne weichen innerhalb einer Region ab.

@@ -568,8 +568,6 @@ settings-general-extra-gain-everything-radio-sends =
 
     Go up 6 dB at a time. Too much clips — the audio is limited at full scale rather than allowed to wrap round, so overdoing it sounds harsh rather than loud. Recordings are taken ahead of this and are not affected.
 settings-general-reload-band-plan = 重新加载频段计划
-settings-general-re-read-bandplan-json-machine = 在电台所连接的机器上重新读取 bandplan.json 并应用它——频段边界、子频段和 skimmer 窗口——无需重启。
-settings-general-running-station-s-own-band = 正在使用电台站点自己的频段计划。
 settings-general-running-built-iaru-tables = 正在使用内置的 IARU 表。
 settings-general-settings-file = 设置文件
 settings-general-settings-are-machine-radio-attached = 设置保存在电台所连接的机器上。请在那里导出。
@@ -632,7 +630,6 @@ settings-net-checking = 正在检查……
 
 settings-amp-connected-to = 已连接到 { $model }
 settings-controls-last-midi = 最后一条消息：{ $message }  数值 { $value }
-settings-general-band-plan-file = 每个频段边界和子频段都来自 { $path }。该文件首次运行时由内置的 IARU 表写入，之后即归你编辑——把某个频段缩窄到你的执照范围，sdroxide 就会拒绝在其之外发射。频率以 MHz 为单位；删除该文件可重新获得默认值的副本。这是区域分配，而不是你的执照：你自己的条件可能更窄，而且同一区域内的各国计划也有所不同。
 settings-general-exported = 已导出 { $note }——请选择保存位置。
 settings-general-export-failed = 导出失败：{ $error }
 settings-general-import-failed = 导入失败：{ $error }
@@ -655,7 +652,6 @@ settings-add-radio-here-station-you = 添加电台——在此处，或在你已
 
 ## Settings window, General, continued
 
-settings-general-every-band-edge-sub-segment = 每个频段边界和子频段都来自电台所连接机器上的 bandplan.json。这是区域分配，而不是你的执照：你自己的条件可能更窄，而且同一区域内的各国计划也有所不同。
 
 ## Settings window, picture upload (src/app/settings/picup.rs)
 
@@ -9154,11 +9150,8 @@ settings-general-band-plan = 波段计划
 
 settings-general-band-plan-built-in = 内置IARU
 
-settings-general-band-plan-germany-nrw = 德国（NRW，SWL）
 
-settings-general-band-plan-own = 本站自有
 
-settings-general-band-plan-hint = 选择一个随附的波段计划。它会替换 bandplan.json；内置IARU表始终是默认值。
 
 sonde-card-source = 来源
 
@@ -9259,3 +9252,21 @@ rx-bands-notice = 接收频段列表尚未确认：在您检查并确认一次�
 rx-bands-out-of-range = 此电台公布的范围未覆盖该频段。
 
 rx-bands-band-off = 在此电台的频段计划（设置）中该频段的接收已关闭，或接收列表尚未确认。
+
+settings-general-re-read-band-plan-file = 在电台所连接的机器上重新读取所选方案的文件并应用——波段边界、子段和 skimmer 窗口——无需重启。
+
+settings-general-running-band-plan = 正在使用波段方案“{ $name }”。
+
+settings-general-band-plan-choose-hint = 从电台的方案库中选择一个波段方案。默认是内置的 IARU 表。更换方案后，需要重新检查并确认 TX 和 RX 波段列表。
+
+settings-general-band-plan-import = 导入方案
+
+settings-general-band-plan-import-hint = 把波段方案文件添加到电台的方案库。会先检查，仅添加——在列表中选择它才会使用。
+
+settings-general-band-plan-reset = 恢复内置 IARU
+
+settings-general-band-plan-reset-hint = 重新使用内置的 IARU 表。之后需要重新检查并确认 TX 和 RX 波段列表。
+
+settings-general-band-plan-folder = 方案就是电台所连接机器上 { $path } 中的文件，可以自行添加和删除。把某个波段缩小到您的执照范围，sdroxide 就会拒绝在其之外发射。频率单位为 MHz。这是区域划分，不是您的执照：您的实际条件可能更窄，各国方案在同一区域内也有差异。
+
+settings-general-band-plan-station-folder = 方案保存在电台所连接的机器上。把某个波段缩小到您的执照范围，sdroxide 就会拒绝在其之外发射。这是区域划分，不是您的执照：您的实际条件可能更窄，各国方案在同一区域内也有差异。

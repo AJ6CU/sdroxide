@@ -609,19 +609,19 @@ pub(in crate::app) fn clear_broadcast_cache() {
 #[cfg(target_arch = "wasm32")]
 pub(in crate::app) fn clear_broadcast_cache() {}
 
-// ── The band-plan file's path (shown on the General tab) ─────────────────────
+// ── The band-plan folder (shown on the General tab) ──────────────────────────
 
-/// Where `bandplan.json` is, so the settings dialog can name the file the
-/// operator has to edit. `None` when there is no config directory to point at.
+/// Where the station's band plans are, so the settings dialog can name the
+/// folder. `None` when there is no config directory to point at.
 #[cfg(not(target_arch = "wasm32"))]
-pub(in crate::app) fn band_plan_path() -> Option<std::path::PathBuf> {
-    sdroxide_config::band_plan_path()
+pub(in crate::app) fn band_plans_dir() -> Option<std::path::PathBuf> {
+    sdroxide_config::band_plans_dir()
 }
 
-/// The browser client has no filesystem, and the file it would want to name is
-/// on the engine's machine in any case.
+/// The browser client has no filesystem, and the folder it would want to name
+/// is on the engine's machine in any case.
 #[cfg(target_arch = "wasm32")]
-pub(in crate::app) fn band_plan_path() -> Option<std::path::PathBuf> {
+pub(in crate::app) fn band_plans_dir() -> Option<std::path::PathBuf> {
     None
 }
 

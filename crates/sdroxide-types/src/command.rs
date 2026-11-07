@@ -1442,6 +1442,40 @@ pub enum Command {
     ///
     /// Appended for the usual reason — postcard numbers variants by position.
     SetSondeConfig(crate::SondeSettings),
+
+    /// Add a band plan to the station's `bandplans` folder under `name`, from
+    /// the text of a plan file. The screen reads the file wherever the operator
+    /// is — a browser has no folder of the station's to write to — and the
+    /// engine checks it and writes it, so a native, a remote and a web client
+    /// all take the same road.
+    ///
+    /// A file in another layout (a flat list of bands in hertz) is converted
+    /// first. A plan that does not pass the check is refused with a
+    /// [`crate::RadioEvent::Notice`] and nothing is written; a name already in
+    /// the folder is replaced, the old file kept once as `<name>.json.bak`.
+    /// Adding a plan does not run it: see [`Command::SelectBandPlan`].
+    ///
+    /// Appended for the usual reason — postcard numbers variants by position.
+    ImportBandPlan { name: String, json: String },
+
+    /// Run the plan called `name` from the `bandplans` folder, or the built-in
+    /// IARU tables when it is `None` — the one-click way back to the default.
+    /// Persisted in `config.toml` and echoed in
+    /// [`crate::StationConfig::band_plan_name`].
+    ///
+    /// A plan that is not the one already running **withdraws the confirmation
+    /// of every radio's transmit and receive band lists**: the operator checks
+    /// them again against the new plan, as if they never had. Choosing the plan
+    /// that is already running changes nothing.
+    ///
+    /// Appended for the usual reason.
+    SelectBandPlan { name: Option<String> },
+
+    /// Delete the plan called `name` from the `bandplans` folder. The plan
+    /// running now cannot be deleted: choose another first.
+    ///
+    /// Appended for the usual reason.
+    DeleteBandPlan { name: String },
 }
 
 /// What a [`Command::GetKnownCalls`] was answered with.

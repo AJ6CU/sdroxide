@@ -149,7 +149,10 @@ pub use band_segments::{
     rtty_ranges_in, segment_kind_at, segment_kind_at_in, segments, segments_in, set_digi_presets,
     span_within_segment, span_within_segment_in, sstv_dials_in,
 };
-pub use bandplan::{BandPlan, BandPlanError, RegionPlan, band_plan, set_band_plan};
+pub use bandplan::{
+    BandPlan, BandPlanError, PlanInfo, PlanMeta, RegionPlan, band_plan, band_plan_revision,
+    set_band_plan,
+};
 pub use broadcast::{BroadcastStation, BroadcastStations, ScheduleSource};
 pub use callsign::{CallsignInfo, LoginTarget, LoginTestResult, UploadResult, UploadTarget};
 pub use caps::{DeviceCaps, DeviceSetting, Direction, GainElement, GainUnit, SettingKind};

@@ -4087,6 +4087,12 @@ struct Engine {
     /// caught up with. See [`EngineConfig::store_sync`].
     store_sync: Option<Arc<crate::StoreSync>>,
     shared_gen_seen: u64,
+    /// [`sdroxide_types::band_plan_revision`] as this engine last saw it. When
+    /// the process-wide plan becomes a different one — chosen here, or by
+    /// another radio's engine, or from a screen — this radio's operator has
+    /// checked its band lists against a plan that is no longer running, and the
+    /// engine withdraws both confirmations (see [`Engine::poll_band_plan`]).
+    seen_plan_rev: u64,
     /// Which of the station's radios is on FreeDV. See
     /// [`EngineConfig::rade_watch`].
     rade_watch: Option<Arc<crate::RadeWatch>>,
@@ -5434,6 +5440,9 @@ fn engine_thread(
         tx_gate: engine_cfg.tx_gate,
         cw_gate_until: None,
         shared_gen_seen: engine_cfg.store_sync.as_ref().map_or(0, |s| s.generation()),
+        // After the `set_band_plan` at the top of this function: the plan this
+        // engine starts under is not a change of plan.
+        seen_plan_rev: sdroxide_types::band_plan_revision(),
         store_sync: engine_cfg.store_sync,
         rade_watch: engine_cfg.rade_watch,
     };
@@ -5640,6 +5649,12 @@ fn engine_thread(
     // it where they happen.
     engine.refresh_rx_gains();
 
+    // A radio confirmed against one plan and started under another — the file
+    // was swapped, or `config.toml` edited, while the program was off — is
+    // unconfirmed from the first block, exactly as if the plan had changed
+    // while it ran.
+    engine.reconcile_band_confirmations_at_start();
+
     // The commands waiting at the top of a tick, kept between iterations so the
     // batch costs no allocation. See [`collapse_superseded`].
     let mut batch: Vec<Command> = Vec::new();
@@ -5689,6 +5704,10 @@ fn engine_thread(
         // Catch up with shared-store writes by any other engine in the process
         // (an atomic load per tick; reloads only when the generation moved).
         engine.poll_shared_stores();
+
+        // The band plan, if another radio's engine or a screen changed it since
+        // the last tick: an atomic load, and a withdrawal only when it moved.
+        engine.poll_band_plan();
 
         // The band plan's repeater shift, if the operator asked to follow it.
         // Ahead of `push_tx_freq`, which is what tells an accessory where we
@@ -12067,28 +12086,20 @@ impl Engine {
                 self.emit_station_config();
             }
             ReloadBandPlan => {
-                // A missing file is seeded here as well as at startup, which is
-                // what makes "delete it to get the defaults back" work without
-                // a restart.
+                // Read again from the library, which is what makes a plan file
+                // edited in place take effect without a restart — and a chosen
+                // plan whose file has gone fall back to the built-in tables
+                // with the loader's alert.
                 let plan = sdroxide_config::load_band_plan();
                 let custom = !plan.is_default();
-                // The plan is process-wide, so a second radio at this station
-                // is transmitting under the new edges from this moment too —
-                // the lockout reads it at key time. Only its *displayed* band
-                // lags, until it next retunes and recomputes.
-                sdroxide_types::set_band_plan(plan);
-                // Same reason as `SetRegion`: the dial has not moved but the
-                // band under it may have.
-                self.state.band = Band::containing(self.state.active_freq_hz());
-                self.relay_bands_told = None;
-                self.emit_station_config();
+                self.adopt_band_plan(plan);
                 // Whatever the loader had to say — a row it dropped, a file it
                 // could not read — reaches the operator who asked for the
                 // reload, not just the log.
                 let alerts = sdroxide_config::take_load_alerts();
                 if alerts.is_empty() {
                     self.notice(if custom {
-                        "Band plan reloaded from bandplan.json."
+                        "Band plan reloaded."
                     } else {
                         "Band plan reloaded — it matches the built-in IARU tables."
                     });
@@ -12096,12 +12107,61 @@ impl Engine {
                     self.notice(&alerts.join("\n"));
                 }
             }
+            // A plan from a screen, wherever that screen is: the text comes over
+            // the wire and this machine, which owns the disk, checks and keeps
+            // it. Only added — running it is a separate, deliberate choice,
+            // because choosing it withdraws every radio's band confirmations.
+            ImportBandPlan { name, json } => {
+                match sdroxide_config::import_band_plan(&name, &json) {
+                    Ok(key) => {
+                        self.emit_station_config();
+                        self.notice(&format!(
+                            "Band plan “{key}” added. Choose it in Settings → General to run it."
+                        ));
+                    }
+                    Err(e) => self.notice(&e),
+                }
+            }
+            SelectBandPlan { name } => match sdroxide_config::select_band_plan(name.as_deref()) {
+                Ok(plan) => {
+                    let shown = match name.as_deref() {
+                        None => "the built-in IARU band plan".to_string(),
+                        Some(_) if plan.meta().name.trim().is_empty() => {
+                            format!("“{}”", name.as_deref().unwrap_or_default())
+                        }
+                        Some(_) => format!("“{}”", plan.meta().name),
+                    };
+                    let same = *sdroxide_types::band_plan() == plan;
+                    self.adopt_band_plan(plan);
+                    if same {
+                        // Already running it: nothing moved, so nothing is
+                        // withdrawn and nothing needs checking again.
+                        self.notice(&format!("Band plan: {shown} was already running."));
+                    } else {
+                        self.notice(&format!("Band plan: now running {shown}."));
+                    }
+                    let alerts = sdroxide_config::take_load_alerts();
+                    if !alerts.is_empty() {
+                        self.notice(&alerts.join("\n"));
+                    }
+                }
+                Err(e) => self.notice(&e),
+            },
+            DeleteBandPlan { name } => match sdroxide_config::delete_band_plan(&name) {
+                Ok(()) => {
+                    self.emit_station_config();
+                    self.notice("Band plan deleted.");
+                }
+                Err(e) => self.notice(&e),
+            },
 
             // This radio's own `radio.json` (no RadioState change → return
             // before the State emit below). The engine is the one that writes
             // it: the file is in *this* machine's config directory, and the
             // screen asking for the change may be in another country.
             SetRadioConfig { cfg, reopen } => {
+                let mut cfg = cfg;
+                self.vet_band_confirmations(&mut cfg);
                 if let Err(e) = self.store.save_radio_config(&cfg) {
                     warn!("saving radio config: {e}");
                 }
@@ -14999,6 +15059,8 @@ impl Engine {
                 cb_plan: sdroxide_types::cb_plan(),
                 cb_tx_allowed: sdroxide_types::cb_tx_allowed(),
                 band_plan: sdroxide_types::band_plan().clone(),
+                band_plans: sdroxide_config::list_band_plans(),
+                band_plan_name: sdroxide_config::band_plan_selection(),
                 digi_presets: sdroxide_types::digi_presets().to_vec(),
             },
         )));
@@ -18147,6 +18209,109 @@ impl Engine {
             self.shared_gen_seen = g;
             self.reload_shared_stores();
         }
+    }
+
+    /// Take on `plan` as the station's band plan and tell every screen.
+    ///
+    /// Process-wide, so a second radio at this station is transmitting under the
+    /// new edges from this moment too — the lockout reads it at key time. Its
+    /// *displayed* band lags until it next retunes and recomputes, and its band
+    /// confirmations are withdrawn on its own next tick
+    /// ([`Engine::poll_band_plan`]), because the plan is the one thing both
+    /// radios were checked against.
+    fn adopt_band_plan(&mut self, plan: sdroxide_types::BandPlan) {
+        sdroxide_types::set_band_plan(plan);
+        // Same reason as `SetRegion`: the dial has not moved but the band under
+        // it may have.
+        self.state.band = Band::containing(self.state.active_freq_hz());
+        self.relay_bands_told = None;
+        self.emit_station_config();
+    }
+
+    /// Withdraw this radio's band confirmations when the station's band plan has
+    /// become a different plan since this engine last looked.
+    ///
+    /// The operator confirmed the transmit and the receive list *against a plan*.
+    /// A different plan can put a band edge somewhere else, or take a band away,
+    /// so both lists are checked and confirmed again — as if they never had been.
+    /// The lists themselves stay ticked as they were; only the confirmation goes,
+    /// and with it the permission to key and to tune (see [`Engine::tx_band_refusal`]
+    /// and [`Engine::rx_band_refusal_for`]).
+    fn poll_band_plan(&mut self) {
+        let rev = sdroxide_types::band_plan_revision();
+        if rev != self.seen_plan_rev {
+            self.seen_plan_rev = rev;
+            self.withdraw_band_confirmations();
+        }
+    }
+
+    /// Clear both confirmations, in this engine and in the radio's `radio.json`,
+    /// tell the screens, and say why if there was anything to withdraw.
+    fn withdraw_band_confirmations(&mut self) {
+        let mut cfg = self.store.load_radio_config();
+        let had = cfg.tx_bands_confirmed
+            || cfg.rx_bands_confirmed
+            || self.tx_bands_confirmed
+            || self.rx_bands_confirmed;
+        cfg.tx_bands_confirmed = false;
+        cfg.rx_bands_confirmed = false;
+        cfg.band_plan_fp = 0;
+        if let Err(e) = self.store.save_radio_config(&cfg) {
+            warn!("withdrawing the band confirmations: {e}");
+        }
+        self.tx_bands_confirmed = false;
+        self.rx_bands_confirmed = false;
+        self.emit_radio_config();
+        if had {
+            info!("the band plan changed: transmit and receive band lists need checking again");
+            self.notice(
+                "The band plan changed — check the TX and RX band lists again and confirm them.",
+            );
+        }
+    }
+
+    /// At start-up: a radio whose lists were confirmed against a plan other than
+    /// the one that is running is unconfirmed, and a radio confirmed before the
+    /// plan was recorded is taken to have been confirmed against this one.
+    fn reconcile_band_confirmations_at_start(&mut self) {
+        if !(self.tx_bands_confirmed || self.rx_bands_confirmed) {
+            return;
+        }
+        let fp = sdroxide_types::band_plan().fingerprint();
+        let mut cfg = self.store.load_radio_config();
+        match cfg.band_plan_fp {
+            0 => {
+                cfg.band_plan_fp = fp;
+                if let Err(e) = self.store.save_radio_config(&cfg) {
+                    warn!("recording the band plan the lists were confirmed against: {e}");
+                }
+            }
+            stored if stored != fp => self.withdraw_band_confirmations(),
+            _ => {}
+        }
+    }
+
+    /// What a screen may confirm. The engine stamps a confirmation with the plan
+    /// running now, and refuses one a screen made against another.
+    ///
+    /// A settings dialog keeps its own copy of `radio.json` while it is open. If
+    /// the plan changes under it, that copy still says "confirmed" — and the
+    /// next Apply, for anything at all, would send it back and quietly undo the
+    /// withdrawal. The copy carries the fingerprint it was confirmed under, so a
+    /// confirmation made against a different plan is recognised and dropped; one
+    /// made after the screen heard of the change arrives with no fingerprint and
+    /// is stamped.
+    fn vet_band_confirmations(&self, cfg: &mut sdroxide_types::RadioConfig) {
+        let fp = sdroxide_types::band_plan().fingerprint();
+        if (cfg.tx_bands_confirmed || cfg.rx_bands_confirmed)
+            && cfg.band_plan_fp != 0
+            && cfg.band_plan_fp != fp
+        {
+            warn!("a band confirmation made against another band plan was dropped");
+            cfg.tx_bands_confirmed = false;
+            cfg.rx_bands_confirmed = false;
+        }
+        cfg.band_plan_fp = if cfg.tx_bands_confirmed || cfg.rx_bands_confirmed { fp } else { 0 };
     }
 
     /// Re-read the station-shared stores after another engine in this process
