@@ -58,7 +58,7 @@ the back of the queue for being the reason the program exists.
 
 ## F4NRM's areas (PR required, never straight to main)
 
-F4NRM owns: decoders SSTV, DAB, NAVTEX, APRS, WFM, DSC, Olivia, RTTY, WEFAX,
+F4NRM owns: decoders Bands plans, SSTV, DAB, NAVTEX, APRS, WFM, DSC, Olivia, RTTY, WEFAX,
 FT8, RDS and backends HackRF, PlutoSDR. RSP1 is NOT on his list (bench receiver).
 Confirmed on air by his radio group: WEFAX, DAB, SSTV, DSC, radio classic, aircraft.
 
@@ -82,8 +82,6 @@ or stackable and add it to the Detachable page in Settings.
   standing", no "to be transparent", no announcing that one is being candid.
   The correction is the whole of it.
 - **Ask a reporter one thing, not three.**
-- **F4NRM's replies are AI-drafted** — read as suggestions, not commands.
-  Answer short (3-4 sentences, one question max).
 - **A measurement that disagrees with a report is the first suspect.** Check:
   visible? measures the right thing? existing number disagrees? something
   fighting the fix?
