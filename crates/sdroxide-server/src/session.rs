@@ -251,6 +251,9 @@ async fn run_session(
         vdl2_status,
         ais_status,
         vor_status,
+        qo100_status,
+        hfdl_status,
+        sonde_status,
         drm,
         hd,
         relay,
@@ -278,6 +281,9 @@ async fn run_session(
             latest.vdl2_status.clone(),
             latest.ais_status.clone(),
             latest.vor_status.clone(),
+            latest.qo100_status.clone(),
+            latest.hfdl_status.clone(),
+            latest.sonde_status.clone(),
             latest.drm.clone(),
             latest.hd.clone(),
             latest.relay.clone(),
@@ -415,6 +421,16 @@ async fn run_session(
     // ...and the VOR read-out, so the view is not blank until the next one.
     if let Some(st) = vor_status {
         let _ = socket.send(msg(&ServerMsg::VorStatus(st))).await;
+    }
+    // ...and the QO-100, HFDL and radiosonde read-outs, likewise.
+    if let Some(st) = qo100_status {
+        let _ = socket.send(msg(&ServerMsg::Qo100Status(st))).await;
+    }
+    if let Some(st) = hfdl_status {
+        let _ = socket.send(msg(&ServerMsg::HfdlStatus(st))).await;
+    }
+    if let Some(st) = sonde_status {
+        let _ = socket.send(msg(&ServerMsg::SondeStatus(st))).await;
     }
     // And the transmit-image presets, for the same reason. The received
     // galleries are not replayed: a panel lists its store when it opens, which

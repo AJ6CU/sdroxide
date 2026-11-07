@@ -3485,7 +3485,6 @@ qo100-write-converter-lnb-offset-puts = クリックした場所のビーコン�
 qo100-write-converter-lnb-offset-puts-2 = トラッカーの推定値を 10489.750 MHz に置くコンバーター/LNB のオフセットを書き込み、受信機を開き直します。設定 ▸ 無線機 ▸ 適用で起きるのと同じ短い中断です
 qo100-waiting-second-crc-valid-frame = これを書き込むことを提案する前に、CRC が正しい 2 つ目のフレームを待っています。1 回のロックだけでは、偶然の一致かもしれないためです
 qo100-write-corrected-converter-lnb-offset = 補正されたコンバーター/LNB のオフセットを書き込み、受信機を開き直します。設定 ▸ 無線機 ▸ 適用で起きるのと同じ短い中断です
-qo100-decoder-runs-receiving-station-readout = デコーダーは受信しているステーションで動作します。その表示はリモートのクライアントには送られません
 qo100-starting = 開始中…
 qo100-searching-first-window-fills-after = 検索中 — 最初の窓は約 24 秒後に埋まり、その後繰り返します
 

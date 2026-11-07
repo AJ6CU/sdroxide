@@ -3509,7 +3509,6 @@ qo100-write-converter-lnb-offset-puts = Tıkladığınız yerdeki işareti 10489
 qo100-write-converter-lnb-offset-puts-2 = İzleyicinin tahminini 10489,750 MHz'e koyan dönüştürücü/LNB kaymasını yazın ve alıcıyı yeniden açın — Ayarlar ▸ Radyo ▸ Uygula'nın yaptığı aynı kısa kesinti
 qo100-waiting-second-crc-valid-frame = Bunu yazmayı önermeden önce CRC'si geçerli ikinci bir çerçeve bekleniyor — tek bir kilit bir tesadüfi eşleşme olabilir
 qo100-write-corrected-converter-lnb-offset = Düzeltilmiş dönüştürücü/LNB kaymasını yazın ve alıcıyı yeniden açın — kısa bir kesinti, Ayarlar ▸ Radyo ▸ Uygula'nın yaptığıyla aynı
-qo100-decoder-runs-receiving-station-readout = çözücü, alan istasyonda çalışır — okuması uzak istemcilere gönderilmez
 qo100-starting = başlatılıyor…
 qo100-searching-first-window-fills-after = aranıyor — ilk pencere yaklaşık 24 sn sonra dolar, sonra tekrarlanır
 

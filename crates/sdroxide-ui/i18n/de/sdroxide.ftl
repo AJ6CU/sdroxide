@@ -3502,7 +3502,6 @@ qo100-write-converter-lnb-offset-puts = Den Konverter-/LNB-Versatz schreiben, de
 qo100-write-converter-lnb-offset-puts-2 = Den Konverter-/LNB-Versatz schreiben, der die Schätzung des Trackers auf 10489,750 MHz legt, und den Empfänger neu öffnen — dieselbe kurze Unterbrechung wie Einstellungen ▸ Funkgerät ▸ Übernehmen
 qo100-waiting-second-crc-valid-frame = Warte auf einen zweiten rahmen mit gültiger CRC, bevor angeboten wird, dies zu schreiben — eine einzelne Einrastung könnte ein Zufallstreffer sein
 qo100-write-corrected-converter-lnb-offset = Den korrigierten Konverter-/LNB-Versatz schreiben und den Empfänger neu öffnen — eine kurze Unterbrechung, dieselbe, die Einstellungen ▸ Funkgerät ▸ Übernehmen macht
-qo100-decoder-runs-receiving-station-readout = Der Dekoder läuft auf der empfangenden Station — seine Anzeige wird nicht an entfernte Clients gesendet
 qo100-starting = wird gestartet…
 qo100-searching-first-window-fills-after = suche — das erste Fenster füllt sich nach etwa 24 s und wiederholt sich dann
 
