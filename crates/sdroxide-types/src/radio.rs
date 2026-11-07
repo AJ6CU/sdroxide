@@ -6782,6 +6782,36 @@ impl BandDriveTrim {
     }
 }
 
+/// The most power this radio's station puts out on one band, in watts, as the
+/// operator states it. See [`RadioConfig::tx_band_power_w`].
+///
+/// A radio with no power sensor cannot say what it is radiating, and the
+/// S-meter has nothing to show during a transmission but the drive setting as
+/// a percentage. With this figure the same setting can be shown as watts: it is
+/// the power the station makes on `band` with Drive at its top, amplifier
+/// included, and the engine scales it by the drive actually in force.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct BandPower {
+    /// The band this row states, matched against the transmit frequency on the
+    /// dial through [`Band::containing`], like [`BandDriveTrim::band`].
+    pub band: Band,
+    /// Watts at full drive. Not `> 0` and finite means "unknown", exactly as if
+    /// the row were absent; see [`BandPower::watts`].
+    pub watts: f32,
+}
+
+impl BandPower {
+    /// The largest figure a row accepts, in watts. A kilowatt-plus station is
+    /// real; past this a typo is likelier than a transmitter.
+    pub const MAX_W: f32 = 5000.0;
+
+    /// The figure, or `None` when it is zero, negative, NaN or infinite — what a
+    /// hand-edited `radio.json` is held to before anything is computed from it.
+    pub fn watts(&self) -> Option<f32> {
+        (self.watts.is_finite() && self.watts > 0.0).then(|| self.watts.min(Self::MAX_W))
+    }
+}
+
 #[cfg(test)]
 mod oc_table_tests {
     use super::*;
@@ -6919,6 +6949,76 @@ mod drive_trim_tests {
         // No trim is exactly no change, not a rounding of one.
         assert_eq!(BandDriveTrim::factor_for(0.0, false), 1.0);
         assert_eq!(BandDriveTrim::factor_for(0.0, true), 1.0);
+    }
+}
+
+#[cfg(test)]
+mod band_power_tests {
+    use super::*;
+
+    /// A row answers for its own band and for nothing else, and a dial outside
+    /// every band falls on the "Other" row if there is one.
+    #[test]
+    fn the_power_follows_the_transmit_band() {
+        let cfg = RadioConfig {
+            tx_band_power_w: vec![
+                BandPower { band: Band::M40, watts: 100.0 },
+                BandPower { band: Band::M10, watts: 50.0 },
+                BandPower { band: Band::Gen, watts: 4.0 },
+            ],
+            ..RadioConfig::default()
+        };
+        assert_eq!(cfg.tx_band_watts(7_074_000.0), Some(100.0));
+        assert_eq!(cfg.tx_band_watts(28_074_000.0), Some(50.0));
+        assert_eq!(cfg.tx_band_watts(14_074_000.0), None, "a band with no row is unknown");
+        assert_eq!(cfg.tx_band_watts(2_100_000.0), Some(4.0), "outside every band: Other");
+        // The station that never opened the table: nothing is looked up.
+        assert_eq!(RadioConfig::default().tx_band_watts(7_074_000.0), None);
+    }
+
+    /// A hand-edited `radio.json` cannot make a zero, a negative or a NaN into
+    /// a power, and an absurd figure is held to the cap.
+    #[test]
+    fn an_impossible_row_reads_as_unknown_or_is_capped() {
+        for w in [0.0, -5.0, f32::NAN, f32::INFINITY] {
+            assert_eq!(BandPower { band: Band::M20, watts: w }.watts(), None, "{w}");
+        }
+        assert_eq!(BandPower { band: Band::M20, watts: 1e9 }.watts(), Some(BandPower::MAX_W));
+        assert_eq!(BandPower { band: Band::M20, watts: 100.0 }.watts(), Some(100.0));
+    }
+
+    /// One row per band, and clearing a band leaves no row behind.
+    #[test]
+    fn setting_a_band_replaces_its_row_and_clearing_removes_it() {
+        let mut cfg = RadioConfig::default();
+        cfg.set_tx_band_watts(Band::M20, Some(100.0));
+        cfg.set_tx_band_watts(Band::M20, Some(75.0));
+        cfg.set_tx_band_watts(Band::M40, Some(10.0));
+        assert_eq!(cfg.tx_band_power_w.len(), 2);
+        assert_eq!(cfg.tx_band_watts(14_074_000.0), Some(75.0));
+        cfg.set_tx_band_watts(Band::M20, None);
+        assert_eq!(cfg.tx_band_watts(14_074_000.0), None);
+        assert_eq!(cfg.tx_band_power_w.len(), 1);
+        cfg.set_tx_band_watts(Band::M40, Some(f32::NAN));
+        assert!(cfg.tx_band_power_w.is_empty(), "an unusable figure clears the row");
+    }
+
+    /// The table survives `radio.json`, and a `radio.json` written before the
+    /// field existed loads with it empty rather than failing.
+    #[test]
+    fn the_table_round_trips_and_an_old_file_loads_empty() {
+        let cfg = RadioConfig {
+            tx_band_power_w: vec![BandPower { band: Band::M20, watts: 100.0 }],
+            ..RadioConfig::default()
+        };
+        let json = serde_json::to_string(&cfg).unwrap();
+        let back: RadioConfig = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.tx_band_power_w, cfg.tx_band_power_w);
+
+        let mut v: serde_json::Value = serde_json::from_str(&json).unwrap();
+        v.as_object_mut().unwrap().remove("tx_band_power_w").expect("the field is written");
+        let old: RadioConfig = serde_json::from_value(v).unwrap();
+        assert!(old.tx_band_power_w.is_empty());
     }
 }
 
@@ -7795,6 +7895,16 @@ pub struct RadioConfig {
     /// Appended last, as the wire requires.
     #[serde(default)]
     pub tx_bands_confirmed: bool,
+    /// The most power the station makes on each band, in watts, as the operator
+    /// states it — see [`BandPower`]. Empty, the default and what every
+    /// `radio.json` written before this existed loads as, means unknown on every
+    /// band, and nothing changes: the S-meter keeps showing the drive as a
+    /// percentage. A band with no row is unknown on its own.
+    ///
+    /// Per radio, on the server with the rest of `radio.json`. Appended last, as
+    /// the wire requires.
+    #[serde(default)]
+    pub tx_band_power_w: Vec<BandPower>,
 }
 
 /// Why [`RadioConfig::tx_block_reason`] refuses a frequency. Also what the
@@ -7974,6 +8084,30 @@ impl RadioConfig {
     /// operator who wants no output turns the Drive control down.
     pub fn tx_drive_ceiling(&self) -> Option<f32> {
         self.tx_drive_max.filter(|c| c.is_finite() && *c > 0.0).map(|c| c.min(1.0))
+    }
+
+    /// The power the operator states for the band `tx_dial_hz` falls in, in
+    /// watts at full drive, or `None` where they have stated none.
+    ///
+    /// The *dial* transmit frequency, for the reason [`Self::drive_trim_db`]
+    /// takes it: behind a transverter the band that radiates is the converted
+    /// one. A frequency in no band falls on [`Band::Gen`], the "Other" row. A
+    /// band with more than one row takes the first, as the trim table does.
+    pub fn tx_band_watts(&self, tx_dial_hz: f64) -> Option<f32> {
+        if self.tx_band_power_w.is_empty() {
+            return None;
+        }
+        let band = Band::containing(tx_dial_hz);
+        self.tx_band_power_w.iter().find(|p| p.band == band).and_then(BandPower::watts)
+    }
+
+    /// Set (or, with `None`, clear) the stated power for `band`, keeping one row
+    /// per band and no row for an unknown one.
+    pub fn set_tx_band_watts(&mut self, band: Band, watts: Option<f32>) {
+        self.tx_band_power_w.retain(|p| p.band != band);
+        if let Some(w) = watts.filter(|w| w.is_finite() && *w > 0.0) {
+            self.tx_band_power_w.push(BandPower { band, watts: w.min(BandPower::MAX_W) });
+        }
     }
 
     /// The converter offset in force at `dial_hz`, read-only.

@@ -9313,3 +9313,7 @@ vor-nearby = VORs nearest your station
 vor-no-grid = Enter your grid locator in the digital-mode settings to list the nearest VORs.
 
 vor-tune-hover = Tune this VOR in AM
+
+tx-bands-power-hint = The most power this band makes with Drive at its top, in watts. Leave at — if you do not know.
+
+tx-bands-power-note = Optional. A radio with no power meter uses these figures to show its transmit power in watts on the S-meter; with none, it shows the Drive setting as a percentage.

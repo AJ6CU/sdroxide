@@ -9289,3 +9289,7 @@ vor-nearby = VOR más cercanos a su estación
 vor-no-grid = Indique su locator en los ajustes de modos digitales para listar los VOR más cercanos.
 
 vor-tune-hover = Sintonizar este VOR en AM
+
+tx-bands-power-hint = La potencia máxima en esta banda con el Drive al máximo, en vatios. Déjelo en — si no la conoce.
+
+tx-bands-power-note = Opcional. Una radio sin medidor de potencia usa estas cifras para mostrar su potencia de transmisión en vatios en el S-metro; sin ellas, muestra el ajuste de Drive en porcentaje.

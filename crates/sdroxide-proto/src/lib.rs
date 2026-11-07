@@ -2231,8 +2231,15 @@ use sdroxide_types::{
 /// runs and once when it starts, stops or is refused. Cached by the server and
 /// replayed on connect. A v271 peer has no variant to decode it into.
 /// `PROTO_VERSION` 271 → 272, `VERSION_BYTE` 0x5B → 0x5C.
-pub const PROTO_VERSION: u16 = 272;
-const VERSION_BYTE: u8 = 0x5C;
+/// v273: **the power per band.** [`sdroxide_types::RadioConfig`] gains
+/// `tx_band_power_w` at its tail: the watts the station makes on each band at
+/// full drive, as the operator states them, so a radio with no power sensor can
+/// show its transmit power in watts. `RadioConfig` rides
+/// `ServerMsg::RadioConfig` and `Command::SetRadioConfig` whole, so the appended
+/// field moves its layout. `#[serde(default)]`, so a `radio.json` written before
+/// this loads unchanged. `PROTO_VERSION` 272 → 273, `VERSION_BYTE` 0x5C → 0x5D.
+pub const PROTO_VERSION: u16 = 273;
+const VERSION_BYTE: u8 = 0x5D;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -3894,6 +3901,13 @@ mod tests {
             tx_drive_trim: vec![
                 sdroxide_types::BandDriveTrim { band: sdroxide_types::Band::M160, db: -4.5 },
                 sdroxide_types::BandDriveTrim { band: sdroxide_types::Band::M6, db: 2.0 },
+            ],
+            // The last field in the struct: a `Vec` of rows, a band and a
+            // float each. Two rows far apart in `Band`'s order, so a read a
+            // byte out of step cannot land on the right pair by luck.
+            tx_band_power_w: vec![
+                sdroxide_types::BandPower { band: sdroxide_types::Band::M20, watts: 100.0 },
+                sdroxide_types::BandPower { band: sdroxide_types::Band::Gen, watts: 4.5 },
             ],
             converter_offset_hz: 125_000_000.0,
             // The transmit converter is an enum with a payload on one variant
