@@ -2766,6 +2766,19 @@ fn wants_recording_tap(recorder: bool, udp_stream: bool, external: bool) -> bool
     (recorder || udp_stream) && !external
 }
 
+/// `src`, or a block of silence of the same length when `off`. The receive band
+/// list ([`Engine::rx_band_refusal`]) cuts what is *heard and recorded* with it:
+/// the decoders read their own clean tap and are not touched. `scratch` holds
+/// the silence, and stays empty (no allocation) when `off` is false.
+fn silenced_copy<'a>(off: bool, src: &'a [f32], scratch: &'a mut Vec<f32>) -> &'a [f32] {
+    if !off {
+        return src;
+    }
+    scratch.clear();
+    scratch.resize(src.len(), 0.0);
+    &scratch[..]
+}
+
 /// Binaural (pseudo-stereo) audio: spread the receive passband across the two
 /// ears, so that pitch becomes direction and tuning a signal floats it from one
 /// ear to the other (issue #263). What it actually does to the audio is
@@ -6784,6 +6797,12 @@ impl Engine {
             &mut self.main_play_r,
         );
 
+        // The receive band list, judged here while nothing is borrowed: the
+        // main receiver on the dial, the sub receiver on its own frequency.
+        let main_off =
+            !unscaled_preview && self.rx_band_refusal(self.state.active_freq_hz()).is_some();
+        let sub_off = self.rx_band_refusal(self.state.sub_rx_hz).is_some();
+
         // Both taps come out of one borrow: `run`'s own return would keep the
         // chain mutably borrowed, leaving no way to ask for the recorder tap
         // as well.
@@ -6850,6 +6869,18 @@ impl Engine {
         }
         let (speaker, speaker_right): (&[f32], Option<&[f32]>) =
             if self.replay.on() { (&self.replay_buf, None) } else { (&self.main_play, right) };
+        // The receive band list: a dial on a band that is RX NO, or while the RX
+        // list is unconfirmed, is not heard and not recorded. The preview of a
+        // voice-keyer message is the operator's own audio, not the band, and is
+        // left alone. The right channel is the sub receiver's when it runs, so
+        // it is judged on the sub's own frequency.
+        let right_off = if sub_audio.is_some() { sub_off } else { main_off };
+        let (mut z_l, mut z_r, mut z_rec, mut z_rec_r) =
+            (Vec::new(), Vec::new(), Vec::new(), Vec::new());
+        let speaker = silenced_copy(main_off, speaker, &mut z_l);
+        let speaker_right = speaker_right.map(|r| silenced_copy(right_off, r, &mut z_r));
+        let rec_left = silenced_copy(main_off, &self.main_play_rec, &mut z_rec);
+        let rec_right = rec_right.map(|r| silenced_copy(right_off, r, &mut z_rec_r));
         let now = Instant::now();
         if self.audio_level_until.is_some_and(|t| now < t) {
             if let Some(level) =
@@ -6859,7 +6890,7 @@ impl Engine {
             }
         }
         if let Some(mixer) = self.mixer.as_mut() {
-            mixer.push(speaker, speaker_right, &self.main_play_rec, rec_right);
+            mixer.push(speaker, speaker_right, rec_left, rec_right);
         }
         // Feed the high-resolution channel spectrum from the DDC output.
         if let (Some(ca), Some(main)) = (self.channel_analyzer.as_mut(), self.main.as_ref()) {
@@ -7182,8 +7213,14 @@ impl Engine {
         }
         let (speaker, speaker_right): (&[f32], Option<&[f32]>) =
             if self.replay.on() { (&self.replay_buf, None) } else { (&self.audio_play, right) };
+        // The same receive band list as the SDR path.
+        let off = self.rx_band_refusal(self.state.active_freq_hz()).is_some();
+        let (mut z_l, mut z_r, mut z_rec) = (Vec::new(), Vec::new(), Vec::new());
+        let speaker = silenced_copy(off, speaker, &mut z_l);
+        let speaker_right = speaker_right.map(|r| silenced_copy(off, r, &mut z_r));
+        let rec_left = silenced_copy(off, &self.audio_play_rec, &mut z_rec);
         if let Some(mixer) = self.mixer.as_mut() {
-            mixer.push(speaker, speaker_right, &self.audio_play_rec, None);
+            mixer.push(speaker, speaker_right, rec_left, None);
         }
     }
 
@@ -24152,6 +24189,19 @@ mod frame_watch_tests {
 #[cfg(test)]
 mod decode_feed_tests {
     use super::*;
+
+    /// The receive band list cuts the audio by replacing it with silence of the
+    /// same length, and costs nothing when it is not cutting.
+    #[test]
+    fn silenced_copy_is_silence_of_the_same_length_or_the_source_itself() {
+        let src = [0.5f32, -0.25, 0.75];
+        let mut scratch = Vec::new();
+        assert_eq!(silenced_copy(false, &src, &mut scratch), &src[..]);
+        assert!(scratch.is_empty(), "nothing allocated when not cutting");
+        assert_eq!(silenced_copy(true, &src, &mut scratch), &[0.0, 0.0, 0.0][..]);
+        let mut again = Vec::new();
+        assert!(silenced_copy(true, &[], &mut again).is_empty());
+    }
 
     fn line() -> FeedLine<'static> {
         FeedLine {
