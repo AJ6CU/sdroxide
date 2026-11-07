@@ -2224,8 +2224,15 @@ use sdroxide_types::{
 /// gains `scan` at its tail. The struct rides `RadioState` and
 /// `Command::SetSondeConfig` whole, so a v270 peer reads the extra byte as the
 /// start of the next field. `PROTO_VERSION` 270 → 271, `VERSION_BYTE` 0x5A → 0x5B.
-pub const PROTO_VERSION: u16 = 271;
-const VERSION_BYTE: u8 = 0x5B;
+///
+/// v272: **the VOR read-out.** `ServerMsg` gains `VorStatus(Box<VorStatus>)`
+/// last: the radial, the ident and the lock of the beacon the receiver is
+/// parked on ([`sdroxide_types::VorStatus`]), twice a second while the lane
+/// runs and once when it starts, stops or is refused. Cached by the server and
+/// replayed on connect. A v271 peer has no variant to decode it into.
+/// `PROTO_VERSION` 271 → 272, `VERSION_BYTE` 0x5B → 0x5C.
+pub const PROTO_VERSION: u16 = 272;
+const VERSION_BYTE: u8 = 0x5C;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -2807,6 +2814,11 @@ pub enum ServerMsg {
         ok: bool,
         text: String,
     },
+    /// The VOR beacon the receiver is parked on: radial, ident and how well
+    /// the two 30 Hz signals are heard, with why the lane is not running when
+    /// it is not. A whole snapshot, twice a second while it runs — see
+    /// [`sdroxide_types::VorStatus`]. Appended last.
+    VorStatus(Box<sdroxide_types::VorStatus>),
 }
 
 /// What [`ServerMsg::ClientSettings`] carries.
@@ -3538,6 +3550,33 @@ mod tests {
             other => panic!("the answer did not round-trip: {other:?}"),
         }
         assert_eq!((PROTO_VERSION, VERSION_BYTE), (269, 0x59));
+    }
+
+    /// The VOR read-out rides the wire whole, locked or not, and the message is
+    /// the last variant, so a slip in the discriminant would show here.
+    #[test]
+    fn a_vor_status_round_trips() {
+        for st in [
+            sdroxide_types::VorStatus {
+                running: true,
+                freq_hz: 114_100_000.0,
+                radial_deg: 138.5,
+                var_depth: 0.3,
+                ref_depth: 0.17,
+                deviation_hz: 480.0,
+                locked: true,
+                ident: Some("BBG".into()),
+                ..Default::default()
+            },
+            sdroxide_types::VorStatus {
+                unavailable: Some(sdroxide_types::VorUnavailable::OutsideWindow),
+                ..Default::default()
+            },
+        ] {
+            let m = ServerMsg::VorStatus(Box::new(st));
+            let back: ServerMsg = decode(&encode(&m).unwrap()).unwrap();
+            assert_eq!(back, m);
+        }
     }
 
     /// What an aircraft says about its own flight crosses the wire with the

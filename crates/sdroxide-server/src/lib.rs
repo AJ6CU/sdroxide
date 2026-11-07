@@ -286,6 +286,11 @@ pub(crate) struct Latest {
     /// every three minutes, so a client that attached without the table would
     /// show an empty sea for minutes in front of a working decoder.
     pub ais_status: Option<Box<sdroxide_types::AisStatus>>,
+    /// The VOR read-out. Replayed on connect: a beacon's lock and ident are a
+    /// standing condition, and a client that attached without them would show
+    /// the puce empty in front of a working lane for up to half a second, or
+    /// for ever when the lane only speaks on a change.
+    pub vor_status: Option<Box<sdroxide_types::VorStatus>>,
     /// What the DRM decoder has made of the broadcast currently tuned. Replayed
     /// on connect for the same reason as `rds`: a station's label and the
     /// transmission's parameters are standing conditions, and a client that
@@ -1258,8 +1263,10 @@ fn handle_event(shared: &Shared, ev: RadioEvent) {
             RadioEvent::HfdlStatus(_) => None,
             // ...and the radiosonde tracks, for the same reason.
             RadioEvent::SondeStatus(_) => None,
-            // ...and the VOR read-out.
-            RadioEvent::VorStatus(_) => None,
+            RadioEvent::VorStatus(st) => {
+                latest.vor_status = Some(st.clone());
+                Some(ServerMsg::VorStatus(st))
+            }
             RadioEvent::SstvLine { image_id, y, rgb } => {
                 Some(ServerMsg::SstvLine { image_id, y, rgb })
             }
