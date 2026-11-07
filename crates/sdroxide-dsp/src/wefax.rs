@@ -2003,6 +2003,13 @@ fn pulse_region(line: &[f32], strict: bool) -> Option<PulseRegion> {
         // White for most of the line is a bright picture, not a pulse.
         return None;
     }
+    if strict && width > pulse * 2 {
+        // A phasing pulse is five per cent of the line, give or take the
+        // edges. A chart's own dark bar carries a wider bright patch (its
+        // border or lettering) that the checks above can still read as a
+        // pulse, and it is not one (#444).
+        return None;
+    }
     if strict {
         // A phasing line is black outside its one pulse. A chart's thick black
         // bar with white lettering carries several bright patches, and the run
@@ -3741,4 +3748,38 @@ mod carrier_tests {
             "phasing straight after a page began another: {ev:?}"
         );
     }
+
+/// A thick black bar whose bright patch is narrow but wider than a real
+/// phasing pulse must not be read as phasing, even though it carries only
+/// one bright region (so `bright_outside` does not catch it). The pulse
+/// width cap is what closes this (#444).
+#[test]
+fn a_thick_black_bar_with_a_narrow_border_is_not_phasing() {
+    let n = 6000;
+    let pulse = n / 20; // 5 %, the standard phasing pulse width
+    // A real phasing line still passes.
+    let mut phasing = vec![0.0f32; n];
+    for v in phasing.iter_mut().skip(n - pulse) {
+        *v = 1.0;
+    }
+    assert!(
+        phasing_skew_strict(&phasing).is_some(),
+        "a real phasing line must still pass the strict test"
+    );
+
+    // A thick black bar with a single bright border ~15 % wide: one bright
+    // region, so bright_outside is zero, but the patch is three times the
+    // standard pulse width.
+    let border = pulse * 3;
+    let mut bar = vec![0.0f32; n];
+    for v in bar.iter_mut().skip(n - border) {
+        *v = 1.0;
+    }
+    assert_eq!(
+        phasing_skew_strict(&bar),
+        None,
+        "a thick black bar with a narrow border must not be read as phasing"
+    );
+}
+
 }
