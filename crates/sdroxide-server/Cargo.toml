@@ -49,6 +49,9 @@ triple_buffer = "9.0.0"
 # the rest of the config, so the server writes them through the same store the
 # native program does rather than hand-rolling the file.
 sdroxide-config = { path = "../sdroxide-config" }
+# SondeHub relay (`sonde_online.rs`) asks it for the sonde list. Also a
+# dev-dependency below, for the sign-in test.
+ureq = "3.4.0"
 
 [dev-dependencies]
 # Only to POST to /signin in the end-to-end cookie test — the one thing here
