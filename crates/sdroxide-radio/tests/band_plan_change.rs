@@ -52,11 +52,15 @@ fn caps() -> DeviceCaps {
     }
 }
 
-/// 2 m narrowed in Region 1: not the built-in plan, and a valid one.
-const NARROW: &str = r#"{"meta":{"name":"Narrow 2 m"},
-    "region1":{"bands":[{"band":"M2","lo_mhz":144.0,"hi_mhz":144.4}]},
-    "region2":{"bands":[{"band":"M2","lo_mhz":144.0,"hi_mhz":148.0}]},
-    "region3":{"bands":[{"band":"M2","lo_mhz":144.0,"hi_mhz":148.0}]}}"#;
+/// The built-in tables with 2 m narrowed in Region 1: not the built-in plan, a
+/// valid one, and with every HF band still in it so the dial can go there.
+fn narrow() -> String {
+    let doc = sdroxide_types::BandPlan::default().to_json_document();
+    let row = r#"{"band": "M2", "lo_mhz": 144.0, "hi_mhz": 146.0}"#;
+    assert!(doc.contains(row), "the built-in 2 m row moved");
+    doc.replace(row, r#"{"band": "M2", "lo_mhz": 144.0, "hi_mhz": 144.4}"#)
+        .replace(r#""name": """#, r#""name": "Narrow 2 m""#)
+}
 
 /// What the engine last said about the radio, kept between steps.
 #[derive(Default)]
@@ -132,7 +136,7 @@ fn a_change_of_plan_withdraws_the_confirmations_and_the_same_plan_does_not() {
     assert_eq!(rig.tune(7_074_000.0), 7_074_000.0, "confirmed: 40 m is YES");
 
     // A plan is added: nothing changes, because adding is not running it.
-    rig.send(Command::ImportBandPlan { name: "Narrow 2m".into(), json: NARROW.into() });
+    rig.send(Command::ImportBandPlan { name: "Narrow 2m".into(), json: narrow() });
     assert_eq!(rig.tune(14_074_000.0), 14_074_000.0, "adding a plan withdraws nothing");
     assert!(rig.seen.radio_cfg.as_ref().is_none_or(|c| c.tx_bands_confirmed));
 
