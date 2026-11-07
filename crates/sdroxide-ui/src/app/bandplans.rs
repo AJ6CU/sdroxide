@@ -46,10 +46,6 @@ pub fn parse_plan(json: &str) -> Option<BandPlan> {
         return None;
     }
     Some(plan)
-<<<<<<< HEAD
-    serde_json::from_str::<BandPlan>(json).ok()
-=======
->>>>>>> 0ca4fe3 (fix(bandplan): validate on import, backup previous, reset TX bands, ImportBandPlan command (#546 feedback))
 }
 
 /// Whether `plan` is exactly the Germany (NRW) preset, so the chooser can name

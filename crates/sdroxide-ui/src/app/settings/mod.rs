@@ -2231,7 +2231,6 @@ impl SdroxideApp {
             self.ask_device(ctx, P::HackRf);
         }
         self.run_settings_transfer(settings_export, settings_import);
-        self.run_band_plan_io(band_plan_import, band_plan_export);
         self.handle_recordings_dir(recordings_choose, recordings_reset);
         if hackrf_copy_report {
             // Worth more on this backend than on the receive-only ones: a
@@ -2906,7 +2905,7 @@ impl SdroxideApp {
                     &tr!("settings-cb-licence-note"),
                 );
                 ui.add_space(6.0);
-                self.settings_band_plan_file(ui, cmds, io.band_plan_import, io.band_plan_export);
+                self.settings_band_plan_file(ui, cmds);
 
                 ui.add_space(10.0);
                 ui.separator();

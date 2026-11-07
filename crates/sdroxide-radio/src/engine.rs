@@ -12076,10 +12076,6 @@ impl Engine {
                 // edges, so the transmit-band confirmation no longer covers
                 // what it said it did. Reset it so the operator re-checks.
                 self.tx_bands_confirmed = false;
-<<<<<<< HEAD
-                if let Some(cfg) = self.state.rx.get_mut(0) {
-                    // best-effort: the radio config is re-sent by the client
-                }
                 self.emit_station_config();
                 self.notice(if custom {
                     "Band plan imported. The station is running on it."
