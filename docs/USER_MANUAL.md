@@ -8314,6 +8314,24 @@ one and in a browser:
   `.bak`). If the plan that runs is one of them, it is re-read at once — and if it
   differs, that is a change of plan like any other.
 
+**A plan for one radio.** At a station with several radios each radio can run a plan
+of its own while the others follow the station's — a national plan on the HF radio,
+the built-in tables on the VHF one. On the General tab of a radio, **This radio**
+chooses its plan (*Follows the station* is the default, and what every radio did
+before), and **THIS RADIO ONLY** in the manager runs a plan on that radio alone. The
+choice is kept in that radio's own `radio.json` (`band_plan`), so it survives a
+restart, and nothing one radio does reaches another: its band edges, its transmit
+lockout, its waterfall strip and its skimmer windows follow its own plan, and a
+split view of two radios draws each with its own.
+
+The band confirmations follow the radio, not the station. Choosing or leaving a plan
+for **this radio** withdraws the TX and RX confirmation of **this radio only** (and
+only if the plan it *runs* changes — leaving its own plan for a station plan that is
+identical changes nothing). A change of the **station's** plan withdraws the
+confirmations of the radios that follow it and leaves alone the ones running a plan of
+their own. A plan that a radio runs cannot be deleted; if its file goes missing the
+radio runs the station's plan and says so, and keeps the name.
+
 **Changing the plan means checking the band lists again.** The TX and the RX band
 lists ([§6.2](#62-radio-choosing-and-configuring-the-rig)) were confirmed against one plan, and a different plan
 can put a band edge somewhere else or take a band away. So whenever the station
