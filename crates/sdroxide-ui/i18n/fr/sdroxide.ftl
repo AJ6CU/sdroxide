@@ -9334,7 +9334,7 @@ settings-general-band-plan-choose-hint = Choisissez un plan de bandes dans la bi
 
 settings-general-band-plan-import = IMPORTER UN PLAN
 
-settings-general-band-plan-import-hint = Ajoute un fichier de plan de bandes à la bibliothèque de la station. Il est vérifié d'abord et seulement ajouté — choisissez-le dans la liste pour l'utiliser.
+settings-general-band-plan-import-hint = Ajoute un fichier de plan de bandes à la bibliothèque de la station. Une simple liste de bandes (nom, type, début et fin en hertz) est d'abord convertie. Il est vérifié et seulement ajouté — choisissez-le dans la liste pour l'utiliser.
 
 settings-general-band-plan-reset = RETOUR À L'IARU INTÉGRÉ
 

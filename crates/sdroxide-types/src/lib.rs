@@ -18,6 +18,7 @@ mod awards;
 mod band;
 pub mod band_openings;
 mod band_segments;
+mod band_list_import;
 mod bandplan;
 pub mod broadcast;
 mod callsign;
@@ -149,6 +150,7 @@ pub use band_segments::{
     rtty_ranges_in, segment_kind_at, segment_kind_at_in, segments, segments_in, set_digi_presets,
     span_within_segment, span_within_segment_in, sstv_dials_in,
 };
+pub use band_list_import::{BAND_LIST_MAX_BYTES, Converted, convert_band_list, looks_like_band_list};
 pub use bandplan::{
     BandPlan, BandPlanError, PlanInfo, PlanMeta, RegionPlan, ThreadPlanGuard, band_plan,
     band_plan_revision, leak_band_plan, set_band_plan, set_thread_band_plan, station_band_plan,

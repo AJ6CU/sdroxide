@@ -250,6 +250,31 @@ fn a_change_of_plan_withdraws_the_confirmations_and_the_same_plan_does_not() {
     rig.send(Command::RestoreShippedBandPlans);
     assert_eq!(rig.tune(14_074_000.0), 7_074_000.0, "restoring the running plan changed it: unconfirmed");
 
+    // A flat list of bands in hertz is converted on the way in, and held to the
+    // same check: it is added, the bad row is said, and it can be run.
+    let list = r#"{"name":"Testland","country_name":"Testland","country_code":"FR","bands":[
+        {"name":"40m Ham","type":"amateur","start":7000000,"end":7200000},
+        {"name":"bad","type":"marine","start":5,"end":1}]}"#;
+    rig.send(Command::ImportBandPlan { name: "testland.json".into(), json: list.into() });
+    assert!(
+        rig.seen.notices.iter().any(|n| n.contains("testland") && n.contains("converted")
+            && n.contains("1 row(s) were left out")),
+        "{:?}",
+        rig.seen.notices
+    );
+    rig.send(Command::SelectBandPlan { name: Some("testland".into()) });
+    assert!(rig.seen.notices.iter().any(|n| n.contains("now running")), "{:?}", rig.seen.notices);
+    // Its list said nothing about the lockout: the allocations are the built-in ones.
+    assert_eq!(Band::containing(14_074_000.0), Band::M20);
+    rig.send(Command::SelectBandPlan { name: None });
+    // And a list with nothing usable in it is refused, nothing is written.
+    rig.send(Command::ImportBandPlan {
+        name: "nothing".into(),
+        json: r#"{"bands":[{"name":"x","type":"amateur","start":9,"end":1}]}"#.into(),
+    });
+    assert!(rig.seen.notices.iter().any(|n| n.contains("no usable row")), "{:?}", rig.seen.notices);
+    assert!(!root.join("bandplans").join("nothing.json").exists());
+
     drop(rig.h.cmd_tx);
     if let Some(t) = thread {
         let _ = t.join();
