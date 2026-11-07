@@ -217,7 +217,7 @@ pub use hd::{HdAudioService, HdRadioStatus};
 pub use vor::{VOR_BAND_HZ, VorStatus, VorUnavailable};
 pub use sonde::{
     SONDE_BAND_HZ, SONDE_DEFAULT_HZ, SONDE_MAX_TRACKS, SONDE_TRACK_DEPTH, SondePoint,
-    SondeSettings, SondeStatus, SondeTrack,
+    SondeSettings, SondeStatus, SondeTrack, window_reaches_band as sonde_window_reaches_band,
 };
 pub use hfdl::{
     HFDL_DEFAULT_HZ, HFDL_LANE_RATE_HZ, HFDL_LOG_DEPTH, HfdlDecode, HfdlFix, HfdlSettings,

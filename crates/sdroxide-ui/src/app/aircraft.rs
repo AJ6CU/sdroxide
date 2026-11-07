@@ -423,6 +423,7 @@ impl super::SdroxideApp {
                                 cmds.extend(super::sonde::button_commands(
                                     &self.state.sonde,
                                     self.state.active_vfo,
+                                    active,
                                 ));
                             }
                             let b = crate::chrome::chip_sized(
