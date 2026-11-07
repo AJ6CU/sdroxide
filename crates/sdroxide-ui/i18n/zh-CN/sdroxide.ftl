@@ -9196,3 +9196,35 @@ sonde-card-frames = 已收帧数
 sonde-card-open = 在 { $site } 打开
 
 sonde-card-close = 关闭
+
+aircraft-mode-vor-hover = 读取电台所调谐的 VOR 导航台：径向线与摩尔斯识别码
+
+vor-audio-front = 此接收机提供的是已解调的音频；VOR 读取需要原始 I/Q 数据流。
+
+vor-outside-window = 所调谐的频道超出接收机提供的带宽。请将接收机居中于该频道。
+
+vor-not-in-band = 调谐到 VOR 导航台（108.00–117.95 MHz）即可读取其径向线。
+
+vor-locked = 已锁定
+
+vor-no-lock = 未锁定
+
+vor-no-lock-hover = 30 Hz 可变信号或 9960 Hz 基准信号缺失或太弱。此频段的 ILS 航向台永远不会锁定。
+
+vor-ident-heard = 听到的识别码：{ $ident }
+
+vor-ident-waiting = 正在等待识别码（约每 10 秒发送一次）…
+
+vor-charted = 航图：{ $ident } — { $name }
+
+vor-var-depth = 30 Hz 调幅：载波的 { $pct } %
+
+vor-ref-depth = 9960 Hz 调频：载波的 { $pct } %，频偏 ±{ $dev } Hz
+
+vor-caveat = 径向线是接收机相对于导航台的方位，以导航台自身的磁北为基准。不可用于导航。
+
+vor-nearby = 离您电台最近的 VOR
+
+vor-no-grid = 请在数字模式设置中填写您的网格定位符，以列出最近的 VOR。
+
+vor-tune-hover = 用调幅调谐此 VOR

@@ -9206,3 +9206,35 @@ sonde-card-frames = 受信フレーム数
 sonde-card-open = { $site } で開く
 
 sonde-card-close = 閉じる
+
+aircraft-mode-vor-hover = ラジオが同調している VOR 局を読み取る：ラジアルとモールス識別
+
+vor-audio-front = この受信機は復調済みの音声を渡します。VOR の読み取りには生の I/Q ストリームが必要です。
+
+vor-outside-window = 同調したチャンネルは受信機が出す帯域の外にあります。受信機をそのチャンネルに合わせてください。
+
+vor-not-in-band = VOR 局（108.00～117.95 MHz）に同調するとラジアルを読み取れます。
+
+vor-locked = ロック
+
+vor-no-lock = ロックなし
+
+vor-no-lock-hover = 30 Hz の可変信号または 9960 Hz の基準信号がないか、弱すぎます。この帯域の ILS ローカライザーはロックしません。
+
+vor-ident-heard = 聞こえた識別: { $ident }
+
+vor-ident-waiting = 識別信号を待っています（約 10 秒ごとに送信）…
+
+vor-charted = 航空図: { $ident } — { $name }
+
+vor-var-depth = 30 Hz AM：搬送波の { $pct } %
+
+vor-ref-depth = 9960 Hz FM：搬送波の { $pct } %、偏移 ±{ $dev } Hz
+
+vor-caveat = ラジアルは局から見た受信機の方位で、局自身の磁北が基準です。航法には使えません。
+
+vor-nearby = あなたの局に近い VOR
+
+vor-no-grid = 最も近い VOR を表示するには、デジタルモード設定でロケーターを入力してください。
+
+vor-tune-hover = この VOR を AM で同調

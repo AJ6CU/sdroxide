@@ -1258,6 +1258,8 @@ fn handle_event(shared: &Shared, ev: RadioEvent) {
             RadioEvent::HfdlStatus(_) => None,
             // ...and the radiosonde tracks, for the same reason.
             RadioEvent::SondeStatus(_) => None,
+            // ...and the VOR read-out.
+            RadioEvent::VorStatus(_) => None,
             RadioEvent::SstvLine { image_id, y, rgb } => {
                 Some(ServerMsg::SstvLine { image_id, y, rgb })
             }

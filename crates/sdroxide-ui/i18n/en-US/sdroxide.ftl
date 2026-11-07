@@ -9281,3 +9281,35 @@ sonde-card-frames = Frames heard
 sonde-card-open = Open on { $site }
 
 sonde-card-close = Close
+
+aircraft-mode-vor-hover = Read the VOR beacon the radio is tuned to: its radial and its Morse ident
+
+vor-audio-front = This receiver hands over demodulated audio; the VOR read-out needs the raw I/Q stream.
+
+vor-outside-window = The tuned channel is outside the span the receiver delivers. Centre the receiver on it.
+
+vor-not-in-band = Tune a VOR beacon (108.00–117.95 MHz) to read its radial.
+
+vor-locked = LOCKED
+
+vor-no-lock = NO LOCK
+
+vor-no-lock-hover = The 30 Hz variable signal or the 9960 Hz reference is missing or too weak. An ILS localiser on this band never locks.
+
+vor-ident-heard = Ident heard: { $ident }
+
+vor-ident-waiting = Listening for the ident (sent every 10 s or so)…
+
+vor-charted = Charted: { $ident } — { $name }
+
+vor-var-depth = 30 Hz AM: { $pct } % of the carrier
+
+vor-ref-depth = 9960 Hz FM: { $pct } % of the carrier, ±{ $dev } Hz deviation
+
+vor-caveat = The radial is the bearing of the receiver from the beacon, in the beacon's own magnetic north. Not for navigation.
+
+vor-nearby = VORs nearest your station
+
+vor-no-grid = Enter your grid locator in the digital-mode settings to list the nearest VORs.
+
+vor-tune-hover = Tune this VOR in AM

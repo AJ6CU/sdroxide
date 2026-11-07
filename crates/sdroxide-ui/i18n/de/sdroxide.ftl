@@ -9256,3 +9256,35 @@ sonde-card-frames = Empfangene Frames
 sonde-card-open = Auf { $site } öffnen
 
 sonde-card-close = Schließen
+
+aircraft-mode-vor-hover = Das VOR-Funkfeuer lesen, auf das das Funkgerät abgestimmt ist: Radial und Morse-Kennung
+
+vor-audio-front = Dieser Empfänger liefert demodulierte Audiodaten; die VOR-Anzeige braucht den rohen I/Q-Strom.
+
+vor-outside-window = Der eingestellte Kanal liegt außerhalb der Bandbreite, die der Empfänger liefert. Empfänger darauf zentrieren.
+
+vor-not-in-band = Ein VOR-Funkfeuer (108,00–117,95 MHz) einstellen, um sein Radial zu lesen.
+
+vor-locked = VERRIEGELT
+
+vor-no-lock = KEIN LOCK
+
+vor-no-lock-hover = Das variable 30-Hz-Signal oder die 9960-Hz-Referenz fehlt oder ist zu schwach. Ein ILS-Localizer in diesem Band verriegelt nie.
+
+vor-ident-heard = Kennung gehört: { $ident }
+
+vor-ident-waiting = Warte auf die Kennung (etwa alle 10 s gesendet)…
+
+vor-charted = In der Karte: { $ident } — { $name }
+
+vor-var-depth = 30-Hz-AM: { $pct } % des Trägers
+
+vor-ref-depth = 9960-Hz-FM: { $pct } % des Trägers, Hub ±{ $dev } Hz
+
+vor-caveat = Das Radial ist die Peilung des Empfängers vom Funkfeuer aus, bezogen auf dessen eigenen magnetischen Norden. Nicht zur Navigation.
+
+vor-nearby = VORs in der Nähe Ihrer Station
+
+vor-no-grid = Locator in den Einstellungen der Digitalmodi eintragen, um die nächsten VORs aufzulisten.
+
+vor-tune-hover = Dieses VOR in AM abstimmen

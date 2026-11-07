@@ -91,6 +91,11 @@ opt-level = 2
 [profile.dev.package.sdroxide-vdl2]
 opt-level = 2
 
+# One correlator and a 301-tap filter per audio sample; unoptimized the tests
+# that render seconds of beacon take a quarter of a minute.
+[profile.dev.package.sdroxide-vor]
+opt-level = 2
+
 # Both AIS channels get a down-converter, a burst gate and a receive filter over
 # the same window, and the filter is a dot product per sample; unoptimized that
 # alone outweighs the rest of the receive chain, exactly as the VDL2 lane does.
@@ -165,6 +170,7 @@ sdroxide-aprs = { path = "crates/sdroxide-aprs" }
 sdroxide-adsb = { path = "crates/sdroxide-adsb" }
 sdroxide-vdl2 = { path = "crates/sdroxide-vdl2" }
 sdroxide-ais = { path = "crates/sdroxide-ais" }
+sdroxide-vor = { path = "crates/sdroxide-vor" }
 
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

@@ -97,6 +97,7 @@ mod tone;
 mod ui;
 mod uvpacket;
 mod vdl2;
+mod vor;
 mod voice;
 mod wavelog;
 mod wefax;
@@ -213,6 +214,7 @@ pub use geo::{
     grid4, latlon_to_grid,
 };
 pub use hd::{HdAudioService, HdRadioStatus};
+pub use vor::{VOR_BAND_HZ, VorStatus, VorUnavailable};
 pub use sonde::{
     SONDE_BAND_HZ, SONDE_DEFAULT_HZ, SONDE_MAX_TRACKS, SONDE_TRACK_DEPTH, SondePoint,
     SondeSettings, SondeStatus, SondeTrack,

@@ -57,6 +57,7 @@ pub(in crate::app) mod grid_tracker;
 pub(in crate::app) mod hd;
 pub(in crate::app) mod hfdl;
 pub(in crate::app) mod sonde;
+mod vor;
 mod sonde_card;
 pub(in crate::app) mod ignore;
 pub(in crate::app) mod ism;
@@ -769,6 +770,10 @@ pub struct SdroxideApp {
     /// The AIRCRAFT window shows the radiosonde view (a view like Cards, not a
     /// radio mode).
     aircraft_sonde: bool,
+    /// The AIRCRAFT window shows the VOR beacon read-out.
+    aircraft_vor: bool,
+    /// The VOR beacon the radio is on: radial, ident, lock.
+    vor_status: Option<Box<sdroxide_types::VorStatus>>,
     /// One card per aircraft, merged across ADS-B, VDL2, HFDL and ACARS. Lives
     /// here, not in a mode's status, so it survives a switch of mode.
     aircraft_registry: aircraft_registry::AircraftRegistry,
@@ -2335,6 +2340,8 @@ impl SdroxideApp {
             sonde_map: crate::sonde_map::SondeMapState::default(),
             sonde_online: crate::sonde_online::Online::default(),
             aircraft_sonde: false,
+            aircraft_vor: false,
+            vor_status: None,
             aircraft_registry: aircraft_registry::AircraftRegistry::default(),
             hfdl_filter: String::new(),
             // The settings trace is *for* the settings page, so turning it on

@@ -49,6 +49,7 @@ use sdroxide_types::{
     TxEqState, TxMeters, Vfo,
 };
 use sdroxide_vdl2::{Vdl2Action, Vdl2Controller};
+use sdroxide_vor::VorDecoder;
 
 use crate::recorder::{Recorder, RecorderFault, RecordingChannels};
 use crate::voice::VoiceKeyer;
@@ -1711,6 +1712,27 @@ impl FeedLine<'_> {
 /// messages than arrived, and the newer ones are the ones still there — the
 /// alternative, sending the whole log, would repeat messages a consumer has
 /// already had.
+/// What the VOR lane is to do about the dial.
+#[derive(Clone, Copy, PartialEq)]
+enum VorPlan {
+    /// The dial is not on a navigation channel.
+    Off,
+    /// It is, and the lane cannot run here.
+    Blocked(sdroxide_types::VorUnavailable),
+    /// Run on this frequency.
+    Run(f64),
+}
+
+/// The rate the VOR down-converter aims for: the composite reaches 10.5 kHz, so
+/// this leaves room for the filter's skirt.
+const VOR_TARGET_RATE_HZ: f64 = 48_000.0;
+/// The lowest stream that holds a VOR channel with that skirt.
+const VOR_MIN_STREAM_HZ: f64 = 60_000.0;
+/// Half the channel the lane needs about the dial, Hz.
+const VOR_HALF_WIDTH_HZ: f64 = 12_000.0;
+/// A retune of more than this is another beacon, not a nudge of the same.
+const VOR_NEW_BEACON_HZ: f64 = 5_000.0;
+
 fn vdl2_take(len: usize, frames: u64, last: Option<u64>) -> (usize, u64) {
     let Some(last) = last else { return (0, frames) };
     let new = frames.saturating_sub(last) as usize;
@@ -3504,6 +3526,28 @@ struct Engine {
     /// yet, which is different from having said "there is nothing wrong".
     vdl2_idle_sent: Option<Option<String>>,
 
+    /// The VOR lane: the navigation beacon the receiver is parked on, read for
+    /// its radial and its Morse ident.
+    ///
+    /// Not a mode and not a setting. It runs whenever the dial is inside
+    /// 108-118 MHz and the front end delivers raw I/Q around it, in whatever
+    /// mode the operator is listening in, because it takes its own
+    /// down-conversion of the stream and its own envelope detector: the radial
+    /// is a phase, and the listening chain's filters would shift it.
+    vor_ddc: Option<Ddc>,
+    vor: Option<VorDecoder>,
+    vor_buf: Vec<Complex32>,
+    vor_audio: Vec<f32>,
+    /// The channel the decoder was last pointed at.
+    vor_dial_hz: f64,
+    /// The stream rate `vor_ddc` was built to decimate.
+    vor_in_rate: f64,
+    /// Newest reading of the 30 Hz pair.
+    vor_reading: Option<sdroxide_vor::Reading>,
+    /// When the status last went out, and what it said about being up.
+    vor_sent_at: Option<Instant>,
+    vor_sent_state: Option<(bool, Option<sdroxide_types::VorUnavailable>)>,
+
     /// The AIS lane: a fifth window, on the two ship-reporting channels either
     /// side of 162.000 MHz.
     ///
@@ -5174,6 +5218,15 @@ fn engine_thread(
         vdl2_in_rate: 0.0,
         vdl2_cfg,
         vdl2_idle_sent: None,
+        vor_ddc: None,
+        vor: None,
+        vor_buf: Vec::new(),
+        vor_audio: Vec::new(),
+        vor_dial_hz: 0.0,
+        vor_in_rate: 0.0,
+        vor_reading: None,
+        vor_sent_at: None,
+        vor_sent_state: None,
         ais_ddc: None,
         ais: None,
         ais_buf: Vec::new(),
@@ -5633,6 +5686,7 @@ fn engine_thread(
         engine.poll_ism();
         engine.poll_adsb();
         engine.poll_vdl2();
+        engine.poll_vor();
         engine.poll_ais();
         engine.poll_dab();
         engine.poll_qo100();
@@ -6825,6 +6879,21 @@ impl Engine {
             ddc.process(iq, &mut self.vdl2_buf);
             if let Some(d) = self.vdl2.as_ref() {
                 d.on_rx_iq(&self.vdl2_buf);
+            }
+        }
+        // ...and the VOR lane, from the one 50 kHz channel the dial is on. The
+        // detector is the plain magnitude: the decoder wants the envelope with
+        // nothing between, because a filter would delay the 30 Hz and move the
+        // radial by the same angle.
+        if let Some(ddc) = self.vor_ddc.as_mut() {
+            self.vor_buf.clear();
+            ddc.process(iq, &mut self.vor_buf);
+            self.vor_audio.clear();
+            self.vor_audio.extend(self.vor_buf.iter().map(|z| z.norm()));
+            if let Some(d) = self.vor.as_mut() {
+                if let Some(r) = d.push(&self.vor_audio).reading {
+                    self.vor_reading = Some(r);
+                }
             }
         }
         // ...and the AIS lane, from 150 kHz around 162.000 MHz. The two
@@ -13021,6 +13090,113 @@ impl Engine {
         let Some(bank) = self.sonde.as_mut() else { return };
         let Some(status) = bank.poll(now) else { return };
         let _ = self.event_tx.send(RadioEvent::SondeStatus(Box::new(status)));
+    }
+
+    /// What the VOR lane should be doing for the dial and the front end as they
+    /// are now.
+    fn vor_plan(&self) -> VorPlan {
+        let dial = self.state.rx_freq_hz();
+        let (lo, hi) = sdroxide_types::VOR_BAND_HZ;
+        if !(lo..=hi).contains(&dial) {
+            return VorPlan::Off;
+        }
+        if self.audio_mode {
+            return VorPlan::Blocked(sdroxide_types::VorUnavailable::AudioFront);
+        }
+        // The channel and a margin either side must be inside what the
+        // down-converter's own filter passes.
+        let reach = self.state.sample_rate * 0.4;
+        if self.state.sample_rate < VOR_MIN_STREAM_HZ
+            || (dial - self.state.center_hz).abs() + VOR_HALF_WIDTH_HZ > reach
+        {
+            return VorPlan::Blocked(sdroxide_types::VorUnavailable::OutsideWindow);
+        }
+        VorPlan::Run(dial)
+    }
+
+    /// Follow the dial, run the VOR lane while it is on a beacon, and tell the
+    /// window what it hears: twice a second while it runs, and once each time
+    /// it starts, stops or is refused.
+    fn poll_vor(&mut self) {
+        let plan = self.vor_plan();
+        match plan {
+            VorPlan::Run(dial) => self.vor_follow(dial),
+            _ => {
+                if self.vor.is_some() {
+                    info!("VOR decoder stopped");
+                }
+                self.vor = None;
+                self.vor_ddc = None;
+                self.vor_buf.clear();
+                self.vor_reading = None;
+            }
+        }
+        let state = match plan {
+            VorPlan::Run(_) => (self.vor.is_some(), None),
+            VorPlan::Blocked(why) => (false, Some(why)),
+            VorPlan::Off => (false, None),
+        };
+        let changed = self.vor_sent_state != Some(state);
+        let due = state.0
+            && self.vor_sent_at.is_none_or(|t| t.elapsed() >= Duration::from_millis(500));
+        if !changed && !due {
+            return;
+        }
+        // Never in the band and nothing said yet: there is nobody to tell.
+        if changed && self.vor_sent_state.is_none() && state == (false, None) {
+            self.vor_sent_state = Some(state);
+            return;
+        }
+        self.vor_sent_state = Some(state);
+        self.vor_sent_at = Some(Instant::now());
+        let (running, unavailable) = state;
+        let mut st = sdroxide_types::VorStatus {
+            running,
+            unavailable,
+            freq_hz: self.vor_dial_hz,
+            ..Default::default()
+        };
+        if let Some(r) = self.vor_reading.filter(|_| running) {
+            st.radial_deg = r.radial_deg;
+            st.var_depth = r.var_depth;
+            st.ref_depth = r.ref_depth;
+            st.deviation_hz = r.ref_deviation_hz;
+            st.locked = r.locked;
+        }
+        st.ident = self.vor.as_ref().and_then(|d| d.ident()).map(str::to_owned);
+        let _ = self.event_tx.send(RadioEvent::VorStatus(Box::new(st)));
+    }
+
+    /// Start the lane on `dial`, or keep it on it after a retune.
+    fn vor_follow(&mut self, dial: f64) {
+        let rate_changed = (self.state.sample_rate - self.vor_in_rate).abs() >= 1.0;
+        if self.vor.is_none() || self.vor_ddc.is_none() || rate_changed {
+            let ddc = Ddc::new(self.state.sample_rate, VOR_TARGET_RATE_HZ);
+            let Ok(decoder) = VorDecoder::new(ddc.out_rate().round() as u32) else {
+                self.vor = None;
+                self.vor_ddc = None;
+                return;
+            };
+            info!(rate = ddc.out_rate(), dial, "VOR decoder started");
+            self.vor_ddc = Some(ddc);
+            self.vor = Some(decoder);
+            self.vor_in_rate = self.state.sample_rate;
+            self.vor_dial_hz = dial;
+            self.vor_reading = None;
+        } else if (dial - self.vor_dial_hz).abs() > VOR_NEW_BEACON_HZ {
+            // Another channel is another beacon: what was heard of the last
+            // one is not evidence about this one. A fine-tuning nudge is not.
+            if let Some(d) = self.vor.as_mut() {
+                d.reset();
+            }
+            self.vor_dial_hz = dial;
+            self.vor_reading = None;
+        }
+        // Re-seated every pass: the offset is measured from the hardware
+        // centre, and a retune of the hardware is what moves that.
+        if let Some(ddc) = self.vor_ddc.as_mut() {
+            ddc.set_offset_hz(dial - self.state.center_hz);
+        }
     }
 
     /// Drain the HFDL decoder's latest status and forward it.
