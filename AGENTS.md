@@ -117,6 +117,11 @@ or stackable and add it to the Detachable page in Settings.
   re-centre. Modes keep their preset bandwidth; CTR only moves the line. Touching
   waterfall or zoom code: keep the `ctr_zoom_sim` tests in
   `widgets/spectrum_view.rs` green and add the gesture you changed.
+  - Web sessions: every fix and every new feature must also work in web sessions (browser client
+connected to the web server), not only in the desktop app. Whatever needs to be stored is stored on the
+server and reaches the client through the protocol (see "Persistence"). Everything is added to the web
+server too, unless F4NRM says otherwise for that item. Check with
+cargo check --release --target wasm32-unknown-unknown -p sdroxide-ui when wasm-reachable code changes.
 
 ## Every piece of interface text is translated
 
