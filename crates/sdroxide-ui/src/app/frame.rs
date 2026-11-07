@@ -4096,6 +4096,19 @@ impl SdroxideApp {
                 RadioEvent::DyndnsAnswer { at_unix, ok, text } => {
                     self.dyndns_last = Some((at_unix, ok, text));
                 }
+                // A band plan's file, sent to every screen: this one saves it
+                // only if it is the one that asked.
+                RadioEvent::BandPlanExport { file, json } => {
+                    let asked = self.band_plan_export_wanted.borrow().as_deref() == Some(&file);
+                    if asked {
+                        *self.band_plan_export_wanted.borrow_mut() = None;
+                        crate::download::save_as(
+                            &format!("{file}.json"),
+                            json.as_bytes(),
+                            crate::download::Mime::Text,
+                        );
+                    }
+                }
                 RadioEvent::LoginTest(r) => {
                     self.login_tests_pending.remove(&r.target);
                     self.push_net_log(format!(

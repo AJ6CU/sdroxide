@@ -1209,6 +1209,11 @@ fn handle_event(shared: &Shared, ev: RadioEvent) {
             RadioEvent::DyndnsAnswer { at_unix, ok, text } => {
                 Some(ServerMsg::DyndnsAnswer { at_unix, ok, text })
             }
+            // A plan's file for the screen that asked to save it: broadcast, the
+            // asking screen is the one that keeps it.
+            RadioEvent::BandPlanExport { file, json } => {
+                Some(ServerMsg::BandPlanExport { file, json })
+            }
             RadioEvent::Ft8Decodes(d) => Some(ServerMsg::Ft8Decodes(d)),
             RadioEvent::Ft8Status(s) => {
                 latest.digi = Some(s.clone());

@@ -9347,3 +9347,37 @@ settings-general-band-plan-reset-hint = Снова использовать вс
 settings-general-band-plan-folder = Планы — это файлы в { $path } на машине, к которой подключено радио; их можно добавлять и удалять. Сузьте диапазон до вашей лицензии, и sdroxide откажется передавать за его пределами. Частоты в МГц. Это региональное распределение, а не ваша лицензия: ваши условия могут быть уже, а национальные планы различаются внутри региона.
 
 settings-general-band-plan-station-folder = Планы хранятся на машине, к которой подключено радио. Сузьте диапазон до вашей лицензии, и sdroxide откажется передавать за его пределами. Это региональное распределение, а не ваша лицензия: ваши условия могут быть уже, а национальные планы различаются внутри региона.
+
+settings-general-band-plan-manager = Менеджер планов диапазонов
+
+settings-general-band-plan-run = ИСПОЛЬЗОВАТЬ
+
+settings-general-band-plan-run-hint = Использовать этот план. Списки диапазонов TX и RX придётся проверить и подтвердить заново.
+
+settings-general-band-plan-download = СКАЧАТЬ
+
+settings-general-band-plan-download-hint = Сохранить файл этого плана на этом компьютере.
+
+settings-general-band-plan-delete = УДАЛИТЬ
+
+settings-general-band-plan-delete-confirm = НАЖМИТЕ ЕЩЁ РАЗ, ЧТОБЫ УДАЛИТЬ
+
+settings-general-band-plan-delete-hint = Удаляет этот план из библиотеки станции. Используемый план удалить нельзя.
+
+settings-general-band-plan-running-tag = ИСПОЛЬЗУЕТСЯ
+
+settings-general-band-plan-shipped-tag = в комплекте
+
+settings-general-band-plan-save-current = СОХРАНИТЬ ТЕКУЩИЙ ПЛАН КАК
+
+settings-general-band-plan-save-current-hint = Сохраняет используемый план в библиотеке под этим именем. План с таким же именем заменяется, а старый файл сохраняется один раз как .bak.
+
+settings-general-band-plan-name-hint = имя
+
+settings-general-band-plan-restore = ВОССТАНОВИТЬ ПЛАНЫ ИЗ КОМПЛЕКТА
+
+settings-general-band-plan-restore-hint = Возвращает планы, поставляемые с программой, удалённые или изменённые. Изменённый план заменяется, а его копия сохраняется один раз как .bak.
+
+settings-general-band-plan-size = { $kb } kB
+
+settings-general-band-plan-empty = В библиотеке нет планов.

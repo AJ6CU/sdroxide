@@ -509,6 +509,15 @@ pub enum RadioEvent {
         ok: bool,
         text: String,
     },
+    /// The file of a band plan, answering [`Command::ExportBandPlan`]. Goes to
+    /// every screen (the bridge does not know who asked), so a screen saves it
+    /// only if it is the one that asked.
+    BandPlanExport {
+        /// The plan's file name without `.json`.
+        file: String,
+        /// The text of the file.
+        json: String,
+    },
 }
 
 /// Snapshot of the frontend's switchable sound devices (native clients).

@@ -1476,6 +1476,32 @@ pub enum Command {
     ///
     /// Appended for the usual reason.
     DeleteBandPlan { name: String },
+
+    /// Keep the band plan the station runs right now in the `bandplans` folder
+    /// under `name` — how the built-in IARU tables, or an edited plan, becomes a
+    /// file that can be chosen, downloaded and shared. A name already in the
+    /// folder is replaced, the old file kept once as `<name>.json.bak`. Does not
+    /// change what runs.
+    ///
+    /// Appended for the usual reason.
+    SaveCurrentBandPlan { name: String },
+
+    /// Send the file of the plan called `name` back as a
+    /// [`crate::RadioEvent::BandPlanExport`], for the screen that asked to save
+    /// it on its own computer — the way a browser, which has no access to the
+    /// station's folder, gets a plan out.
+    ///
+    /// Appended for the usual reason.
+    ExportBandPlan { name: String },
+
+    /// Put back the plans that come with the program: one that was deleted is
+    /// written again, one that was edited is replaced (the edited file kept once
+    /// as `<name>.json.bak`). The plan that is running is re-read afterwards, so
+    /// restoring the one in use applies at once — and, being a change of plan,
+    /// withdraws the band confirmations like any other.
+    ///
+    /// Appended for the usual reason.
+    RestoreShippedBandPlans,
 }
 
 /// What a [`Command::GetKnownCalls`] was answered with.

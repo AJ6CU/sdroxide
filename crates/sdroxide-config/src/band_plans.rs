@@ -229,6 +229,42 @@ pub fn delete_in(dir: &Path, key: &str) -> Result<(), String> {
         .map_err(|e| format!("The band plan “{key}” could not be deleted ({e})."))
 }
 
+/// Keep `plan` — the plan the station runs, or the built-in tables — in `dir`'s
+/// library under `name`, returning its key. The name is also what the list shows
+/// (the plan's own country and author, if it has them, are kept). A key already
+/// in use is replaced, the old file kept once as `<key>.json.bak`.
+pub fn save_current_in(dir: &Path, name: &str, plan: &BandPlan) -> Result<String, String> {
+    let key = plan_key(name)?;
+    let mut meta = plan.meta().clone();
+    meta.name = name.trim().chars().take(80).collect();
+    let text = plan.clone().with_meta(meta).to_json_document();
+    import_in(dir, &key, &text)
+}
+
+/// The text of the plan called `name` in `dir`'s library, with its key.
+pub fn export_text_in(dir: &Path, name: &str) -> Result<(String, String), String> {
+    let key = plan_key(name)?;
+    let text = fs::read_to_string(file_in(dir, &key))
+        .map_err(|e| format!("The band plan “{key}” could not be read ({e})."))?;
+    Ok((key, text))
+}
+
+/// Put the shipped plans back in `dir`'s library: one that is missing is written
+/// again, one that differs from what shipped is replaced (the file it had kept
+/// once as `.bak`). Returns the keys that were written.
+pub fn restore_shipped_in(dir: &Path) -> Result<Vec<String>, String> {
+    ensure_library_in(dir).map_err(|e| e.to_string())?;
+    let mut written = Vec::new();
+    for (key, text) in SHIPPED {
+        let now = fs::read_to_string(file_in(dir, key)).ok();
+        if now.as_deref() != Some(*text) {
+            import_in(dir, key, text)?;
+            written.push((*key).to_string());
+        }
+    }
+    Ok(written)
+}
+
 // ── The same on the real config directory ───────────────────────────────────
 
 /// Where the library is, for the settings dialog to show the operator.
@@ -265,6 +301,21 @@ pub fn band_plan_selection() -> Option<String> {
 /// Add a plan to the station's library under `name`. See [`import_in`].
 pub fn import_band_plan(name: &str, text: &str) -> Result<String, String> {
     import_in(&ensure_library()?, name, text)
+}
+
+/// Keep `plan` in the station's library under `name`. See [`save_current_in`].
+pub fn save_current_band_plan(name: &str, plan: &BandPlan) -> Result<String, String> {
+    save_current_in(&ensure_library()?, name, plan)
+}
+
+/// The file of a plan in the station's library, with its key.
+pub fn export_band_plan_text(name: &str) -> Result<(String, String), String> {
+    export_text_in(&ensure_library()?, name)
+}
+
+/// Put the shipped plans back in the station's library. See [`restore_shipped_in`].
+pub fn restore_shipped_band_plans() -> Result<Vec<String>, String> {
+    restore_shipped_in(&ensure_library()?)
 }
 
 /// Delete a plan from the station's library. Refused for the plan the station
@@ -533,6 +584,68 @@ mod tests {
         delete_in(&dir, "gone").unwrap();
         assert!(read_in(&dir, "gone").is_err());
         assert!(delete_in(&dir, "gone").is_err());
+    }
+
+    #[test]
+    fn the_running_plan_can_be_kept_under_a_name_and_read_back() {
+        let dir = scratch();
+        // The built-in tables become a file that can be chosen and downloaded.
+        let key = save_current_in(&dir, "My IARU copy", &BandPlan::default()).unwrap();
+        assert_eq!(key, "my-iaru-copy");
+        let info = list_in(&dir).into_iter().find(|p| p.file == key).unwrap();
+        assert_eq!(info.name, "My IARU copy", "the name given is what the list shows");
+        assert!(read_in(&dir, &key).unwrap().is_default(), "same edges as what was running");
+
+        // An edited plan keeps its country and author but takes the new name.
+        let narrow = serde_json::from_str::<BandPlan>(&narrow_2m()).unwrap();
+        let key = save_current_in(&dir, "Mine", &narrow).unwrap();
+        let info = list_in(&dir).into_iter().find(|p| p.file == key).unwrap();
+        assert_eq!((info.name.as_str(), info.country.as_str(), info.author.as_str()),
+                   ("Mine", "Nowhere", "Me"));
+        assert_eq!(read_in(&dir, &key).unwrap(), narrow);
+
+        // Saving over a name keeps one backup of what was there.
+        save_current_in(&dir, "Mine", &BandPlan::default()).unwrap();
+        assert!(library_in(&dir).join("mine.json.bak").exists());
+        assert!(read_in(&dir, "mine").unwrap().is_default());
+        assert!(save_current_in(&dir, "///", &BandPlan::default()).is_err());
+    }
+
+    #[test]
+    fn a_plan_is_exported_as_the_text_of_its_file() {
+        let dir = scratch();
+        import_in(&dir, "Mine", &narrow_2m()).unwrap();
+        let (key, text) = export_text_in(&dir, "Mine.json").unwrap();
+        assert_eq!(key, "mine");
+        assert_eq!(text, narrow_2m(), "byte for byte what was kept");
+        assert!(export_text_in(&dir, "nothing").is_err());
+        // What was exported imports again under another name.
+        assert!(import_in(&dir, "copy", &text).is_ok());
+    }
+
+    #[test]
+    fn restoring_puts_back_a_deleted_plan_and_an_edited_one_with_a_backup() {
+        let dir = scratch();
+        ensure_library_in(&dir).unwrap();
+        assert_eq!(restore_shipped_in(&dir).unwrap(), Vec::<String>::new(), "nothing to restore");
+
+        delete_in(&dir, "bandplan-de-nrw").unwrap();
+        assert_eq!(restore_shipped_in(&dir).unwrap(), vec!["bandplan-de-nrw".to_string()]);
+        assert!(read_in(&dir, "bandplan-de-nrw").is_ok());
+
+        // Edited by the operator: replaced, and their version is kept once.
+        let edited = SHIPPED[0].1.replace("Germany (NRW)", "My own NRW");
+        fs::write(file_in(&dir, "bandplan-de-nrw"), &edited).unwrap();
+        assert_eq!(restore_shipped_in(&dir).unwrap(), vec!["bandplan-de-nrw".to_string()]);
+        assert_eq!(fs::read_to_string(file_in(&dir, "bandplan-de-nrw")).unwrap(), SHIPPED[0].1);
+        assert_eq!(
+            fs::read_to_string(library_in(&dir).join("bandplan-de-nrw.json.bak")).unwrap(),
+            edited
+        );
+        // The operator's own plans are not touched.
+        import_in(&dir, "mine", &narrow_2m()).unwrap();
+        restore_shipped_in(&dir).unwrap();
+        assert!(read_in(&dir, "mine").is_ok());
     }
 
     #[test]

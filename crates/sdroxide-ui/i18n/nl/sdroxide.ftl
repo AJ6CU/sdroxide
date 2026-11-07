@@ -9340,3 +9340,37 @@ settings-general-band-plan-reset-hint = Gebruikt weer de ingebouwde IARU-tabelle
 settings-general-band-plan-folder = De plannen zijn de bestanden in { $path } op de machine waar de radio aan hangt; je kunt er toevoegen en verwijderen. Beperk een band tot je vergunning en sdroxide weigert daarbuiten te zenden. Frequenties in MHz. Dit is de regionale toewijzing, niet je vergunning: je eigen voorwaarden kunnen strenger zijn, en nationale plannen verschillen binnen een regio.
 
 settings-general-band-plan-station-folder = De plannen worden bewaard op de machine waar de radio aan hangt. Beperk een band tot je vergunning en sdroxide weigert daarbuiten te zenden. Dit is de regionale toewijzing, niet je vergunning: je eigen voorwaarden kunnen strenger zijn, en nationale plannen verschillen binnen een regio.
+
+settings-general-band-plan-manager = Bandplanbeheer
+
+settings-general-band-plan-run = GEBRUIKEN
+
+settings-general-band-plan-run-hint = Dit plan gebruiken. De TX- en RX-bandlijsten moeten opnieuw gecontroleerd en bevestigd worden.
+
+settings-general-band-plan-download = DOWNLOADEN
+
+settings-general-band-plan-download-hint = Het bestand van dit plan op deze computer opslaan.
+
+settings-general-band-plan-delete = VERWIJDEREN
+
+settings-general-band-plan-delete-confirm = KLIK NOGMAALS OM TE VERWIJDEREN
+
+settings-general-band-plan-delete-hint = Verwijdert dit plan uit de bibliotheek van het station. Het actieve plan kan niet verwijderd worden.
+
+settings-general-band-plan-running-tag = ACTIEF
+
+settings-general-band-plan-shipped-tag = meegeleverd
+
+settings-general-band-plan-save-current = HUIDIG PLAN OPSLAAN ALS
+
+settings-general-band-plan-save-current-hint = Bewaart het actieve plan onder deze naam in de bibliotheek. Een plan met dezelfde naam wordt vervangen en het oude bestand blijft eenmalig als .bak bewaard.
+
+settings-general-band-plan-name-hint = naam
+
+settings-general-band-plan-restore = MEEGELEVERDE PLANNEN HERSTELLEN
+
+settings-general-band-plan-restore-hint = Zet de met het programma meegeleverde plannen terug, verwijderd of bewerkt. Een bewerkt plan wordt vervangen en eenmalig als .bak bewaard.
+
+settings-general-band-plan-size = { $kb } kB
+
+settings-general-band-plan-empty = Geen plannen in de bibliotheek.

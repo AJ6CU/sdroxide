@@ -9270,3 +9270,37 @@ settings-general-band-plan-reset-hint = 重新使用内置的 IARU 表。之后�
 settings-general-band-plan-folder = 方案就是电台所连接机器上 { $path } 中的文件，可以自行添加和删除。把某个波段缩小到您的执照范围，sdroxide 就会拒绝在其之外发射。频率单位为 MHz。这是区域划分，不是您的执照：您的实际条件可能更窄，各国方案在同一区域内也有差异。
 
 settings-general-band-plan-station-folder = 方案保存在电台所连接的机器上。把某个波段缩小到您的执照范围，sdroxide 就会拒绝在其之外发射。这是区域划分，不是您的执照：您的实际条件可能更窄，各国方案在同一区域内也有差异。
+
+settings-general-band-plan-manager = 波段方案管理
+
+settings-general-band-plan-run = 使用
+
+settings-general-band-plan-run-hint = 使用此方案。需要重新检查并确认 TX 和 RX 波段列表。
+
+settings-general-band-plan-download = 下载
+
+settings-general-band-plan-download-hint = 把此方案的文件保存到这台电脑。
+
+settings-general-band-plan-delete = 删除
+
+settings-general-band-plan-delete-confirm = 再次点击以删除
+
+settings-general-band-plan-delete-hint = 从电台的方案库中删除此方案。正在使用的方案无法删除。
+
+settings-general-band-plan-running-tag = 使用中
+
+settings-general-band-plan-shipped-tag = 自带
+
+settings-general-band-plan-save-current = 将当前方案另存为
+
+settings-general-band-plan-save-current-hint = 把正在使用的方案以此名称保存到方案库。同名方案会被替换，旧文件仅保留一份 .bak。
+
+settings-general-band-plan-name-hint = 名称
+
+settings-general-band-plan-restore = 恢复自带方案
+
+settings-general-band-plan-restore-hint = 恢复随程序自带的方案，无论已删除还是已编辑。已编辑的会被替换，并保留一份 .bak。
+
+settings-general-band-plan-size = { $kb } kB
+
+settings-general-band-plan-empty = 方案库中没有方案。

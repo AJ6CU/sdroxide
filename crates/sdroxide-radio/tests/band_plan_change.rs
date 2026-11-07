@@ -68,6 +68,7 @@ struct Seen {
     dial: f64,
     radio_cfg: Option<RadioConfig>,
     notices: Vec<String>,
+    exports: Vec<(String, String)>,
 }
 
 struct Rig {
@@ -82,6 +83,7 @@ impl Rig {
                 RadioEvent::State(s) => self.seen.dial = s.vfo_a_hz,
                 RadioEvent::RadioConfig(c) => self.seen.radio_cfg = Some(*c),
                 RadioEvent::Notice(Some(n)) => self.seen.notices.push(n),
+                RadioEvent::BandPlanExport { file, json } => self.seen.exports.push((file, json)),
                 _ => {}
             }
         }
@@ -208,6 +210,45 @@ fn a_change_of_plan_withdraws_the_confirmations_and_the_same_plan_does_not() {
     rig.send(Command::SelectBandPlan { name: None });
     rig.send(Command::DeleteBandPlan { name: "narrow-2m".into() });
     assert!(rig.seen.notices.iter().any(|n| n.contains("deleted")), "{:?}", rig.seen.notices);
+
+    // ── The manager ─────────────────────────────────────────────────────────
+    // Keeping the running plan is not a change of plan: confirmations stay.
+    rig.confirm();
+    assert_eq!(rig.tune(7_074_000.0), 7_074_000.0);
+    rig.send(Command::SaveCurrentBandPlan { name: "My copy".into() });
+    assert!(rig.seen.notices.iter().any(|n| n.contains("my-copy")), "{:?}", rig.seen.notices);
+    assert_eq!(rig.tune(14_074_000.0), 14_074_000.0, "saving the running plan withdraws nothing");
+
+    // A file of the library comes back to every screen as an event.
+    rig.send(Command::ExportBandPlan { name: "my-copy".into() });
+    let (file, json) = rig.seen.exports.pop().expect("the plan's file was sent");
+    assert_eq!(file, "my-copy");
+    assert!(json.contains("\"M20\""), "it is a whole plan");
+    rig.send(Command::ExportBandPlan { name: "no-such".into() });
+    assert!(rig.seen.exports.is_empty());
+
+    // Restoring the shipped plans while the built-in tables run changes nothing,
+    // and says so; with a shipped plan running and edited on disk it is a change.
+    rig.send(Command::RestoreShippedBandPlans);
+    assert!(
+        rig.seen.notices.iter().any(|n| n.contains("in place already")),
+        "{:?}",
+        rig.seen.notices
+    );
+    assert_eq!(rig.tune(7_074_000.0), 7_074_000.0, "nothing moved: still confirmed");
+    rig.send(Command::SelectBandPlan { name: Some("bandplan-de-nrw".into()) });
+    rig.confirm();
+    assert_eq!(rig.tune(14_074_000.0), 14_074_000.0);
+    let nrw = root.join("bandplans").join("bandplan-de-nrw.json");
+    let edited = std::fs::read_to_string(&nrw).unwrap().replace("\"M20\", \"lo_mhz\": 14.0", "\"M20\", \"lo_mhz\": 14.1");
+    assert!(edited.contains("\"lo_mhz\": 14.1"), "the edit applied");
+    std::fs::write(&nrw, edited).unwrap();
+    rig.send(Command::ReloadBandPlan);
+    assert_eq!(rig.tune(7_074_000.0), 14_074_000.0, "an edited plan that differs is a change: unconfirmed");
+    rig.confirm();
+    assert_eq!(rig.tune(7_074_000.0), 7_074_000.0);
+    rig.send(Command::RestoreShippedBandPlans);
+    assert_eq!(rig.tune(14_074_000.0), 7_074_000.0, "restoring the running plan changed it: unconfirmed");
 
     drop(rig.h.cmd_tx);
     if let Some(t) = thread {

@@ -8294,6 +8294,26 @@ to the screen's own disk, because the plans are kept **on the station**:
   attached to and applies it without a restart — so the loop for a hand edit is
   still: edit the file in the `bandplans` folder, save, click, done.
 
+Below them, **Band plan manager** lists every plan the station holds — name,
+country, author, date and size, with the one running marked and the ones that came
+with the program tagged *shipped* — and works the same on a native screen, a remote
+one and in a browser:
+
+- **RUN** runs that plan (the same change as choosing it in the list, with the same
+  consequence for the band confirmations).
+- **DOWNLOAD** saves that plan's file on the computer you are sitting at — a browser
+  downloads it like any other file. Nothing else leaves the station.
+- **DELETE** removes the plan from the station after a second click. The plan that is
+  running can be neither run again nor deleted: choose another first.
+- **SAVE CURRENT PLAN AS** keeps the plan running now under the name you type —
+  the way the built-in IARU tables, or a plan you have reloaded after editing, become
+  a file you can choose, download and share. A plan with that name is replaced and its
+  old file kept once as `<name>.json.bak`. It does not change what runs.
+- **RESTORE SHIPPED PLANS** puts back the plans that came with the program: one that was
+  deleted is written again, one that was edited is replaced (your version kept once as
+  `.bak`). If the plan that runs is one of them, it is re-read at once — and if it
+  differs, that is a change of plan like any other.
+
 **Changing the plan means checking the band lists again.** The TX and the RX band
 lists ([§6.2](#62-radio-choosing-and-configuring-the-rig)) were confirmed against one plan, and a different plan
 can put a band edge somewhere else or take a band away. So whenever the station

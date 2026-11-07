@@ -2263,8 +2263,14 @@ use sdroxide_types::{
 /// and `Command::SetRadioConfig` whole. All `#[serde(default)]` in the files, so
 /// a `radio.json` or `config.toml` written before this loads unchanged.
 /// `PROTO_VERSION` 275 → 276, `VERSION_BYTE` 0x5F → 0x60.
-pub const PROTO_VERSION: u16 = 276;
-const VERSION_BYTE: u8 = 0x60;
+///
+/// v277: **a band plan manager.** `Command` gains `SaveCurrentBandPlan`,
+/// `ExportBandPlan` and `RestoreShippedBandPlans`, and `ServerMsg` gains
+/// `BandPlanExport { file, json }`, all appended last: the manager can keep the
+/// plan that runs, hand a plan's file to the screen that asked for it, and put
+/// the shipped plans back. `PROTO_VERSION` 276 → 277, `VERSION_BYTE` 0x60 → 0x61.
+pub const PROTO_VERSION: u16 = 277;
+const VERSION_BYTE: u8 = 0x61;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -2860,6 +2866,9 @@ pub enum ServerMsg {
     /// The radiosonde decoder: level and the sondes heard with their tracks,
     /// a whole snapshot each time. Appended last.
     SondeStatus(Box<sdroxide_types::SondeStatus>),
+    /// The file of a band plan, for the screen that asked to save it on its own
+    /// computer. Appended last.
+    BandPlanExport { file: String, json: String },
 }
 
 /// What [`ServerMsg::ClientSettings`] carries.
@@ -3559,7 +3568,7 @@ mod tests {
             ServerMsg::TxRefused(w, hz) => assert_eq!((w, hz), (why, 7_074_000.0)),
             _ => panic!("TxRefused did not round-trip"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (276, 0x60));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (277, 0x61));
     }
 
     /// The dynamic-DNS answer rides last on [`ServerMsg`], and it has to: the
@@ -3590,7 +3599,7 @@ mod tests {
             }
             other => panic!("the answer did not round-trip: {other:?}"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (276, 0x60));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (277, 0x61));
     }
 
     /// The VOR read-out rides the wire whole, locked or not, and the message is
@@ -4204,10 +4213,16 @@ mod tests {
             Command::SelectBandPlan { name: Some("mine".into()) },
             Command::SelectBandPlan { name: None },
             Command::DeleteBandPlan { name: "mine".into() },
+            Command::SaveCurrentBandPlan { name: "my copy".into() },
+            Command::ExportBandPlan { name: "mine".into() },
+            Command::RestoreShippedBandPlans,
         ] {
             let m = ClientMsg::Command(c);
             assert_eq!(decode::<ClientMsg>(&encode(&m).unwrap()).unwrap(), m);
         }
+        // The file of a plan, for the screen that asked to save it.
+        let m = ServerMsg::BandPlanExport { file: "mine".into(), json: "{\"region1\":{}}".into() };
+        assert_eq!(decode::<ServerMsg>(&encode(&m).unwrap()).unwrap(), m);
         let plan = sdroxide_types::BandPlan::iaru_defaults().with_meta(sdroxide_types::PlanMeta {
             name: "Narrow".into(),
             country: "Nowhere".into(),

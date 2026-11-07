@@ -313,6 +313,15 @@ pub(in crate::app) fn settings_rx_audio_gain(
     );
 }
 
+/// What the band plan manager remembers between frames.
+#[derive(Default)]
+pub(in crate::app) struct BandPlanUi {
+    /// The plan whose DELETE has been clicked once and is waiting for the second.
+    pub(in crate::app) delete_arm: Option<String>,
+    /// The name typed beside SAVE CURRENT PLAN AS.
+    pub(in crate::app) save_name: String,
+}
+
 impl SdroxideApp {
     /// Hand a band plan file the operator picked to the station.
     ///
@@ -455,6 +464,149 @@ impl SdroxideApp {
             .size(10.5)
             .color(crate::theme::gray(140)),
         );
+        ui.add_space(4.0);
+        self.settings_band_plan_manager(ui, cmds);
+    }
+
+    /// The plans the station holds, one row each, with what can be done to
+    /// them: run, download, delete — and, below, keep the plan that runs under a
+    /// name and put the shipped plans back.
+    ///
+    /// Everything here is a command to the station or a file this screen saves
+    /// on its own computer (a download, which a browser does as readily as a
+    /// native screen); none of it touches a folder on this machine. A delete
+    /// asks for a second click, and the plan that is running can be neither
+    /// deleted nor run again.
+    fn settings_band_plan_manager(&self, ui: &mut egui::Ui, cmds: &mut Vec<sdroxide_types::Command>) {
+        use sdroxide_types::Command;
+        let running = self.band_plan_name.clone();
+        let weak = |t: String| RichText::new(t).size(10.5).color(crate::theme::gray(140));
+        egui::CollapsingHeader::new(
+            RichText::new(tr!("settings-general-band-plan-manager")).size(10.5),
+        )
+        .id_salt("band-plan-manager")
+        .show(ui, |ui| {
+            if self.band_plans.is_empty() {
+                ui.label(weak(tr!("settings-general-band-plan-empty")));
+            }
+            egui::Grid::new("band-plan-manager-grid")
+                .num_columns(5)
+                .spacing([10.0, 3.0])
+                .striped(true)
+                .show(ui, |ui| {
+                    for p in &self.band_plans {
+                        let is_running = running.as_deref() == Some(p.file.as_str());
+                        ui.horizontal(|ui| {
+                            ui.label(RichText::new(&p.name).size(10.5).strong());
+                            if is_running {
+                                ui.label(
+                                    RichText::new(tr!("settings-general-band-plan-running-tag"))
+                                        .size(9.0)
+                                        .color(crate::theme::gray(190)),
+                                );
+                            }
+                            if p.shipped {
+                                ui.label(weak(tr!("settings-general-band-plan-shipped-tag")));
+                            }
+                        });
+                        ui.label(weak(p.country.clone()));
+                        ui.label(weak(p.author.clone()));
+                        let (y, m, d, ..) = sdroxide_types::utc_ymd_hms(p.modified as i64);
+                        let when = if p.modified == 0 {
+                            String::new()
+                        } else {
+                            format!("{y:04}-{m:02}-{d:02}")
+                        };
+                        ui.label(weak(format!(
+                            "{when}  {}",
+                            tr!("settings-general-band-plan-size", kb = p.bytes.div_ceil(1024))
+                        )));
+                        ui.horizontal(|ui| {
+                            let run = ui
+                                .add_enabled_ui(!is_running, |ui| {
+                                    crate::chrome::chip(
+                                        ui,
+                                        false,
+                                        RichText::new(tr!("settings-general-band-plan-run"))
+                                            .size(10.0),
+                                    )
+                                })
+                                .inner
+                                .on_hover_text(tr!("settings-general-band-plan-run-hint"));
+                            if run.clicked() {
+                                cmds.push(Command::SelectBandPlan { name: Some(p.file.clone()) });
+                            }
+                            if crate::chrome::chip(
+                                ui,
+                                false,
+                                RichText::new(tr!("settings-general-band-plan-download"))
+                                    .size(10.0),
+                            )
+                            .on_hover_text(tr!("settings-general-band-plan-download-hint"))
+                            .clicked()
+                            {
+                                *self.band_plan_export_wanted.borrow_mut() = Some(p.file.clone());
+                                cmds.push(Command::ExportBandPlan { name: p.file.clone() });
+                            }
+                            let armed =
+                                self.band_plan_ui.borrow().delete_arm.as_deref() == Some(&p.file);
+                            let del = ui
+                                .add_enabled_ui(!is_running, |ui| {
+                                    crate::chrome::chip(
+                                        ui,
+                                        armed,
+                                        RichText::new(if armed {
+                                            tr!("settings-general-band-plan-delete-confirm")
+                                        } else {
+                                            tr!("settings-general-band-plan-delete")
+                                        })
+                                        .size(10.0),
+                                    )
+                                })
+                                .inner
+                                .on_hover_text(tr!("settings-general-band-plan-delete-hint"));
+                            if del.clicked() {
+                                if armed {
+                                    self.band_plan_ui.borrow_mut().delete_arm = None;
+                                    cmds.push(Command::DeleteBandPlan { name: p.file.clone() });
+                                } else {
+                                    self.band_plan_ui.borrow_mut().delete_arm =
+                                        Some(p.file.clone());
+                                }
+                            }
+                        });
+                        ui.end_row();
+                    }
+                });
+            ui.add_space(4.0);
+            ui.horizontal_wrapped(|ui| {
+                let mut st = self.band_plan_ui.borrow_mut();
+                ui.add(
+                    egui::TextEdit::singleline(&mut st.save_name)
+                        .hint_text(tr!("settings-general-band-plan-name-hint"))
+                        .desired_width(150.0),
+                );
+                let save = crate::chrome::chip(
+                    ui,
+                    false,
+                    RichText::new(tr!("settings-general-band-plan-save-current")).size(10.5),
+                )
+                .on_hover_text(tr!("settings-general-band-plan-save-current-hint"));
+                if save.clicked() && !st.save_name.trim().is_empty() {
+                    cmds.push(Command::SaveCurrentBandPlan { name: st.save_name.trim().to_string() });
+                }
+                if crate::chrome::chip(
+                    ui,
+                    false,
+                    RichText::new(tr!("settings-general-band-plan-restore")).size(10.5),
+                )
+                .on_hover_text(tr!("settings-general-band-plan-restore-hint"))
+                .clicked()
+                {
+                    cmds.push(Command::RestoreShippedBandPlans);
+                }
+            });
+        });
     }
 
     /// Take this station's settings away as one file, and put one back.

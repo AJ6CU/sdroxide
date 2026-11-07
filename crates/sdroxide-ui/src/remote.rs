@@ -677,6 +677,9 @@ impl RemoteController {
             ServerMsg::DyndnsAnswer { at_unix, ok, text } => self
                 .pending
                 .push_back(RadioEvent::DyndnsAnswer { at_unix, ok, text }),
+            ServerMsg::BandPlanExport { file, json } => {
+                self.pending.push_back(RadioEvent::BandPlanExport { file, json })
+            }
             ServerMsg::Ft8Decodes(d) => self.pending.push_back(RadioEvent::Ft8Decodes(d)),
             ServerMsg::WsprSpots(s) => self.pending.push_back(RadioEvent::WsprSpots(s)),
             ServerMsg::Pi4Spots(s) => self.pending.push_back(RadioEvent::Pi4Spots(s)),
