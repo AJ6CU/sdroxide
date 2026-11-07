@@ -191,6 +191,11 @@ impl SondeBank {
 
     /// Realtime path: the wide I/Q, `now` in unix seconds.
     pub fn on_wide_iq(&mut self, iq: &[Complex32], now: i64) {
+        // Nothing to decode, and nothing worth scanning, while the window is
+        // parked off the sonde band (1090 MHz for ADS-B, the shortwave for HFDL).
+        if !sdroxide_types::sonde_window_reaches_band(self.center_hz, self.in_rate) {
+            return;
+        }
         for l in &mut self.lanes {
             l.feed(iq);
         }
@@ -374,6 +379,20 @@ mod tests {
         let s = b.poll(6).expect("a status");
         assert_eq!(s.sondes.len(), 1, "the sonde heard in scan mode is still listed");
         assert!(s.frames >= 1, "and its frames are still counted");
+    }
+
+    #[test]
+    fn a_window_off_the_sonde_band_is_not_scanned() {
+        let cfg = SondeSettings { enabled: true, frequency_hz: 403e6, scan: true };
+        let w = window(240_000.0, &[30_000.0]);
+        // Parked on 1090 MHz (ADS-B): the spectrum is not even averaged.
+        let mut off = SondeBank::new(240_000.0, 1_090e6, cfg);
+        feed(&mut off, &w, 0);
+        assert_eq!(off.scanner.as_ref().map(|s| s.acc.blocks()), Some(0));
+        // On the band it is.
+        let mut on = SondeBank::new(240_000.0, 403e6, cfg);
+        feed(&mut on, &w, 0);
+        assert!(on.scanner.as_ref().is_some_and(|s| s.acc.blocks() > 0));
     }
 
     #[test]
