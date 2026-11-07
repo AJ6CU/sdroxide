@@ -9314,3 +9314,13 @@ settings-general-band-plan-restore-hint = プログラムに同梱のプラン�
 settings-general-band-plan-size = { $kb } kB
 
 settings-general-band-plan-empty = ライブラリにプランがありません。
+
+settings-general-band-plan-radio = この無線機
+
+settings-general-band-plan-radio-follow = 局に従う
+
+settings-general-band-plan-radio-hint = プランをこの無線機だけで使います。局のプランと他の無線機には影響しません。この無線機のTXとRXのバンドリストを再確認して承認し直す必要があります。
+
+settings-general-band-plan-run-radio = この無線機のみ
+
+settings-general-band-plan-radio-tag = この無線機

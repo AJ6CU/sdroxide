@@ -399,6 +399,44 @@ impl SdroxideApp {
             cmds.push(sdroxide_types::Command::SelectBandPlan { name: choice });
         }
 
+        // This radio's own plan, beside the station's: one radio on a national
+        // plan and another on the built-in tables is an ordinary station. Shown
+        // once this radio's configuration has been announced.
+        let radio_plan = self.radio_cfg.as_ref().map(|c| c.band_plan.clone());
+        if let Some(radio_plan) = radio_plan {
+            let radio_shown = |file: &Option<String>| -> String {
+                match file {
+                    None => tr!("settings-general-band-plan-radio-follow"),
+                    Some(f) => self
+                        .band_plans
+                        .iter()
+                        .find(|p| p.file == *f)
+                        .map_or_else(|| f.clone(), |p| p.name.clone()),
+                }
+            };
+            let mut radio_choice = radio_plan.clone();
+            ui.horizontal_wrapped(|ui| {
+                ui.label(RichText::new(tr!("settings-general-band-plan-radio")).size(10.5).weak());
+                ComboBox::from_id_salt("band-plan-radio-choice")
+                    .selected_text(radio_shown(&radio_plan))
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(
+                            &mut radio_choice,
+                            None,
+                            tr!("settings-general-band-plan-radio-follow"),
+                        );
+                        for p in &self.band_plans {
+                            ui.selectable_value(&mut radio_choice, Some(p.file.clone()), p.name.clone());
+                        }
+                    });
+            })
+            .response
+            .on_hover_text(tr!("settings-general-band-plan-radio-hint"));
+            if radio_choice != radio_plan {
+                cmds.push(sdroxide_types::Command::SelectRadioBandPlan { name: radio_choice });
+            }
+        }
+
         ui.horizontal_wrapped(|ui| {
             if crate::chrome::chip(
                 ui,
@@ -480,6 +518,7 @@ impl SdroxideApp {
     fn settings_band_plan_manager(&self, ui: &mut egui::Ui, cmds: &mut Vec<sdroxide_types::Command>) {
         use sdroxide_types::Command;
         let running = self.band_plan_name.clone();
+        let radio_plan = self.radio_cfg.as_ref().and_then(|c| c.band_plan.clone());
         let weak = |t: String| RichText::new(t).size(10.5).color(crate::theme::gray(140));
         egui::CollapsingHeader::new(
             RichText::new(tr!("settings-general-band-plan-manager")).size(10.5),
@@ -501,6 +540,13 @@ impl SdroxideApp {
                             if is_running {
                                 ui.label(
                                     RichText::new(tr!("settings-general-band-plan-running-tag"))
+                                        .size(9.0)
+                                        .color(crate::theme::gray(190)),
+                                );
+                            }
+                            if radio_plan.as_deref() == Some(p.file.as_str()) {
+                                ui.label(
+                                    RichText::new(tr!("settings-general-band-plan-radio-tag"))
                                         .size(9.0)
                                         .color(crate::theme::gray(190)),
                                 );
@@ -535,6 +581,28 @@ impl SdroxideApp {
                                 .on_hover_text(tr!("settings-general-band-plan-run-hint"));
                             if run.clicked() {
                                 cmds.push(Command::SelectBandPlan { name: Some(p.file.clone()) });
+                            }
+                            // Only on this radio: shown once its configuration is
+                            // known, and not for the plan it already runs.
+                            if self.radio_cfg.is_some() {
+                                let own = radio_plan.as_deref() == Some(p.file.as_str());
+                                if ui
+                                    .add_enabled_ui(!own, |ui| {
+                                        crate::chrome::chip(
+                                            ui,
+                                            false,
+                                            RichText::new(tr!("settings-general-band-plan-run-radio"))
+                                                .size(10.0),
+                                        )
+                                    })
+                                    .inner
+                                    .on_hover_text(tr!("settings-general-band-plan-radio-hint"))
+                                    .clicked()
+                                {
+                                    cmds.push(Command::SelectRadioBandPlan {
+                                        name: Some(p.file.clone()),
+                                    });
+                                }
                             }
                             if crate::chrome::chip(
                                 ui,

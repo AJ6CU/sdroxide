@@ -9374,3 +9374,13 @@ settings-general-band-plan-restore-hint = Zet de met het programma meegeleverde 
 settings-general-band-plan-size = { $kb } kB
 
 settings-general-band-plan-empty = Geen plannen in de bibliotheek.
+
+settings-general-band-plan-radio = Deze radio
+
+settings-general-band-plan-radio-follow = Volgt het station
+
+settings-general-band-plan-radio-hint = Een plan alleen op deze radio gebruiken. Het plan van het station en de andere radio's blijven ongemoeid. De TX- en RX-bandlijsten van deze radio moeten opnieuw gecontroleerd en bevestigd worden.
+
+settings-general-band-plan-run-radio = ALLEEN DEZE RADIO
+
+settings-general-band-plan-radio-tag = deze radio

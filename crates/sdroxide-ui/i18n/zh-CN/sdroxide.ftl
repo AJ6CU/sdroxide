@@ -9304,3 +9304,13 @@ settings-general-band-plan-restore-hint = 恢复随程序自带的方案，无�
 settings-general-band-plan-size = { $kb } kB
 
 settings-general-band-plan-empty = 方案库中没有方案。
+
+settings-general-band-plan-radio = 此电台
+
+settings-general-band-plan-radio-follow = 跟随电台
+
+settings-general-band-plan-radio-hint = 仅在此电台上使用方案。电台整体方案和其他电台不受影响。需要重新检查并确认此电台的 TX 和 RX 波段列表。
+
+settings-general-band-plan-run-radio = 仅此电台
+
+settings-general-band-plan-radio-tag = 此电台

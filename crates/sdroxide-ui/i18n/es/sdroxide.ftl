@@ -9365,3 +9365,13 @@ settings-general-band-plan-restore-hint = Vuelve a poner los planes incluidos co
 settings-general-band-plan-size = { $kb } kB
 
 settings-general-band-plan-empty = No hay planes en la biblioteca.
+
+settings-general-band-plan-radio = Esta radio
+
+settings-general-band-plan-radio-follow = Sigue a la estación
+
+settings-general-band-plan-radio-hint = Usar un plan solo en esta radio. El plan de la estación y las demás radios no se tocan. Habrá que revisar y confirmar de nuevo las listas de bandas de TX y RX de esta radio.
+
+settings-general-band-plan-run-radio = SOLO ESTA RADIO
+
+settings-general-band-plan-radio-tag = esta radio

@@ -804,6 +804,8 @@ impl eframe::App for SdroxideApp {
     }
 
     fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
+        // This radio's band plan for everything this frame draws and decides.
+        let _plan = sdroxide_types::ThreadPlanGuard::enter(self.band_plan_cur);
         let ctx = ui.ctx().clone();
         let now = ctx.input(|i| i.time);
         self.konami.tick(ctx.input(|i| i.stable_dt).min(0.25));
@@ -2809,6 +2811,7 @@ impl SdroxideApp {
         ctx: &egui::Context,
         now: f64,
     ) {
+        let _plan = sdroxide_types::ThreadPlanGuard::enter(self.band_plan_cur);
         use sdroxide_types::DetachableModule as M;
         let spec = detached_spec(module);
         let seed = self.ui_settings.detached_state(module).window;
@@ -3811,6 +3814,7 @@ impl SdroxideApp {
     }
 
     pub(crate) fn drain_events(&mut self, ctx: &egui::Context, now: f64) {
+        let _plan = sdroxide_types::ThreadPlanGuard::enter(self.band_plan_cur);
         // The settings row's explicit "save to profile" / "back to profile",
         // for the same reason as the answers below: the dialog is drawn from
         // `&self`, so what it asks for is left here and done where the app can
@@ -4628,12 +4632,16 @@ impl SdroxideApp {
                     // previous plan, and this bundle arrives on every
                     // station-config edit — a password change must not cost an
                     // allocation that is never freed.
-                    // The plan's name rides with it, and the same plan may come
-                    // under a new name, which the equality alone does not see.
-                    if sdroxide_types::band_plan() != &c.band_plan
-                        || sdroxide_types::band_plan().meta() != c.band_plan.meta()
-                    {
-                        sdroxide_types::set_band_plan(c.band_plan.clone());
+                    // This radio's own copy, not the process's: the engine announces
+                    // the plan *this radio* runs — the station's, or one of its
+                    // own — and another tab may be on another. The plan's name
+                    // rides with it, and the same plan may come under a new name,
+                    // which the equality alone does not see.
+                    let stale = self.band_plan_cur.is_none_or(|cur| {
+                        cur != &c.band_plan || cur.meta() != c.band_plan.meta()
+                    });
+                    if stale {
+                        self.band_plan_cur = Some(sdroxide_types::leak_band_plan(c.band_plan.clone()));
                     }
                     // The library and the choice are the station's, announced
                     // with every bundle: the list this client chooses from.
