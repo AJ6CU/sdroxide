@@ -12147,6 +12147,46 @@ impl Engine {
                 }
                 Err(e) => self.notice(&e),
             },
+            // The plan running now, kept as a file that can be chosen, downloaded
+            // and shared. Not a change of plan: what runs is untouched.
+            SaveCurrentBandPlan { name } => {
+                match sdroxide_config::save_current_band_plan(&name, sdroxide_types::band_plan()) {
+                    Ok(key) => {
+                        self.emit_station_config();
+                        self.notice(&format!("The band plan was kept as “{key}”."));
+                    }
+                    Err(e) => self.notice(&e),
+                }
+            }
+            // The file goes to every screen; the one that asked is the one that
+            // saves it (the bridge does not know who it was).
+            ExportBandPlan { name } => match sdroxide_config::export_band_plan_text(&name) {
+                Ok((file, json)) => {
+                    let _ = self.event_tx.send(RadioEvent::BandPlanExport { file, json });
+                }
+                Err(e) => self.notice(&e),
+            },
+            // Missing or edited shipped plans are put back; the plan that runs is
+            // read again, so restoring the one in use takes effect at once and,
+            // if it differs, is a change of plan like any other.
+            RestoreShippedBandPlans => match sdroxide_config::restore_shipped_band_plans() {
+                Ok(written) => {
+                    let plan = sdroxide_config::load_band_plan();
+                    self.adopt_band_plan(plan);
+                    let alerts = sdroxide_config::take_load_alerts();
+                    if !alerts.is_empty() {
+                        self.notice(&alerts.join("\n"));
+                    } else if written.is_empty() {
+                        self.notice("The shipped band plans were all in place already.");
+                    } else {
+                        self.notice(&format!(
+                            "Shipped band plans put back: {}.",
+                            written.join(", ")
+                        ));
+                    }
+                }
+                Err(e) => self.notice(&e),
+            },
             DeleteBandPlan { name } => match sdroxide_config::delete_band_plan(&name) {
                 Ok(()) => {
                     self.emit_station_config();

@@ -9332,3 +9332,37 @@ settings-general-band-plan-reset-hint = Yerleşik IARU tablolarını yeniden kul
 settings-general-band-plan-folder = Planlar, telsizin bağlı olduğu makinedeki { $path } içindeki dosyalardır; ekleyip silebilirsiniz. Bir bandı lisansınıza daraltın, sdroxide dışında yayın yapmayı reddeder. Frekanslar MHz cinsindendir. Bu bölgesel tahsistir, lisansınız değil: kendi koşullarınız daha dar olabilir ve ulusal planlar bir bölge içinde farklılık gösterir.
 
 settings-general-band-plan-station-folder = Planlar telsizin bağlı olduğu makinede saklanır. Bir bandı lisansınıza daraltın, sdroxide dışında yayın yapmayı reddeder. Bu bölgesel tahsistir, lisansınız değil: kendi koşullarınız daha dar olabilir ve ulusal planlar bir bölge içinde farklılık gösterir.
+
+settings-general-band-plan-manager = Bant planı yöneticisi
+
+settings-general-band-plan-run = KULLAN
+
+settings-general-band-plan-run-hint = Bu planı kullan. TX ve RX bant listelerinin yeniden kontrol edilip onaylanması gerekir.
+
+settings-general-band-plan-download = İNDİR
+
+settings-general-band-plan-download-hint = Bu planın dosyasını bu bilgisayara kaydet.
+
+settings-general-band-plan-delete = SİL
+
+settings-general-band-plan-delete-confirm = SİLMEK İÇİN TEKRAR TIKLAYIN
+
+settings-general-band-plan-delete-hint = Bu planı istasyonun kitaplığından siler. Çalışan plan silinemez.
+
+settings-general-band-plan-running-tag = ÇALIŞIYOR
+
+settings-general-band-plan-shipped-tag = birlikte gelen
+
+settings-general-band-plan-save-current = GEÇERLİ PLANI ŞÖYLE KAYDET
+
+settings-general-band-plan-save-current-hint = Çalışan planı bu adla kitaplığa kaydeder. Aynı adlı plan değiştirilir, eski dosyası bir kez .bak olarak saklanır.
+
+settings-general-band-plan-name-hint = ad
+
+settings-general-band-plan-restore = BİRLİKTE GELEN PLANLARI GERİ YÜKLE
+
+settings-general-band-plan-restore-hint = Programla gelen planları, silinmiş ya da düzenlenmiş olsalar da geri koyar. Düzenlenmiş olan değiştirilir ve bir kez .bak olarak saklanır.
+
+settings-general-band-plan-size = { $kb } kB
+
+settings-general-band-plan-empty = Kitaplıkta plan yok.

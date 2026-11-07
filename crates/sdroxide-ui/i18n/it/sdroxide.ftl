@@ -9341,3 +9341,37 @@ settings-general-band-plan-reset-hint = Riusa le tabelle IARU integrate. Gli ele
 settings-general-band-plan-folder = I piani sono i file in { $path } sulla macchina a cui è collegata la radio; puoi aggiungerne ed eliminarne. Restringi una banda alla tua licenza e sdroxide rifiuterà di trasmettere fuori. Frequenze in MHz. È l'assegnazione regionale, non la tua licenza: le tue condizioni possono essere più strette e i piani nazionali differiscono all'interno di una regione.
 
 settings-general-band-plan-station-folder = I piani sono conservati sulla macchina a cui è collegata la radio. Restringi una banda alla tua licenza e sdroxide rifiuterà di trasmettere fuori. È l'assegnazione regionale, non la tua licenza: le tue condizioni possono essere più strette e i piani nazionali differiscono all'interno di una regione.
+
+settings-general-band-plan-manager = Gestione piani di banda
+
+settings-general-band-plan-run = USA
+
+settings-general-band-plan-run-hint = Usa questo piano. Gli elenchi di bande TX e RX dovranno essere ricontrollati e riconfermati.
+
+settings-general-band-plan-download = SCARICA
+
+settings-general-band-plan-download-hint = Salva il file di questo piano su questo computer.
+
+settings-general-band-plan-delete = ELIMINA
+
+settings-general-band-plan-delete-confirm = CLICCA DI NUOVO PER ELIMINARE
+
+settings-general-band-plan-delete-hint = Elimina questo piano dalla libreria della stazione. Il piano in uso non può essere eliminato.
+
+settings-general-band-plan-running-tag = IN USO
+
+settings-general-band-plan-shipped-tag = incluso
+
+settings-general-band-plan-save-current = SALVA IL PIANO ATTUALE COME
+
+settings-general-band-plan-save-current-hint = Conserva il piano in uso nella libreria con questo nome. Un piano con lo stesso nome viene sostituito e il vecchio file resta una volta come .bak.
+
+settings-general-band-plan-name-hint = nome
+
+settings-general-band-plan-restore = RIPRISTINA I PIANI INCLUSI
+
+settings-general-band-plan-restore-hint = Rimette i piani forniti con il programma, eliminati o modificati. Uno modificato viene sostituito e conservato una volta come .bak.
+
+settings-general-band-plan-size = { $kb } kB
+
+settings-general-band-plan-empty = Nessun piano nella libreria.

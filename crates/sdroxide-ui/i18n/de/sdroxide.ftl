@@ -9330,3 +9330,37 @@ settings-general-band-plan-reset-hint = Verwendet wieder die eingebauten IARU-Ta
 settings-general-band-plan-folder = Die Pläne sind die Dateien in { $path } auf dem Rechner, an dem das Funkgerät hängt; du kannst welche hinzufügen und löschen. Schränke ein Band auf deine Lizenz ein, und sdroxide verweigert das Senden außerhalb. Frequenzen in MHz. Das ist die regionale Zuweisung, nicht deine Lizenz: Deine Bedingungen können enger sein, und nationale Pläne weichen innerhalb einer Region ab.
 
 settings-general-band-plan-station-folder = Die Pläne liegen auf dem Rechner, an dem das Funkgerät hängt. Schränke ein Band auf deine Lizenz ein, und sdroxide verweigert das Senden außerhalb. Das ist die regionale Zuweisung, nicht deine Lizenz: Deine Bedingungen können enger sein, und nationale Pläne weichen innerhalb einer Region ab.
+
+settings-general-band-plan-manager = Bandplan-Verwaltung
+
+settings-general-band-plan-run = VERWENDEN
+
+settings-general-band-plan-run-hint = Diesen Plan verwenden. Die TX- und RX-Bandlisten müssen erneut geprüft und bestätigt werden.
+
+settings-general-band-plan-download = HERUNTERLADEN
+
+settings-general-band-plan-download-hint = Die Datei dieses Plans auf diesem Computer speichern.
+
+settings-general-band-plan-delete = LÖSCHEN
+
+settings-general-band-plan-delete-confirm = ERNEUT KLICKEN ZUM LÖSCHEN
+
+settings-general-band-plan-delete-hint = Löscht diesen Plan aus der Bibliothek der Station. Der laufende Plan kann nicht gelöscht werden.
+
+settings-general-band-plan-running-tag = AKTIV
+
+settings-general-band-plan-shipped-tag = mitgeliefert
+
+settings-general-band-plan-save-current = AKTUELLEN PLAN SPEICHERN ALS
+
+settings-general-band-plan-save-current-hint = Speichert den laufenden Plan unter diesem Namen in der Bibliothek. Ein Plan gleichen Namens wird ersetzt, die alte Datei bleibt einmal als .bak erhalten.
+
+settings-general-band-plan-name-hint = Name
+
+settings-general-band-plan-restore = MITGELIEFERTE PLÄNE WIEDERHERSTELLEN
+
+settings-general-band-plan-restore-hint = Stellt die mit dem Programm gelieferten Pläne wieder her, ob gelöscht oder bearbeitet. Ein bearbeiteter wird ersetzt und einmal als .bak behalten.
+
+settings-general-band-plan-size = { $kb } kB
+
+settings-general-band-plan-empty = Keine Pläne in der Bibliothek.

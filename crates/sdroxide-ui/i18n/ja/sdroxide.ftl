@@ -9280,3 +9280,37 @@ settings-general-band-plan-reset-hint = 内蔵のIARUテーブルに戻します
 settings-general-band-plan-folder = プランは、無線機が接続されているマシンの { $path } にあるファイルです。追加・削除できます。バンドをライセンスの範囲に狭めると、sdroxideはその外での送信を拒否します。周波数はMHz単位です。これは地域の割り当てであり、あなたのライセンスではありません。実際の条件はより狭い場合があり、国別のプランは地域内でも異なります。
 
 settings-general-band-plan-station-folder = プランは、無線機が接続されているマシンに保存されます。バンドをライセンスの範囲に狭めると、sdroxideはその外での送信を拒否します。これは地域の割り当てであり、あなたのライセンスではありません。実際の条件はより狭い場合があり、国別のプランは地域内でも異なります。
+
+settings-general-band-plan-manager = バンドプラン管理
+
+settings-general-band-plan-run = 使用
+
+settings-general-band-plan-run-hint = このプランを使います。TXとRXのバンドリストを再確認して承認し直す必要があります。
+
+settings-general-band-plan-download = ダウンロード
+
+settings-general-band-plan-download-hint = このプランのファイルをこのコンピューターに保存します。
+
+settings-general-band-plan-delete = 削除
+
+settings-general-band-plan-delete-confirm = もう一度クリックで削除
+
+settings-general-band-plan-delete-hint = このプランを局のライブラリから削除します。使用中のプランは削除できません。
+
+settings-general-band-plan-running-tag = 使用中
+
+settings-general-band-plan-shipped-tag = 同梱
+
+settings-general-band-plan-save-current = 現在のプランを名前を付けて保存
+
+settings-general-band-plan-save-current-hint = 使用中のプランをこの名前でライブラリに保存します。同名のプランは置き換えられ、古いファイルは .bak として1つだけ残ります。
+
+settings-general-band-plan-name-hint = 名前
+
+settings-general-band-plan-restore = 同梱のプランを復元
+
+settings-general-band-plan-restore-hint = プログラムに同梱のプランを、削除・編集済みでも元に戻します。編集済みのプランは置き換えられ、.bak として1つだけ残ります。
+
+settings-general-band-plan-size = { $kb } kB
+
+settings-general-band-plan-empty = ライブラリにプランがありません。

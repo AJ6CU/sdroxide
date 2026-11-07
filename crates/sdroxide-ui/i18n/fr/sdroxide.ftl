@@ -9343,3 +9343,37 @@ settings-general-band-plan-reset-hint = Remet en service les tables IARU intégr
 settings-general-band-plan-folder = Les plans sont les fichiers de { $path } sur la machine à laquelle la radio est reliée ; vous pouvez en ajouter et en supprimer. Réduisez une bande à votre licence et sdroxide refusera d'émettre en dehors. Fréquences en MHz. C'est l'allocation régionale, pas votre licence : vos conditions peuvent être plus étroites, et les plans nationaux diffèrent au sein d'une région.
 
 settings-general-band-plan-station-folder = Les plans sont conservés sur la machine à laquelle la radio est reliée. Réduisez une bande à votre licence et sdroxide refusera d'émettre en dehors. C'est l'allocation régionale, pas votre licence : vos conditions peuvent être plus étroites, et les plans nationaux diffèrent au sein d'une région.
+
+settings-general-band-plan-manager = Gestionnaire de plans de bandes
+
+settings-general-band-plan-run = UTILISER
+
+settings-general-band-plan-run-hint = Utiliser ce plan. Les listes de bandes TX et RX devront être revérifiées et reconfirmées.
+
+settings-general-band-plan-download = TÉLÉCHARGER
+
+settings-general-band-plan-download-hint = Enregistrer le fichier de ce plan sur cet ordinateur.
+
+settings-general-band-plan-delete = SUPPRIMER
+
+settings-general-band-plan-delete-confirm = CLIQUEZ À NOUVEAU POUR SUPPRIMER
+
+settings-general-band-plan-delete-hint = Supprimer ce plan de la bibliothèque de la station. Le plan en service ne peut pas être supprimé.
+
+settings-general-band-plan-running-tag = EN SERVICE
+
+settings-general-band-plan-shipped-tag = livré
+
+settings-general-band-plan-save-current = ENREGISTRER LE PLAN ACTUEL SOUS
+
+settings-general-band-plan-save-current-hint = Conserver le plan en service dans la bibliothèque sous ce nom. Un plan du même nom est remplacé et son ancien fichier gardé une fois en .bak.
+
+settings-general-band-plan-name-hint = nom
+
+settings-general-band-plan-restore = RESTAURER LES PLANS LIVRÉS
+
+settings-general-band-plan-restore-hint = Remettre les plans livrés avec le programme, supprimés ou modifiés. Un plan modifié est remplacé et gardé une fois en .bak.
+
+settings-general-band-plan-size = { $kb } kB
+
+settings-general-band-plan-empty = Aucun plan dans la bibliothèque.

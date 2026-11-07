@@ -1599,6 +1599,13 @@ pub struct SdroxideApp {
     pub(in crate::app) band_plans: Vec<sdroxide_types::PlanInfo>,
     /// Which of them the station runs; `None` is the built-in IARU tables.
     pub(in crate::app) band_plan_name: Option<String>,
+    /// The plan this screen asked the station to send as a file, so that of the
+    /// answers (which go to every screen) only this one's is saved here. A cell
+    /// because the settings are drawn through `&self`.
+    pub(in crate::app) band_plan_export_wanted: std::cell::RefCell<Option<String>>,
+    /// The band plan manager's own state: the delete that is waiting for a
+    /// second click, and the name typed for SAVE CURRENT PLAN AS.
+    pub(in crate::app) band_plan_ui: std::cell::RefCell<settings::general::BandPlanUi>,
     /// Inbox for a settings bundle chosen on the General tab (issue #356).
     /// Native only — the browser has no filesystem to pick one from, and the
     /// settings it would replace are on the engine's machine anyway.
@@ -2679,6 +2686,8 @@ impl SdroxideApp {
             band_plan_import_inbox: Arc::new(Mutex::new(None)),
             band_plans: Vec::new(),
             band_plan_name: None,
+            band_plan_export_wanted: std::cell::RefCell::new(None),
+            band_plan_ui: std::cell::RefCell::new(Default::default()),
             pending_lookups: Vec::new(),
             callsign_cache: Default::default(),
             pending_uploads: Vec::new(),

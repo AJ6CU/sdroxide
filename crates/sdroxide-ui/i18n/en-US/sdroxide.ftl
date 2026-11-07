@@ -9355,3 +9355,37 @@ settings-general-band-plan-reset-hint = Run the built-in IARU tables again. The 
 settings-general-band-plan-folder = The plans are the files in { $path } on the machine the radio is attached to, yours to add to and delete from. Narrow a band to your licence and sdroxide will refuse to transmit outside it. Frequencies are in MHz. This is the regional allocation, not your licence: your own conditions may be narrower, and national plans differ inside a region.
 
 settings-general-band-plan-station-folder = The plans are kept on the machine the radio is attached to. Narrow a band to your licence and sdroxide will refuse to transmit outside it. This is the regional allocation, not your licence: your own conditions may be narrower, and national plans differ inside a region.
+
+settings-general-band-plan-manager = Band plan manager
+
+settings-general-band-plan-run = RUN
+
+settings-general-band-plan-run-hint = Run this plan. The TX and RX band lists have to be checked and confirmed again.
+
+settings-general-band-plan-download = DOWNLOAD
+
+settings-general-band-plan-download-hint = Save this plan's file on this computer.
+
+settings-general-band-plan-delete = DELETE
+
+settings-general-band-plan-delete-confirm = CLICK AGAIN TO DELETE
+
+settings-general-band-plan-delete-hint = Delete this plan from the station's library. The plan that is running cannot be deleted.
+
+settings-general-band-plan-running-tag = RUNNING
+
+settings-general-band-plan-shipped-tag = shipped
+
+settings-general-band-plan-save-current = SAVE CURRENT PLAN AS
+
+settings-general-band-plan-save-current-hint = Keep the plan running now in the library under this name. A plan with the same name is replaced and its old file kept once as .bak.
+
+settings-general-band-plan-name-hint = name
+
+settings-general-band-plan-restore = RESTORE SHIPPED PLANS
+
+settings-general-band-plan-restore-hint = Put back the plans that came with the program, whether deleted or edited. An edited one is replaced and kept once as .bak.
+
+settings-general-band-plan-size = { $kb } kB
+
+settings-general-band-plan-empty = No plans in the library.
