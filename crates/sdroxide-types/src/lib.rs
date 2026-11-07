@@ -287,7 +287,7 @@ pub use publicsdr::{PublicSdrDirectory, PublicSdrEntry, PublicSdrNetwork};
 pub use q65::Q65Mode;
 pub use qo100::{QO100_BEACON_HZ, Qo100Settings, Qo100Status};
 pub use radio::{
-    TxBlock, AirspyConfig, AirspyDevice, AirspyGain, AirspyHfConfig, AirspyHfDevice, AirspyHfModel,
+    TxBlock, RxBlock, AirspyConfig, AirspyDevice, AirspyGain, AirspyHfConfig, AirspyHfDevice, AirspyHfModel,
     AtsMiniConfig, Backend, BandDriveTrim, BandPower, CAT_IQ_DC_BLOCK_MAX_HZ, CAT_IQ_RATES,
     CAT_SCOPE_MIN_BAUD, CONVERTER_OFFSET_MAX_HZ, CONVERTER_PRESETS, CatConfig, CatFamily,
     ConverterTx, CwKeying, DB_PER_S_UNIT, DIV_FREEZE_ELEMENT, DIV_MODE_ELEMENT, DIV_RATE_ELEMENT,
