@@ -343,6 +343,9 @@ pub enum RadioEvent {
     /// The radiosonde decoder's level and the sondes it has heard, with their
     /// tracks. Native-engine only, like [`RadioEvent::HfdlStatus`].
     SondeStatus(Box<crate::SondeStatus>),
+    /// The VOR beacon the receiver is parked on: radial, ident and how well the
+    /// two 30 Hz signals are heard. Rides `ServerMsg::VorStatus`.
+    VorStatus(Box<crate::VorStatus>),
     /// Everything the VDL Mode 2 decoder has: the message log, the station
     /// table, and what every channel of the plan is doing. A whole snapshot, a
     /// couple of times a second.

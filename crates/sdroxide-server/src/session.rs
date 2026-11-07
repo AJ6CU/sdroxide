@@ -250,6 +250,7 @@ async fn run_session(
         adsb_status,
         vdl2_status,
         ais_status,
+        vor_status,
         drm,
         hd,
         relay,
@@ -276,6 +277,7 @@ async fn run_session(
             latest.adsb_status.clone(),
             latest.vdl2_status.clone(),
             latest.ais_status.clone(),
+            latest.vor_status.clone(),
             latest.drm.clone(),
             latest.hd.clone(),
             latest.relay.clone(),
@@ -409,6 +411,10 @@ async fn run_session(
     // front of a blank chart long enough to conclude the decoder was broken.
     if let Some(st) = ais_status {
         let _ = socket.send(msg(&ServerMsg::AisStatus(st))).await;
+    }
+    // ...and the VOR read-out, so the view is not blank until the next one.
+    if let Some(st) = vor_status {
+        let _ = socket.send(msg(&ServerMsg::VorStatus(st))).await;
     }
     // And the transmit-image presets, for the same reason. The received
     // galleries are not replayed: a panel lists its store when it opens, which

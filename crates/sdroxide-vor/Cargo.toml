@@ -1,0 +1,14 @@
+[package]
+name = "sdroxide-vor"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+# The VOR (VHF omnidirectional range) decoder: the radial and the Morse ident
+# of a 108-118 MHz navigation beacon, from the audio an AM detector gives.
+#
+# Written from the published signal description (ICAO Annex 10 Volume I,
+# 3.3.5, and the FAA/EUROCAE signal-in-space definition) and nothing else; no
+# code comes from another decoder. No dependency: the whole thing is a few
+# correlators, one FIR and a Morse table, so it builds in seconds and runs
+# anywhere the engine does.

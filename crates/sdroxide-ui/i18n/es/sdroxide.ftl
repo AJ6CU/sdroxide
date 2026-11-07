@@ -9257,3 +9257,35 @@ sonde-card-frames = Tramas recibidas
 sonde-card-open = Abrir en { $site }
 
 sonde-card-close = Cerrar
+
+aircraft-mode-vor-hover = Leer la baliza VOR en la que está sintonizada la radio: su radial y su identificación en Morse
+
+vor-audio-front = Este receptor entrega audio demodulado; la lectura VOR necesita el flujo I/Q en bruto.
+
+vor-outside-window = El canal sintonizado queda fuera del ancho que entrega el receptor. Centre el receptor en él.
+
+vor-not-in-band = Sintonice una baliza VOR (108,00–117,95 MHz) para leer su radial.
+
+vor-locked = ENGANCHADO
+
+vor-no-lock = SIN ENGANCHE
+
+vor-no-lock-hover = Falta o es demasiado débil la señal variable de 30 Hz o la referencia de 9960 Hz. Un localizador ILS de esta banda nunca engancha.
+
+vor-ident-heard = Identificación oída: { $ident }
+
+vor-ident-waiting = Escuchando la identificación (se envía cada 10 s aprox.)…
+
+vor-charted = En carta: { $ident } — { $name }
+
+vor-var-depth = AM de 30 Hz: { $pct } % de la portadora
+
+vor-ref-depth = FM de 9960 Hz: { $pct } % de la portadora, desviación ±{ $dev } Hz
+
+vor-caveat = La radial es el rumbo del receptor respecto a la baliza, en el norte magnético de la propia baliza. No sirve para navegar.
+
+vor-nearby = VOR más cercanos a su estación
+
+vor-no-grid = Indique su locator en los ajustes de modos digitales para listar los VOR más cercanos.
+
+vor-tune-hover = Sintonizar este VOR en AM

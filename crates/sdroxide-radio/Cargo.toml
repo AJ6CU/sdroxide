@@ -42,6 +42,7 @@ sdroxide-skimmer = { path = "../sdroxide-skimmer" }
 sdroxide-ism = { path = "../sdroxide-ism" }
 sdroxide-adsb = { path = "../sdroxide-adsb" }
 sdroxide-vdl2 = { path = "../sdroxide-vdl2" }
+sdroxide-vor = { path = "../sdroxide-vor" }
 sdroxide-ais = { path = "../sdroxide-ais" }
 sdroxide-dab = { path = "../sdroxide-dab" }
 sdroxide-qo100 = { path = "../sdroxide-qo100" }

@@ -9258,3 +9258,35 @@ sonde-card-frames = Alınan çerçeve
 sonde-card-open = { $site } sitesinde aç
 
 sonde-card-close = Kapat
+
+aircraft-mode-vor-hover = Radyonun ayarlı olduğu VOR yer istasyonunu oku: radyali ve Mors tanıtımı
+
+vor-audio-front = Bu alıcı demodüle edilmiş ses verir; VOR okuması ham I/Q akışını gerektirir.
+
+vor-outside-window = Ayarlanan kanal, alıcının verdiği aralığın dışında. Alıcıyı bu kanala ortalayın.
+
+vor-not-in-band = Radyalini okumak için bir VOR istasyonuna (108,00–117,95 MHz) ayarlayın.
+
+vor-locked = KİLİTLİ
+
+vor-no-lock = KİLİT YOK
+
+vor-no-lock-hover = 30 Hz değişken sinyal ya da 9960 Hz referans yok veya çok zayıf. Bu banttaki bir ILS lokalizeri hiçbir zaman kilitlenmez.
+
+vor-ident-heard = Duyulan tanıtım: { $ident }
+
+vor-ident-waiting = Tanıtım dinleniyor (yaklaşık 10 sn'de bir gönderilir)…
+
+vor-charted = Haritada: { $ident } — { $name }
+
+vor-var-depth = 30 Hz AM: taşıyıcının % { $pct }'si
+
+vor-ref-depth = 9960 Hz FM: taşıyıcının % { $pct }'si, sapma ±{ $dev } Hz
+
+vor-caveat = Radyal, alıcının istasyondan itibaren yönüdür ve istasyonun kendi manyetik kuzeyine göredir. Seyrüsefer için değildir.
+
+vor-nearby = İstasyonunuza en yakın VOR'lar
+
+vor-no-grid = En yakın VOR'ları listelemek için sayısal mod ayarlarına Maidenhead locator'unuzu girin.
+
+vor-tune-hover = Bu VOR'u AM'de ayarla

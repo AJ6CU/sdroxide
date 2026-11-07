@@ -9269,3 +9269,35 @@ sonde-card-frames = Trames reçues
 sonde-card-open = Ouvrir sur { $site }
 
 sonde-card-close = Fermer
+
+aircraft-mode-vor-hover = Lire la balise VOR sur laquelle la radio est accordée : sa radiale et son indicatif Morse
+
+vor-audio-front = Ce récepteur fournit de l'audio démodulé ; la lecture VOR a besoin du flux I/Q brut.
+
+vor-outside-window = Le canal accordé est hors de la plage fournie par le récepteur. Centrez le récepteur dessus.
+
+vor-not-in-band = Accordez une balise VOR (108,00–117,95 MHz) pour lire sa radiale.
+
+vor-locked = VERROUILLÉ
+
+vor-no-lock = PAS DE VERROU
+
+vor-no-lock-hover = Le signal variable à 30 Hz ou la référence à 9960 Hz manque ou est trop faible. Un radiophare ILS de cette bande ne verrouille jamais.
+
+vor-ident-heard = Indicatif entendu : { $ident }
+
+vor-ident-waiting = Écoute de l'indicatif (émis toutes les 10 s environ)…
+
+vor-charted = Carte : { $ident } — { $name }
+
+vor-var-depth = AM 30 Hz : { $pct } % de la porteuse
+
+vor-ref-depth = FM 9960 Hz : { $pct } % de la porteuse, excursion ±{ $dev } Hz
+
+vor-caveat = La radiale est le relèvement du récepteur depuis la balise, dans le nord magnétique de la balise. Pas pour naviguer.
+
+vor-nearby = VOR les plus proches de votre station
+
+vor-no-grid = Indiquez votre locator dans les réglages des modes numériques pour lister les VOR les plus proches.
+
+vor-tune-hover = Accorder ce VOR en AM

@@ -5860,6 +5860,7 @@ dependencies = [
  "sdroxide-tci",
  "sdroxide-types",
  "sdroxide-vdl2",
+ "sdroxide-vor",
  "sdroxide-winlink",
  "sdroxide-wsjtx",
  "shine-rs",
@@ -6156,6 +6157,10 @@ dependencies = [
 
 [[package]]
 name = "sdroxide-version"
+version = "2.3.0"
+
+[[package]]
+name = "sdroxide-vor"
 version = "2.3.0"
 
 [[package]]

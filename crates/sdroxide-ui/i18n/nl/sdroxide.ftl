@@ -9266,3 +9266,35 @@ sonde-card-frames = Ontvangen frames
 sonde-card-open = Openen op { $site }
 
 sonde-card-close = Sluiten
+
+aircraft-mode-vor-hover = Lees het VOR-baken waarop de radio is afgestemd: radiaal en Morse-roepletters
+
+vor-audio-front = Deze ontvanger levert gedemoduleerde audio; de VOR-uitlezing heeft de ruwe I/Q-stroom nodig.
+
+vor-outside-window = Het afgestemde kanaal ligt buiten de bandbreedte die de ontvanger levert. Centreer de ontvanger erop.
+
+vor-not-in-band = Stem af op een VOR-baken (108,00–117,95 MHz) om de radiaal te lezen.
+
+vor-locked = VERGRENDELD
+
+vor-no-lock = GEEN LOCK
+
+vor-no-lock-hover = Het variabele 30 Hz-signaal of de 9960 Hz-referentie ontbreekt of is te zwak. Een ILS-localizer op deze band vergrendelt nooit.
+
+vor-ident-heard = Roepletters gehoord: { $ident }
+
+vor-ident-waiting = Luisteren naar de roepletters (ongeveer elke 10 s)…
+
+vor-charted = Op de kaart: { $ident } — { $name }
+
+vor-var-depth = 30 Hz AM: { $pct } % van de draaggolf
+
+vor-ref-depth = 9960 Hz FM: { $pct } % van de draaggolf, zwaai ±{ $dev } Hz
+
+vor-caveat = De radiaal is de peiling van de ontvanger vanaf het baken, in het magnetisch noorden van het baken zelf. Niet om mee te navigeren.
+
+vor-nearby = VOR's het dichtst bij uw station
+
+vor-no-grid = Vul uw locator in bij de instellingen voor digitale modi om de dichtstbijzijnde VOR's te tonen.
+
+vor-tune-hover = Dit VOR afstemmen in AM
