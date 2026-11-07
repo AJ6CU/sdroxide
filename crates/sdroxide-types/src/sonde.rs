@@ -18,6 +18,16 @@ pub const SONDE_DEFAULT_HZ: f64 = 403_000_000.0;
 /// meteorological-aids band, with a little margin).
 pub const SONDE_BAND_HZ: (f64, f64) = (400_000_000.0, 406_100_000.0);
 
+/// Whether a sample window of `rate_hz` centred on `center_hz` reaches any of
+/// the sonde band. The decoder lanes mix from the window, so outside it there
+/// is nothing to decode and nothing worth scanning: the engine feeds them only
+/// while this is true (a window parked on 1090 MHz for ADS-B, or on the
+/// shortwave for HFDL, used to be scanned for sondes all the same).
+pub fn window_reaches_band(center_hz: f64, rate_hz: f64) -> bool {
+    let half = rate_hz.abs() / 2.0;
+    center_hz + half > SONDE_BAND_HZ.0 && center_hz - half < SONDE_BAND_HZ.1
+}
+
 /// How many sondes the status carries at once (the most recently heard).
 pub const SONDE_MAX_TRACKS: usize = 8;
 
@@ -127,6 +137,15 @@ pub struct SondeStatus {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn only_a_window_on_the_band_is_worth_decoding() {
+        assert!(window_reaches_band(403_000_000.0, 2_500_000.0));
+        assert!(window_reaches_band(399_000_000.0, 2_500_000.0), "its upper edge reaches in");
+        assert!(!window_reaches_band(1_090_000_000.0, 2_500_000.0), "ADS-B window");
+        assert!(!window_reaches_band(8_912_000.0, 2_500_000.0), "HFDL window");
+        assert!(!window_reaches_band(136_800_000.0, 2_500_000.0), "VDL2 window");
+    }
 
     #[test]
     fn the_saved_channel_is_brought_into_the_sonde_band() {

@@ -550,10 +550,14 @@ pub fn open_external(url: &str) -> bool {
     }
     #[cfg(all(not(target_arch = "wasm32"), not(target_os = "linux"), not(target_os = "macos")))]
     {
-        // Windows: `start` is a `cmd` builtin, and the empty pair of quotes is
-        // the *window title* — without it a quoted URL becomes the title and
-        // nothing opens.
-        std::process::Command::new("cmd").args(["/c", "start", ""]).arg(url).spawn().is_ok()
+        // Windows: straight to the shell's URL handler, no `cmd`. Through
+        // `cmd /c start` an `&` in the address (SondeHub's `#!f=..&q=..`) is read
+        // as a command separator, so the page was cut or never opened.
+        std::process::Command::new("rundll32")
+            .args(["url.dll,FileProtocolHandler"])
+            .arg(url)
+            .spawn()
+            .is_ok()
     }
 }
 
