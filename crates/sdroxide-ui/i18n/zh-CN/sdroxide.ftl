@@ -9231,3 +9231,31 @@ vor-tune-hover = 用调幅调谐此 VOR
 tx-bands-power-hint = 此波段在 Drive 调到最大时的最大功率(瓦)。不清楚请保持为 —。
 
 tx-bands-power-note = 可选。没有功率计的电台会用这些数值在 S 表上以瓦显示发射功率;未填写时,以百分比显示 Drive 设置。
+
+band-plan-title = 此电台的频段计划
+
+band-plan-col-tx = TX
+
+band-plan-col-rx = RX
+
+rx-bands-note = 仅对此电台需要收听的频段将 RX 设为“是”。电台绝不会调谐到设为“否”的频段，在确认 RX 列表之前也完全不会调谐。TX 与 RX 相互独立：同一频段可以是 TX 否、RX 是。
+
+rx-bands-title = 接收频段
+
+rx-bands-check-again = 重新检查 RX
+
+rx-bands-check-again-hint = 撤销确认以重新检查接收列表。更改任何频段时会自动撤销。
+
+rx-bands-confirmed = ✓ 此电台的接收频段已确认
+
+rx-bands-ack = 我已对照我的电台检查了这些接收频段
+
+rx-bands-confirm = 确认这些接收频段
+
+rx-bands-confirm-hint = 请先勾选复选框：每台电台只需确认一次。
+
+rx-bands-notice = 接收频段列表尚未确认：在您检查并确认一次接收频段之前，电台不会调谐。
+
+rx-bands-out-of-range = 此电台公布的范围未覆盖该频段。
+
+rx-bands-band-off = 在此电台的频段计划（设置）中该频段的接收已关闭，或接收列表尚未确认。

@@ -9302,3 +9302,31 @@ vor-tune-hover = Sintonizzare questo VOR in AM
 tx-bands-power-hint = La potenza massima su questa banda con il Drive al massimo, in watt. Lasciare — se non la conoscete.
 
 tx-bands-power-note = Facoltativo. Una radio senza wattmetro usa questi valori per mostrare la potenza di trasmissione in watt sull'S-meter; senza, mostra l'impostazione Drive in percentuale.
+
+band-plan-title = Piano di banda di questa radio
+
+band-plan-col-tx = TX
+
+band-plan-col-rx = RX
+
+rx-bands-note = Imposta RX su SÌ solo per le bande su cui questa radio deve ascoltare. La radio non si sintonizza mai su una banda su NO, e non si sintonizza affatto finché l'elenco RX non è confermato. TX e RX sono indipendenti: una banda può essere TX NO e RX SÌ.
+
+rx-bands-title = Bande di ricezione
+
+rx-bands-check-again = CONTROLLA RX
+
+rx-bands-check-again-hint = Ritira la conferma per rivedere l'elenco di ricezione. Cambiare una banda lo fa già da solo.
+
+rx-bands-confirmed = ✓ Bande di ricezione confermate per questa radio
+
+rx-bands-ack = Ho verificato queste bande di ricezione rispetto alla mia radio
+
+rx-bands-confirm = Conferma queste bande di ricezione
+
+rx-bands-confirm-hint = Spunta prima la casella: si conferma una volta per radio.
+
+rx-bands-notice = Elenco delle bande di ricezione non confermato: la radio non si sintonizza finché non controlli e confermi una volta le bande di ricezione.
+
+rx-bands-out-of-range = La gamma dichiarata di questa radio non raggiunge questa banda.
+
+rx-bands-band-off = La ricezione è disattivata su questa banda nel piano di banda di questa radio (Impostazioni), oppure l'elenco di ricezione non è ancora confermato.

@@ -940,84 +940,137 @@ fn transverter_table(ui: &mut egui::Ui, cfg: &mut sdroxide_types::RadioConfig) {
     });
 }
 
-/// The bands this radio may transmit on: one YES/NO per band, and the one-time
-/// confirmation. First in the transmit settings because it comes before every
-/// other transmit setting — a band that is NO is never keyed, and YES does not
-/// lift any other limit (the radio's own range, the amateur-band rail, the band
-/// plan segments).
+/// The band plan of this radio: for every band, one YES/NO for transmit (TX) and
+/// one for receive (RX), each list with its own one-time confirmation. TX comes
+/// before every other transmit setting — a band that is NO is never keyed, and
+/// YES does not lift any other limit (the radio's own range, the amateur-band
+/// rail, the band plan segments). RX is the mirror: a band that is NO, or a list
+/// nobody confirmed, is never tuned.
+///
+/// The two lists are independent (160 m can be TX NO and RX YES) and belong to
+/// this radio alone, even when it is coupled to another one.
 ///
 /// Every band in [`Band::ALL`] is here, none hidden: the last row, "Other", is
-/// any frequency that is in no band — what the ALL selector tunes to.
-fn tx_bands_table(ui: &mut egui::Ui, cfg: &mut sdroxide_types::RadioConfig) {
+/// any frequency that is in no band — what the ALL selector tunes to. A band the
+/// hardware does not reach is greyed and shows NO in the RX menu.
+///
+/// `tx` is whether this radio can transmit: a receive-only radio gets the RX
+/// list alone.
+fn band_plan_table(
+    ui: &mut egui::Ui,
+    cfg: &mut sdroxide_types::RadioConfig,
+    caps: Option<&sdroxide_types::DeviceCaps>,
+    tx: bool,
+) {
     use sdroxide_types::Band;
 
     ui.add_space(10.0);
     ui.separator();
     ui.end_row();
     ui.add_space(4.0);
-    ui.label(RichText::new(tr!("tx-bands-title")).size(14.0).strong().color(crate::theme::CYAN()));
+    ui.label(RichText::new(tr!("band-plan-title")).size(14.0).strong().color(crate::theme::CYAN()));
     ui.add_space(2.0);
-    note(ui, &tr!("tx-bands-note"));
-    ui.add_space(2.0);
-    ui.label(RichText::new(tr!("tx-bands-careful")).color(crate::theme::YELLOW()));
+    if tx {
+        note(ui, &tr!("tx-bands-note"));
+        ui.add_space(2.0);
+        ui.label(RichText::new(tr!("tx-bands-careful")).color(crate::theme::YELLOW()));
+        ui.add_space(2.0);
+    }
+    note(ui, &tr!("rx-bands-note"));
     ui.add_space(6.0);
 
     let mut set: Option<(Band, bool)> = None;
+    let mut set_rx: Option<(Band, bool)> = None;
     let mut set_w: Option<(Band, Option<f32>)> = None;
     let listed = cfg.tx_band_enable.clone().unwrap_or_default();
-    egui::Grid::new("tx-bands-grid")
-        .num_columns(12)
+    let listed_rx = cfg.rx_band_enable.clone().unwrap_or_default();
+    // Columns per band: name, [TX, watts,] RX.
+    let per_band = if tx { 4 } else { 2 };
+    let per_row = if tx { 3 } else { 6 };
+    egui::Grid::new("band-plan-grid")
+        .num_columns(per_band * per_row)
         .spacing([12.0, 6.0])
         .min_row_height(ui.spacing().interact_size.y)
         .striped(true)
         .show(ui, |ui| {
+            // TX and RX over their own menus, repeated for every group of columns.
+            for _ in 0..per_row {
+                ui.label("");
+                if tx {
+                    ui.label(RichText::new(tr!("band-plan-col-tx")).strong());
+                    ui.label("");
+                }
+                ui.label(RichText::new(tr!("band-plan-col-rx")).strong());
+            }
+            ui.end_row();
             for (i, band) in Band::ALL.iter().enumerate() {
-                let on = listed.contains(band);
                 ui.label(if *band == Band::Gen {
                     tr!("settings-other")
                 } else {
                     super::tx_bands::tx_band_label(*band)
                 });
-                let mut choice = on;
-                egui::ComboBox::from_id_salt(("tx-band", i))
-                    .width(64.0)
-                    .selected_text(if on { tr!("tx-bands-yes") } else { tr!("tx-bands-no") })
-                    .show_ui(ui, |ui| {
-                        ui.selectable_value(&mut choice, true, tr!("tx-bands-yes"));
-                        ui.selectable_value(&mut choice, false, tr!("tx-bands-no"));
-                    });
-                if choice != on {
-                    set = Some((*band, choice));
-                }
-                // The most power this band makes, for a radio that cannot
-                // measure it. Only on a band that is switched on; 0 = unknown.
-                if on {
-                    let mut w = cfg
-                        .tx_band_power_w
-                        .iter()
-                        .find(|p| p.band == *band)
-                        .map(|p| p.watts)
-                        .unwrap_or(0.0);
-                    if ui
-                        .add(
-                            egui::DragValue::new(&mut w)
-                                .speed(0.5)
-                                .range(0.0..=sdroxide_types::BandPower::MAX_W)
-                                .custom_formatter(|n, _| {
-                                    if n > 0.0 { format!("{n:.0}") } else { "—".to_string() }
-                                })
-                                .custom_parser(|s| s.trim().parse::<f64>().ok())
-                                .suffix(" W"),
-                        )
-                        .on_hover_text(tr!("tx-bands-power-hint"))
-                        .changed()
-                    {
-                        set_w = Some((*band, (w > 0.0).then_some(w)));
+                if tx {
+                    let on = listed.contains(band);
+                    let mut choice = on;
+                    egui::ComboBox::from_id_salt(("tx-band", i))
+                        .width(64.0)
+                        .selected_text(if on { tr!("tx-bands-yes") } else { tr!("tx-bands-no") })
+                        .show_ui(ui, |ui| {
+                            ui.selectable_value(&mut choice, true, tr!("tx-bands-yes"));
+                            ui.selectable_value(&mut choice, false, tr!("tx-bands-no"));
+                        });
+                    if choice != on {
+                        set = Some((*band, choice));
                     }
-                } else {
-                    ui.label("");
+                    // The most power this band makes, for a radio that cannot
+                    // measure it. Only on a band that is switched on; 0 = unknown.
+                    if on {
+                        let mut w = cfg
+                            .tx_band_power_w
+                            .iter()
+                            .find(|p| p.band == *band)
+                            .map(|p| p.watts)
+                            .unwrap_or(0.0);
+                        if ui
+                            .add(
+                                egui::DragValue::new(&mut w)
+                                    .speed(0.5)
+                                    .range(0.0..=sdroxide_types::BandPower::MAX_W)
+                                    .custom_formatter(|n, _| {
+                                        if n > 0.0 { format!("{n:.0}") } else { "—".to_string() }
+                                    })
+                                    .custom_parser(|s| s.trim().parse::<f64>().ok())
+                                    .suffix(" W"),
+                            )
+                            .on_hover_text(tr!("tx-bands-power-hint"))
+                            .changed()
+                        {
+                            set_w = Some((*band, (w > 0.0).then_some(w)));
+                        }
+                    } else {
+                        ui.label("");
+                    }
                 }
-                if i % 4 == 3 {
+                // Receive: the same menu. A band the hardware does not reach at
+                // all is greyed out and reads NO.
+                let reach = band_reached(caps, *band);
+                let on_rx = reach && listed_rx.contains(band);
+                let mut choice_rx = on_rx;
+                ui.add_enabled_ui(reach, |ui| {
+                    egui::ComboBox::from_id_salt(("rx-band", i))
+                        .width(64.0)
+                        .selected_text(if on_rx { tr!("tx-bands-yes") } else { tr!("tx-bands-no") })
+                        .show_ui(ui, |ui| {
+                            ui.selectable_value(&mut choice_rx, true, tr!("tx-bands-yes"));
+                            ui.selectable_value(&mut choice_rx, false, tr!("tx-bands-no"));
+                        });
+                })
+                .response
+                .on_disabled_hover_text(tr!("rx-bands-out-of-range"));
+                if reach && choice_rx != on_rx {
+                    set_rx = Some((*band, choice_rx));
+                }
+                if i % per_row == per_row - 1 {
                     ui.end_row();
                 }
             }
@@ -1026,43 +1079,77 @@ fn tx_bands_table(ui: &mut egui::Ui, cfg: &mut sdroxide_types::RadioConfig) {
     if let Some((band, on)) = set {
         apply_tx_band_choice(cfg, band, on);
     }
+    if let Some((band, on)) = set_rx {
+        let had = cfg.rx_band_enable.as_ref().is_some_and(|b| b.contains(&band));
+        if had != on {
+            cfg.set_rx_band(band, on);
+        }
+    }
     if let Some((band, w)) = set_w {
         cfg.set_tx_band_watts(band, w);
     }
-    ui.add_space(2.0);
-    note(ui, &tr!("tx-bands-power-note"));
-
+    if tx {
+        ui.add_space(2.0);
+        note(ui, &tr!("tx-bands-power-note"));
+        ui.add_space(6.0);
+        ui.label(RichText::new(tr!("tx-bands-title")).strong());
+        bands_confirmation(ui, "tx-bands", &mut cfg.tx_bands_confirmed, true);
+    }
     ui.add_space(6.0);
-    // **The list can be reviewed and checked again at any time.** Confirming is
-    // the operator saying "I have looked at every band here", and the row used
-    // to answer that with a green label and nothing else for the rest of the
-    // radio's life: a list that later changed showed "confirmed" for something
-    // nobody had checked, and there was no way back to the control that would
-    // have said so. (Bench report, 2026-11-01.)
-    if cfg.tx_bands_confirmed
-        && crate::chrome::chip(ui, true, tr!("tx-bands-check-again"))
-            .on_hover_text(tr!("tx-bands-check-again-hint"))
+    ui.label(RichText::new(tr!("rx-bands-title")).strong());
+    bands_confirmation(ui, "rx-bands", &mut cfg.rx_bands_confirmed, false);
+    ui.end_row();
+}
+
+/// Whether the hardware reaches any part of `band`. A band with no edges
+/// ("Other") and a device that publishes no range are always reachable.
+fn band_reached(caps: Option<&sdroxide_types::DeviceCaps>, band: sdroxide_types::Band) -> bool {
+    match (caps, band.edges()) {
+        (Some(c), Some((lo, hi))) => c.may_rx_span(lo, hi),
+        _ => true,
+    }
+}
+
+/// **The list can be reviewed and checked again at any time.** Confirming is
+/// the operator saying "I have looked at every band here", and the row used
+/// to answer that with a green label and nothing else for the rest of the
+/// radio's life: a list that later changed showed "confirmed" for something
+/// nobody had checked, and there was no way back to the control that would
+/// have said so. (Bench report, 2026-11-01.)
+///
+/// One procedure for both lists: `tx_bands` (`tx` true) or `rx_bands`. The
+/// messages are `<prefix>-check-again`, `-confirmed`, `-ack`, `-confirm`.
+fn bands_confirmation(ui: &mut egui::Ui, prefix: &str, confirmed: &mut bool, tx: bool) {
+    macro_rules! text {
+        ($tx_id:literal, $rx_id:literal) => {
+            if tx { tr!($tx_id) } else { tr!($rx_id) }
+        };
+    }
+    if *confirmed
+        && crate::chrome::chip(ui, true, text!("tx-bands-check-again", "rx-bands-check-again"))
+            .on_hover_text(text!("tx-bands-check-again-hint", "rx-bands-check-again-hint"))
             .clicked()
     {
-        cfg.tx_bands_confirmed = false;
+        *confirmed = false;
     }
-    if cfg.tx_bands_confirmed {
-        ui.label(RichText::new(tr!("tx-bands-confirmed")).color(crate::theme::GREEN()));
+    if *confirmed {
+        ui.label(
+            RichText::new(text!("tx-bands-confirmed", "rx-bands-confirmed")).color(crate::theme::GREEN()),
+        );
     } else {
-        let id = ui.id().with("tx-bands-ack");
+        let id = ui.id().with((prefix, "ack"));
         let mut ack: bool = ui.data(|d| d.get_temp(id)).unwrap_or(false);
-        if crate::chrome::checkbox(ui, &mut ack, tr!("tx-bands-ack")).changed() {
+        if crate::chrome::checkbox(ui, &mut ack, text!("tx-bands-ack", "rx-bands-ack")).changed() {
             ui.data_mut(|d| d.insert_temp(id, ack));
         }
         if ui
-            .add_enabled(ack, egui::Button::new(tr!("tx-bands-confirm")))
-            .on_disabled_hover_text(tr!("tx-bands-confirm-hint"))
+            .add_enabled(ack, egui::Button::new(text!("tx-bands-confirm", "rx-bands-confirm")))
+            .on_disabled_hover_text(text!("tx-bands-confirm-hint", "rx-bands-confirm-hint"))
             .clicked()
         {
-            cfg.tx_bands_confirmed = true;
+            *confirmed = true;
         }
     }
-    ui.end_row();
 }
 
 /// What the band grid does with a choice the operator made: nothing at all when
@@ -3427,8 +3514,10 @@ impl SdroxideApp {
                 // It applies the same way regardless of which interface is
                 // selected above, so it sits here rather than in one of the
                 // per-backend sections below.
+                // The band plan: TX and RX per band. Every radio has its RX list,
+                // so this is outside the transmit-only block.
+                band_plan_table(ui, cfg, self.caps.as_ref(), self.tx_capable());
                 if self.tx_capable() {
-                    tx_bands_table(ui, cfg);
                     drive_ceiling_row(ui, cfg);
                     drive_trim_table(ui, cfg);
                     ui.separator();

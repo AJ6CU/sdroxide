@@ -9316,3 +9316,31 @@ vor-tune-hover = Tune this VOR in AM
 tx-bands-power-hint = The most power this band makes with Drive at its top, in watts. Leave at — if you do not know.
 
 tx-bands-power-note = Optional. A radio with no power meter uses these figures to show its transmit power in watts on the S-meter; with none, it shows the Drive setting as a percentage.
+
+band-plan-title = Band plan of this radio
+
+band-plan-col-tx = TX
+
+band-plan-col-rx = RX
+
+rx-bands-note = Switch RX to YES only on the bands this radio should listen on. The radio never tunes to a band that is NO, and never tunes at all until the RX list is confirmed. TX and RX are separate: a band can be TX NO and RX YES.
+
+rx-bands-title = Receive bands
+
+rx-bands-check-again = CHECK RX AGAIN
+
+rx-bands-check-again-hint = Withdraw the confirmation and check the receive list again. Changing any band does this by itself.
+
+rx-bands-confirmed = ✓ Receive bands confirmed for this radio
+
+rx-bands-ack = I have checked these receive bands against my radio
+
+rx-bands-confirm = Confirm these receive bands
+
+rx-bands-confirm-hint = Tick the box first: you confirm once for each radio.
+
+rx-bands-notice = Receive band list not confirmed: the radio will not tune until you check and confirm the receive bands once.
+
+rx-bands-out-of-range = This radio's published range does not reach this band.
+
+rx-bands-band-off = Receive is off on this band in this radio's band plan (Settings), or the receive list is not confirmed yet.

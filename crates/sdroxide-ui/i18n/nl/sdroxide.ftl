@@ -9301,3 +9301,31 @@ vor-tune-hover = Dit VOR afstemmen in AM
 tx-bands-power-hint = Het maximale vermogen op deze band met Drive op het maximum, in watt. Laat op — staan als u het niet weet.
 
 tx-bands-power-note = Optioneel. Een radio zonder vermogensmeter gebruikt deze waarden om het zendvermogen in watt op de S-meter te tonen; zonder toont hij de Drive-instelling in procenten.
+
+band-plan-title = Bandplan van deze radio
+
+band-plan-col-tx = TX
+
+band-plan-col-rx = RX
+
+rx-bands-note = Zet RX alleen op JA voor de banden waarop deze radio moet luisteren. De radio stemt nooit af op een band met NEE en helemaal niet zolang de RX-lijst niet is bevestigd. TX en RX staan los van elkaar: een band kan TX NEE en RX JA zijn.
+
+rx-bands-title = Ontvangstbanden
+
+rx-bands-check-again = RX CONTROLEREN
+
+rx-bands-check-again-hint = Trekt de bevestiging in om de ontvangstlijst opnieuw te controleren. Een band wijzigen doet dit al vanzelf.
+
+rx-bands-confirmed = ✓ Ontvangstbanden bevestigd voor deze radio
+
+rx-bands-ack = Ik heb deze ontvangstbanden met mijn radio vergeleken
+
+rx-bands-confirm = Deze ontvangstbanden bevestigen
+
+rx-bands-confirm-hint = Vink eerst het vakje aan: u bevestigt één keer per radio.
+
+rx-bands-notice = Lijst met ontvangstbanden niet bevestigd: de radio stemt niet af totdat u de ontvangstbanden één keer hebt gecontroleerd en bevestigd.
+
+rx-bands-out-of-range = Het opgegeven bereik van deze radio haalt deze band niet.
+
+rx-bands-band-off = Ontvangst staat uit op deze band in het bandplan van deze radio (Instellingen), of de ontvangstlijst is nog niet bevestigd.
