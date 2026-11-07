@@ -963,9 +963,10 @@ fn tx_bands_table(ui: &mut egui::Ui, cfg: &mut sdroxide_types::RadioConfig) {
     ui.add_space(6.0);
 
     let mut set: Option<(Band, bool)> = None;
+    let mut set_w: Option<(Band, Option<f32>)> = None;
     let listed = cfg.tx_band_enable.clone().unwrap_or_default();
     egui::Grid::new("tx-bands-grid")
-        .num_columns(8)
+        .num_columns(12)
         .spacing([12.0, 6.0])
         .min_row_height(ui.spacing().interact_size.y)
         .striped(true)
@@ -988,6 +989,34 @@ fn tx_bands_table(ui: &mut egui::Ui, cfg: &mut sdroxide_types::RadioConfig) {
                 if choice != on {
                     set = Some((*band, choice));
                 }
+                // The most power this band makes, for a radio that cannot
+                // measure it. Only on a band that is switched on; 0 = unknown.
+                if on {
+                    let mut w = cfg
+                        .tx_band_power_w
+                        .iter()
+                        .find(|p| p.band == *band)
+                        .map(|p| p.watts)
+                        .unwrap_or(0.0);
+                    if ui
+                        .add(
+                            egui::DragValue::new(&mut w)
+                                .speed(0.5)
+                                .range(0.0..=sdroxide_types::BandPower::MAX_W)
+                                .custom_formatter(|n, _| {
+                                    if n > 0.0 { format!("{n:.0}") } else { "—".to_string() }
+                                })
+                                .custom_parser(|s| s.trim().parse::<f64>().ok())
+                                .suffix(" W"),
+                        )
+                        .on_hover_text(tr!("tx-bands-power-hint"))
+                        .changed()
+                    {
+                        set_w = Some((*band, (w > 0.0).then_some(w)));
+                    }
+                } else {
+                    ui.label("");
+                }
                 if i % 4 == 3 {
                     ui.end_row();
                 }
@@ -997,6 +1026,11 @@ fn tx_bands_table(ui: &mut egui::Ui, cfg: &mut sdroxide_types::RadioConfig) {
     if let Some((band, on)) = set {
         apply_tx_band_choice(cfg, band, on);
     }
+    if let Some((band, w)) = set_w {
+        cfg.set_tx_band_watts(band, w);
+    }
+    ui.add_space(2.0);
+    note(ui, &tr!("tx-bands-power-note"));
 
     ui.add_space(6.0);
     // **The list can be reviewed and checked again at any time.** Confirming is

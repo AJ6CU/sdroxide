@@ -9288,3 +9288,7 @@ vor-nearby = VORs in der Nähe Ihrer Station
 vor-no-grid = Locator in den Einstellungen der Digitalmodi eintragen, um die nächsten VORs aufzulisten.
 
 vor-tune-hover = Dieses VOR in AM abstimmen
+
+tx-bands-power-hint = Die höchste Leistung auf diesem Band bei voll aufgedrehtem Drive, in Watt. Bei — lassen, wenn unbekannt.
+
+tx-bands-power-note = Optional. Ein Funkgerät ohne Leistungsmesser nutzt diese Werte, um seine Sendeleistung in Watt am S-Meter anzuzeigen; ohne sie zeigt es die Drive-Einstellung in Prozent.

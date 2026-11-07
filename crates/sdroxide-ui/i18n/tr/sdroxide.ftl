@@ -9290,3 +9290,7 @@ vor-nearby = İstasyonunuza en yakın VOR'lar
 vor-no-grid = En yakın VOR'ları listelemek için sayısal mod ayarlarına Maidenhead locator'unuzu girin.
 
 vor-tune-hover = Bu VOR'u AM'de ayarla
+
+tx-bands-power-hint = Drive en üstteyken bu bantta elde edilen en yüksek güç, watt cinsinden. Bilmiyorsanız — olarak bırakın.
+
+tx-bands-power-note = İsteğe bağlı. Güç ölçeri olmayan bir telsiz, S-metrede iletim gücünü watt olarak göstermek için bu değerleri kullanır; yoksa Drive ayarını yüzde olarak gösterir.

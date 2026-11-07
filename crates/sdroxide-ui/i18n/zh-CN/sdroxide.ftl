@@ -9228,3 +9228,7 @@ vor-nearby = 离您电台最近的 VOR
 vor-no-grid = 请在数字模式设置中填写您的网格定位符，以列出最近的 VOR。
 
 vor-tune-hover = 用调幅调谐此 VOR
+
+tx-bands-power-hint = 此波段在 Drive 调到最大时的最大功率(瓦)。不清楚请保持为 —。
+
+tx-bands-power-note = 可选。没有功率计的电台会用这些数值在 S 表上以瓦显示发射功率;未填写时,以百分比显示 Drive 设置。

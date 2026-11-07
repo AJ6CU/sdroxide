@@ -9301,3 +9301,7 @@ vor-nearby = VOR les plus proches de votre station
 vor-no-grid = Indiquez votre locator dans les réglages des modes numériques pour lister les VOR les plus proches.
 
 vor-tune-hover = Accorder ce VOR en AM
+
+tx-bands-power-hint = La puissance maximale sur cette bande avec le Drive au maximum, en watts. Laissez à — si vous l'ignorez.
+
+tx-bands-power-note = Facultatif. Une radio sans wattmètre s'en sert pour afficher sa puissance d'émission en watts sur le S-mètre ; sans ces valeurs, elle affiche le réglage Drive en pourcentage.

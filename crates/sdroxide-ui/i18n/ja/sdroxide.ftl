@@ -9238,3 +9238,7 @@ vor-nearby = あなたの局に近い VOR
 vor-no-grid = 最も近い VOR を表示するには、デジタルモード設定でロケーターを入力してください。
 
 vor-tune-hover = この VOR を AM で同調
+
+tx-bands-power-hint = Drive を最大にしたときのこのバンドの最大出力(W)。不明な場合は — のままにしてください。
+
+tx-bands-power-note = 任意。パワーメーターのない無線機は、この値を使って送信出力をSメーターにワットで表示します。未設定の場合は Drive の設定をパーセントで表示します。
