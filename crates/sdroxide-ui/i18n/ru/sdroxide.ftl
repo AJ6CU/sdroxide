@@ -9381,3 +9381,13 @@ settings-general-band-plan-restore-hint = Возвращает планы, по�
 settings-general-band-plan-size = { $kb } kB
 
 settings-general-band-plan-empty = В библиотеке нет планов.
+
+settings-general-band-plan-radio = Это радио
+
+settings-general-band-plan-radio-follow = Как у станции
+
+settings-general-band-plan-radio-hint = Использовать план только на этом радио. План станции и другие радио не затрагиваются. Списки диапазонов TX и RX этого радио придётся проверить и подтвердить заново.
+
+settings-general-band-plan-run-radio = ТОЛЬКО ЭТО РАДИО
+
+settings-general-band-plan-radio-tag = это радио

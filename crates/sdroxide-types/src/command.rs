@@ -1502,6 +1502,19 @@ pub enum Command {
     ///
     /// Appended for the usual reason.
     RestoreShippedBandPlans,
+
+    /// Run the plan called `name` on **this radio only** (`None`: follow the
+    /// station's plan again). Kept in this radio's `radio.json`
+    /// ([`crate::RadioConfig::band_plan`]) and echoed in
+    /// [`crate::RadioEvent::RadioConfig`].
+    ///
+    /// Every other radio at the station keeps the plan it had, and its band
+    /// confirmations. This radio's TX and RX confirmations are withdrawn when the
+    /// plan it runs changes, as for [`Command::SelectBandPlan`]; choosing what it
+    /// already runs changes nothing.
+    ///
+    /// Appended for the usual reason.
+    SelectRadioBandPlan { name: Option<String> },
 }
 
 /// What a [`Command::GetKnownCalls`] was answered with.

@@ -265,6 +265,31 @@ pub fn restore_shipped_in(dir: &Path) -> Result<Vec<String>, String> {
     Ok(written)
 }
 
+/// The plans some radio runs on its own: the `band_plan` of the station's own
+/// `radio.json` and of every `radio-<n>/radio.json` in `dir`. A file that is
+/// missing or will not parse names nothing.
+pub fn plans_used_by_radios_in(dir: &Path) -> Vec<String> {
+    let mut files = vec![dir.join("radio.json")];
+    if let Ok(rd) = fs::read_dir(dir) {
+        for e in rd.flatten() {
+            let name = e.file_name();
+            if name.to_string_lossy().starts_with("radio-") && e.path().is_dir() {
+                files.push(e.path().join("radio.json"));
+            }
+        }
+    }
+    let mut used: Vec<String> = files
+        .iter()
+        .filter_map(|f| fs::read_to_string(f).ok())
+        .filter_map(|t| serde_json::from_str::<serde_json::Value>(&t).ok())
+        .filter_map(|v| v.get("band_plan")?.as_str().map(str::to_owned))
+        .filter_map(|n| plan_key(&n).ok())
+        .collect();
+    used.sort();
+    used.dedup();
+    used
+}
+
 // ── The same on the real config directory ───────────────────────────────────
 
 /// Where the library is, for the settings dialog to show the operator.
@@ -318,14 +343,27 @@ pub fn restore_shipped_band_plans() -> Result<Vec<String>, String> {
     restore_shipped_in(&ensure_library()?)
 }
 
+/// The plan called `name` in the station's library.
+pub fn read_band_plan(name: &str) -> Result<BandPlan, String> {
+    let dir = ensure_library()?;
+    read_in(&dir, &plan_key(name)?)
+}
+
 /// Delete a plan from the station's library. Refused for the plan the station
-/// runs: it would leave `config.toml` naming a file that is not there.
+/// runs and for one any radio runs on its own: it would leave `config.toml` or a
+/// `radio.json` naming a file that is not there.
 pub fn delete_band_plan(name: &str) -> Result<(), String> {
     let dir = ensure_library()?;
     let key = plan_key(name)?;
     if band_plan_selection().as_deref() == Some(key.as_str()) {
         return Err(format!(
             "The band plan “{key}” is the one running. Choose another plan first."
+        ));
+    }
+    if plans_used_by_radios_in(&dir).contains(&key) {
+        return Err(format!(
+            "The band plan “{key}” is run by a radio of its own. Choose another plan for that \
+             radio first."
         ));
     }
     delete_in(&dir, &key)
@@ -646,6 +684,22 @@ mod tests {
         import_in(&dir, "mine", &narrow_2m()).unwrap();
         restore_shipped_in(&dir).unwrap();
         assert!(read_in(&dir, "mine").is_ok());
+    }
+
+    #[test]
+    fn the_plans_radios_run_on_their_own_are_found_in_every_radio_scope() {
+        let dir = scratch();
+        assert!(plans_used_by_radios_in(&dir).is_empty());
+        fs::write(dir.join("radio.json"), r#"{"band_plan": "Mine"}"#).unwrap();
+        fs::create_dir_all(dir.join("radio-2")).unwrap();
+        fs::write(dir.join("radio-2").join("radio.json"), r#"{"band_plan": "other", "x": 1}"#).unwrap();
+        fs::create_dir_all(dir.join("radio-3")).unwrap();
+        fs::write(dir.join("radio-3").join("radio.json"), r#"{"band_plan": null}"#).unwrap();
+        fs::create_dir_all(dir.join("radio-4")).unwrap();
+        fs::write(dir.join("radio-4").join("radio.json"), "not json").unwrap();
+        fs::create_dir_all(dir.join("recordings")).unwrap();
+        fs::write(dir.join("recordings").join("radio.json"), r#"{"band_plan": "no"}"#).unwrap();
+        assert_eq!(plans_used_by_radios_in(&dir), vec!["mine".to_string(), "other".to_string()]);
     }
 
     #[test]

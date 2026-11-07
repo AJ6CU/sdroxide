@@ -7934,6 +7934,18 @@ pub struct RadioConfig {
     /// requires.
     #[serde(default)]
     pub band_plan_fp: u64,
+    /// The band plan this radio runs on its own, by its name in the station's
+    /// `bandplans` folder; `None` follows the station's plan, which is the
+    /// default and what every radio did before.
+    ///
+    /// Per radio, in this radio's `radio.json`: one radio on a national plan and
+    /// another on the built-in tables is an ordinary station. Choosing or
+    /// leaving a plan of its own changes the plan this radio runs, so it
+    /// withdraws the confirmation of **this radio's** TX and RX band lists, and
+    /// no other radio's. A plan whose file has gone runs the station's, with an
+    /// alert, and the name stays. Appended last, as the wire requires.
+    #[serde(default)]
+    pub band_plan: Option<String>,
 }
 
 /// Why [`RadioConfig::rx_block_reason`] refuses a frequency.

@@ -9364,3 +9364,13 @@ settings-general-band-plan-restore-hint = Stellt die mit dem Programm gelieferte
 settings-general-band-plan-size = { $kb } kB
 
 settings-general-band-plan-empty = Keine Pläne in der Bibliothek.
+
+settings-general-band-plan-radio = Dieses Funkgerät
+
+settings-general-band-plan-radio-follow = Folgt der Station
+
+settings-general-band-plan-radio-hint = Einen Plan nur auf diesem Funkgerät verwenden. Der Plan der Station und die anderen Funkgeräte bleiben unberührt. Die TX- und RX-Bandlisten dieses Funkgeräts müssen erneut geprüft und bestätigt werden.
+
+settings-general-band-plan-run-radio = NUR DIESES FUNKGERÄT
+
+settings-general-band-plan-radio-tag = dieses Funkgerät

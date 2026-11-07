@@ -4093,6 +4093,15 @@ struct Engine {
     /// checked its band lists against a plan that is no longer running, and the
     /// engine withdraws both confirmations (see [`Engine::poll_band_plan`]).
     seen_plan_rev: u64,
+    /// The band plan this radio runs on its own ([`sdroxide_types::RadioConfig::band_plan`]),
+    /// kept for the life of the program, or `None` while it follows the
+    /// station's. Declared to the engine thread as its plan
+    /// ([`sdroxide_types::set_thread_band_plan`]), which is what makes every band
+    /// edge, lockout and skimmer window this engine consults this radio's own.
+    own_plan: Option<&'static sdroxide_types::BandPlan>,
+    /// The name the radio's `radio.json` holds for [`Engine::own_plan`] — kept
+    /// even when its file cannot be read, so the choice is not lost with it.
+    own_plan_name: Option<String>,
     /// Which of the station's radios is on FreeDV. See
     /// [`EngineConfig::rade_watch`].
     rade_watch: Option<Arc<crate::RadeWatch>>,
@@ -4589,6 +4598,23 @@ fn collapse_superseded(batch: &mut Vec<Command>) {
     });
 }
 
+/// The band plan `cfg` says this radio runs on its own, read from the station's
+/// library: `None` when it names none, or when its file cannot be read — in
+/// which case the radio runs the station's plan and the operator is told.
+fn read_own_plan(cfg: &sdroxide_types::RadioConfig) -> Option<sdroxide_types::BandPlan> {
+    let name = cfg.band_plan.as_deref()?;
+    match sdroxide_config::read_band_plan(name) {
+        Ok(plan) => Some(plan),
+        Err(e) => {
+            warn!("this radio's own band plan: {e}");
+            sdroxide_config::note_startup(format!(
+                "This radio's own band plan could not be read — it runs the station's plan. {e}"
+            ));
+            None
+        }
+    }
+}
+
 fn engine_thread(
     source: Box<dyn IqSource>,
     mut caps: DeviceCaps,
@@ -4620,6 +4646,14 @@ fn engine_thread(
     // any test that brings one up — is on the station's band plan too. The
     // first call also seeds `bandplan.json` if the operator has none.
     sdroxide_types::set_band_plan(sdroxide_config::load_band_plan());
+    // This radio's own plan, if it has one: declared to *this* thread, so every
+    // lookup the engine makes from here on — the first `Band::containing`
+    // below included — is this radio's, and no other radio's.
+    let (own_plan_name, own_plan) = {
+        let cfg = engine_cfg.store.load_radio_config();
+        (cfg.band_plan.clone(), read_own_plan(&cfg).map(sdroxide_types::leak_band_plan))
+    };
+    sdroxide_types::set_thread_band_plan(own_plan);
     sdroxide_types::set_region(sdroxide_config::load_region());
     sdroxide_types::set_cb_plan(sdroxide_config::load_cb_plan());
     // The operator's deliberate opt-in to transmit on 11 m, which is otherwise
@@ -5443,6 +5477,8 @@ fn engine_thread(
         // After the `set_band_plan` at the top of this function: the plan this
         // engine starts under is not a change of plan.
         seen_plan_rev: sdroxide_types::band_plan_revision(),
+        own_plan,
+        own_plan_name,
         store_sync: engine_cfg.store_sync,
         rade_watch: engine_cfg.rade_watch,
     };
@@ -12093,6 +12129,7 @@ impl Engine {
                 let plan = sdroxide_config::load_band_plan();
                 let custom = !plan.is_default();
                 self.adopt_band_plan(plan);
+                self.reload_own_plan();
                 // Whatever the loader had to say — a row it dropped, a file it
                 // could not read — reaches the operator who asked for the
                 // reload, not just the log.
@@ -12131,9 +12168,15 @@ impl Engine {
                         }
                         Some(_) => format!("“{}”", plan.meta().name),
                     };
-                    let same = *sdroxide_types::band_plan() == plan;
+                    let same = *sdroxide_types::station_band_plan() == plan;
                     self.adopt_band_plan(plan);
-                    if same {
+                    if self.own_plan.is_some() {
+                        // The station's plan moved (or did not); this radio runs a
+                        // plan of its own and is not affected either way.
+                        self.notice(&format!(
+                            "The station now runs {shown}; this radio keeps its own band plan."
+                        ));
+                    } else if same {
                         // Already running it: nothing moved, so nothing is
                         // withdrawn and nothing needs checking again.
                         self.notice(&format!("Band plan: {shown} was already running."));
@@ -12173,6 +12216,7 @@ impl Engine {
                 Ok(written) => {
                     let plan = sdroxide_config::load_band_plan();
                     self.adopt_band_plan(plan);
+                    self.reload_own_plan();
                     let alerts = sdroxide_config::take_load_alerts();
                     if !alerts.is_empty() {
                         self.notice(&alerts.join("\n"));
@@ -12187,6 +12231,41 @@ impl Engine {
                 }
                 Err(e) => self.notice(&e),
             },
+            // A plan for this radio only. The station's plan and every other radio
+            // are untouched; this radio's own confirmations are withdrawn if the
+            // plan it runs changes, and no other radio's.
+            SelectRadioBandPlan { name } => {
+                let resolved = match name.as_deref() {
+                    None => Ok(None),
+                    Some(n) => sdroxide_config::read_band_plan(n).map(Some),
+                };
+                match resolved {
+                    Err(e) => self.notice(&e),
+                    Ok(plan) => {
+                        let key = name.as_deref().and_then(|n| sdroxide_config::band_plan_key(n).ok());
+                        let shown = match &plan {
+                            Some(p) if !p.meta().name.trim().is_empty() => {
+                                format!("the band plan “{}”", p.meta().name)
+                            }
+                            Some(_) => format!("the band plan “{}”", key.clone().unwrap_or_default()),
+                            None => "the station's band plan".to_string(),
+                        };
+                        let mut cfg = self.store.load_radio_config();
+                        cfg.band_plan = key.clone();
+                        if let Err(e) = self.store.save_radio_config(&cfg) {
+                            warn!("saving this radio's band plan: {e}");
+                        }
+                        self.own_plan_name = key;
+                        let changed = self.set_own_plan(plan);
+                        self.emit_station_config();
+                        self.emit_radio_config();
+                        self.notice(&format!("This radio now runs {shown}."));
+                        if changed {
+                            self.withdraw_band_confirmations();
+                        }
+                    }
+                }
+            }
             DeleteBandPlan { name } => match sdroxide_config::delete_band_plan(&name) {
                 Ok(()) => {
                     self.emit_station_config();
@@ -18268,6 +18347,44 @@ impl Engine {
         self.emit_station_config();
     }
 
+    /// Take on `plan` as this radio's own (`None`: follow the station's), and
+    /// say whether the plan this radio *runs* is a different one as a result.
+    fn set_own_plan(&mut self, plan: Option<sdroxide_types::BandPlan>) -> bool {
+        let before = sdroxide_types::band_plan();
+        match (&plan, self.own_plan) {
+            (None, None) => {}
+            // The same plan read again: nothing to install, nothing to keep.
+            (Some(new), Some(current)) if new == current => {}
+            _ => {
+                self.own_plan = plan.map(sdroxide_types::leak_band_plan);
+                sdroxide_types::set_thread_band_plan(self.own_plan);
+            }
+        }
+        let changed = before != sdroxide_types::band_plan();
+        // As for the station's plan: the dial has not moved but the band under it
+        // may have.
+        self.state.band = Band::containing(self.state.active_freq_hz());
+        self.relay_bands_told = None;
+        changed
+    }
+
+    /// Read this radio's own plan from its file again (the station's plan was
+    /// just re-read, and a plan edited in place has to reach this radio too) and
+    /// withdraw its confirmations if what it runs is different now.
+    fn reload_own_plan(&mut self) {
+        let cfg = self.store.load_radio_config();
+        self.own_plan_name = cfg.band_plan.clone();
+        if self.own_plan_name.is_some() && read_own_plan(&cfg).is_none() {
+            // Unreadable: the name stays, the radio runs the station's plan.
+            self.set_own_plan(None);
+            return;
+        }
+        let plan = read_own_plan(&cfg);
+        if self.set_own_plan(plan) {
+            self.withdraw_band_confirmations();
+        }
+    }
+
     /// Withdraw this radio's band confirmations when the station's band plan has
     /// become a different plan since this engine last looked.
     ///
@@ -18281,7 +18398,17 @@ impl Engine {
         let rev = sdroxide_types::band_plan_revision();
         if rev != self.seen_plan_rev {
             self.seen_plan_rev = rev;
-            self.withdraw_band_confirmations();
+            // The station's plan moved. A radio running a plan of its own is not
+            // on it, so nothing it was checked against has changed.
+            if self.own_plan.is_none() {
+                self.withdraw_band_confirmations();
+            }
+            // Every radio's screen is told, whichever engine took the command:
+            // a tab that follows the station draws the new plan, and all of them
+            // show which plan the station runs.
+            self.state.band = Band::containing(self.state.active_freq_hz());
+            self.relay_bands_told = None;
+            self.emit_station_config();
         }
     }
 
@@ -18352,6 +18479,9 @@ impl Engine {
             cfg.rx_bands_confirmed = false;
         }
         cfg.band_plan_fp = if cfg.tx_bands_confirmed || cfg.rx_bands_confirmed { fp } else { 0 };
+        // The radio's own plan is the engine's to say, like the fingerprint: a
+        // settings dialog that was open before it changed holds the old name.
+        cfg.band_plan = self.own_plan_name.clone();
     }
 
     /// Re-read the station-shared stores after another engine in this process

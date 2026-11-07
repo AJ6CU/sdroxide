@@ -9389,3 +9389,13 @@ settings-general-band-plan-restore-hint = Put back the plans that came with the 
 settings-general-band-plan-size = { $kb } kB
 
 settings-general-band-plan-empty = No plans in the library.
+
+settings-general-band-plan-radio = This radio
+
+settings-general-band-plan-radio-follow = Follows the station
+
+settings-general-band-plan-radio-hint = Run a plan on this radio only. The station's plan and the other radios are not touched. This radio's TX and RX band lists have to be checked and confirmed again.
+
+settings-general-band-plan-run-radio = THIS RADIO ONLY
+
+settings-general-band-plan-radio-tag = this radio

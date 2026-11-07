@@ -1599,6 +1599,12 @@ pub struct SdroxideApp {
     pub(in crate::app) band_plans: Vec<sdroxide_types::PlanInfo>,
     /// Which of them the station runs; `None` is the built-in IARU tables.
     pub(in crate::app) band_plan_name: Option<String>,
+    /// The band plan this radio's tab draws and reasons with, as its engine last
+    /// announced it: the station's plan, or the radio's own. Declared to the UI
+    /// thread around everything this tab does ([`sdroxide_types::ThreadPlanGuard`]),
+    /// so a split view of two radios on two plans draws each with its own. Leaked
+    /// once per *change* of plan, never per frame.
+    pub(in crate::app) band_plan_cur: Option<&'static sdroxide_types::BandPlan>,
     /// The plan this screen asked the station to send as a file, so that of the
     /// answers (which go to every screen) only this one's is saved here. A cell
     /// because the settings are drawn through `&self`.
@@ -2686,6 +2692,7 @@ impl SdroxideApp {
             band_plan_import_inbox: Arc::new(Mutex::new(None)),
             band_plans: Vec::new(),
             band_plan_name: None,
+            band_plan_cur: None,
             band_plan_export_wanted: std::cell::RefCell::new(None),
             band_plan_ui: std::cell::RefCell::new(Default::default()),
             pending_lookups: Vec::new(),

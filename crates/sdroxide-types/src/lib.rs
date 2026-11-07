@@ -150,8 +150,8 @@ pub use band_segments::{
     span_within_segment, span_within_segment_in, sstv_dials_in,
 };
 pub use bandplan::{
-    BandPlan, BandPlanError, PlanInfo, PlanMeta, RegionPlan, band_plan, band_plan_revision,
-    set_band_plan,
+    BandPlan, BandPlanError, PlanInfo, PlanMeta, RegionPlan, ThreadPlanGuard, band_plan,
+    band_plan_revision, leak_band_plan, set_band_plan, set_thread_band_plan, station_band_plan,
 };
 pub use broadcast::{BroadcastStation, BroadcastStations, ScheduleSource};
 pub use callsign::{CallsignInfo, LoginTarget, LoginTestResult, UploadResult, UploadTarget};

@@ -804,9 +804,66 @@ pub fn band_plan_revision() -> u64 {
     REVISION.load(Ordering::SeqCst)
 }
 
-/// The band plan every lookup uses: the operator's `bandplan.json` once it has
-/// been installed, the built-in IARU tables until then.
+thread_local! {
+    /// The plan a radio runs *on its own*, for the thread that works for that
+    /// radio: its engine, and the screen's draw and event code for its tab.
+    ///
+    /// A radio at a multi-radio station may run a plan of its own (see
+    /// [`crate::RadioConfig::band_plan`]), while every band edge, transmit
+    /// lockout, waterfall strip and skimmer window in the program asks
+    /// [`band_plan`] without saying which radio it is for — hundreds of callers
+    /// that have no radio to name. So the answer depends on the thread: where
+    /// the thread has declared a plan of its own it gets that one, anywhere else
+    /// the station's. Nothing a radio does here can reach another radio, because
+    /// another radio's engine is another thread.
+    static THREAD_PLAN: std::cell::Cell<Option<&'static BandPlan>> =
+        const { std::cell::Cell::new(None) };
+}
+
+/// The band plan every lookup uses: the plan of the radio the calling thread
+/// works for if it has declared one ([`set_thread_band_plan`]), otherwise the
+/// station's.
 pub fn band_plan() -> &'static BandPlan {
+    THREAD_PLAN.with(std::cell::Cell::get).unwrap_or_else(station_band_plan)
+}
+
+/// A plan kept for the life of the program, so lookups can hand out `&'static`
+/// slices without an `Arc` in every signature — what [`set_band_plan`] does with
+/// the station's. One small allocation each time a radio's own plan *changes*,
+/// never per frame or per block.
+pub fn leak_band_plan(plan: BandPlan) -> &'static BandPlan {
+    Box::leak(Box::new(plan))
+}
+
+/// Declare the plan the calling thread's radio runs on its own, or `None` to
+/// follow the station's. See [`THREAD_PLAN`].
+pub fn set_thread_band_plan(plan: Option<&'static BandPlan>) {
+    THREAD_PLAN.with(|c| c.set(plan));
+}
+
+/// A thread's plan for the length of a scope: what a screen does around the draw
+/// and event code of one radio's tab, so that a split view with two radios on
+/// two plans draws each with its own. The previous declaration comes back when
+/// it is dropped.
+pub struct ThreadPlanGuard(Option<&'static BandPlan>);
+
+impl ThreadPlanGuard {
+    /// Run as the radio with `plan` (`None`: the station's) until dropped.
+    pub fn enter(plan: Option<&'static BandPlan>) -> ThreadPlanGuard {
+        ThreadPlanGuard(THREAD_PLAN.with(|c| c.replace(plan)))
+    }
+}
+
+impl Drop for ThreadPlanGuard {
+    fn drop(&mut self) {
+        THREAD_PLAN.with(|c| c.set(self.0));
+    }
+}
+
+/// The station's band plan, whatever radio the calling thread works for:
+/// the operator's choice once it has been installed, the built-in IARU tables
+/// until then.
+pub fn station_band_plan() -> &'static BandPlan {
     match INSTALLED.read() {
         Ok(g) => g.unwrap_or(&DEFAULTS),
         // A poisoned lock means a writer panicked mid-install. The built-in
@@ -827,7 +884,7 @@ pub fn set_band_plan(plan: BandPlan) {
     // Counted before the swap, against what is installed now: an announcement
     // of the plan already in force (a client hearing it again, a second engine
     // starting) is not a change and must not withdraw anybody's confirmation.
-    if band_plan() != &plan {
+    if station_band_plan() != &plan {
         REVISION.fetch_add(1, Ordering::SeqCst);
     }
     let leaked: &'static BandPlan = Box::leak(Box::new(plan));

@@ -9366,3 +9366,13 @@ settings-general-band-plan-restore-hint = Programla gelen planları, silinmiş y
 settings-general-band-plan-size = { $kb } kB
 
 settings-general-band-plan-empty = Kitaplıkta plan yok.
+
+settings-general-band-plan-radio = Bu telsiz
+
+settings-general-band-plan-radio-follow = İstasyonu izler
+
+settings-general-band-plan-radio-hint = Bir planı yalnızca bu telsizde kullan. İstasyonun planına ve diğer telsizlere dokunulmaz. Bu telsizin TX ve RX bant listelerinin yeniden kontrol edilip onaylanması gerekir.
+
+settings-general-band-plan-run-radio = YALNIZ BU TELSİZ
+
+settings-general-band-plan-radio-tag = bu telsiz

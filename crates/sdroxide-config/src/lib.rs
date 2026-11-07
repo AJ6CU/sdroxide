@@ -581,7 +581,8 @@ mod publicsdr;
 pub use band_plans::{
     BAND_PLAN_MAX_BYTES, BAND_PLANS_DIR, SHIPPED as SHIPPED_BAND_PLANS, band_plan_selection,
     band_plans_dir, delete_band_plan, export_band_plan_text, import_band_plan, is_shipped as is_shipped_band_plan,
-    list_band_plans, load_band_plan, plan_key as band_plan_key, restore_shipped_band_plans,
+    list_band_plans, load_band_plan, plan_key as band_plan_key, read_band_plan,
+    restore_shipped_band_plans,
     save_current_band_plan, select_band_plan,
 };
 pub use publicsdr::public_sdr_directory;

@@ -2269,8 +2269,15 @@ use sdroxide_types::{
 /// `BandPlanExport { file, json }`, all appended last: the manager can keep the
 /// plan that runs, hand a plan's file to the screen that asked for it, and put
 /// the shipped plans back. `PROTO_VERSION` 276 → 277, `VERSION_BYTE` 0x60 → 0x61.
-pub const PROTO_VERSION: u16 = 277;
-const VERSION_BYTE: u8 = 0x61;
+///
+/// v278: **a band plan per radio.** `Command` gains `SelectRadioBandPlan`,
+/// appended last, and `RadioConfig` gains `band_plan` (the plan this radio runs
+/// on its own, `None` following the station's) at its tail. `RadioConfig` rides
+/// `ServerMsg::RadioConfig` and `Command::SetRadioConfig` whole, so the appended
+/// field moves its layout. `#[serde(default)]`, so a `radio.json` written before
+/// this loads unchanged. `PROTO_VERSION` 277 → 278, `VERSION_BYTE` 0x61 → 0x62.
+pub const PROTO_VERSION: u16 = 278;
+const VERSION_BYTE: u8 = 0x62;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -3568,7 +3575,7 @@ mod tests {
             ServerMsg::TxRefused(w, hz) => assert_eq!((w, hz), (why, 7_074_000.0)),
             _ => panic!("TxRefused did not round-trip"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (277, 0x61));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (278, 0x62));
     }
 
     /// The dynamic-DNS answer rides last on [`ServerMsg`], and it has to: the
@@ -3599,7 +3606,7 @@ mod tests {
             }
             other => panic!("the answer did not round-trip: {other:?}"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (277, 0x61));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (278, 0x62));
     }
 
     /// The VOR read-out rides the wire whole, locked or not, and the message is
@@ -3717,13 +3724,13 @@ mod tests {
         // (PROTO_VERSION 264 → 265). `HpsdrConfig` sits inside `RadioConfig`,
         // so this moves what follows it: that is what the bump is for.
         //
-        // 903 since the receive band list (PROTO_VERSION 274 → 275) and the plan
-        // fingerprint its confirmation is made against (275 → 276) were appended
-        // at its tail. The pin had not been moved since 265; this is the
-        // conscious edit those two bumps owed it.
+        // 904 since the receive band list (PROTO_VERSION 274 → 275), the plan
+        // fingerprint its confirmation is made against (275 → 276) and the radio's
+        // own band plan (277 → 278) were appended at its tail. The pin had not
+        // been moved since 265; this is the conscious edit those bumps owed it.
         assert_eq!(
             (radio.len(), fnv1a(&radio)),
-            (903, 11_970_222_115_761_017_210),
+            (904, 13_554_492_482_937_614_926),
             "RadioConfig's wire layout shifted — append fields, never insert them"
         );
         // 316 since the two Dynamic DNS fields were appended at the end
@@ -4216,6 +4223,8 @@ mod tests {
             Command::SaveCurrentBandPlan { name: "my copy".into() },
             Command::ExportBandPlan { name: "mine".into() },
             Command::RestoreShippedBandPlans,
+            Command::SelectRadioBandPlan { name: Some("mine".into()) },
+            Command::SelectRadioBandPlan { name: None },
         ] {
             let m = ClientMsg::Command(c);
             assert_eq!(decode::<ClientMsg>(&encode(&m).unwrap()).unwrap(), m);
@@ -4256,6 +4265,7 @@ mod tests {
             tx_bands_confirmed: true,
             rx_bands_confirmed: true,
             band_plan_fp: plan.fingerprint(),
+            band_plan: Some("narrow".into()),
             ..Default::default()
         };
         let m = ServerMsg::RadioConfig(Box::new(cfg.clone()));
@@ -4264,6 +4274,7 @@ mod tests {
             panic!("not a radio config")
         };
         assert_eq!(back.band_plan_fp, plan.fingerprint());
+        assert_eq!(back.band_plan.as_deref(), Some("narrow"), "the radio's own plan rides along");
         assert_eq!(*back, cfg);
     }
 
