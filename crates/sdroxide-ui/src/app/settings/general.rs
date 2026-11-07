@@ -369,23 +369,7 @@ impl SdroxideApp {
             let names = [
                 tr!("settings-general-band-plan-built-in"),
                 tr!("settings-general-band-plan-germany-nrw"),
-                tr!("settings-general-band-plan-sdrpp-australia"),
-                tr!("settings-general-band-plan-sdrpp-austria"),
-                tr!("settings-general-band-plan-sdrpp-belgium"),
-                tr!("settings-general-band-plan-sdrpp-brazil"),
-                tr!("settings-general-band-plan-sdrpp-canada"),
-                tr!("settings-general-band-plan-sdrpp-china"),
-                tr!("settings-general-band-plan-sdrpp-france"),
-                tr!("settings-general-band-plan-sdrpp-germany"),
-                tr!("settings-general-band-plan-sdrpp-ireland"),
-                tr!("settings-general-band-plan-sdrpp-italy"),
-                tr!("settings-general-band-plan-sdrpp-netherlands"),
-                tr!("settings-general-band-plan-sdrpp-republic-of-korea"),
-                tr!("settings-general-band-plan-sdrpp-russia"),
-                tr!("settings-general-band-plan-sdrpp-slovakia"),
-                tr!("settings-general-band-plan-sdrpp-turkey"),
-                tr!("settings-general-band-plan-sdrpp-united-kingdom"),
-                tr!("settings-general-band-plan-sdrpp-usa"),
+                tr!("settings-general-band-plan-own"),
             ];
             let mut choice = current;
             ui.horizontal_wrapped(|ui| {
@@ -403,8 +387,7 @@ impl SdroxideApp {
             if choice != current {
                 let picked = match choice {
                     0 => Some(sdroxide_types::BandPlan::default()),
-                    1 => crate::app::bandplans::parse_plan(crate::app::bandplans::GERMANY_NRW),
-                    _ => None,
+                    _ => crate::app::bandplans::preset_plan(crate::app::bandplans::GERMANY_NRW),
                 };
                 match picked {
                     Some(p) => match sdroxide_config::save_band_plan(&p) {
@@ -508,7 +491,6 @@ impl SdroxideApp {
 
     /// Carry out what [`Self::settings_transfer`]'s buttons asked for, after
     /// the window closure has given `&mut self` back — see [`SettingsIo`].
-    #[cfg(not(target_arch = "wasm32"))]
     #[cfg(not(target_arch = "wasm32"))]
     pub(in crate::app) fn run_settings_transfer(&mut self, export: bool, import: bool) {
         if export {

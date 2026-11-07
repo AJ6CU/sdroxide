@@ -9156,6 +9156,7 @@ settings-general-band-plan-built-in = 内置IARU
 
 settings-general-band-plan-germany-nrw = 德国（NRW，SWL）
 
+settings-general-band-plan-own = 本站自有
 
 settings-general-band-plan-hint = 选择一个随附的波段计划。它会替换 bandplan.json；内置IARU表始终是默认值。
 
@@ -9230,43 +9231,3 @@ vor-tune-hover = 用调幅调谐此 VOR
 tx-bands-power-hint = 此波段在 Drive 调到最大时的最大功率(瓦)。不清楚请保持为 —。
 
 tx-bands-power-note = 可选。没有功率计的电台会用这些数值在 S 表上以瓦显示发射功率;未填写时,以百分比显示 Drive 设置。
-settings-general-band-plan-import-hint = 从 JSON 文件读取波段计划，作为本电台的计划。它会替换 bandplan.json，就像你亲手编辑该文件一样——想保留当前计划，请先导出。
-
-settings-general-band-plan-export-hint = 将正在使用的计划写入 JSON 文件，便于保存或发送给他人。
-
-settings-general-band-plan-imported = 波段计划已导入，本电台正在使用它。
-
-
-settings-general-band-plan-sdrpp-australia = Australia
-
-settings-general-band-plan-sdrpp-austria = Austria
-
-settings-general-band-plan-sdrpp-belgium = Belgium
-
-settings-general-band-plan-sdrpp-brazil = Brazil
-
-settings-general-band-plan-sdrpp-canada = Canada
-
-settings-general-band-plan-sdrpp-china = China
-
-settings-general-band-plan-sdrpp-france = France
-
-settings-general-band-plan-sdrpp-germany = Germany
-
-settings-general-band-plan-sdrpp-ireland = Ireland
-
-settings-general-band-plan-sdrpp-italy = Italy
-
-settings-general-band-plan-sdrpp-netherlands = Netherlands
-
-settings-general-band-plan-sdrpp-republic-of-korea = Republic of Korea
-
-settings-general-band-plan-sdrpp-russia = Russia
-
-settings-general-band-plan-sdrpp-slovakia = Slovakia
-
-settings-general-band-plan-sdrpp-turkey = Turkey
-
-settings-general-band-plan-sdrpp-united-kingdom = United Kingdom
-
-settings-general-band-plan-sdrpp-usa = USA

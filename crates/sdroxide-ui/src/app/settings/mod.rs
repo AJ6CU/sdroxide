@@ -544,10 +544,6 @@ pub(in crate::app) struct SettingsIo<'a> {
     /// have to wait for `&mut self` like everything else here (issue #356).
     settings_export: &'a mut bool,
     settings_import: &'a mut bool,
-    /// The General tab's band-plan import/export buttons, which touch the disk
-    /// and open a file picker, so they wait for `&mut self` like the pair above.
-    band_plan_import: &'a mut bool,
-    band_plan_export: &'a mut bool,
     /// The General tab's recordings-folder buttons, which open a native folder
     /// picker and so have to wait for `&mut self` like the file transfer above.
     recordings_choose: &'a mut bool,
@@ -1690,8 +1686,6 @@ impl SdroxideApp {
         let mut hackrf_copy_report = false;
         let mut settings_export = false;
         let mut settings_import = false;
-        let mut band_plan_import = false;
-        let mut band_plan_export = false;
         let mut recordings_choose = false;
         let mut recordings_reset = false;
         let mut airspy_rescan = false;
@@ -1902,8 +1896,6 @@ impl SdroxideApp {
                                 hackrf_rescan: &mut hackrf_rescan,
                                 settings_export: &mut settings_export,
                                 settings_import: &mut settings_import,
-                                band_plan_import: &mut band_plan_import,
-                                band_plan_export: &mut band_plan_export,
                                 recordings_choose: &mut recordings_choose,
                                 recordings_reset: &mut recordings_reset,
                                 hackrf_copy_report: &mut hackrf_copy_report,

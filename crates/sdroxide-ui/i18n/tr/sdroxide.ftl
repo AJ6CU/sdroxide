@@ -9218,6 +9218,7 @@ settings-general-band-plan-built-in = Yerleşik IARU
 
 settings-general-band-plan-germany-nrw = Almanya (NRW, SWL)
 
+settings-general-band-plan-own = İstasyonun kendi
 
 settings-general-band-plan-hint = Birlikte gelen bir bant planı seçin. bandplan.json dosyasını değiştirir; yerleşik IARU tabloları varsayılan olarak kalır.
 
@@ -9292,43 +9293,3 @@ vor-tune-hover = Bu VOR'u AM'de ayarla
 tx-bands-power-hint = Drive en üstteyken bu bantta elde edilen en yüksek güç, watt cinsinden. Bilmiyorsanız — olarak bırakın.
 
 tx-bands-power-note = İsteğe bağlı. Güç ölçeri olmayan bir telsiz, S-metrede iletim gücünü watt olarak göstermek için bu değerleri kullanır; yoksa Drive ayarını yüzde olarak gösterir.
-settings-general-band-plan-import-hint = Bir JSON dosyasından bant planı okuyup bu istasyonun planı yap. bandplan.json'un yerine geçer, tıpkı dosyayı kendin düzenlemişsin gibi — mevcut planı saklamak istiyorsan önce dışa aktar.
-
-settings-general-band-plan-export-hint = Kullanımdaki planı saklamak veya birine göndermek için bir JSON dosyasına yaz.
-
-settings-general-band-plan-imported = Bant planı içe aktarıldı. İstasyon artık onu kullanıyor.
-
-
-settings-general-band-plan-sdrpp-australia = Australia
-
-settings-general-band-plan-sdrpp-austria = Austria
-
-settings-general-band-plan-sdrpp-belgium = Belgium
-
-settings-general-band-plan-sdrpp-brazil = Brazil
-
-settings-general-band-plan-sdrpp-canada = Canada
-
-settings-general-band-plan-sdrpp-china = China
-
-settings-general-band-plan-sdrpp-france = France
-
-settings-general-band-plan-sdrpp-germany = Germany
-
-settings-general-band-plan-sdrpp-ireland = Ireland
-
-settings-general-band-plan-sdrpp-italy = Italy
-
-settings-general-band-plan-sdrpp-netherlands = Netherlands
-
-settings-general-band-plan-sdrpp-republic-of-korea = Republic of Korea
-
-settings-general-band-plan-sdrpp-russia = Russia
-
-settings-general-band-plan-sdrpp-slovakia = Slovakia
-
-settings-general-band-plan-sdrpp-turkey = Turkey
-
-settings-general-band-plan-sdrpp-united-kingdom = United Kingdom
-
-settings-general-band-plan-sdrpp-usa = USA

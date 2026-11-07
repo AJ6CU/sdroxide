@@ -9166,6 +9166,7 @@ settings-general-band-plan-built-in = 内蔵IARU
 
 settings-general-band-plan-germany-nrw = ドイツ（NRW、SWL）
 
+settings-general-band-plan-own = 局独自
 
 settings-general-band-plan-hint = 同梱のバンドプランを選択します。bandplan.json を置き換えますが、内蔵IARUテーブルが常に既定です。
 
@@ -9240,43 +9241,3 @@ vor-tune-hover = この VOR を AM で同調
 tx-bands-power-hint = Drive を最大にしたときのこのバンドの最大出力(W)。不明な場合は — のままにしてください。
 
 tx-bands-power-note = 任意。パワーメーターのない無線機は、この値を使って送信出力をSメーターにワットで表示します。未設定の場合は Drive の設定をパーセントで表示します。
-settings-general-band-plan-import-hint = JSONファイルからバンドプランを読み込み、この局のプランにします。bandplan.json を置き換えます（ファイルを直接編集した場合と同じです）。現在のプランを残したい場合は先にエクスポートしてください。
-
-settings-general-band-plan-export-hint = 使用中のプランを JSON ファイルに書き出し、保存したり他の人に渡したりできます。
-
-settings-general-band-plan-imported = バンドプランをインポートしました。この局はそのプランで動作しています。
-
-
-settings-general-band-plan-sdrpp-australia = Australia
-
-settings-general-band-plan-sdrpp-austria = Austria
-
-settings-general-band-plan-sdrpp-belgium = Belgium
-
-settings-general-band-plan-sdrpp-brazil = Brazil
-
-settings-general-band-plan-sdrpp-canada = Canada
-
-settings-general-band-plan-sdrpp-china = China
-
-settings-general-band-plan-sdrpp-france = France
-
-settings-general-band-plan-sdrpp-germany = Germany
-
-settings-general-band-plan-sdrpp-ireland = Ireland
-
-settings-general-band-plan-sdrpp-italy = Italy
-
-settings-general-band-plan-sdrpp-netherlands = Netherlands
-
-settings-general-band-plan-sdrpp-republic-of-korea = Republic of Korea
-
-settings-general-band-plan-sdrpp-russia = Russia
-
-settings-general-band-plan-sdrpp-slovakia = Slovakia
-
-settings-general-band-plan-sdrpp-turkey = Turkey
-
-settings-general-band-plan-sdrpp-united-kingdom = United Kingdom
-
-settings-general-band-plan-sdrpp-usa = USA

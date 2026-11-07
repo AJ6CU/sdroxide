@@ -9227,6 +9227,7 @@ settings-general-band-plan-built-in = IARU integrato
 
 settings-general-band-plan-germany-nrw = Germania (NRW, SWL)
 
+settings-general-band-plan-own = Proprio della stazione
 
 settings-general-band-plan-hint = Scegli un piano bande fornito. Sostituisce bandplan.json; le tabelle IARU integrate restano il valore predefinito.
 
@@ -9301,43 +9302,3 @@ vor-tune-hover = Sintonizzare questo VOR in AM
 tx-bands-power-hint = La potenza massima su questa banda con il Drive al massimo, in watt. Lasciare — se non la conoscete.
 
 tx-bands-power-note = Facoltativo. Una radio senza wattmetro usa questi valori per mostrare la potenza di trasmissione in watt sull'S-meter; senza, mostra l'impostazione Drive in percentuale.
-settings-general-band-plan-import-hint = Legge un piano di banda da un file JSON e lo rende il piano di questa stazione. Sostituisce bandplan.json, esattamente come se avessi modificato il file — esporta prima quello attuale se vuoi conservarlo.
-
-settings-general-band-plan-export-hint = Scrive il piano in uso in un file JSON, da conservare o inviare a qualcun altro.
-
-settings-general-band-plan-imported = Piano di banda importato. La stazione lo sta usando.
-
-
-settings-general-band-plan-sdrpp-australia = Australia
-
-settings-general-band-plan-sdrpp-austria = Austria
-
-settings-general-band-plan-sdrpp-belgium = Belgium
-
-settings-general-band-plan-sdrpp-brazil = Brazil
-
-settings-general-band-plan-sdrpp-canada = Canada
-
-settings-general-band-plan-sdrpp-china = China
-
-settings-general-band-plan-sdrpp-france = France
-
-settings-general-band-plan-sdrpp-germany = Germany
-
-settings-general-band-plan-sdrpp-ireland = Ireland
-
-settings-general-band-plan-sdrpp-italy = Italy
-
-settings-general-band-plan-sdrpp-netherlands = Netherlands
-
-settings-general-band-plan-sdrpp-republic-of-korea = Republic of Korea
-
-settings-general-band-plan-sdrpp-russia = Russia
-
-settings-general-band-plan-sdrpp-slovakia = Slovakia
-
-settings-general-band-plan-sdrpp-turkey = Turkey
-
-settings-general-band-plan-sdrpp-united-kingdom = United Kingdom
-
-settings-general-band-plan-sdrpp-usa = USA
