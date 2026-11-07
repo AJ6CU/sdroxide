@@ -8288,6 +8288,10 @@ to the screen's own disk, because the plans are kept **on the station**:
   no bands, far too big) is refused with a notice and nothing is written. A plan
   with a name already in the list replaces it, and the old file is kept **once**
   as `<name>.json.bak` — one backup, overwritten by the next replacement.
+- A file that is **a plain list of bands** — a name, a type and a start and an end in
+  *hertz* for each row, as many national band lists are published — is converted by the
+  station on the way in, and then held to the same check. The conversion is described
+  in *A list of bands* below.
 - **BACK TO BUILT-IN IARU** is the one click back to the default. It appears
   whenever the station is running another plan.
 - **RELOAD BAND PLAN** re-reads the chosen plan's file on the machine the radio is
@@ -8331,6 +8335,20 @@ identical changes nothing). A change of the **station's** plan withdraws the
 confirmations of the radios that follow it and leaves alone the ones running a plan of
 their own. A plan that a radio runs cannot be deleted; if its file goes missing the
 radio runs the station's plan and says so, and keeps the name.
+
+**A list of bands.** A list of this kind says who uses what — broadcasters, the sea,
+the air, mobile phones and, among them, the amateur bands. It does not say what *you* may
+transmit, so a converted plan changes what the waterfall strip draws and names and
+**never the transmit lockout**: the allocations stay the built-in IARU ones. The rows
+become sub-segments, each named after its row, in the region of the list's country (a
+list for the whole world, or for a country sdroxide does not know, goes into all three
+regions; the other regions keep the built-in tables). Amateur rows are drawn as CW, data,
+phone, beacon or all-modes when their name says so; CB, PMR 446, pagers and the like, which
+such lists often file under *amateur*, are drawn as what they are named and are never a
+band. Rows that overlap are cut so that none does, amateur rows first. A row that is not a
+range — ending before it starts, or not a number — is left out, and the notice bar says
+which and why; if nothing is left the file is refused. The converted plan has no author:
+the list says nothing the station can vouch for.
 
 **Changing the plan means checking the band lists again.** The TX and the RX band
 lists ([§6.2](#62-radio-choosing-and-configuring-the-rig)) were confirmed against one plan, and a different plan

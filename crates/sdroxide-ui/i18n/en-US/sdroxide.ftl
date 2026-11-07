@@ -9346,7 +9346,7 @@ settings-general-band-plan-choose-hint = Choose a band plan from the station's l
 
 settings-general-band-plan-import = IMPORT BAND PLAN
 
-settings-general-band-plan-import-hint = Add a band plan file to the station's library. It is checked first and only added — choose it in the list to run it.
+settings-general-band-plan-import-hint = Add a band plan file to the station's library. A plain list of bands (name, type, start and end in hertz) is converted first. It is checked and only added — choose it in the list to run it.
 
 settings-general-band-plan-reset = BACK TO BUILT-IN IARU
 

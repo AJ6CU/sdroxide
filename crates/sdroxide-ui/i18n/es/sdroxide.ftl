@@ -9322,7 +9322,7 @@ settings-general-band-plan-choose-hint = Elige un plan de bandas de la bibliotec
 
 settings-general-band-plan-import = IMPORTAR PLAN
 
-settings-general-band-plan-import-hint = Añade un archivo de plan de bandas a la biblioteca de la estación. Se comprueba primero y solo se añade: elígelo en la lista para usarlo.
+settings-general-band-plan-import-hint = Añade un archivo de plan de bandas a la biblioteca de la estación. Una simple lista de bandas (nombre, tipo, inicio y fin en hercios) se convierte antes. Se comprueba y solo se añade: elígelo en la lista para usarlo.
 
 settings-general-band-plan-reset = VOLVER A IARU INTEGRADO
 

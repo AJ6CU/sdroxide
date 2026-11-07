@@ -9261,7 +9261,7 @@ settings-general-band-plan-choose-hint = 从电台的方案库中选择一个波
 
 settings-general-band-plan-import = 导入方案
 
-settings-general-band-plan-import-hint = 把波段方案文件添加到电台的方案库。会先检查，仅添加——在列表中选择它才会使用。
+settings-general-band-plan-import-hint = 把波段方案文件添加到电台的方案库。只含波段的简单列表（名称、类型、以赫兹为单位的起止频率）会先被转换。会先检查，仅添加——在列表中选择它才会使用。
 
 settings-general-band-plan-reset = 恢复内置 IARU
 

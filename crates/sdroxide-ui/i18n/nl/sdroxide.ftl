@@ -9331,7 +9331,7 @@ settings-general-band-plan-choose-hint = Kies een bandplan uit de bibliotheek va
 
 settings-general-band-plan-import = BANDPLAN IMPORTEREN
 
-settings-general-band-plan-import-hint = Voegt een bandplanbestand toe aan de bibliotheek van het station. Het wordt eerst gecontroleerd en alleen toegevoegd — kies het in de lijst om het te gebruiken.
+settings-general-band-plan-import-hint = Voegt een bandplanbestand toe aan de bibliotheek van het station. Een eenvoudige lijst van banden (naam, type, begin en einde in hertz) wordt eerst omgezet. Het wordt gecontroleerd en alleen toegevoegd — kies het in de lijst om het te gebruiken.
 
 settings-general-band-plan-reset = TERUG NAAR INGEBOUWD IARU
 

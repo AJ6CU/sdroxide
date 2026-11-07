@@ -9271,7 +9271,7 @@ settings-general-band-plan-choose-hint = 局のライブラリからバンドプ
 
 settings-general-band-plan-import = プランをインポート
 
-settings-general-band-plan-import-hint = バンドプランのファイルを局のライブラリに追加します。先に検査され、追加されるだけです。使うにはリストから選んでください。
+settings-general-band-plan-import-hint = バンドプランのファイルを局のライブラリに追加します。バンドの単純なリスト（名前、種類、ヘルツ単位の開始と終了）は先に変換されます。検査され、追加されるだけです。使うにはリストから選んでください。
 
 settings-general-band-plan-reset = 内蔵IARUに戻す
 

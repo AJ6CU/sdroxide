@@ -9323,7 +9323,7 @@ settings-general-band-plan-choose-hint = İstasyonun kitaplığından bir bant p
 
 settings-general-band-plan-import = PLAN İÇE AKTAR
 
-settings-general-band-plan-import-hint = İstasyonun kitaplığına bir bant planı dosyası ekler. Önce denetlenir ve yalnızca eklenir — kullanmak için listeden seçin.
+settings-general-band-plan-import-hint = İstasyonun kitaplığına bir bant planı dosyası ekler. Basit bir bant listesi (ad, tür, hertz cinsinden başlangıç ve bitiş) önce dönüştürülür. Denetlenir ve yalnızca eklenir — kullanmak için listeden seçin.
 
 settings-general-band-plan-reset = YERLEŞİK IARU'YA DÖN
 

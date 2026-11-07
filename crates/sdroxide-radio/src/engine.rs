@@ -12149,11 +12149,36 @@ impl Engine {
             // it. Only added — running it is a separate, deliberate choice,
             // because choosing it withdraws every radio's band confirmations.
             ImportBandPlan { name, json } => {
-                match sdroxide_config::import_band_plan(&name, &json) {
-                    Ok(key) => {
+                // A flat list of bands in hertz is not a band plan file but one
+                // import away from it: converted here, on the machine that owns
+                // the disk, and then held to exactly the check a plan file of
+                // our own is.
+                let prepared = if sdroxide_types::looks_like_band_list(&json) {
+                    sdroxide_types::convert_band_list(&json, "").map(|c| (c.text, Some(c.dropped)))
+                } else {
+                    Ok((json, None))
+                };
+                match prepared.and_then(|(text, listed)| {
+                    sdroxide_config::import_band_plan(&name, &text).map(|key| (key, listed))
+                }) {
+                    Ok((key, listed)) => {
                         self.emit_station_config();
+                        let how = match listed {
+                            None => String::new(),
+                            Some(dropped) if dropped.is_empty() => {
+                                " It was a list of bands and has been converted.".to_string()
+                            }
+                            Some(dropped) => format!(
+                                " It was a list of bands and has been converted; {} row(s) were \
+                                 left out: {}{}",
+                                dropped.len(),
+                                dropped.iter().take(3).cloned().collect::<Vec<_>>().join(" "),
+                                if dropped.len() > 3 { " …" } else { "" }
+                            ),
+                        };
                         self.notice(&format!(
-                            "Band plan “{key}” added. Choose it in Settings → General to run it."
+                            "Band plan “{key}” added.{how} Choose it in Settings → General to \
+                             run it."
                         ));
                     }
                     Err(e) => self.notice(&e),
