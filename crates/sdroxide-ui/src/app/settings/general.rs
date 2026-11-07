@@ -11,7 +11,7 @@ use sdroxide_types::{
 };
 
 use crate::app::SdroxideApp;
-use crate::app::persist::band_plan_path;
+use crate::app::persist::band_plans_dir;
 use crate::chrome::StyledCombo;
 
 /// The IARU region dropdown: the number the band plans are published under,
@@ -314,101 +314,143 @@ pub(in crate::app) fn settings_rx_audio_gain(
 }
 
 impl SdroxideApp {
-    /// The band-plan file: where it is, whether the station is on it, and the
-    /// button that re-reads it.
+    /// Hand a band plan file the operator picked to the station.
     ///
-    /// No editor here on purpose. A band plan is forty rows of numbers that
-    /// exist to be pasted from a published table and compared against one; a
-    /// text editor does that far better than any grid this dialog could hold,
-    /// and the file is written to be readable. What the dialog owes the
-    /// operator is the path, and a way to apply an edit without restarting.
+    /// The text goes as it is; the station checks it, converts it if it is in
+    /// another layout, and keeps it — this side has no folder of the station's
+    /// to write to and judges nothing, so a plan it would have refused cannot be
+    /// accepted here and refused there.
+    pub(in crate::app) fn poll_band_plan_import(&mut self, cmds: &mut Vec<sdroxide_types::Command>) {
+        let loaded = self.band_plan_import_inbox.lock().ok().and_then(|mut g| g.take());
+        match loaded {
+            None => {}
+            Some(Ok(l)) => cmds.push(sdroxide_types::Command::ImportBandPlan {
+                name: l.name.unwrap_or_else(|| "imported-plan".to_string()),
+                json: l.text,
+            }),
+            Some(Err(e)) => self.show_notice(e),
+        }
+    }
+
+    /// The station's band plans: the list to choose from, IMPORT to add one, the
+    /// way back to the built-in tables, and the button that re-reads the chosen
+    /// file.
+    ///
+    /// The same on a native screen, a remote one and a browser, because none of
+    /// it touches the screen's own disk: the list is what the station announced,
+    /// a plan is added by sending its *text* to the station
+    /// ([`sdroxide_types::Command::ImportBandPlan`]), and choosing one is a
+    /// command too. No editor here on purpose — a band plan is forty rows of
+    /// numbers pasted from a published table, and a text editor does that far
+    /// better than any grid this dialog could hold.
+    ///
+    /// Choosing a plan other than the one running withdraws the confirmation of
+    /// every radio's TX and RX band lists, so the hover text says so before the
+    /// click rather than after.
     pub(in crate::app) fn settings_band_plan_file(
         &self,
         ui: &mut egui::Ui,
         cmds: &mut Vec<sdroxide_types::Command>,
     ) {
-        let custom = !sdroxide_types::band_plan().is_default();
+        let running = self.band_plan_name.clone();
+        let shown = |file: &Option<String>| -> String {
+            match file {
+                None => tr!("settings-general-band-plan-built-in"),
+                Some(f) => self
+                    .band_plans
+                    .iter()
+                    .find(|p| p.file == *f)
+                    .map_or_else(|| f.clone(), |p| p.name.clone()),
+            }
+        };
+        let mut choice = running.clone();
         ui.horizontal_wrapped(|ui| {
+            ui.label(RichText::new(tr!("settings-general-band-plan")).size(10.5).weak());
+            ComboBox::from_id_salt("band-plan-choice")
+                .selected_text(shown(&running))
+                .show_ui(ui, |ui| {
+                    ui.selectable_value(
+                        &mut choice,
+                        None,
+                        tr!("settings-general-band-plan-built-in"),
+                    );
+                    for p in &self.band_plans {
+                        let label = if p.country.is_empty() {
+                            p.name.clone()
+                        } else {
+                            format!("{} — {}", p.name, p.country)
+                        };
+                        ui.selectable_value(&mut choice, Some(p.file.clone()), label);
+                    }
+                });
+        })
+        .response
+        .on_hover_text(tr!("settings-general-band-plan-choose-hint"));
+        if choice != running {
+            cmds.push(sdroxide_types::Command::SelectBandPlan { name: choice });
+        }
+
+        ui.horizontal_wrapped(|ui| {
+            if crate::chrome::chip(
+                ui,
+                false,
+                RichText::new(tr!("settings-general-band-plan-import")).size(10.5),
+            )
+            .on_hover_text(tr!("settings-general-band-plan-import-hint"))
+            .clicked()
+            {
+                crate::download::load_text(
+                    "Band plan",
+                    &["json"],
+                    self.band_plan_import_inbox.clone(),
+                );
+            }
+            // One click back to the default, only when there is somewhere to go
+            // back from.
+            if running.is_some()
+                && crate::chrome::chip(
+                    ui,
+                    false,
+                    RichText::new(tr!("settings-general-band-plan-reset")).size(10.5),
+                )
+                .on_hover_text(tr!("settings-general-band-plan-reset-hint"))
+                .clicked()
+            {
+                cmds.push(sdroxide_types::Command::SelectBandPlan { name: None });
+            }
             if crate::chrome::chip(
                 ui,
                 false,
                 RichText::new(tr!("settings-general-reload-band-plan")).size(10.5),
             )
-            .on_hover_text(tr!("settings-general-re-read-bandplan-json-machine"))
+            .on_hover_text(tr!("settings-general-re-read-band-plan-file"))
             .clicked()
             {
                 cmds.push(sdroxide_types::Command::ReloadBandPlan);
             }
-            ui.add(
-                egui::Label::new(
-                    RichText::new(if custom {
-                        tr!("settings-general-running-station-s-own-band")
-                    } else {
-                        tr!("settings-general-running-built-iaru-tables")
-                    })
-                    .size(10.5)
-                    .weak(),
-                )
-                .wrap(),
-            );
         });
-        // Choose a shipped plan. Native and local only: a browser has no config
-        // file, and a remote client would write its own laptop's copy rather
-        // than the station's. Choosing one replaces `bandplan.json` on purpose —
-        // it is the operator's click, not a silent rewrite.
-        #[cfg(not(target_arch = "wasm32"))]
-        if !self.ctrl.engine_is_remote() {
-            let plan = sdroxide_types::band_plan();
-            let current = if plan.is_default() {
-                0
-            } else if crate::app::bandplans::is_germany_nrw(plan) {
-                1
-            } else {
-                2
-            };
-            let names = [
-                tr!("settings-general-band-plan-built-in"),
-                tr!("settings-general-band-plan-germany-nrw"),
-                tr!("settings-general-band-plan-own"),
-            ];
-            let mut choice = current;
-            ui.horizontal_wrapped(|ui| {
-                ui.label(RichText::new(tr!("settings-general-band-plan")).size(10.5).weak());
-                ComboBox::from_id_salt("band-plan-preset")
-                    .selected_text(names[choice].as_str())
-                    .show_ui(ui, |ui| {
-                        for i in 0..2 {
-                            ui.selectable_value(&mut choice, i, names[i].as_str());
-                        }
-                    });
-            })
-            .response
-            .on_hover_text(tr!("settings-general-band-plan-hint"));
-            if choice != current {
-                let picked = match choice {
-                    0 => Some(sdroxide_types::BandPlan::default()),
-                    _ => crate::app::bandplans::preset_plan(crate::app::bandplans::GERMANY_NRW),
-                };
-                match picked {
-                    Some(p) => match sdroxide_config::save_band_plan(&p) {
-                        Ok(()) => cmds.push(Command::ReloadBandPlan),
-                        Err(e) => tracing::warn!("writing band plan preset: {e}"),
-                    },
-                    None => tracing::warn!("the shipped band plan preset did not parse"),
-                }
-            }
-        }
+        ui.add(
+            egui::Label::new(
+                RichText::new(match &running {
+                    Some(_) => tr!("settings-general-running-band-plan", name = shown(&running)),
+                    None => tr!("settings-general-running-built-iaru-tables"),
+                })
+                .size(10.5)
+                .weak(),
+            )
+            .wrap(),
+        );
         ui.add_space(4.0);
-        // Only where the file is actually on this machine. A remote client
+        // Only where the folder is actually on this machine. A remote client
         // showing its own config path would be pointing at the wrong computer.
-        let path = (!self.ctrl.engine_is_remote())
-            .then(band_plan_path)
+        let dir = (!self.ctrl.engine_is_remote())
+            .then(band_plans_dir)
             .flatten()
             .map(|p| p.display().to_string());
         ui.label(
-            RichText::new(match &path {
-                Some(p) => tr!("settings-general-band-plan-file", path = p.as_str()),
-                None => tr!("settings-general-every-band-edge-sub-segment"),
+            RichText::new(match &dir {
+                Some(p) => tr!("settings-general-band-plan-folder", path = p.as_str()),
+                None => tr!("settings-general-band-plan-station-folder"),
             })
             .size(10.5)
             .color(crate::theme::gray(140)),

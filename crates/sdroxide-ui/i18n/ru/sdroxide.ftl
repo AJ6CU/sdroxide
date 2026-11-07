@@ -572,8 +572,6 @@ settings-general-extra-gain-everything-radio-sends =
 
     Go up 6 dB at a time. Too much clips — the audio is limited at full scale rather than allowed to wrap round, so overdoing it sounds harsh rather than loud. Recordings are taken ahead of this and are not affected.
 settings-general-reload-band-plan = ПЕРЕЧИТАТЬ ПЛАН ДИАПАЗОНОВ
-settings-general-re-read-bandplan-json-machine = Перечитать bandplan.json на машине, к которой подключено радио, и применить — границы диапазонов, подсегменты и окна скиммеров — без перезапуска.
-settings-general-running-station-s-own-band = Работа по собственному плану диапазонов станции.
 settings-general-running-built-iaru-tables = Работа по встроенным таблицам IARU.
 settings-general-settings-file = Файл настроек
 settings-general-settings-are-machine-radio-attached = Настройки находятся на машине, к которой подключено радио. Экспортируйте их там.
@@ -636,7 +634,6 @@ settings-net-checking = проверка…
 
 settings-amp-connected-to = Подключено к { $model }
 settings-controls-last-midi = Последнее сообщение: { $message }  значение { $value }
-settings-general-band-plan-file = Каждая граница диапазона и подсегмент берутся из { $path }; файл записывается из встроенных таблиц IARU при первом запуске и дальше принадлежит вам для редактирования — сузьте диапазон до своей лицензии, и sdroxide откажется передавать за его пределами. Частоты в МГц; удалите файл, чтобы получить свежую копию значений по умолчанию. Это региональное распределение, а не ваша лицензия: ваши собственные условия могут быть уже, а национальные планы внутри региона различаются.
 settings-general-exported = Экспортировано: { $note } — выберите, куда сохранить.
 settings-general-export-failed = Ошибка экспорта: { $error }
 settings-general-import-failed = Ошибка импорта: { $error }
@@ -659,7 +656,6 @@ settings-add-radio-here-station-you = Добавить радио — здесь
 
 ## Settings window, General, continued
 
-settings-general-every-band-edge-sub-segment = Каждая граница диапазона и подсегмент берутся из bandplan.json на машине, к которой подключено радио. Это региональное распределение, а не ваша лицензия: ваши собственные условия могут быть уже, а национальные планы внутри региона различаются.
 
 ## Settings window, picture upload (src/app/settings/picup.rs)
 
@@ -9231,11 +9227,8 @@ settings-general-band-plan = План диапазонов
 
 settings-general-band-plan-built-in = Встроенный IARU
 
-settings-general-band-plan-germany-nrw = Германия (NRW, SWL)
 
-settings-general-band-plan-own = Свой план станции
 
-settings-general-band-plan-hint = Выберите поставляемый план диапазонов. Он заменяет bandplan.json; встроенные таблицы IARU остаются по умолчанию.
 
 sonde-card-source = Источник
 
@@ -9336,3 +9329,21 @@ rx-bands-notice = Список диапазонов приёма не подтв
 rx-bands-out-of-range = Заявленный диапазон этого радио не достигает этого диапазона частот.
 
 rx-bands-band-off = Приём на этом диапазоне выключен в плане диапазонов этого радио (Настройки) либо список приёма ещё не подтверждён.
+
+settings-general-re-read-band-plan-file = Заново читает файл выбранного плана на машине, к которой подключено радио, и применяет его — границы диапазонов, поддиапазоны и окна скиммеров — без перезапуска.
+
+settings-general-running-band-plan = Используется план диапазонов «{ $name }».
+
+settings-general-band-plan-choose-hint = Выберите план диапазонов из библиотеки станции. По умолчанию — встроенные таблицы IARU. При смене плана списки диапазонов TX и RX нужно проверить и подтвердить заново.
+
+settings-general-band-plan-import = ИМПОРТ ПЛАНА
+
+settings-general-band-plan-import-hint = Добавляет файл плана диапазонов в библиотеку станции. Сначала он проверяется и только добавляется — выберите его в списке, чтобы использовать.
+
+settings-general-band-plan-reset = НАЗАД К ВСТРОЕННОМУ IARU
+
+settings-general-band-plan-reset-hint = Снова использовать встроенные таблицы IARU. Списки диапазонов TX и RX придётся проверить и подтвердить заново.
+
+settings-general-band-plan-folder = Планы — это файлы в { $path } на машине, к которой подключено радио; их можно добавлять и удалять. Сузьте диапазон до вашей лицензии, и sdroxide откажется передавать за его пределами. Частоты в МГц. Это региональное распределение, а не ваша лицензия: ваши условия могут быть уже, а национальные планы различаются внутри региона.
+
+settings-general-band-plan-station-folder = Планы хранятся на машине, к которой подключено радио. Сузьте диапазон до вашей лицензии, и sdroxide откажется передавать за его пределами. Это региональное распределение, а не ваша лицензия: ваши условия могут быть уже, а национальные планы различаются внутри региона.

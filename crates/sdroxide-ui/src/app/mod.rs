@@ -37,7 +37,6 @@ pub(in crate::app) mod alerts;
 pub(in crate::app) mod antenna;
 pub(in crate::app) mod auto_mode;
 pub(in crate::app) mod awards;
-pub(in crate::app) mod bandplans;
 pub(in crate::app) mod bands;
 /// **Classic UI** — the left-column arrangement. Native only: it takes a column
 /// off the desktop and a browser has one window with nowhere to put it.
@@ -1591,6 +1590,15 @@ pub struct SdroxideApp {
     /// "Import" button — its own, beside the ADIF one, so a log import and a
     /// channel import cannot land in each other's parser.
     chirp_import_inbox: crate::download::LoadInbox,
+    /// Inbox for a band plan file chosen with the General tab's IMPORT BAND
+    /// PLAN. Its text is sent to the station, which checks and keeps it: the
+    /// browser has no folder of the station's to write to, so every client takes
+    /// the same road.
+    pub(in crate::app) band_plan_import_inbox: crate::download::LoadInbox,
+    /// The plans in the station's `bandplans` folder, as it last announced them.
+    pub(in crate::app) band_plans: Vec<sdroxide_types::PlanInfo>,
+    /// Which of them the station runs; `None` is the built-in IARU tables.
+    pub(in crate::app) band_plan_name: Option<String>,
     /// Inbox for a settings bundle chosen on the General tab (issue #356).
     /// Native only — the browser has no filesystem to pick one from, and the
     /// settings it would replace are on the engine's machine anyway.
@@ -2668,6 +2676,9 @@ impl SdroxideApp {
             settings_import_inbox: Arc::new(Mutex::new(None)),
             settings_transfer_note: None,
             chirp_import_inbox: Arc::new(Mutex::new(None)),
+            band_plan_import_inbox: Arc::new(Mutex::new(None)),
+            band_plans: Vec::new(),
+            band_plan_name: None,
             pending_lookups: Vec::new(),
             callsign_cache: Default::default(),
             pending_uploads: Vec::new(),

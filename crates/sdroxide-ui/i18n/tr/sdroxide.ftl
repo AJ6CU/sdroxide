@@ -571,8 +571,6 @@ settings-general-extra-gain-everything-radio-sends =
 
     Go up 6 dB at a time. Too much clips — the audio is limited at full scale rather than allowed to wrap round, so overdoing it sounds harsh rather than loud. Recordings are taken ahead of this and are not affected.
 settings-general-reload-band-plan = BANT PLANINI YENİDEN YÜKLE
-settings-general-re-read-bandplan-json-machine = Radyonun bağlı olduğu makinedeki bandplan.json dosyasını yeniden okuyup uygulayın — bant kenarları, alt segmentler ve skimmer pencereleri — yeniden başlatmadan.
-settings-general-running-station-s-own-band = İstasyonun kendi bant planında çalışıyor.
 settings-general-running-built-iaru-tables = Yerleşik IARU tablolarında çalışıyor.
 settings-general-settings-file = Ayarlar dosyası
 settings-general-settings-are-machine-radio-attached = Ayarlar, radyonun bağlı olduğu makinededir. Onları orada dışa aktarın.
@@ -635,7 +633,6 @@ settings-net-checking = denetleniyor…
 
 settings-amp-connected-to = { $model } modeline bağlanıldı
 settings-controls-last-midi = Son ileti: { $message }  değer { $value }
-settings-general-band-plan-file = Her bant kenarı ve alt segmenti { $path } dosyasından gelir; dosya ilk seferinde yerleşik IARU tablolarından yazılır ve sonrasında düzenlemek sizindir — bir bandı lisansınıza daraltırsanız sdroxide onun dışında yayın yapmayı reddeder. Frekanslar MHz cinsindendir; varsayılanların yeni bir kopyası için dosyayı silin. Bu bölgesel tahsistir, lisansınız değildir: kendi koşullarınız daha dar olabilir ve ulusal planlar bir bölge içinde farklılık gösterir.
 settings-general-exported = { $note } dışa aktarıldı — kaydedileceği yeri seçin.
 settings-general-export-failed = Dışa aktarma başarısız: { $error }
 settings-general-import-failed = İçe aktarma başarısız: { $error }
@@ -658,7 +655,6 @@ settings-add-radio-here-station-you = Bir radyo ekleyin — burada ya da bağlı
 
 ## Settings window, General, continued
 
-settings-general-every-band-edge-sub-segment = Her bant kenarı ve alt segmenti, radyonun bağlı olduğu makinedeki bandplan.json dosyasından gelir. Bu bölgesel tahsistir, lisansınız değildir: kendi koşullarınız daha dar olabilir ve ulusal planlar bir bölge içinde farklılık gösterir.
 
 ## Settings window, picture upload (src/app/settings/picup.rs)
 
@@ -9216,11 +9212,8 @@ settings-general-band-plan = Bant planı
 
 settings-general-band-plan-built-in = Yerleşik IARU
 
-settings-general-band-plan-germany-nrw = Almanya (NRW, SWL)
 
-settings-general-band-plan-own = İstasyonun kendi
 
-settings-general-band-plan-hint = Birlikte gelen bir bant planı seçin. bandplan.json dosyasını değiştirir; yerleşik IARU tabloları varsayılan olarak kalır.
 
 sonde-card-source = Kaynak
 
@@ -9321,3 +9314,21 @@ rx-bands-notice = Alış bandı listesi onaylanmadı: alış bantlarını bir ke
 rx-bands-out-of-range = Bu telsizin bildirilen aralığı bu banda ulaşmıyor.
 
 rx-bands-band-off = Bu telsizin bant planında (Ayarlar) bu bantta alış kapalı ya da alış listesi henüz onaylanmadı.
+
+settings-general-re-read-band-plan-file = Seçili planın dosyasını telsizin bağlı olduğu makinede yeniden okur ve uygular — bant sınırları, alt bölümler ve skimmer pencereleri — yeniden başlatmadan.
+
+settings-general-running-band-plan = Çalışan bant planı: “{ $name }”.
+
+settings-general-band-plan-choose-hint = İstasyonun kitaplığından bir bant planı seçin. Varsayılan, yerleşik IARU tablolarıdır. Başka bir plan kullanmak, TX ve RX bant listelerinin yeniden kontrol edilip onaylanmasını gerektirir.
+
+settings-general-band-plan-import = PLAN İÇE AKTAR
+
+settings-general-band-plan-import-hint = İstasyonun kitaplığına bir bant planı dosyası ekler. Önce denetlenir ve yalnızca eklenir — kullanmak için listeden seçin.
+
+settings-general-band-plan-reset = YERLEŞİK IARU'YA DÖN
+
+settings-general-band-plan-reset-hint = Yerleşik IARU tablolarını yeniden kullanır. TX ve RX bant listelerinin ardından yeniden kontrol edilip onaylanması gerekir.
+
+settings-general-band-plan-folder = Planlar, telsizin bağlı olduğu makinedeki { $path } içindeki dosyalardır; ekleyip silebilirsiniz. Bir bandı lisansınıza daraltın, sdroxide dışında yayın yapmayı reddeder. Frekanslar MHz cinsindendir. Bu bölgesel tahsistir, lisansınız değil: kendi koşullarınız daha dar olabilir ve ulusal planlar bir bölge içinde farklılık gösterir.
+
+settings-general-band-plan-station-folder = Planlar telsizin bağlı olduğu makinede saklanır. Bir bandı lisansınıza daraltın, sdroxide dışında yayın yapmayı reddeder. Bu bölgesel tahsistir, lisansınız değil: kendi koşullarınız daha dar olabilir ve ulusal planlar bir bölge içinde farklılık gösterir.

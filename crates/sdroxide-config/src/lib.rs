@@ -257,6 +257,14 @@ pub struct Settings {
     /// travels to remote clients in the [`sdroxide_types::StationConfig`]
     /// bundle. Off by default.
     pub cb_tx_allowed: bool,
+    /// Which band plan from the `bandplans` folder the station runs, by file
+    /// name without `.json`; `None` is the built-in IARU tables, the default.
+    ///
+    /// The station's, like `region`: it decides every band edge, the transmit
+    /// lockout and the waterfall's band strip, and travels to clients in the
+    /// [`sdroxide_types::StationConfig`] bundle. Changing it withdraws the
+    /// confirmation of every radio's band lists.
+    pub band_plan: Option<String>,
     /// Where audio recordings and raw I/Q captures are written, or `None` for
     /// the default (the user's music folder, `<Music>/sdroxide`, or the config
     /// directory's `recordings` when the platform has no music folder).
@@ -320,6 +328,7 @@ impl Default for Settings {
             region: sdroxide_types::Region::default(),
             cb_plan: sdroxide_types::CbPlan::default(),
             cb_tx_allowed: false,
+            band_plan: None,
             recordings_dir: None,
             ui: sdroxide_types::UiSettings::default(),
             remote_access: sdroxide_types::RemoteAccess::default(),
@@ -388,75 +397,6 @@ pub fn save_region(region: sdroxide_types::Region) -> Result<(), ConfigError> {
     let mut s = Settings::load();
     s.region = region;
     s.save()
-}
-
-/// The band-plan file's name in the config directory.
-pub const BAND_PLAN_FILE: &str = "bandplan.json";
-
-/// Where `bandplan.json` lives, for the settings dialog to show the operator.
-pub fn band_plan_path() -> Option<PathBuf> {
-    config_dir().ok().map(|d| d.join(BAND_PLAN_FILE))
-}
-
-/// The station's band plan, seeded from the built-in IARU tables the first
-/// time.
-///
-/// Three outcomes, and the differences matter:
-///
-/// - **No file** — write the built-in tables and return them. The operator now
-///   has a complete, valid document to edit, which is a far better starting
-///   point than an empty file and a manual page.
-/// - **A file that parses** — return it, with any per-row complaints queued as
-///   load alerts so a dropped row is visible rather than silently missing.
-/// - **A file that does not parse** — warn, alert, and use the built-in tables
-///   *for this run*, leaving the file exactly as it is.
-///
-/// That last case deliberately breaks with [`quarantine_unreadable`], which
-/// renames the offending file aside and writes a fresh one. That is right for
-/// the files sdroxide itself writes; this is a document the operator authors by
-/// hand, and renaming a half-finished edit out from under them — even to
-/// `.bak` — would be taking their work away at exactly the wrong moment. The
-/// cost of leaving it is that the same complaint repeats on every start, which
-/// is the correct amount of nagging for a file that is currently wrong.
-pub fn load_band_plan() -> sdroxide_types::BandPlan {
-    let Ok(dir) = config_dir() else { return sdroxide_types::BandPlan::default() };
-    let path = dir.join(BAND_PLAN_FILE);
-    let text = match fs::read_to_string(&path) {
-        Ok(t) => t,
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-            let seed = sdroxide_types::BandPlan::default();
-            match save_band_plan(&seed) {
-                Ok(()) => info!("wrote a starting band plan to {}", path.display()),
-                // Not fatal: the built-in tables are what it would have
-                // contained, so the program runs on exactly the right plan and
-                // only the editing convenience is lost.
-                Err(e) => warn!("could not write {}: {e}", path.display()),
-            }
-            return seed;
-        }
-        Err(e) => {
-            warn!("could not read {}: {e}; using the built-in band plan", path.display());
-            return sdroxide_types::BandPlan::default();
-        }
-    };
-    match serde_json::from_str::<sdroxide_types::BandPlan>(&text) {
-        Ok(plan) => {
-            for p in plan.problems() {
-                warn!("{BAND_PLAN_FILE}: {p}");
-                push_load_alert(format!("{BAND_PLAN_FILE}: {p}"));
-            }
-            plan
-        }
-        Err(e) => {
-            warn!("failed to parse {BAND_PLAN_FILE}: {e}; using the built-in band plan");
-            push_load_alert(format!(
-                "{BAND_PLAN_FILE} could not be read ({e}) — running on the built-in IARU band \
-                 plan. The file has been left alone; fix it and reload, or delete it to get a \
-                 fresh one."
-            ));
-            sdroxide_types::BandPlan::default()
-        }
-    }
 }
 
 pub const RTL433_FLEX_FILE: &str = "rtl433_flex.conf";
@@ -536,23 +476,6 @@ const RTL433_FLEX_SEED: &str = "\
 #    unique
 #}
 ";
-
-/// Write the band plan, atomically like every other config file.
-///
-/// The only file here that does not go through [`save_json`]: the band plan
-/// formats itself, because the units and the row-per-line layout are part of
-/// what makes the file editable and belong with the type rather than with the
-/// code that moves bytes. See [`sdroxide_types::BandPlan::to_json_document`].
-///
-/// Called when seeding a file that is not there yet, and when the operator
-/// deliberately chooses a shipped band plan from Settings → General. Those are
-/// the only two callers, and they should stay the only two: an existing
-/// `bandplan.json` is the operator's document, so it is never rewritten
-/// silently — their spacing, their ordering and anything they added to the
-/// `readme` survive until they themselves pick another plan.
-pub fn save_band_plan(plan: &sdroxide_types::BandPlan) -> Result<(), ConfigError> {
-    write_atomic(&config_dir()?, BAND_PLAN_FILE, &plan.to_json_document())
-}
 
 /// The operator's own receive filter presets (`filter_presets.json`), each
 /// standing in for one of a mode's built-in chips. A missing file is none.
@@ -653,7 +576,13 @@ pub fn save_remote_login(login: Option<&sdroxide_types::RemoteAccess>) -> Result
     }
 }
 
+mod band_plans;
 mod publicsdr;
+pub use band_plans::{
+    BAND_PLAN_MAX_BYTES, BAND_PLANS_DIR, SHIPPED as SHIPPED_BAND_PLANS, band_plan_selection,
+    band_plans_dir, delete_band_plan, import_band_plan, is_shipped as is_shipped_band_plan,
+    list_band_plans, load_band_plan, plan_key as band_plan_key, select_band_plan,
+};
 pub use publicsdr::public_sdr_directory;
 
 pub mod transfer;
@@ -5196,79 +5125,70 @@ mod tests {
         // ── The band plan ───────────────────────────────────────────────────
         // Folded into this test rather than given its own, for the reason in
         // the doc comment above: only one test in this binary may redirect the
-        // config directory.
-        let plan_path = root.join(BAND_PLAN_FILE);
-        assert!(!plan_path.exists(), "nothing has written it yet");
+        // config directory. The library itself is tested without it, in
+        // `band_plans`; this is the part that reads `config.toml`.
+        let lib = root.join(BAND_PLANS_DIR);
+        assert!(!lib.exists(), "nothing has made the library yet");
+        assert_eq!(band_plans_dir().unwrap(), lib);
 
-        // First load seeds the file from the built-in tables, and what lands on
-        // disk has to be the plan that was returned — otherwise the operator's
-        // starting point is not what the program is running.
-        let seeded = load_band_plan();
-        assert!(seeded.is_default());
-        assert!(plan_path.exists(), "a first load must write a starting file");
-        assert!(take_load_alerts().is_empty(), "seeding is not a problem to report");
-        assert_eq!(load_band_plan(), seeded, "the second load reads the file it wrote");
-        assert_eq!(band_plan_path().unwrap(), plan_path);
+        // Nothing chosen is the built-in tables, and the first look makes the
+        // library with the shipped plans in it — and writes no `bandplan.json`.
+        assert!(load_band_plan().is_default());
+        assert!(lib.is_dir(), "the first load makes the library");
+        assert!(!root.join("bandplan.json").exists(), "the old file is no longer seeded");
+        assert!(take_load_alerts().is_empty(), "a new library is not a problem to report");
+        assert_eq!(band_plan_selection(), None);
+        assert!(list_band_plans().iter().any(|p| p.file == "bandplan-de-nrw" && p.shipped));
 
-        // The seeded file is editable: MHz, and one row per line rather than
-        // `to_string_pretty`'s five, which is the difference between a file an
-        // operator can read down and nine hundred lines of scrolling.
-        let text = fs::read_to_string(&plan_path).unwrap();
-        assert!(text.contains("\"lo_mhz\""), "the file has to be in megahertz");
-        assert!(text.contains("\"readme\""), "and has to explain itself");
-        assert!(
-            text.contains(r#"{"band": "M160", "lo_mhz": 1.81, "hi_mhz": 2.0}"#),
-            "a band should be one readable line:\n{text}"
-        );
-        assert!(text.lines().count() < 300, "{} lines is too many to edit", text.lines().count());
-        assert!(text.ends_with('\n'), "a text file ends with a newline");
-        fs::write(
-            &plan_path,
-            r#"{"region1":{"bands":[{"band":"M2","lo_mhz":144.0,"hi_mhz":144.4}]},
-                "region2":{"bands":[{"band":"M2","lo_mhz":144.0,"hi_mhz":148.0}]},
-                "region3":{"bands":[{"band":"M2","lo_mhz":144.0,"hi_mhz":148.0}]}}"#,
-        )
-        .unwrap();
-        let mine = load_band_plan();
-        assert!(!mine.is_default());
+        // Choosing a plan runs it, remembers it, and a restart finds it again.
+        let nrw = select_band_plan(Some("Bandplan DE NRW")).unwrap();
+        assert!(!nrw.is_default());
+        assert_eq!(band_plan_selection().as_deref(), Some("bandplan-de-nrw"));
+        assert_eq!(load_band_plan(), nrw);
+        assert_eq!(Settings::load().band_plan.as_deref(), Some("bandplan-de-nrw"));
+
+        // A choice that cannot be honoured leaves the choice as it was.
+        assert!(select_band_plan(Some("no-such-plan")).is_err());
+        assert_eq!(band_plan_selection().as_deref(), Some("bandplan-de-nrw"));
+        // The plan running cannot be deleted from under the station.
+        assert!(delete_band_plan("bandplan-de-nrw").unwrap_err().contains("running"));
+
+        // An imported plan is only added: it runs when it is chosen.
+        let mine = r#"{"meta":{"name":"Mine"},
+            "region1":{"bands":[{"band":"M2","lo_mhz":144.0,"hi_mhz":144.4}]},
+            "region2":{"bands":[{"band":"M2","lo_mhz":144.0,"hi_mhz":148.0}]},
+            "region3":{"bands":[{"band":"M2","lo_mhz":144.0,"hi_mhz":148.0}]}}"#;
+        assert_eq!(import_band_plan("Mine", mine).unwrap(), "mine");
+        assert_eq!(band_plan_selection().as_deref(), Some("bandplan-de-nrw"));
+        let picked = select_band_plan(Some("mine")).unwrap();
         assert_eq!(
-            mine.region(sdroxide_types::Region::R1).edges(sdroxide_types::Band::M2),
+            picked.region(sdroxide_types::Region::R1).edges(sdroxide_types::Band::M2),
             Some((144_000_000.0, 144_400_000.0))
         );
+        assert_eq!(load_band_plan(), picked);
 
-        // A row that says nothing is dropped, named, and does not take the file
-        // down with it.
-        fs::write(
-            &plan_path,
-            r#"{"region1":{"bands":[
-                    {"band":"M2","lo_mhz":148.0,"hi_mhz":144.0},
-                    {"band":"M20","lo_mhz":14.0,"hi_mhz":14.35}]},
-                "region2":{"bands":[{"band":"M20","lo_mhz":14.0,"hi_mhz":14.35}]},
-                "region3":{"bands":[{"band":"M20","lo_mhz":14.0,"hi_mhz":14.35}]}}"#,
-        )
-        .unwrap();
-        let patched = load_band_plan();
-        assert_eq!(
-            patched.region(sdroxide_types::Region::R1).edges(sdroxide_types::Band::M2),
-            None
-        );
-        let alerts = take_load_alerts();
-        assert_eq!(alerts.len(), 1, "{alerts:?}");
-        assert!(alerts[0].contains("2M"), "{}", alerts[0]);
+        // One click back to the default: nothing chosen again.
+        assert!(select_band_plan(None).unwrap().is_default());
+        assert_eq!(band_plan_selection(), None);
+        assert!(load_band_plan().is_default());
+        delete_band_plan("mine").unwrap();
 
-        // A file that will not parse is *left alone* — unlike `radio.json`,
-        // which is quarantined. This one is the operator's own document, and a
-        // half-finished edit must survive the start that failed to read it.
-        fs::write(&plan_path, "{ \"region1\": ").unwrap();
-        assert!(load_band_plan().is_default(), "a broken file falls back to the built-ins");
-        assert!(plan_path.exists(), "the operator's file must not be renamed away");
-        assert!(!root.join(format!("{BAND_PLAN_FILE}.bak")).exists());
+        // A chosen plan whose file has gone runs the built-in tables, says so,
+        // and keeps the choice — it is somebody's document, not ours to unpick.
+        select_band_plan(Some("bandplan-de-nrw")).unwrap();
+        fs::remove_file(lib.join("bandplan-de-nrw.json")).unwrap();
+        assert!(load_band_plan().is_default());
         let alerts = take_load_alerts();
         assert_eq!(alerts.len(), 1, "{alerts:?}");
         assert!(alerts[0].contains("built-in"), "{}", alerts[0]);
-        // And it says so again next time, because the file is still wrong.
+        assert_eq!(band_plan_selection().as_deref(), Some("bandplan-de-nrw"));
+
+        // And one that will not parse is left alone, as before.
+        fs::write(lib.join("bandplan-de-nrw.json"), "{ \"region1\": ").unwrap();
         assert!(load_band_plan().is_default());
+        assert_eq!(fs::read_to_string(lib.join("bandplan-de-nrw.json")).unwrap(), "{ \"region1\": ");
         assert_eq!(take_load_alerts().len(), 1);
+        select_band_plan(None).unwrap();
 
         // Recordings follow the isolation too, whatever the setting says: a
         // recording is the one file that would otherwise escape to the

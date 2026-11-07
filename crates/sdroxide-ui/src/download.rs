@@ -53,6 +53,9 @@ pub struct Loaded {
     /// not say and was not UTF-8. `None` when nothing was guessed. Worth showing
     /// the operator: it is the one part of the read that could be wrong.
     pub assumed: Option<&'static str>,
+    /// The file's name as the picker gave it, extension included, when it is
+    /// known — what a plan imported from it is called by default.
+    pub name: Option<String>,
 }
 
 /// Where a [`load_text`] pick is delivered: the file it read, or why it could
@@ -85,7 +88,10 @@ pub fn load_text(filter_name: &str, exts: &[&str], inbox: LoadInbox) {
             // import — every callsign, date and band in it, all of them plain
             // ASCII — over a code page in one name field.
             let outcome = match std::fs::read(&path) {
-                Ok(bytes) => Ok(decode_text(&bytes)),
+                Ok(bytes) => Ok(Loaded {
+                    name: path.file_name().map(|n| n.to_string_lossy().into_owned()),
+                    ..decode_text(&bytes)
+                }),
                 Err(e) => Err(tr!(
                     "download-reading",
                     path = path.display().to_string(),
@@ -116,7 +122,7 @@ pub fn load_text(filter_name: &str, exts: &[&str], inbox: LoadInbox) {
 /// Both platforms run the same chain: a native pick reads bytes off disk, a
 /// browser pick reads the same bytes off a `FileReader`.
 pub fn decode_text(bytes: &[u8]) -> Loaded {
-    let unicode = |text: String| Loaded { text, assumed: None };
+    let unicode = |text: String| Loaded { text, assumed: None, name: None };
     if let Some(rest) = bytes.strip_prefix(&[0xef, 0xbb, 0xbf]) {
         return unicode(String::from_utf8_lossy(rest).into_owned());
     }
@@ -134,7 +140,7 @@ pub fn decode_text(bytes: &[u8]) -> Loaded {
     } else {
         ("Windows-1252", sdroxide_types::text::cp1252_char)
     };
-    Loaded { text: bytes.iter().map(|&b| table(b)).collect(), assumed: Some(name) }
+    Loaded { text: bytes.iter().map(|&b| table(b)).collect(), assumed: Some(name), name: None }
 }
 
 /// UTF-16 code units in the order `pair` reads them, surrogates paired up. A
@@ -237,6 +243,7 @@ pub fn load_text(_filter_name: &str, exts: &[&str], inbox: LoadInbox) {
     let for_change = input.clone();
     let on_change = Closure::<dyn FnMut()>::new(move || {
         let Some(file) = for_change.files().and_then(|list| list.get(0)) else { return };
+        let file_name = file.name();
         let Ok(reader) = web_sys::FileReader::new() else { return };
         let read_here = reader.clone();
         let ok_inbox = inbox.clone();
@@ -245,7 +252,7 @@ pub fn load_text(_filter_name: &str, exts: &[&str], inbox: LoadInbox) {
                 // An ArrayBuffer, read as its bytes and decoded exactly as the
                 // native arm decodes bytes off disk.
                 let bytes = js_sys::Uint8Array::new(&v).to_vec();
-                decode_text(&bytes)
+                Loaded { name: Some(file_name.clone()), ..decode_text(&bytes) }
             });
             if let Ok(mut g) = ok_inbox.lock() {
                 *g = Some(match loaded {

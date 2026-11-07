@@ -7923,6 +7923,17 @@ pub struct RadioConfig {
     /// Appended last, as the wire requires.
     #[serde(default)]
     pub rx_bands_confirmed: bool,
+    /// [`crate::BandPlan::fingerprint`] of the band plan the two lists above
+    /// were confirmed against, or 0 when neither is confirmed (or the radio
+    /// was confirmed before this was recorded).
+    ///
+    /// Written by the engine when the operator confirms, never by the screen.
+    /// A different plan at the next start means the plan moved while the
+    /// program was off, and the engine withdraws both confirmations exactly as
+    /// it does when the plan changes while it runs. Appended last, as the wire
+    /// requires.
+    #[serde(default)]
+    pub band_plan_fp: u64,
 }
 
 /// Why [`RadioConfig::rx_block_reason`] refuses a frequency.

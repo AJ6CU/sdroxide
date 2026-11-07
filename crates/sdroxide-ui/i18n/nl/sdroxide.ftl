@@ -566,8 +566,6 @@ settings-general-extra-gain-everything-radio-sends =
 
     Ga in stappen van 6 dB omhoog. Te veel clipt — de audio wordt op volle schaal begrensd in plaats van rond te laten slaan, dus overdrijven klinkt hard in plaats van luid. Opnamen worden hiervoor gemaakt en worden er niet door beïnvloed.
 settings-general-reload-band-plan = BANDPLAN OPNIEUW LADEN
-settings-general-re-read-bandplan-json-machine = Lees bandplan.json opnieuw op de machine waaraan de radio hangt en pas het toe — bandgrenzen, subsegmenten en skimmervensters — zonder herstart.
-settings-general-running-station-s-own-band = Draait op het eigen bandplan van het station.
 settings-general-running-built-iaru-tables = Draait op de ingebouwde IARU-tabellen.
 settings-general-settings-file = Instellingenbestand
 settings-general-settings-are-machine-radio-attached = De instellingen staan op de machine waaraan de radio hangt. Exporteer ze daar.
@@ -630,7 +628,6 @@ settings-net-checking = controleren…
 
 settings-amp-connected-to = Verbonden met de { $model }
 settings-controls-last-midi = Laatste bericht: { $message }  waarde { $value }
-settings-general-band-plan-file = Elke bandgrens en elk subsegment komt uit { $path }, de eerste keer geschreven uit de ingebouwde IARU-tabellen en daarna van jou om te bewerken — beperk een band tot je vergunning en sdroxide weigert erbuiten te zenden. Frequenties zijn in MHz; verwijder het bestand voor een verse kopie van de standaardwaarden. Dit is de regionale toewijzing, niet je vergunning: je eigen voorwaarden kunnen smaller zijn, en nationale plannen verschillen binnen een regio.
 settings-general-exported = { $note } geëxporteerd — kies waar je het opslaat.
 settings-general-export-failed = Exporteren mislukt: { $error }
 settings-general-import-failed = Importeren mislukt: { $error }
@@ -653,7 +650,6 @@ settings-add-radio-here-station-you = Voeg een radio toe — hier, of op een sta
 
 ## Settings window, General, continued
 
-settings-general-every-band-edge-sub-segment = Elke bandgrens en elk subsegment komt uit bandplan.json op de machine waaraan de radio hangt. Dit is de regionale toewijzing, niet je vergunning: je eigen voorwaarden kunnen smaller zijn, en nationale plannen verschillen binnen een regio.
 
 ## Settings window, picture upload (src/app/settings/picup.rs)
 
@@ -9224,11 +9220,8 @@ settings-general-band-plan = Bandplan
 
 settings-general-band-plan-built-in = Ingebouwd (IARU)
 
-settings-general-band-plan-germany-nrw = Duitsland (NRW, SWL)
 
-settings-general-band-plan-own = Eigen van de station
 
-settings-general-band-plan-hint = Kies een meegeleverd bandplan. Het vervangt bandplan.json; de ingebouwde IARU-tabellen blijven de standaard.
 
 sonde-card-source = Bron
 
@@ -9329,3 +9322,21 @@ rx-bands-notice = Lijst met ontvangstbanden niet bevestigd: de radio stemt niet 
 rx-bands-out-of-range = Het opgegeven bereik van deze radio haalt deze band niet.
 
 rx-bands-band-off = Ontvangst staat uit op deze band in het bandplan van deze radio (Instellingen), of de ontvangstlijst is nog niet bevestigd.
+
+settings-general-re-read-band-plan-file = Leest het bestand van het gekozen plan opnieuw op de machine waar de radio aan hangt en past het toe — bandgrenzen, subsegmenten en skimmervensters — zonder opnieuw te starten.
+
+settings-general-running-band-plan = Actief bandplan: “{ $name }”.
+
+settings-general-band-plan-choose-hint = Kies een bandplan uit de bibliotheek van het station. De ingebouwde IARU-tabellen zijn de standaard. Een ander plan betekent dat de TX- en RX-bandlijsten opnieuw gecontroleerd en bevestigd moeten worden.
+
+settings-general-band-plan-import = BANDPLAN IMPORTEREN
+
+settings-general-band-plan-import-hint = Voegt een bandplanbestand toe aan de bibliotheek van het station. Het wordt eerst gecontroleerd en alleen toegevoegd — kies het in de lijst om het te gebruiken.
+
+settings-general-band-plan-reset = TERUG NAAR INGEBOUWD IARU
+
+settings-general-band-plan-reset-hint = Gebruikt weer de ingebouwde IARU-tabellen. De TX- en RX-bandlijsten moeten dan opnieuw gecontroleerd en bevestigd worden.
+
+settings-general-band-plan-folder = De plannen zijn de bestanden in { $path } op de machine waar de radio aan hangt; je kunt er toevoegen en verwijderen. Beperk een band tot je vergunning en sdroxide weigert daarbuiten te zenden. Frequenties in MHz. Dit is de regionale toewijzing, niet je vergunning: je eigen voorwaarden kunnen strenger zijn, en nationale plannen verschillen binnen een regio.
+
+settings-general-band-plan-station-folder = De plannen worden bewaard op de machine waar de radio aan hangt. Beperk een band tot je vergunning en sdroxide weigert daarbuiten te zenden. Dit is de regionale toewijzing, niet je vergunning: je eigen voorwaarden kunnen strenger zijn, en nationale plannen verschillen binnen een regio.

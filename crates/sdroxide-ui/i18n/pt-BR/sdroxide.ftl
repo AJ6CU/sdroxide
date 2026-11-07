@@ -571,8 +571,6 @@ settings-general-extra-gain-everything-radio-sends =
 
     Go up 6 dB at a time. Too much clips — the audio is limited at full scale rather than allowed to wrap round, so overdoing it sounds harsh rather than loud. Recordings are taken ahead of this and are not affected.
 settings-general-reload-band-plan = RECARREGAR PLANO DE FAIXAS
-settings-general-re-read-bandplan-json-machine = Relê o bandplan.json na máquina à qual o rádio está conectado e o aplica — bordas de faixa, subsegmentos e janelas de skimmer — sem reiniciar.
-settings-general-running-station-s-own-band = Rodando com o plano de faixas próprio da estação.
 settings-general-running-built-iaru-tables = Rodando com as tabelas IARU embutidas.
 settings-general-settings-file = Arquivo de configurações
 settings-general-settings-are-machine-radio-attached = As configurações ficam na máquina à qual o rádio está conectado. Exporte-as lá.
@@ -635,7 +633,6 @@ settings-net-checking = verificando…
 
 settings-amp-connected-to = Conectado ao { $model }
 settings-controls-last-midi = Última mensagem: { $message }  valor { $value }
-settings-general-band-plan-file = Toda borda de faixa e subsegmento vem de { $path }, gravado a partir das tabelas IARU embutidas na primeira vez e seu para editar depois — estreite uma faixa para a sua licença e o sdroxide recusará transmitir fora dela. As frequências estão em MHz; apague o arquivo para uma cópia nova dos padrões. Isto é a alocação regional, não a sua licença: suas condições próprias podem ser mais restritas, e os planos nacionais diferem dentro de uma região.
 settings-general-exported = { $note } exportado — escolha onde salvar.
 settings-general-export-failed = Falha na exportação: { $error }
 settings-general-import-failed = Falha na importação: { $error }
@@ -658,7 +655,6 @@ settings-add-radio-here-station-you = Adicionar um rádio — aqui, ou em uma es
 
 ## Settings window, General, continued
 
-settings-general-every-band-edge-sub-segment = Toda borda de faixa e subsegmento vem do bandplan.json na máquina à qual o rádio está conectado. Isto é a alocação regional, não a sua licença: suas condições próprias podem ser mais restritas, e os planos nacionais diferem dentro de uma região.
 
 ## Settings window, picture upload (src/app/settings/picup.rs)
 
@@ -9216,11 +9212,8 @@ settings-general-band-plan = Plano de bandas
 
 settings-general-band-plan-built-in = IARU integrado
 
-settings-general-band-plan-germany-nrw = Alemanha (NRW, SWL)
 
-settings-general-band-plan-own = Próprio da estação
 
-settings-general-band-plan-hint = Escolha um plano de bandas incluído. Ele substitui bandplan.json; as tabelas IARU integradas continuam sendo o padrão.
 
 sonde-card-source = Origem
 
@@ -9321,3 +9314,21 @@ rx-bands-notice = Lista de bandas de recepção não confirmada: o rádio não s
 rx-bands-out-of-range = A faixa informada deste rádio não alcança esta banda.
 
 rx-bands-band-off = A recepção está desligada nesta banda no plano de bandas deste rádio (Configurações), ou a lista de recepção ainda não foi confirmada.
+
+settings-general-re-read-band-plan-file = Lê de novo o arquivo do plano escolhido na máquina à qual o rádio está ligado e o aplica — limites de banda, subsegmentos e janelas dos skimmers — sem reiniciar.
+
+settings-general-running-band-plan = Plano de bandas em uso: “{ $name }”.
+
+settings-general-band-plan-choose-hint = Escolha um plano de bandas da biblioteca da estação. As tabelas IARU integradas são o padrão. Usar outro plano obriga a verificar e confirmar de novo as listas de bandas de TX e RX.
+
+settings-general-band-plan-import = IMPORTAR PLANO
+
+settings-general-band-plan-import-hint = Adiciona um arquivo de plano de bandas à biblioteca da estação. Ele é verificado primeiro e só adicionado — escolha-o na lista para usá-lo.
+
+settings-general-band-plan-reset = VOLTAR AO IARU INTEGRADO
+
+settings-general-band-plan-reset-hint = Volta a usar as tabelas IARU integradas. As listas de bandas de TX e RX terão de ser verificadas e confirmadas de novo.
+
+settings-general-band-plan-folder = Os planos são os arquivos em { $path } na máquina à qual o rádio está ligado; você pode adicionar e apagar. Restrinja uma banda à sua licença e o sdroxide se recusará a transmitir fora dela. Frequências em MHz. Esta é a alocação regional, não a sua licença: suas condições podem ser mais estreitas e os planos nacionais diferem dentro de uma região.
+
+settings-general-band-plan-station-folder = Os planos ficam na máquina à qual o rádio está ligado. Restrinja uma banda à sua licença e o sdroxide se recusará a transmitir fora dela. Esta é a alocação regional, não a sua licença: suas condições podem ser mais estreitas e os planos nacionais diferem dentro de uma região.

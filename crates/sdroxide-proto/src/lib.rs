@@ -2252,8 +2252,19 @@ use sdroxide_types::{
 /// `Command::SetRadioConfig` whole, so the appended fields move its layout.
 /// `#[serde(default)]`, so a `radio.json` written before this loads unchanged.
 /// `PROTO_VERSION` 274 → 275, `VERSION_BYTE` 0x5E → 0x5F.
-pub const PROTO_VERSION: u16 = 275;
-const VERSION_BYTE: u8 = 0x5F;
+///
+/// v276: **a library of band plans on the station.** `Command` gains
+/// `ImportBandPlan`, `SelectBandPlan` and `DeleteBandPlan`, appended last.
+/// `StationConfig` gains `band_plans` (the plans in the station's folder) and
+/// `band_plan_name` (the one it runs) at its tail, and the band plan it carries
+/// gains a `meta` block (name, country, author) after its readme, so the
+/// bundle's layout moves. `RadioConfig` gains `band_plan_fp` at its tail, the
+/// plan its band lists were confirmed against, and rides `ServerMsg::RadioConfig`
+/// and `Command::SetRadioConfig` whole. All `#[serde(default)]` in the files, so
+/// a `radio.json` or `config.toml` written before this loads unchanged.
+/// `PROTO_VERSION` 275 → 276, `VERSION_BYTE` 0x5F → 0x60.
+pub const PROTO_VERSION: u16 = 276;
+const VERSION_BYTE: u8 = 0x60;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -3548,7 +3559,7 @@ mod tests {
             ServerMsg::TxRefused(w, hz) => assert_eq!((w, hz), (why, 7_074_000.0)),
             _ => panic!("TxRefused did not round-trip"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (269, 0x59));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (276, 0x60));
     }
 
     /// The dynamic-DNS answer rides last on [`ServerMsg`], and it has to: the
@@ -3579,7 +3590,7 @@ mod tests {
             }
             other => panic!("the answer did not round-trip: {other:?}"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (269, 0x59));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (276, 0x60));
     }
 
     /// The VOR read-out rides the wire whole, locked or not, and the message is
@@ -3696,9 +3707,14 @@ mod tests {
         // mode, the taps, the rate and the hold: 8 bytes) at its own tail
         // (PROTO_VERSION 264 → 265). `HpsdrConfig` sits inside `RadioConfig`,
         // so this moves what follows it: that is what the bump is for.
+        //
+        // 903 since the receive band list (PROTO_VERSION 274 → 275) and the plan
+        // fingerprint its confirmation is made against (275 → 276) were appended
+        // at its tail. The pin had not been moved since 265; this is the
+        // conscious edit those two bumps owed it.
         assert_eq!(
             (radio.len(), fnv1a(&radio)),
-            (897, 1_396_573_632_080_966_650),
+            (903, 11_970_222_115_761_017_210),
             "RadioConfig's wire layout shifted — append fields, never insert them"
         );
         // 316 since the two Dynamic DNS fields were appended at the end
@@ -4175,6 +4191,65 @@ mod tests {
         let ServerMsg::State(back) = back else { panic!("not a state") };
         assert_eq!(back.sonde, cfg);
         assert_ne!(back.sonde, sdroxide_types::SondeSettings::default());
+    }
+
+    /// The band plan library crosses the wire: the three commands, the list the
+    /// station announces and the name of the plan it runs, and the fingerprint a
+    /// radio keeps beside its confirmed band lists. Filled rather than left at
+    /// the defaults, so a field that decoded into its default would fail here.
+    #[test]
+    fn roundtrip_band_plan_library() {
+        for c in [
+            Command::ImportBandPlan { name: "mine".into(), json: "{\"region1\":{}}".into() },
+            Command::SelectBandPlan { name: Some("mine".into()) },
+            Command::SelectBandPlan { name: None },
+            Command::DeleteBandPlan { name: "mine".into() },
+        ] {
+            let m = ClientMsg::Command(c);
+            assert_eq!(decode::<ClientMsg>(&encode(&m).unwrap()).unwrap(), m);
+        }
+        let plan = sdroxide_types::BandPlan::iaru_defaults().with_meta(sdroxide_types::PlanMeta {
+            name: "Narrow".into(),
+            country: "Nowhere".into(),
+            author: "Me".into(),
+        });
+        let station = StationConfig {
+            band_plan: plan.clone(),
+            band_plans: vec![sdroxide_types::PlanInfo {
+                file: "narrow".into(),
+                name: "Narrow".into(),
+                country: "Nowhere".into(),
+                author: "Me".into(),
+                bytes: 4096,
+                modified: 1_790_000_000,
+                shipped: true,
+            }],
+            band_plan_name: Some("narrow".into()),
+            ..Default::default()
+        };
+        let m = ServerMsg::StationConfig(Box::new(station.clone()));
+        let ServerMsg::StationConfig(back) = decode::<ServerMsg>(&encode(&m).unwrap()).unwrap()
+        else {
+            panic!("not a station config")
+        };
+        assert_eq!(back.band_plans, station.band_plans);
+        assert_eq!(back.band_plan_name.as_deref(), Some("narrow"));
+        assert_eq!(back.band_plan.meta().author, "Me", "the plan's name rides along");
+        assert_eq!(back.band_plan, plan);
+
+        let cfg = sdroxide_types::RadioConfig {
+            tx_bands_confirmed: true,
+            rx_bands_confirmed: true,
+            band_plan_fp: plan.fingerprint(),
+            ..Default::default()
+        };
+        let m = ServerMsg::RadioConfig(Box::new(cfg.clone()));
+        let ServerMsg::RadioConfig(back) = decode::<ServerMsg>(&encode(&m).unwrap()).unwrap()
+        else {
+            panic!("not a radio config")
+        };
+        assert_eq!(back.band_plan_fp, plan.fingerprint());
+        assert_eq!(*back, cfg);
     }
 
     /// The per-mode transmit-audio level, over the wire in both directions
