@@ -315,19 +315,96 @@ pub(in crate::app) fn settings_rx_audio_gain(
 
 impl SdroxideApp {
     /// The band-plan file: where it is, whether the station is on it, and the
-    /// button that re-reads it.
+    /// buttons that choose a plan, import one, export it or re-read it.
     ///
     /// No editor here on purpose. A band plan is forty rows of numbers that
     /// exist to be pasted from a published table and compared against one; a
     /// text editor does that far better than any grid this dialog could hold,
     /// and the file is written to be readable. What the dialog owes the
-    /// operator is the path, and a way to apply an edit without restarting.
+    /// operator is the path, a way to bring a plan in from outside, and a way
+    /// to apply an edit without restarting.
     pub(in crate::app) fn settings_band_plan_file(
         &self,
         ui: &mut egui::Ui,
         cmds: &mut Vec<sdroxide_types::Command>,
+        import: &mut bool,
+        export: &mut bool,
     ) {
         let custom = !sdroxide_types::band_plan().is_default();
+        // Choose a plan first, the buttons under it: the menu is where an
+        // operator starts, and re-reading the file is the follow-up to an
+        // edit, not the thing to press before choosing. Native and local only:
+        // a browser has no config file, and a remote client would write its own
+        // laptop's copy rather than the station's. Choosing one replaces
+        // `bandplan.json` on purpose — it is the operator's click, not a silent
+        // rewrite.
+        #[cfg(not(target_arch = "wasm32"))]
+        if !self.ctrl.engine_is_remote() {
+            let plan = sdroxide_types::band_plan();
+            let current = crate::app::bandplans::choice_of(plan);
+            let names = [
+                tr!("settings-general-band-plan-built-in"),
+                tr!("settings-general-band-plan-germany-nrw"),
+                tr!("settings-general-band-plan-own"),
+            ];
+            let mut choice = current;
+            ui.horizontal_wrapped(|ui| {
+                ui.label(RichText::new(tr!("settings-general-band-plan")).size(10.5).weak());
+                ComboBox::from_id_salt("band-plan-preset")
+                    .selected_text(names[choice].as_str())
+                    .show_ui(ui, |ui| {
+                        for i in 0..crate::app::bandplans::CHOICES {
+                            ui.selectable_value(&mut choice, i, names[i].as_str());
+                        }
+                    });
+            })
+            .response
+            .on_hover_text(tr!("settings-general-band-plan-hint"));
+            if choice != current {
+                match crate::app::bandplans::plan_for_choice(choice) {
+                    Some(p) => match sdroxide_config::save_band_plan(&p) {
+                        Ok(()) => cmds.push(Command::ReloadBandPlan),
+                        Err(e) => tracing::warn!("writing band plan preset: {e}"),
+                    },
+                    None => tracing::warn!("the shipped band plan preset did not parse"),
+                }
+            }
+            ui.add_space(4.0);
+            // A plan from outside the program: the station's own table is
+            // already the source of truth, so an import is simply a chosen
+            // file written over it. Export is the other direction — the file
+            // the program is running on, as it stands.
+            ui.horizontal_wrapped(|ui| {
+                if crate::chrome::chip(
+                    ui,
+                    false,
+                    RichText::new(tr!("settings-general-import")).size(10.5),
+                )
+                .on_hover_text(tr!("settings-general-band-plan-import-hint"))
+                .clicked()
+                {
+                    *import = true;
+                }
+                if crate::chrome::chip(
+                    ui,
+                    false,
+                    RichText::new(tr!("settings-general-export")).size(10.5),
+                )
+                .on_hover_text(tr!("settings-general-band-plan-export-hint"))
+                .clicked()
+                {
+                    *export = true;
+                }
+            });
+            if let Some(note) = &self.band_plan_note {
+                ui.add_space(4.0);
+                ui.add(
+                    egui::Label::new(RichText::new(note).size(10.5).color(Color32::LIGHT_GREEN))
+                        .wrap(),
+                );
+            }
+            ui.add_space(4.0);
+        }
         ui.horizontal_wrapped(|ui| {
             if crate::chrome::chip(
                 ui,
@@ -352,52 +429,6 @@ impl SdroxideApp {
                 .wrap(),
             );
         });
-        // Choose a shipped plan. Native and local only: a browser has no config
-        // file, and a remote client would write its own laptop's copy rather
-        // than the station's. Choosing one replaces `bandplan.json` on purpose —
-        // it is the operator's click, not a silent rewrite.
-        #[cfg(not(target_arch = "wasm32"))]
-        if !self.ctrl.engine_is_remote() {
-            let plan = sdroxide_types::band_plan();
-            let current = if plan.is_default() {
-                0
-            } else if crate::app::bandplans::is_germany_nrw(plan) {
-                1
-            } else {
-                2
-            };
-            let names = [
-                tr!("settings-general-band-plan-built-in"),
-                tr!("settings-general-band-plan-germany-nrw"),
-                tr!("settings-general-band-plan-own"),
-            ];
-            let mut choice = current;
-            ui.horizontal_wrapped(|ui| {
-                ui.label(RichText::new(tr!("settings-general-band-plan")).size(10.5).weak());
-                ComboBox::from_id_salt("band-plan-preset")
-                    .selected_text(names[choice].as_str())
-                    .show_ui(ui, |ui| {
-                        for i in 0..2 {
-                            ui.selectable_value(&mut choice, i, names[i].as_str());
-                        }
-                    });
-            })
-            .response
-            .on_hover_text(tr!("settings-general-band-plan-hint"));
-            if choice != current {
-                let picked = match choice {
-                    0 => Some(sdroxide_types::BandPlan::default()),
-                    _ => crate::app::bandplans::preset_plan(crate::app::bandplans::GERMANY_NRW),
-                };
-                match picked {
-                    Some(p) => match sdroxide_config::save_band_plan(&p) {
-                        Ok(()) => cmds.push(Command::ReloadBandPlan),
-                        Err(e) => tracing::warn!("writing band plan preset: {e}"),
-                    },
-                    None => tracing::warn!("the shipped band plan preset did not parse"),
-                }
-            }
-        }
         ui.add_space(4.0);
         // Only where the file is actually on this machine. A remote client
         // showing its own config path would be pointing at the wrong computer.
@@ -414,6 +445,52 @@ impl SdroxideApp {
             .color(crate::theme::gray(140)),
         );
     }
+
+    /// Carry out the band-plan buttons once the window closure has given
+    /// `&mut self` back — the same split as [`Self::settings_transfer`].
+    ///
+    /// Import reads a JSON file the operator picked and writes it over
+    /// `bandplan.json`; export writes the plan in use to wherever they choose.
+    /// Both stay on the machine the station is attached to, which is why they
+    /// are drawn only in that case.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub(in crate::app) fn run_band_plan_io(&mut self, import: bool, export: bool) {
+        if export {
+            let plan = sdroxide_types::band_plan();
+            crate::download::save("bandplan.json", plan.to_json_document().as_bytes());
+            self.band_plan_note =
+                Some(tr!("settings-general-exported", note = tr!("settings-general-band-plan")));
+        }
+        if import {
+            self.band_plan_note = None;
+            crate::download::load_text(
+                &tr!("settings-general-band-plan"),
+                &["json"],
+                self.band_plan_import_inbox.clone(),
+            );
+        }
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    pub(in crate::app) fn run_band_plan_io(&mut self, _import: bool, _export: bool) {}
+
+    /// Apply a band plan the operator imported, once the picker thread has
+    /// delivered it. Drained every frame beside the settings import.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub(in crate::app) fn poll_band_plan_import(&mut self, cmds: &mut Vec<Command>) {
+        let loaded = self.band_plan_import_inbox.lock().ok().and_then(|mut g| g.take());
+        let Some(loaded) = loaded else { return };
+        self.band_plan_note = Some(match loaded {
+            Err(e) => tr!("settings-general-import-failed", error = e),
+            Ok(loaded) => {
+                cmds.push(Command::ImportBandPlan(loaded.text));
+                tr!("settings-general-band-plan-imported")
+            }
+        });
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    pub(in crate::app) fn poll_band_plan_import(&mut self, _cmds: &mut Vec<Command>) {}
 
     /// Take this station's settings away as one file, and put one back.
     ///

@@ -517,6 +517,16 @@ pub enum Command {
     /// [`crate::RadioEvent::Notice`].
     ReloadBandPlan,
 
+    /// Import a band plan from its JSON text. The engine validates it,
+    /// writes it to `bandplan.json` (keeping the previous one as
+    /// `bandplan.json.bak`), reloads it, and resets the transmit-band
+    /// confirmation so the operator re-checks the transmit bands against
+    /// the new edges. Answered with a fresh
+    /// [`crate::RadioEvent::StationConfig`] and a
+    /// [`crate::RadioEvent::Notice`].
+    ///
+    /// Appended last: postcard numbers variants by position.
+    ImportBandPlan(String),
     /// The engine host's `radio.json`, as edited by whoever is driving this
     /// radio. Appended for the usual reason: postcard numbers variants by
     /// position.

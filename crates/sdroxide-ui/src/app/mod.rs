@@ -1601,6 +1601,16 @@ pub struct SdroxideApp {
     /// setting, and one from a previous session would be a lie about this one.
     #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
     settings_transfer_note: Option<String>,
+    /// Inbox for a band plan JSON chosen on the General tab. Its own, so a plan
+    /// import and a settings bundle cannot land in each other's parser. Native
+    /// only, for the same reason as the settings one: a browser has no
+    /// filesystem, and a remote client would be writing its own laptop's file.
+    #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
+    band_plan_import_inbox: crate::download::LoadInbox,
+    /// What the last band-plan import or export did, shown under the chooser
+    /// until the dialog is closed. Not persisted: it describes an action.
+    #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
+    band_plan_note: Option<String>,
     /// Callsigns queued for lookup, drained into commands each frame.
     pending_lookups: Vec<String>,
     /// Everything callsign lookup has resolved this session, by callsign. Kept
@@ -2667,6 +2677,8 @@ impl SdroxideApp {
             adif_import_inbox: Arc::new(Mutex::new(None)),
             settings_import_inbox: Arc::new(Mutex::new(None)),
             settings_transfer_note: None,
+            band_plan_import_inbox: Arc::new(Mutex::new(None)),
+            band_plan_note: None,
             chirp_import_inbox: Arc::new(Mutex::new(None)),
             pending_lookups: Vec::new(),
             callsign_cache: Default::default(),

@@ -9291,3 +9291,10 @@ vor-tune-hover = Dieses VOR in AM abstimmen
 tx-bands-power-hint = Die höchste Leistung auf diesem Band bei voll aufgedrehtem Drive, in Watt. Bei — lassen, wenn unbekannt.
 
 tx-bands-power-note = Optional. Ein Funkgerät ohne Leistungsmesser nutzt diese Werte, um seine Sendeleistung in Watt am S-Meter anzuzeigen; ohne sie zeigt es die Drive-Einstellung in Prozent.
+settings-general-band-plan-import-hint = Lies ein Bandplan aus einer JSON-Datei und mache ihn zum Plan dieser Station. Er ersetzt bandplan.json, genau als hättest du die Datei selbst bearbeitet — exportiere zuerst den aktuellen, wenn du ihn behalten willst.
+
+settings-general-band-plan-export-hint = Schreibe den verwendeten Plan in eine JSON-Datei, zum Aufbewahren oder Weitergeben.
+
+settings-general-band-plan-imported = Bandplan importiert. Die Station läuft damit.
+
+settings-general-band-plan-import-not-a-plan = Diese Datei ist kein Bandplan — sie ließ sich nicht lesen. Es wurde nichts geändert.

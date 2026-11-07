@@ -12020,6 +12020,43 @@ impl Engine {
                 }
             }
 
+            ImportBandPlan(text) => {
+                // Guard against oversized imports.
+                if text.len() > 1_000_000 {
+                    self.notice("Import failed: the file is too large.");
+                    return;
+                }
+                // Validate first: a bad plan must not destroy the working file.
+                let plan = match sdroxide_config::parse_band_plan(&text) {
+                    Some(p) => p,
+                    None => {
+                        self.notice("Import failed: not a band plan or has problems.");
+                        return;
+                    }
+                };
+                // Write and reload. save_band_plan keeps the previous file
+                // as bandplan.json.bak, so a bad import cannot destroy it.
+                if let Err(e) = sdroxide_config::save_band_plan(&plan) {
+                    self.notice(&format!("Import failed: {e}"));
+                    return;
+                }
+                let loaded = sdroxide_config::load_band_plan();
+                let custom = !loaded.is_default();
+                sdroxide_types::set_band_plan(loaded);
+                self.state.band = Band::containing(self.state.active_freq_hz());
+                self.relay_bands_told = None;
+                // An imported plan (not a shipped preset) changes the band
+                // edges, so the transmit-band confirmation no longer covers
+                // what it said it did. Reset it so the operator re-checks.
+                self.tx_bands_confirmed = false;
+                self.emit_station_config();
+                self.notice(if custom {
+                    "Band plan imported. The station is running on it."
+                } else {
+                    "Band plan imported — it matches the built-in IARU tables."
+                });
+            }
+
             // This radio's own `radio.json` (no RadioState change → return
             // before the State emit below). The engine is the one that writes
             // it: the file is in *this* machine's config directory, and the

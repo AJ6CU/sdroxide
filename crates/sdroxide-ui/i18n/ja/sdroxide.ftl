@@ -9241,3 +9241,10 @@ vor-tune-hover = この VOR を AM で同調
 tx-bands-power-hint = Drive を最大にしたときのこのバンドの最大出力(W)。不明な場合は — のままにしてください。
 
 tx-bands-power-note = 任意。パワーメーターのない無線機は、この値を使って送信出力をSメーターにワットで表示します。未設定の場合は Drive の設定をパーセントで表示します。
+settings-general-band-plan-import-hint = JSONファイルからバンドプランを読み込み、この局のプランにします。bandplan.json を置き換えます（ファイルを直接編集した場合と同じです）。現在のプランを残したい場合は先にエクスポートしてください。
+
+settings-general-band-plan-export-hint = 使用中のプランを JSON ファイルに書き出し、保存したり他の人に渡したりできます。
+
+settings-general-band-plan-imported = バンドプランをインポートしました。この局はそのプランで動作しています。
+
+settings-general-band-plan-import-not-a-plan = このファイルはバンドプランではありません — 読み取れませんでした。何も変更していません。

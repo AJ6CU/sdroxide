@@ -12,7 +12,6 @@
   ],
   "region1": {
     "bands": [
-      {"band": "Mw", "lo_mhz": 0.472, "hi_mhz": 0.479},
       {"band": "M160", "lo_mhz": 1.81, "hi_mhz": 2.0},
       {"band": "M80", "lo_mhz": 3.5, "hi_mhz": 3.8},
       {"band": "M60", "lo_mhz": 5.3515, "hi_mhz": 5.3665},
@@ -34,7 +33,6 @@
       {"band": "Cm3", "lo_mhz": 10489.5, "hi_mhz": 10490.0}
     ],
     "segments": [
-      {"lo_mhz": 0.472, "hi_mhz": 0.479, "kind": "Digi", "label": "630m"},
       {"lo_mhz": 1.81, "hi_mhz": 1.838, "kind": "Cw"},
       {"lo_mhz": 1.838, "hi_mhz": 1.843, "kind": "Digi"},
       {"lo_mhz": 1.843, "hi_mhz": 2.0, "kind": "Phone"},

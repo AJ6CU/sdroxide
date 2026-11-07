@@ -124,6 +124,11 @@ pub struct ViewState {
     /// Scroll the waterfall upwards: the newest row sits at the *bottom* and
     /// history flows up and off the top, the way several other SDR programs
     /// draw it. Affects the time gridlines and the spot lanes too.
+    ///
+    /// On for a new station: a fresh install reads the waterfall bottom-up.
+    /// A saved view keeps whatever it was left on, so an operator who has been
+    /// using the other direction is not turned round by an upgrade.
+    #[serde(default = "waterfall_flip_default")]
     pub waterfall_flip: bool,
     /// Label decoded stations on the waterfall: one box per callsign at the
     /// frequency it was heard on, in the slotted modes (FT8, FT4, FT2, JS8, the
@@ -599,7 +604,7 @@ impl Default for ViewState {
             center_on_vfo: center_on_vfo_default(),
             spectrum_collapsed: false,
             waterfall_collapsed: false,
-            waterfall_flip: false,
+            waterfall_flip: waterfall_flip_default(),
             decode_labels: decode_labels_default(),
             wide_waterfall: wide_waterfall_default(),
             prop_on_map: false,
@@ -744,6 +749,12 @@ fn decode_labels_default() -> bool {
 /// Default for [`ViewState::wide_waterfall`] — on, so a receiver that has a
 /// full-band lane shows it without anyone having to find the chip first.
 fn wide_waterfall_default() -> bool {
+    true
+}
+
+/// Default for [`ViewState::waterfall_flip`] — on, so a new station reads the
+/// waterfall bottom-up: newest row at the bottom, history flowing up.
+fn waterfall_flip_default() -> bool {
     true
 }
 
@@ -929,6 +940,23 @@ mod tests {
                       spectrum_fraction:0.17981522,peak_hold:false,smeter_style:Trace)";
         let v: ViewState = ron::from_str(stored).expect("a view with the old face must parse");
         assert_eq!(v.fft_size, 32_768, "the rest of the view survived the field moving out");
+    }
+
+    /// A fresh install reads the waterfall bottom-up. A saved view that says
+    /// otherwise keeps the operator's direction: an upgrade is not the place to
+    /// turn someone's picture round.
+    #[test]
+    fn a_new_view_scrolls_the_waterfall_upwards() {
+        assert!(
+            ViewState::default().waterfall_flip,
+            "the first install must scroll upwards, newest row at the bottom"
+        );
+        let stored: ViewState =
+            ron::from_str("(waterfall_flip:false)").expect("a partial view must parse");
+        assert!(
+            !stored.waterfall_flip,
+            "a saved top-down view must survive the new default"
+        );
     }
 
     /// The same trap as the spot filters above, one layer down: a propagation

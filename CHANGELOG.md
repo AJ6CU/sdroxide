@@ -15,6 +15,12 @@ and the [README](https://github.com/madmedicnl/sdroxide-brown#readme).
 
 ### Added
 - **A German (NRW) SWL band plan to choose from** — Settings → General → Band plan now offers the shipped plans alongside the built-in IARU tables: 630 m, detailed 2 m/70 cm (repeaters, satellites, NL repeaters), 6 m, QO-100, Freenet, PMR 446, the 11 m CB/freeband stretch (labelled CB/Freeband), radiosondes, sea radio, NOAA/Meteor weather satellites, DVB-T2, DAB+ and the 694–2200 MHz utility bands. Choosing one writes it to `bandplan.json` and reloads; the file stays editable and the built-in tables remain the default. — drdatapi's plan, #523
+- **Bring your own band plan** — IMPORT and EXPORT beside the chooser: import a band-plan JSON as this station's own plan (it replaces `bandplan.json` and reloads), export the plan in use to a file to keep or share. A national plan no longer needs a code change to reach the menu.
+
+### Changed
+- **The built-in IARU tables stay the first entry and the default** — the chooser opens on them after a fresh install, and an imported or edited plan is named as the station's own.
+- **The reload button sits under the plan chooser** — choose a plan first, re-read the file second.
+- **A fresh install reads the waterfall bottom-up** — newest row at the bottom, history flowing up. A saved view keeps the direction it was left on.
 
 ## [2.3.0_brown] - 2026-11-06
 

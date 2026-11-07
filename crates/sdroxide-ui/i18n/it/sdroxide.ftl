@@ -9302,3 +9302,10 @@ vor-tune-hover = Sintonizzare questo VOR in AM
 tx-bands-power-hint = La potenza massima su questa banda con il Drive al massimo, in watt. Lasciare — se non la conoscete.
 
 tx-bands-power-note = Facoltativo. Una radio senza wattmetro usa questi valori per mostrare la potenza di trasmissione in watt sull'S-meter; senza, mostra l'impostazione Drive in percentuale.
+settings-general-band-plan-import-hint = Legge un piano di banda da un file JSON e lo rende il piano di questa stazione. Sostituisce bandplan.json, esattamente come se avessi modificato il file — esporta prima quello attuale se vuoi conservarlo.
+
+settings-general-band-plan-export-hint = Scrive il piano in uso in un file JSON, da conservare o inviare a qualcun altro.
+
+settings-general-band-plan-imported = Piano di banda importato. La stazione lo sta usando.
+
+settings-general-band-plan-import-not-a-plan = Quel file non è un piano di banda: non è stato possibile leggerlo. Non è cambiato nulla.

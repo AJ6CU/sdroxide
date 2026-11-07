@@ -491,6 +491,35 @@ impl RegionPlan {
             )));
         }
 
+        // A listening band (Lw, Mw, Sw, Fm) redefined far outside its normal
+        // span is almost certainly a mistake — the band's whole point is the
+        // broadcast range it names. Report it so the operator notices (#546).
+        for (band, eh) in Band::ALL.iter().zip(edges.iter()) {
+            let Some((lo, hi)) = eh else { continue };
+            let (lo, hi) = (*lo, *hi);
+            if !matches!(band, Band::Lw | Band::Mw | Band::Sw | Band::Fm) {
+                continue;
+            }
+            let normal = band.iaru_default_edges_in(region);
+            if let Some((nlo, nhi)) = normal {
+                let span = hi - lo;
+                let nspan = nhi - nlo;
+                // "Far outside" = the new span does not overlap the normal one
+                // at all, or is less than a quarter of its width.
+                if hi < nlo || lo > nhi || span < nspan / 4.0 {
+                    problems.push(format!(
+                        "region {r}: {} is redefined far outside its normal span \
+                         ({}–{} MHz vs {}–{} MHz). Check the edges.",
+                        band.label_in(region),
+                        hz_to_mhz(lo),
+                        hz_to_mhz(hi),
+                        hz_to_mhz(nlo),
+                        hz_to_mhz(nhi),
+                    ));
+                }
+            }
+        }
+
         // Overlapping bands are not rejected: `containing` takes the first
         // match, which is a defined answer, and an operator splitting a band
         // into licence classes may well want them to touch. But they are worth
@@ -1032,4 +1061,23 @@ mod tests {
     fn the_uninstalled_plan_is_the_built_in_one() {
         assert!(band_plan().is_default());
     }
+
+    /// A listening band redefined far outside its normal span is reported as a
+    /// problem, so a typo or a mistaken row cannot silently move MW to 630 m.
+    #[test]
+    fn a_listening_band_redefined_far_outside_its_span_is_a_problem() {
+        let p = parse(
+            r#"{"region1":{"bands":[
+                    {"band":"Mw","lo_mhz":0.472,"hi_mhz":0.479},
+                    {"band":"M20","lo_mhz":14.0,"hi_mhz":14.35}]},
+                "region2":{"bands":[{"band":"M20","lo_mhz":14.0,"hi_mhz":14.35}]},
+                "region3":{"bands":[{"band":"M20","lo_mhz":14.0,"hi_mhz":14.35}]}}"#,
+        );
+        assert!(
+            p.problems().iter().any(|s| s.contains("MW") && s.contains("outside")),
+            "redefining MW at 630 m must be reported: {:?}",
+            p.problems()
+        );
+    }
+
 }

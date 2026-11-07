@@ -2252,8 +2252,8 @@ use sdroxide_types::{
 /// `Command::SetRadioConfig` whole, so the appended fields move its layout.
 /// `#[serde(default)]`, so a `radio.json` written before this loads unchanged.
 /// `PROTO_VERSION` 274 → 275, `VERSION_BYTE` 0x5E → 0x5F.
-pub const PROTO_VERSION: u16 = 275;
-const VERSION_BYTE: u8 = 0x5F;
+pub const PROTO_VERSION: u16 = 276;
+const VERSION_BYTE: u8 = 0x60;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -2946,6 +2946,7 @@ mod tests {
             // The recording container, appended last with a field on
             // `RadioState`'s own tail — both a v213 peer would misread.
             ClientMsg::Command(Command::SetRecordingFormat(sdroxide_types::RecordingFormat::Wav)),
+            ClientMsg::Command(Command::ImportBandPlan("{}".to_string())),
             ClientMsg::MicFrame { seq: 7, payload: vec![1, 2, 3] },
         ];
         for m in &msgs {
@@ -3548,7 +3549,7 @@ mod tests {
             ServerMsg::TxRefused(w, hz) => assert_eq!((w, hz), (why, 7_074_000.0)),
             _ => panic!("TxRefused did not round-trip"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (269, 0x59));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (276, 0x60));
     }
 
     /// The dynamic-DNS answer rides last on [`ServerMsg`], and it has to: the
@@ -3579,7 +3580,7 @@ mod tests {
             }
             other => panic!("the answer did not round-trip: {other:?}"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (269, 0x59));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (276, 0x60));
     }
 
     /// The VOR read-out rides the wire whole, locked or not, and the message is
@@ -3698,7 +3699,7 @@ mod tests {
         // so this moves what follows it: that is what the bump is for.
         assert_eq!(
             (radio.len(), fnv1a(&radio)),
-            (897, 1_396_573_632_080_966_650),
+            (902, 14_837_315_487_431_632_798),
             "RadioConfig's wire layout shifted — append fields, never insert them"
         );
         // 316 since the two Dynamic DNS fields were appended at the end

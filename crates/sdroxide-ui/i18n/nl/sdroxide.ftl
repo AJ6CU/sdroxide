@@ -9301,3 +9301,10 @@ vor-tune-hover = Dit VOR afstemmen in AM
 tx-bands-power-hint = Het maximale vermogen op deze band met Drive op het maximum, in watt. Laat op — staan als u het niet weet.
 
 tx-bands-power-note = Optioneel. Een radio zonder vermogensmeter gebruikt deze waarden om het zendvermogen in watt op de S-meter te tonen; zonder toont hij de Drive-instelling in procenten.
+settings-general-band-plan-import-hint = Lees een bandplan uit een JSON-bestand en maak het het plan van dit station. Het vervangt bandplan.json, precies alsof je het bestand zelf had bewerkt — exporteer eerst het huidige als je dat wilt bewaren.
+
+settings-general-band-plan-export-hint = Schrijf het plan dat in gebruik is naar een JSON-bestand, om te bewaren of aan iemand anders te sturen.
+
+settings-general-band-plan-imported = Bandplan geïmporteerd. Het station draait erop.
+
+settings-general-band-plan-import-not-a-plan = Dat bestand is geen bandplan — het kon niet worden gelezen. Er is niets gewijzigd.

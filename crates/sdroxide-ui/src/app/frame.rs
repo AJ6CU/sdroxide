@@ -957,6 +957,9 @@ impl eframe::App for SdroxideApp {
         // A channel list chosen in the memories window: parsed here and sent
         // to the engine, which owns the list and the numbering in it.
         self.poll_chirp_import(&mut cmds);
+        // A band plan the operator picked on the General tab: written and then
+        // reloaded, so the station runs on it without a restart.
+        self.poll_band_plan_import(&mut cmds);
         // A "stop after" deadline armed in the REC popup: stop the MP3
         // recording once it passes (issue #520).
         self.poll_recording_timer(&mut cmds);

@@ -9293,3 +9293,10 @@ vor-tune-hover = Bu VOR'u AM'de ayarla
 tx-bands-power-hint = Drive en üstteyken bu bantta elde edilen en yüksek güç, watt cinsinden. Bilmiyorsanız — olarak bırakın.
 
 tx-bands-power-note = İsteğe bağlı. Güç ölçeri olmayan bir telsiz, S-metrede iletim gücünü watt olarak göstermek için bu değerleri kullanır; yoksa Drive ayarını yüzde olarak gösterir.
+settings-general-band-plan-import-hint = Bir JSON dosyasından bant planı okuyup bu istasyonun planı yap. bandplan.json'un yerine geçer, tıpkı dosyayı kendin düzenlemişsin gibi — mevcut planı saklamak istiyorsan önce dışa aktar.
+
+settings-general-band-plan-export-hint = Kullanımdaki planı saklamak veya birine göndermek için bir JSON dosyasına yaz.
+
+settings-general-band-plan-imported = Bant planı içe aktarıldı. İstasyon artık onu kullanıyor.
+
+settings-general-band-plan-import-not-a-plan = Bu dosya bir bant planı değil — okunamadı. Hiçbir şey değiştirilmedi.
