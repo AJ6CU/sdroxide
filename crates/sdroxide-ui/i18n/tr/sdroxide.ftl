@@ -9484,6 +9484,107 @@ qrzcard-switch-hint = QRZ.com'dan fotoğraf, ad, yaş, adres, lokatör ve QSL; �
 
 qrzcard-needs-login = Kartı etkinleştirmek için sağlayıcı olarak QRZ'yi seçin ve QRZ kullanıcı adı ile parolanızı girin.
 
+meshtastic-title = Meshtastic
+
+meshtastic-receive = Alım
+
+meshtastic-region = Bölge
+
+meshtastic-preset = Ön ayar
+
+meshtastic-channel = Kanal
+
+meshtastic-tune = Burayı dinle
+
+meshtastic-tune-hint = Alıcıyı açar ve radyoyu bu kanala getirir. Radyo menüsündeki alım bandı listesi burada dinlenip dinlenemeyeceğine karar verir. Kapattığınızda ya da çıktığınızda radyo eski yerine döner.
+
+meshtastic-keys = Anahtarlar
+
+meshtastic-keys-hint = Ad=anahtar, virgülle ayrılmış (hex:…, base64:…, simple1..10). Varsayılan anahtar her zaman denenir.
+
+meshtastic-state-off = Alıcı kapalı.
+
+meshtastic-level = Seviye { $db } dBFS
+
+meshtastic-counts = { $pre } öncül · { $ok } çerçeve · { $bad } hatalı CRC
+
+meshtastic-refused-band = ALIM YASAK — { $freq } MHz ({ $band }) onaylanmış bir alım bandı değil. Radyo menüsü, alım bantları bölümünde işaretleyip onaylayın.
+
+meshtastic-refused-unconfirmed = ALIM YASAK — bu radyonun alım bantları henüz onaylanmadı. Radyo menüsü, alım bantları bölümünde kontrol edip onaylayın.
+
+meshtastic-out-of-window = Kanal, radyonun yakaladığı örnek penceresinin dışında: daha yakına ayarlayın veya daha geniş bir örnekleme hızı kullanın.
+
+meshtastic-none-yet = Henüz bir şey duyulmadı.
+
+meshtastic-nodes = Düğümler ({ $n })
+
+meshtastic-log = Paketler ({ $n })
+
+meshtastic-col-id = Düğüm
+
+meshtastic-col-name = Ad
+
+meshtastic-col-heard = Duyuldu
+
+meshtastic-col-snr = SNR
+
+meshtastic-col-hops = Atlama
+
+meshtastic-col-position = Konum
+
+meshtastic-col-battery = Pil
+
+meshtastic-encrypted = şifreli (anahtar yok)
+
+meshtastic-via-mqtt = MQTT üzerinden
+
+meshtastic-bench-hint = Meshtastic penceresini açar: tek bir kanalın LoRa ağ trafiği.
+
+extras-meshtastic-hint = Meshtastic: tek bir kanalın LoRa ağ trafiği, duyulan düğümler ve paketler.
+
+settings-ui-meshtastic-on = Paneli göster
+
+settings-ui-meshtastic-hint = Meshtastic düğmelerini Ekstralar penceresine ve mod menüsünün deneysel bölümüne ekler ve pencerenin açılmasına izin verir. Pencere ana pencereye yerleşir veya başlık çubuğu düğmesiyle kendi penceresine geçer. Kapatmak pencereyi kapatır; alıcı pencerenin kendi anahtarıyla durur.
+
+meshtastic-message = Mesaj
+
+meshtastic-message-hint = Kanaldaki herkes için metin (en fazla 200 bayt)
+
+meshtastic-send = Gönder…
+
+meshtastic-send-hint = Onayınızdan sonra bu metni kanalda yayınlar. Ayarlar, Radyo bölümündeki yayın bandı listesi burada yayın yapılıp yapılamayacağına karar verir; radyo kanalda olmalıdır (Burayı dinle).
+
+meshtastic-confirm = Şimdi { $freq } MHz üzerinde yayın yapılsın mı ({ $air } sn yayın süresi)? Menzildeki herkes duyacak ve bundan lisansınız ile bu bandın kuralları uyarınca siz sorumlusunuz.
+
+meshtastic-confirm-yes = Yayınla
+
+meshtastic-confirm-no = İptal
+
+meshtastic-transmitting = YAYINDA…
+
+meshtastic-tx-airtime = Bu saatte yayın süresi: { $used } sn / { $budget } sn
+
+meshtastic-tx-airtime-free = Bu saatte yayın süresi: { $used } sn (bu bölge için sınır tanımlı değil)
+
+meshtastic-tx-sent = { $n } gönderildi
+
+meshtastic-tx-band-off = YAYIN YASAK — { $freq } MHz ({ $band }) onaylanmış bir yayın bandı değil. Ayarlar → Radyo → Yayın bantları bölümünde işaretleyip onaylayın.
+
+meshtastic-tx-unconfirmed = YAYIN YASAK — bu radyonun yayın bantları henüz onaylanmadı. Ayarlar → Radyo → Yayın bantları bölümünde kontrol edip onaylayın.
+
+meshtastic-tx-duty = Bu bölge için görev döngüsü sınırına ulaşıldı: sonraki mesajdan önce { $s } sn bekleyin.
+
+meshtastic-tx-too-long = Bu mesaj tek başına bu bölge için bir saatlik yayın süresi bütçesinin tamamından uzun.
+
+meshtastic-tx-off-channel = Radyo kanalda değil: önce Burayı dinle düğmesine basın, böylece kadran kanala gelir.
+
+meshtastic-tx-no-transmitter = Bu radyo ham I/Q gönderemez (ses alan bir telsiz veya yalnızca alıcı bir cihaz).
+
+meshtastic-tx-bad-text = Metin boş ya da çok uzun (en fazla 200 bayt).
+
+meshtastic-tx-busy = Zaten bir yayın sürüyor.
+
+meshtastic-tx-rails = Verici yayına geçmeyi reddetti: nedeni yayın mesajında görün.
 rx-bands-swl-note = Bu telsiz için SWL modu açık: alma kilidi yok. Her banda ayarlanabilir.
 
 rx-bands-always-open = Dinleme bantları (ve SWL modu) alma için her zaman açıktır.

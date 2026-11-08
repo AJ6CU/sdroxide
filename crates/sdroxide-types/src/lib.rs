@@ -44,6 +44,7 @@ mod fst4;
 mod geo;
 mod hd;
 mod hfdl;
+mod meshtastic;
 mod sonde;
 mod wxsat;
 pub mod sonde_export;
@@ -224,6 +225,11 @@ pub use vor::{VOR_BAND_HZ, VorStatus, VorUnavailable};
 pub use sonde::{
     SONDE_BAND_HZ, SONDE_DEFAULT_HZ, SONDE_MAX_TRACKS, SONDE_TRACK_DEPTH, SondePoint,
     SondeSettings, SondeStatus, SondeTrack, window_reaches_band as sonde_window_reaches_band,
+};
+pub use meshtastic::{
+    MESH_BAND_HZ, MESH_DEFAULT_HZ, MESH_DEFAULT_PRESET, MESH_DEFAULT_REGION, MESH_LOG_DEPTH,
+    MESH_MAX_NODES, MESH_TX_TEXT_MAX, MeshEntry, MeshNode, MeshTxRefusal, MeshtasticRestore,
+    MeshtasticSend, MeshtasticSettings, MeshtasticStatus, meshtastic_window_covers,
 };
 pub use wxsat::{
     WXSAT_BAND_HZ, WXSAT_DEFAULT_HZ, WXSAT_LINE_PIXELS, WXSAT_MAX_NEW_LINES,

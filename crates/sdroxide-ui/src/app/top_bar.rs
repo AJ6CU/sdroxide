@@ -9811,6 +9811,7 @@ pub(in crate::app) fn band_mode_menu(
             // failure here is a known state rather than something they broke.
             crate::chrome::menu_caption(ui, &tr!("topbar-caption-experimental"));
             mode_chip_grid(ui, mode, &Mode::EXPERIMENTAL, band, state, false, cmds);
+            super::meshtastic::bench_chip(ui);
         }
         BandMenuTab::Listen => {
             ui.add_space(6.0);
@@ -9836,6 +9837,7 @@ pub(in crate::app) fn band_mode_menu(
             ui.add_space(6.0);
             crate::chrome::menu_caption(ui, &tr!("topbar-caption-experimental"));
             mode_chip_grid(ui, mode, &Mode::EXPERIMENTAL, band, state, true, cmds);
+            super::meshtastic::bench_chip(ui);
         }
     }
 }

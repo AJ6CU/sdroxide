@@ -706,6 +706,12 @@ pub struct RadioState {
     /// separately. Appended last: postcard numbers fields by position.
     #[serde(default)]
     pub wxsat: crate::WxsatSettings,
+    /// The Meshtastic receiver: whether it runs, the channel, the preset and
+    /// the keys, and where the radio was before the lane tuned it. Live status
+    /// is [`crate::MeshtasticStatus`], sent separately. Appended last: postcard
+    /// numbers fields by position.
+    #[serde(default)]
+    pub meshtastic: crate::MeshtasticSettings,
 }
 
 impl Default for RadioState {
@@ -723,6 +729,7 @@ impl Default for RadioState {
             usable_hz: 0.0,
             sonde: crate::SondeSettings::default(),
             wxsat: crate::WxsatSettings::default(),
+            meshtastic: crate::MeshtasticSettings::default(),
             decimation: no_decimation(),
             rx: [RxState::with_mode(mode), RxState::with_mode(mode)],
             sub_rx_enabled: false,

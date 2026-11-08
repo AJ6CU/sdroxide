@@ -9422,6 +9422,107 @@ qrzcard-switch-hint = 在瀑布图、解码器和 Spot 列表中显示来自 QRZ
 
 qrzcard-needs-login = 请选择 QRZ 作为提供方，并输入 QRZ 用户名和密码以启用卡片。
 
+meshtastic-title = Meshtastic
+
+meshtastic-receive = 接收
+
+meshtastic-region = 地区
+
+meshtastic-preset = 预设
+
+meshtastic-channel = 信道
+
+meshtastic-tune = 在此收听
+
+meshtastic-tune-hint = 打开接收器并将电台调到此信道。能否在此收听由“电台”菜单中的接收频段列表决定。关闭或退出时，电台会回到原来的状态。
+
+meshtastic-keys = 密钥
+
+meshtastic-keys-hint = 名称=密钥，以逗号分隔（hex:…、base64:…、simple1..10）。始终会尝试默认密钥。
+
+meshtastic-state-off = 接收器已关闭。
+
+meshtastic-level = 电平 { $db } dBFS
+
+meshtastic-counts = { $pre } 个前导码 · { $ok } 帧 · { $bad } 个 CRC 错误
+
+meshtastic-refused-band = 禁止接收 — { $freq } MHz（{ $band }）不是已确认的接收频段。请在“电台”菜单的接收频段中勾选并确认。
+
+meshtastic-refused-unconfirmed = 禁止接收 — 此电台的接收频段尚未确认。请在“电台”菜单的接收频段中检查并确认。
+
+meshtastic-out-of-window = 该信道不在电台采集的采样窗口内：请调谐得更近，或使用更高的采样率。
+
+meshtastic-none-yet = 尚未收到任何内容。
+
+meshtastic-nodes = 节点（{ $n }）
+
+meshtastic-log = 数据包（{ $n }）
+
+meshtastic-col-id = 节点
+
+meshtastic-col-name = 名称
+
+meshtastic-col-heard = 收到时间
+
+meshtastic-col-snr = SNR
+
+meshtastic-col-hops = 跳数
+
+meshtastic-col-position = 位置
+
+meshtastic-col-battery = 电池
+
+meshtastic-encrypted = 已加密（无密钥）
+
+meshtastic-via-mqtt = 经 MQTT
+
+meshtastic-bench-hint = 打开 Meshtastic 窗口：一个信道上的 LoRa 网状网络流量。
+
+extras-meshtastic-hint = Meshtastic：一个信道上的 LoRa 网状网络流量、收到的节点和数据包。
+
+settings-ui-meshtastic-on = 显示面板
+
+settings-ui-meshtastic-hint = 在“附加”窗口和模式菜单的实验区添加 Meshtastic 按钮，并允许打开该窗口。窗口可停靠在主窗口，或用标题栏按钮移到独立窗口。关闭此项会关闭窗口；接收器需用窗口内的开关停止。
+
+meshtastic-message = 消息
+
+meshtastic-message-hint = 发给信道上所有人的文字（最多 200 字节）
+
+meshtastic-send = 发送…
+
+meshtastic-send-hint = 确认后在该信道上发射此文字。能否在此发射由“设置”中“电台”的发射频段列表决定；电台必须已调到该信道（在此收听）。
+
+meshtastic-confirm = 现在在 { $freq } MHz 上发射吗（发射时长 { $air } 秒）？范围内所有人都会收到，您须依据自己的执照和该频段的规定对此负责。
+
+meshtastic-confirm-yes = 发射
+
+meshtastic-confirm-no = 取消
+
+meshtastic-transmitting = 正在发射…
+
+meshtastic-tx-airtime = 本小时发射时长：{ $used } 秒 / { $budget } 秒
+
+meshtastic-tx-airtime-free = 本小时发射时长：{ $used } 秒（该地区未设上限）
+
+meshtastic-tx-sent = 已发送 { $n }
+
+meshtastic-tx-band-off = 禁止发射 — { $freq } MHz（{ $band }）不是已确认的发射频段。请在“设置 → 电台 → 发射频段”中勾选并确认。
+
+meshtastic-tx-unconfirmed = 禁止发射 — 此电台的发射频段尚未确认。请在“设置 → 电台 → 发射频段”中检查并确认。
+
+meshtastic-tx-duty = 已达到该地区的占空比上限：请等待 { $s } 秒后再发下一条。
+
+meshtastic-tx-too-long = 仅此一条消息就超过了该地区一小时的发射时长上限。
+
+meshtastic-tx-off-channel = 电台不在该信道上：请先点“在此收听”，让频率调到该信道。
+
+meshtastic-tx-no-transmitter = 此电台无法发送原始 I/Q（接收音频的电台，或仅接收的设备）。
+
+meshtastic-tx-bad-text = 文字为空或过长（最多 200 字节）。
+
+meshtastic-tx-busy = 已有一次发射正在进行。
+
+meshtastic-tx-rails = 发射机拒绝发射：原因见发射提示信息。
 rx-bands-swl-note = 此电台已启用 SWL 模式：没有接收锁定，可以调谐到任何波段。
 
 rx-bands-always-open = 收听波段（以及 SWL 模式）始终可以接收。

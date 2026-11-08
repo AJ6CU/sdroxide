@@ -9495,6 +9495,107 @@ qrzcard-switch-hint = Photo, nom, âge, adresse, locator et QSL depuis QRZ.com, 
 
 qrzcard-needs-login = Choisissez QRZ comme fournisseur et renseignez votre identifiant et votre mot de passe QRZ pour activer la fiche.
 
+meshtastic-title = Meshtastic
+
+meshtastic-receive = Réception
+
+meshtastic-region = Région
+
+meshtastic-preset = Préréglage
+
+meshtastic-channel = Canal
+
+meshtastic-tune = Écouter ici
+
+meshtastic-tune-hint = Active le récepteur et amène la radio sur ce canal. La liste des bandes de réception du menu Radio décide si la radio peut écouter ici. Quand vous coupez, ou quittez, la radio revient là où elle était.
+
+meshtastic-keys = Clés
+
+meshtastic-keys-hint = Nom=clé, séparés par des virgules (hex:…, base64:…, simple1..10). La clé par défaut est toujours essayée.
+
+meshtastic-state-off = Récepteur coupé.
+
+meshtastic-level = Niveau { $db } dBFS
+
+meshtastic-counts = { $pre } préambules · { $ok } trames · { $bad } CRC faux
+
+meshtastic-refused-band = RÉCEPTION INTERDITE — { $freq } MHz ({ $band }) n'est pas une bande de réception validée. Cochez-la et validez-la dans le menu Radio, bandes de réception.
+
+meshtastic-refused-unconfirmed = RÉCEPTION INTERDITE — les bandes de réception de cette radio ne sont pas encore validées. Vérifiez-les et confirmez dans le menu Radio, bandes de réception.
+
+meshtastic-out-of-window = Le canal est hors de la fenêtre d'échantillons que la radio capte : rapprochez l'accord ou prenez un débit d'échantillonnage plus large.
+
+meshtastic-none-yet = Rien entendu pour l'instant.
+
+meshtastic-nodes = Nœuds ({ $n })
+
+meshtastic-log = Paquets ({ $n })
+
+meshtastic-col-id = Nœud
+
+meshtastic-col-name = Nom
+
+meshtastic-col-heard = Entendu
+
+meshtastic-col-snr = SNR
+
+meshtastic-col-hops = Sauts
+
+meshtastic-col-position = Position
+
+meshtastic-col-battery = Batterie
+
+meshtastic-encrypted = chiffré (pas de clé)
+
+meshtastic-via-mqtt = via MQTT
+
+meshtastic-bench-hint = Ouvre la fenêtre Meshtastic : le trafic du réseau maillé LoRa d'un canal.
+
+extras-meshtastic-hint = Meshtastic : le trafic du réseau maillé LoRa d'un canal, les nœuds entendus et les paquets.
+
+settings-ui-meshtastic-on = Afficher le panneau
+
+settings-ui-meshtastic-hint = Ajoute les puces Meshtastic à la fenêtre Extras et au banc expérimental du menu des modes, et autorise l'ouverture de la fenêtre. La fenêtre s'ancre dans la principale ou passe dans la sienne avec le bouton de la barre de titre. La couper ferme la fenêtre ; le récepteur s'arrête avec l'interrupteur de la fenêtre.
+
+meshtastic-message = Message
+
+meshtastic-message-hint = Texte pour tous sur le canal (200 octets au plus)
+
+meshtastic-send = Envoyer…
+
+meshtastic-send-hint = Émet ce texte sur le canal, après votre confirmation. La liste des bandes d'émission des Réglages, Radio décide si la radio peut émettre ici ; la radio doit être sur le canal (Écouter ici).
+
+meshtastic-confirm = Émettre maintenant sur { $freq } MHz ({ $air } s d'antenne) ? Tous ceux à portée l'entendront, et vous en répondez selon votre licence et les règles de cette bande.
+
+meshtastic-confirm-yes = Émettre
+
+meshtastic-confirm-no = Annuler
+
+meshtastic-transmitting = ÉMISSION…
+
+meshtastic-tx-airtime = Temps d'antenne cette heure : { $used } s sur { $budget } s
+
+meshtastic-tx-airtime-free = Temps d'antenne cette heure : { $used } s (aucune limite fixée pour cette région)
+
+meshtastic-tx-sent = { $n } envoyé(s)
+
+meshtastic-tx-band-off = ÉMISSION INTERDITE — { $freq } MHz ({ $band }) n'est pas une bande d'émission validée. Cochez-la et validez-la dans Réglages → Radio → Bandes d'émission.
+
+meshtastic-tx-unconfirmed = ÉMISSION INTERDITE — les bandes d'émission de cette radio ne sont pas encore validées. Vérifiez-les et confirmez dans Réglages → Radio → Bandes d'émission.
+
+meshtastic-tx-duty = Cycle d'utilisation atteint pour cette région : attendez { $s } s avant le message suivant.
+
+meshtastic-tx-too-long = Ce message est à lui seul plus long que tout le budget de temps d'antenne d'une heure pour cette région.
+
+meshtastic-tx-off-channel = La radio n'est pas sur le canal : appuyez d'abord sur Écouter ici, pour que le cadran soit dessus.
+
+meshtastic-tx-no-transmitter = Cette radio ne peut pas émettre en I/Q brut (un transceiver qui prend de l'audio, ou un récepteur seul).
+
+meshtastic-tx-bad-text = Le texte est vide ou trop long (200 octets au plus).
+
+meshtastic-tx-busy = Une émission est déjà en cours.
+
+meshtastic-tx-rails = L'émetteur a refusé de passer en émission : voyez le message d'émission pour la raison.
 rx-bands-swl-note = Le mode SWL est actif pour cette radio : il n'y a pas de verrou en réception. Toutes les bandes peuvent être écoutées.
 
 rx-bands-always-open = Les bandes d'écoute (et le mode SWL) sont toujours ouvertes en réception.

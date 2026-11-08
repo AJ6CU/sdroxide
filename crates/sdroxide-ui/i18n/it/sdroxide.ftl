@@ -9493,6 +9493,107 @@ qrzcard-switch-hint = Foto, nome, età, indirizzo, locator e QSL da QRZ.com, nel
 
 qrzcard-needs-login = Scegli QRZ come fornitore e inserisci nome utente e password QRZ per attivare la scheda.
 
+meshtastic-title = Meshtastic
+
+meshtastic-receive = Ricezione
+
+meshtastic-region = Regione
+
+meshtastic-preset = Preimpostazione
+
+meshtastic-channel = Canale
+
+meshtastic-tune = Ascolta qui
+
+meshtastic-tune-hint = Attiva il ricevitore e porta la radio su questo canale. L'elenco delle bande di ricezione del menu Radio decide se la radio può ascoltare qui. Allo spegnimento o all'uscita la radio torna dov'era.
+
+meshtastic-keys = Chiavi
+
+meshtastic-keys-hint = Nome=chiave, separati da virgole (hex:…, base64:…, simple1..10). La chiave predefinita viene sempre provata.
+
+meshtastic-state-off = Ricevitore spento.
+
+meshtastic-level = Livello { $db } dBFS
+
+meshtastic-counts = { $pre } preamboli · { $ok } trame · { $bad } CRC errati
+
+meshtastic-refused-band = RICEZIONE VIETATA — { $freq } MHz ({ $band }) non è una banda di ricezione convalidata. Spuntala e convalidala nel menu Radio, bande di ricezione.
+
+meshtastic-refused-unconfirmed = RICEZIONE VIETATA — le bande di ricezione di questa radio non sono ancora convalidate. Controllale e conferma nel menu Radio, bande di ricezione.
+
+meshtastic-out-of-window = Il canale è fuori dalla finestra di campioni che la radio cattura: sintonizza più vicino o usa una frequenza di campionamento maggiore.
+
+meshtastic-none-yet = Ancora nulla di ricevuto.
+
+meshtastic-nodes = Nodi ({ $n })
+
+meshtastic-log = Pacchetti ({ $n })
+
+meshtastic-col-id = Nodo
+
+meshtastic-col-name = Nome
+
+meshtastic-col-heard = Sentito
+
+meshtastic-col-snr = SNR
+
+meshtastic-col-hops = Salti
+
+meshtastic-col-position = Posizione
+
+meshtastic-col-battery = Batteria
+
+meshtastic-encrypted = cifrato (nessuna chiave)
+
+meshtastic-via-mqtt = via MQTT
+
+meshtastic-bench-hint = Apre la finestra Meshtastic: il traffico della rete mesh LoRa di un canale.
+
+extras-meshtastic-hint = Meshtastic: il traffico della rete mesh LoRa di un canale, i nodi sentiti e i pacchetti.
+
+settings-ui-meshtastic-on = Mostra il pannello
+
+settings-ui-meshtastic-hint = Aggiunge i pulsanti Meshtastic alla finestra Extras e al banco sperimentale del menu dei modi e consente di aprire la finestra. La finestra si aggancia alla principale o passa alla propria con il pulsante della barra del titolo. Disattivarlo chiude la finestra; il ricevitore si ferma con l'interruttore della finestra stessa.
+
+meshtastic-message = Messaggio
+
+meshtastic-message-hint = Testo per tutti sul canale (al massimo 200 byte)
+
+meshtastic-send = Invia…
+
+meshtastic-send-hint = Trasmette questo testo sul canale, dopo la tua conferma. L'elenco delle bande di trasmissione in Impostazioni, Radio decide se la radio può trasmettere qui; la radio deve essere sul canale (Ascolta qui).
+
+meshtastic-confirm = Trasmettere ora su { $freq } MHz ({ $air } s di tempo in aria)? Lo sentiranno tutti nel raggio, e ne rispondi secondo la tua licenza e le regole di questa banda.
+
+meshtastic-confirm-yes = Trasmetti
+
+meshtastic-confirm-no = Annulla
+
+meshtastic-transmitting = TRASMISSIONE…
+
+meshtastic-tx-airtime = Tempo in aria quest'ora: { $used } s su { $budget } s
+
+meshtastic-tx-airtime-free = Tempo in aria quest'ora: { $used } s (nessun limite impostato per questa regione)
+
+meshtastic-tx-sent = { $n } inviato/i
+
+meshtastic-tx-band-off = TRASMISSIONE VIETATA — { $freq } MHz ({ $band }) non è una banda di trasmissione convalidata. Spuntala e convalidala in Impostazioni → Radio → Bande di trasmissione.
+
+meshtastic-tx-unconfirmed = TRASMISSIONE VIETATA — le bande di trasmissione di questa radio non sono ancora convalidate. Controllale e conferma in Impostazioni → Radio → Bande di trasmissione.
+
+meshtastic-tx-duty = Duty cycle raggiunto per questa regione: attendi { $s } s prima del prossimo messaggio.
+
+meshtastic-tx-too-long = Questo messaggio da solo è più lungo dell'intero budget di tempo in aria di un'ora per questa regione.
+
+meshtastic-tx-off-channel = La radio non è sul canale: premi prima Ascolta qui, così la sintonia è su di esso.
+
+meshtastic-tx-no-transmitter = Questa radio non può inviare I/Q grezzo (un apparato che prende audio, o un dispositivo solo ricevente).
+
+meshtastic-tx-bad-text = Il testo è vuoto o troppo lungo (al massimo 200 byte).
+
+meshtastic-tx-busy = Una trasmissione è già in corso.
+
+meshtastic-tx-rails = Il trasmettitore ha rifiutato di passare in trasmissione: il motivo è nel messaggio di trasmissione.
 rx-bands-swl-note = La modalità SWL è attiva per questa radio: non c'è blocco in ricezione. Tutte le bande possono essere sintonizzate.
 
 rx-bands-always-open = Le bande d'ascolto (e la modalità SWL) sono sempre aperte in ricezione.
