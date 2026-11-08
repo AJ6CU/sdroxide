@@ -165,9 +165,9 @@ pub enum Band {
     /// Appended for the reason [`Band::M70`] gives; [`Band::ALL`] puts it
     /// between 1.25 m and 70 cm, where the frequencies are.
     Mil,
-    /// The **868 MHz licence-free band** (SRD / ISM), 865.00–898.99 MHz as the
-    /// station defines it: where Meshtastic and LoRaWAN talk in Europe, and
-    /// next to 33 cm (902–928 MHz, Meshtastic's US band).
+    /// The **868 MHz licence-free band** (SRD / ISM), 863–870 MHz, the European
+    /// short-range-device allocation: where Meshtastic (869.4–869.65 MHz) and
+    /// LoRaWAN talk in Europe, below 33 cm (902–928 MHz, Meshtastic's US band).
     ///
     /// Not an amateur allocation: [`Band::is_amateur`] says no. It is on the
     /// transmit list so that an operator can *choose* to key a licence-free
@@ -183,7 +183,7 @@ pub enum Band {
 /// Where [`Band::Ism868`] starts and ends, in Hz. One definition for every
 /// region: the licence-free allocation is the same idea everywhere, and a
 /// region that has none simply never lists the band as ticked.
-pub const ISM868_HZ: (f64, f64) = (865_000_000.0, 898_990_000.0);
+pub const ISM868_HZ: (f64, f64) = (863_000_000.0, 870_000_000.0);
 
 impl Band {
     pub const ALL: [Band; 30] = [
@@ -890,12 +890,12 @@ mod tests {
     fn the_868_band_follows_the_transmit_list() {
         use crate::RadioConfig;
         assert_eq!(Band::Ism868.label(), "ISM868");
-        assert_eq!(Band::Ism868.edges(), Some((865_000_000.0, 898_990_000.0)));
+        assert_eq!(Band::Ism868.edges(), Some((863_000_000.0, 870_000_000.0)));
         assert!(!Band::Ism868.is_amateur());
         for r in [Region::R1, Region::R2, Region::R3] {
             assert_eq!(Band::containing_in(869_525_000.0, r), Band::Ism868, "{r:?}");
-            assert_eq!(Band::containing_in(864_999_000.0, r), Band::Gen, "{r:?}");
-            assert_eq!(Band::containing_in(899_000_000.0, r), Band::Gen, "{r:?}");
+            assert_eq!(Band::containing_in(862_999_000.0, r), Band::Gen, "{r:?}");
+            assert_eq!(Band::containing_in(870_001_000.0, r), Band::Gen, "{r:?}");
         }
         // Between 70 cm and 33 cm on the bar.
         assert!(Band::Ism868.index() > Band::M70.index());

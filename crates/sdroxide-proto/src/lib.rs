@@ -2349,7 +2349,7 @@ use sdroxide_types::{
 /// `PROTO_VERSION` 286 → 287, `VERSION_BYTE` 0x6A → 0x6B.
 ///
 /// v288: **Meshtastic transmit, and the 868 MHz band.** `Band` gains `Ism868`
-/// last (865.00–898.99 MHz, on the transmit list like the other bands; `Band`
+/// last (863–870 MHz, on the transmit list like the other bands; `Band`
 /// is postcard-encoded by declaration index and rides `RadioConfig`, the band
 /// stacks and the memories). [`sdroxide_types::MeshtasticSettings`] gains
 /// `node_id` at its tail, `Command` gains `SendMeshtastic` last, and
