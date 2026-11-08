@@ -9400,3 +9400,13 @@ tx-off-cb = TRANSMISSÃO PROIBIDA em 11 m (CB) — a banda está na sua lista de
 settings-cb-allow-tx-needs-band = Primeiro coloque 11M-CB em SIM na lista TX deste rádio (Configurações → Rádio) e depois permita aqui.
 
 settings-cb-allow-tx-order-note = Dois bloqueios, nesta ordem: 1) 11M-CB em SIM na lista de bandas TX do rádio, confirmada; 2) esta caixa. Os dois são necessários para transmitir em 11 m. Tirar 11M-CB da lista também desmarca esta caixa.
+
+settings-ui-publicsdr-under-waterfall = Acoplado sob a cachoeira
+
+settings-ui-publicsdr-place-hint = Onde o Public SDRs abre: acoplado sob a cachoeira nos modos de voz que não têm nada ali, ou em uma janela. Modos digitais, CW e celulares usam uma janela de qualquer forma.
+
+publicsdr-dock-hint = Acoplar esta lista sob a cachoeira (modos de voz sem nada ali)
+
+publicsdr-undock-hint = Colocar esta lista de volta em uma janela própria
+
+publicsdr-close-hint = Fechar Public SDRs

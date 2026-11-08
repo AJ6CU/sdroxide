@@ -250,6 +250,25 @@ fn entry_row(
     action
 }
 
+/// The placement rule of [`SdroxideApp::public_sdrs_docked_now`], pure so it can
+/// be pinned without a frame.
+///
+/// * `open` — the list is open; `docked` — the operator chose the dock.
+/// * `rc_docked` — Radio Classic already holds the slot under the waterfall.
+///
+/// Docked only in a voice mode with no panel of its own (not CW, not a digital,
+/// ADS-B, VDL2, AIS, HFDL or DAB mode), off a phone, with the slot free.
+/// Anywhere else the list is a window, so opening it never does nothing.
+fn docked_under_waterfall(
+    open: bool,
+    docked: bool,
+    mode: sdroxide_types::Mode,
+    phone: bool,
+    rc_docked: bool,
+) -> bool {
+    open && docked && !phone && !rc_docked && !mode.has_bottom_panel() && mode != sdroxide_types::Mode::Cw
+}
+
 /// What a row asked for.
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum RowAction {
@@ -388,17 +407,41 @@ impl SdroxideApp {
         ranked(&visible, query)
     }
 
-    /// Browse the public-SDR directories and open one as a radio.
-    pub(in crate::app) fn public_sdrs_window(
-        &mut self,
-        ctx: &egui::Context,
-        _cmds: &mut [Command],
-    ) {
+    /// Whether Public SDRs is drawn under the waterfall this frame, rather than
+    /// in a window.
+    ///
+    /// In: whether this is a phone-sized screen. Out: `true` when the list is
+    /// open, the operator chose the dock (Settings → UI, or the chip on the
+    /// list), and the slot under the waterfall is free: a voice mode with no
+    /// panel of its own, Radio Classic not in it, and room for it. Everywhere
+    /// else it is a window, so that opening it never does nothing — the same
+    /// rule Radio Classic follows (`panels::radio_classic::place`).
+    pub(in crate::app) fn public_sdrs_docked_now(&self, phone: bool) -> bool {
+        use crate::app::panels::radio_classic::{RadioClassicPlace, place};
+        let mode = self.state.rx[0].mode;
+        let rc_docked = place(
+            self.ui_settings.radio_classic_on,
+            self.show_radio_classic,
+            mode,
+            phone,
+        ) == RadioClassicPlace::Docked;
+        docked_under_waterfall(
+            self.show_public_sdrs,
+            self.ui_settings.public_sdr_docked,
+            mode,
+            phone,
+            rc_docked,
+        )
+    }
+
+    /// Ask for the directory the first time the list is open. Out: whether it
+    /// is open at all.
+    fn public_sdrs_begin(&mut self, ctx: &egui::Context) -> bool {
         if !self.show_public_sdrs {
             // Asked again the next time it opens, so a window reopened after an
             // hour is not showing an hour-old list.
             self.public_sdrs_asked = false;
-            return;
+            return false;
         }
         // The cached answer on first open, so the window paints at once; the
         // ⟳ chip is what goes to the network.
@@ -406,7 +449,23 @@ impl SdroxideApp {
             self.public_sdrs_asked = true;
             self.ask_device(ctx, sdroxide_types::DeviceProbe::PublicSdrs { refresh: false });
         }
+        true
+    }
 
+    /// Browse the public-SDR directories and open one as a radio, in a window.
+    /// Drawn only where the list is not docked under the waterfall.
+    pub(in crate::app) fn public_sdrs_window(
+        &mut self,
+        ctx: &egui::Context,
+        _cmds: &mut [Command],
+    ) {
+        if !self.public_sdrs_begin(ctx) {
+            return;
+        }
+        let phone = crate::layout::tier(ctx) == crate::layout::Tier::Phone;
+        if self.public_sdrs_docked_now(phone) {
+            return;
+        }
         let mut refresh = false;
         let mut picked: Option<PublicSdrEntry> = None;
         let mut star: Option<String> = None;
@@ -418,6 +477,49 @@ impl SdroxideApp {
             self.show_public_sdrs,
             |me, ui| me.public_sdrs_body(ui, &mut refresh, &mut picked, &mut star),
         );
+        self.public_sdrs_finish(ctx, open, refresh, picked, star);
+    }
+
+    /// Public SDRs in the slot under the waterfall: a title strip with the way
+    /// back to a window and a close, then the same body the window has.
+    pub(in crate::app) fn public_sdrs_docked(&mut self, ui: &mut egui::Ui) {
+        let ctx = ui.ctx().clone();
+        if !self.public_sdrs_begin(&ctx) {
+            return;
+        }
+        let mut refresh = false;
+        let mut picked: Option<PublicSdrEntry> = None;
+        let mut star: Option<String> = None;
+        let mut open = true;
+        ui.horizontal(|ui| {
+            ui.label(
+                RichText::new(tr!("publicsdr-public-sdrs"))
+                    .color(crate::theme::CYAN())
+                    .size(12.0)
+                    .strong(),
+            );
+            crate::chrome::row_tail(ui, |ui| {
+                if ui.button("✕").on_hover_text(tr!("publicsdr-close-hint")).clicked() {
+                    open = false;
+                }
+            });
+        });
+        egui::Frame::new().show(ui, |ui| {
+            self.public_sdrs_body(ui, &mut refresh, &mut picked, &mut star);
+        });
+        self.public_sdrs_finish(&ctx, open, refresh, picked, star);
+    }
+
+    /// What the window or the dock asked for this frame, done once the body has
+    /// given `self` back: closing, a refresh, a star, a receiver taken.
+    fn public_sdrs_finish(
+        &mut self,
+        ctx: &egui::Context,
+        open: bool,
+        refresh: bool,
+        picked: Option<PublicSdrEntry>,
+        star: Option<String>,
+    ) {
         self.show_public_sdrs = open;
         // Closed: the pick goes with the window, so the next opening does not
         // show the last session's receivers with their last answers.
@@ -510,6 +612,18 @@ impl SdroxideApp {
                 self.public_sdr_low_bw = !self.public_sdr_low_bw;
             }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                // Under the waterfall or in a window: the same switch as
+                // Settings → UI, where the operator already is.
+                let docked = self.ui_settings.public_sdr_docked;
+                let (glyph, hint) = if docked {
+                    ("↗", tr!("publicsdr-undock-hint"))
+                } else {
+                    ("⤓", tr!("publicsdr-dock-hint"))
+                };
+                if crate::chrome::chip(ui, docked, glyph).on_hover_text(hint).clicked() {
+                    self.ui_settings.public_sdr_docked = !docked;
+                    crate::app::persist::persist_ui_settings(&self.ui_settings);
+                }
                 if crate::chrome::chip(ui, false, tr!("publicsdr-refresh"))
                     .on_hover_text(tr!("publicsdr-fetch-both-directories-again"))
                     .clicked()
@@ -1165,4 +1279,19 @@ mod tests {
         }
     }
 
+    /// **The dock is a choice, honoured only where the slot is free.** Closed or
+    /// not chosen: a window. A phone, CW, a digital mode or Radio Classic in the
+    /// slot: a window. A plain voice mode with the dock chosen: docked.
+    #[test]
+    fn public_sdrs_docks_only_in_a_voice_mode_with_the_slot_free() {
+        use sdroxide_types::Mode;
+        let d = |open, docked, mode, phone, rc| docked_under_waterfall(open, docked, mode, phone, rc);
+        assert!(d(true, true, Mode::Usb, false, false), "voice, chosen, free");
+        assert!(!d(false, true, Mode::Usb, false, false), "closed");
+        assert!(!d(true, false, Mode::Usb, false, false), "not chosen: a window");
+        assert!(!d(true, true, Mode::Usb, true, false), "a phone has no room");
+        assert!(!d(true, true, Mode::Usb, false, true), "Radio Classic holds the slot");
+        assert!(!d(true, true, Mode::Cw, false, false), "CW has its own panel");
+        assert!(!d(true, true, Mode::Ft8, false, false), "a digital mode has its own panel");
+    }
 }

@@ -9426,3 +9426,13 @@ tx-off-cb = TRANSMIT FORBIDDEN on 11 m (CB) — the band is in your transmit lis
 settings-cb-allow-tx-needs-band = First set 11M-CB to YES in this radio's TX band list (Settings → Radio), then allow it here.
 
 settings-cb-allow-tx-order-note = Two locks, in this order: 1) 11M-CB is YES in the TX band list of the radio, confirmed; 2) this box. Both are needed to transmit on 11 m. Taking 11M-CB off the list also clears this box.
+
+settings-ui-publicsdr-under-waterfall = Docked under the waterfall
+
+settings-ui-publicsdr-place-hint = Where Public SDRs opens: docked under the waterfall in the voice modes that have nothing there, or in a window. Digital modes, CW and phones use a window anyway.
+
+publicsdr-dock-hint = Dock this list under the waterfall (voice modes with nothing there)
+
+publicsdr-undock-hint = Put this list back in a window of its own
+
+publicsdr-close-hint = Close Public SDRs

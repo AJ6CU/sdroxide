@@ -9338,3 +9338,13 @@ tx-off-cb = 11 m (CB) 禁止发射 — 该频段已在发射列表中，但“�
 settings-cb-allow-tx-needs-band = 请先在此电台的 TX 频段列表（设置 → 电台）中将 11M-CB 设为“是”，然后在此允许。
 
 settings-cb-allow-tx-order-note = 两道锁，按此顺序：1) 电台 TX 频段列表中 11M-CB 为“是”且已确认；2) 此复选框。在 11 m 发射需要两者。将 11M-CB 从列表移除也会取消勾选此框。
+
+settings-ui-publicsdr-under-waterfall = 停靠在瀑布图下方
+
+settings-ui-publicsdr-place-hint = Public SDRs 的打开位置：在下方没有内容的语音模式中停靠在瀑布图下方，或使用窗口。数字模式、CW 和手机始终使用窗口。
+
+publicsdr-dock-hint = 将此列表停靠在瀑布图下方（下方无内容的语音模式）
+
+publicsdr-undock-hint = 将此列表放回独立窗口
+
+publicsdr-close-hint = 关闭 Public SDRs

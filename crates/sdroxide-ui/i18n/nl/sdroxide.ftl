@@ -9408,3 +9408,13 @@ tx-off-cb = ZENDEN VERBODEN op 11 m (CB) — de band staat in uw zendlijst, maar
 settings-cb-allow-tx-needs-band = Zet eerst 11M-CB op JA in de TX-bandlijst van deze radio (Instellingen → Radio) en sta het daarna hier toe.
 
 settings-cb-allow-tx-order-note = Twee sloten, in deze volgorde: 1) 11M-CB staat op JA in de TX-bandlijst van de radio, bevestigd; 2) dit vakje. Beide zijn nodig om op 11 m te zenden. 11M-CB uit de lijst halen zet dit vakje ook uit.
+
+settings-ui-publicsdr-under-waterfall = Vastgezet onder de waterval
+
+settings-ui-publicsdr-place-hint = Waar Public SDRs opent: vastgezet onder de waterval in spraakmodi die daar niets hebben, of in een venster. Digitale modi, CW en telefoons gebruiken sowieso een venster.
+
+publicsdr-dock-hint = Zet deze lijst vast onder de waterval (spraakmodi zonder paneel daar)
+
+publicsdr-undock-hint = Zet deze lijst terug in een eigen venster
+
+publicsdr-close-hint = Public SDRs sluiten

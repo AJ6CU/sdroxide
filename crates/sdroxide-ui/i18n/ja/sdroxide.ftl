@@ -9348,3 +9348,13 @@ tx-off-cb = 11 m (CB) では送信禁止 — このバンドは送信リスト�
 settings-cb-allow-tx-needs-band = まずこの無線機の TX バンドリスト（設定 → 無線機）で 11M-CB を「はい」にし、そのあとここで許可してください。
 
 settings-cb-allow-tx-order-note = ロックは2つ、この順です：1) 無線機の TX バンドリストで 11M-CB が「はい」かつ確認済み、2) このチェックボックス。11 m で送信するには両方が必要です。11M-CB をリストから外すと、このチェックも外れます。
+
+settings-ui-publicsdr-under-waterfall = ウォーターフォールの下にドック
+
+settings-ui-publicsdr-place-hint = Public SDRs を開く場所：そこに何もない音声モードではウォーターフォールの下にドック、または別ウィンドウ。デジタルモード、CW、スマートフォンでは常にウィンドウになります。
+
+publicsdr-dock-hint = このリストをウォーターフォールの下にドックする（そこに何もない音声モード）
+
+publicsdr-undock-hint = このリストを独立したウィンドウに戻す
+
+publicsdr-close-hint = Public SDRs を閉じる

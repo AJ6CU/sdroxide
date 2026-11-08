@@ -9411,3 +9411,13 @@ tx-off-cb = ÉMISSION INTERDITE en 11 m (CB) — la bande est dans votre liste d
 settings-cb-allow-tx-needs-band = Mettez d'abord 11M-CB sur OUI dans la liste TX de cette radio (Réglages → Radio), puis autorisez-le ici.
 
 settings-cb-allow-tx-order-note = Deux verrous, dans cet ordre : 1) 11M-CB sur OUI dans la liste de bandes TX de la radio, confirmée ; 2) cette case. Les deux sont nécessaires pour émettre en 11 m. Retirer 11M-CB de la liste décoche aussi cette case.
+
+settings-ui-publicsdr-under-waterfall = Ancré sous le waterfall
+
+settings-ui-publicsdr-place-hint = Où s'ouvre Public SDRs : ancré sous le waterfall dans les modes voix qui n'y ont rien, ou dans une fenêtre. Les modes numériques, le CW et les téléphones utilisent de toute façon une fenêtre.
+
+publicsdr-dock-hint = Ancrer cette liste sous le waterfall (modes voix qui n'y ont rien)
+
+publicsdr-undock-hint = Remettre cette liste dans une fenêtre à part
+
+publicsdr-close-hint = Fermer Public SDRs

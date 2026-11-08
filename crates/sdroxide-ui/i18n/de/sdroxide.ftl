@@ -9400,3 +9400,13 @@ tx-off-cb = SENDEN GESPERRT auf 11 m (CB) — das Band steht in Ihrer Sendeliste
 settings-cb-allow-tx-needs-band = Setzen Sie zuerst 11M-CB in der TX-Bandliste dieses Funkgeräts auf JA (Einstellungen → Radio) und erlauben Sie es dann hier.
 
 settings-cb-allow-tx-order-note = Zwei Sperren, in dieser Reihenfolge: 1) 11M-CB steht in der TX-Bandliste des Funkgeräts auf JA und ist bestätigt; 2) dieses Kästchen. Zum Senden auf 11 m sind beide nötig. Wird 11M-CB aus der Liste genommen, wird auch dieses Kästchen abgewählt.
+
+settings-ui-publicsdr-under-waterfall = Unter dem Wasserfall angedockt
+
+settings-ui-publicsdr-place-hint = Wo Public SDRs sich öffnet: unter dem Wasserfall angedockt in Sprachmodi, die dort nichts haben, oder in einem Fenster. Digitalmodi, CW und Telefone nutzen ohnehin ein Fenster.
+
+publicsdr-dock-hint = Diese Liste unter dem Wasserfall andocken (Sprachmodi ohne Panel dort)
+
+publicsdr-undock-hint = Diese Liste wieder in ein eigenes Fenster setzen
+
+publicsdr-close-hint = Public SDRs schließen

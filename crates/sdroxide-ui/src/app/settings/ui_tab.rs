@@ -159,6 +159,32 @@ pub(in crate::app) fn settings_ui_tab(
                 cfg.set_detached(module, on);
                 ui.end_row();
             }
+            // Public SDRs is not a module of its own but a tool window, with a
+            // third place the modules do not have: docked under the waterfall,
+            // as Radio Classic is. Where that slot is taken (a digital mode's
+            // panel, CW, a phone) it is a window whatever is chosen here.
+            {
+                let mut docked = cfg.public_sdr_docked;
+                ui.label(tr!("settings-ui-window-label", module = tr!("publicsdr-public-sdrs")));
+                ComboBox::from_id_salt("ui-publicsdr-place")
+                    .selected_text(if docked {
+                        tr!("settings-ui-publicsdr-under-waterfall")
+                    } else {
+                        tr!("settings-ui-undocked")
+                    })
+                    .show_styled(ui, |ui| {
+                        ui.selectable_value(
+                            &mut docked,
+                            true,
+                            tr!("settings-ui-publicsdr-under-waterfall"),
+                        );
+                        ui.selectable_value(&mut docked, false, tr!("settings-ui-undocked"));
+                    })
+                    .response
+                    .on_hover_text(tr!("settings-ui-publicsdr-place-hint"));
+                cfg.public_sdr_docked = docked;
+                ui.end_row();
+            }
             // Both directions at once, for arranging a whole screen in one
             // press: every module out, or every module home. Shown only while
             // they would do something, so neither is a button that changes

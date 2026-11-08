@@ -9400,3 +9400,13 @@ tx-off-cb = 11 m (CB) üzerinde YAYIN YASAK — bant yayın listenizde, ancak "1
 settings-cb-allow-tx-needs-band = Önce bu telsizin TX bant listesinde 11M-CB'yi EVET yapın (Ayarlar → Radyo), sonra burada izin verin.
 
 settings-cb-allow-tx-order-note = İki kilit, bu sırayla: 1) telsizin TX bant listesinde 11M-CB EVET ve onaylı; 2) bu kutu. 11 m'de yayın için ikisi de gerekir. 11M-CB'yi listeden çıkarmak bu kutunun işaretini de kaldırır.
+
+settings-ui-publicsdr-under-waterfall = Şelalenin altına sabitlenmiş
+
+settings-ui-publicsdr-place-hint = Public SDRs'nin nerede açılacağı: orada hiçbir şeyi olmayan ses modlarında şelalenin altına sabitlenmiş ya da bir pencerede. Sayısal modlar, CW ve telefonlar zaten pencere kullanır.
+
+publicsdr-dock-hint = Bu listeyi şelalenin altına sabitle (orada paneli olmayan ses modları)
+
+publicsdr-undock-hint = Bu listeyi kendi penceresine geri koy
+
+publicsdr-close-hint = Public SDRs'yi kapat
