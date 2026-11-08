@@ -2527,6 +2527,48 @@ impl SdroxideApp {
                         Some(sdroxide_types::sat_bands(&freqs, t.doppler_rx_hz))
                     })
                     .unwrap_or_default();
+            // A CAT rig under a satellite lock is tuned to the dial plus the
+            // receive correction, and the engine lays its audio out there (the
+            // window and the frames). The dial and its passband are drawn there
+            // too, so the panadapter follows the radio's VFO A as the readout
+            // does, and anything tuned on it is moved back onto the published
+            // dial.
+            //
+            // While the rig transmits (keyed from here or from its microphone)
+            // the over is on the uplink, and the engine frames it there: the
+            // panadapter moves with it — its centre, the dial and the view —
+            // and comes back to the downlink at the same span when it ends.
+            let sat = self
+                .sat_track
+                .as_ref()
+                .filter(|t| t.corrections_active)
+                .filter(|_| self.caps.as_ref().is_some_and(|c| c.audio_mode));
+            let on_air = self.state.tx.ptt || self.state.tx.tune || self.state.tx.rig_keyed;
+            let sat_tx_up = sat
+                .filter(|_| on_air)
+                .and_then(|t| t.uplink_hz.map(|u| u + t.doppler_tx_hz));
+            let sat_shift = match (sat, sat_tx_up) {
+                (_, Some(up)) => up - self.state.active_freq_hz(),
+                (Some(t), None) => t.doppler_rx_hz,
+                (None, None) => 0.0,
+            };
+            let center_rx = self.state.center_hz;
+            match (sat_tx_up, self.sat_tx_view_span) {
+                (Some(up), span) => {
+                    let span = span.unwrap_or_else(|| self.view.span());
+                    self.sat_tx_view_span = Some(span);
+                    self.state.center_hz = up;
+                    self.view.fit(up, span);
+                }
+                (None, Some(span)) => {
+                    self.sat_tx_view_span = None;
+                    self.view.fit(center_rx, span);
+                }
+                (None, None) => {}
+            }
+            let cmds_before = cmds.len();
+            self.state.vfo_a_hz += sat_shift;
+            self.state.vfo_b_hz += sat_shift;
             spectrum_view::show_ext(
                 &mut spec_ui,
                 &mut self.view,
@@ -2556,6 +2598,18 @@ impl SdroxideApp {
                 self.ui_settings.memory_waterfall_lanes,
                 cmds,
             );
+            if sat_tx_up.is_some() {
+                self.state.center_hz = center_rx;
+            }
+            if sat_shift != 0.0 {
+                self.state.vfo_a_hz -= sat_shift;
+                self.state.vfo_b_hz -= sat_shift;
+                for c in &mut cmds[cmds_before..] {
+                    if let Command::SetVfo { hz, .. } = c {
+                        *hz -= sat_shift;
+                    }
+                }
+            }
             // The ATS Mini tunes by stepping its own band cycle, so the dial can
             // be a beat ahead of the radio. It hands us audio only, so the
             // waterfall is where the eye already is: say it here, centred,

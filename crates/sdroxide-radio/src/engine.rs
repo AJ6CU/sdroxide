@@ -2729,6 +2729,12 @@ const SAT_CALC_INTERVAL: Duration = Duration::from_millis(200);
 /// How often the [`RadioEvent::SatTrack`] stream goes out — readout rate, not
 /// correction rate.
 const SAT_EMIT_INTERVAL: Duration = Duration::from_millis(500);
+
+/// The satellite uplink on a CAT rig's VFO B follows the Doppler in steps of at
+/// least this much, at most once per `SAT_VFO_B_GAP`: tens of hertz on 2 m,
+/// where the uplink correction moves at most a few tens of hertz a second.
+const SAT_VFO_B_STEP_HZ: f64 = 50.0;
+const SAT_VFO_B_GAP: Duration = Duration::from_secs(2);
 /// The slow lane: pass prediction is a search, not a lookup, and stale-element
 /// recovery reads the TLE caches off disk. Neither belongs at 5 Hz.
 const SAT_SLOW_INTERVAL_S: f64 = 300.0;
@@ -3719,8 +3725,18 @@ struct Engine {
     sat_cat_last_freq: f64,
     /// Last VFO B frequency sent (SAT uplink), for rate-limiting.
     sat_vfo_b_last_freq: f64,
+    /// When that VFO B write went out, for `SAT_VFO_B_GAP`.
+    sat_vfo_b_last_at: Option<Instant>,
     /// Whether the rig's split is currently on (SAT lock).
     sat_split_on: bool,
+    /// The transmit frequency last put on a CAT rig's VFO B for SPLIT outside a
+    /// satellite lock. Zero means "nothing sent".
+    manual_vfo_b_hz: f64,
+    /// Whether the satellite lock switched SPLIT on (it does, for a link with
+    /// an uplink on a CAT rig), and what SPLIT was before it did — put back
+    /// when the lock ends.
+    sat_took_split: bool,
+    split_before_lock: bool,
     /// The centre an open attempt on this radio failed at, and which a later
     /// attempt should therefore not simply repeat.
     ///
@@ -5166,7 +5182,11 @@ fn engine_thread(
         good_vfo_hz: seeded_good_vfo_hz,
         sat_cat_last_freq: 0.0,
         sat_vfo_b_last_freq: 0.0,
+        sat_vfo_b_last_at: None,
         sat_split_on: false,
+        manual_vfo_b_hz: 0.0,
+        sat_took_split: false,
+        split_before_lock: false,
         // Nothing has been refused yet on a front end that opened, so the first
         // attempt is made at the dial and only its failure arms the fallback.
         refused_center_hz: seeded_refused_center_hz,
@@ -7466,7 +7486,9 @@ impl Engine {
         // carrier it came from, and the operator has no RF panorama to read the
         // band off — so the tuned frequency is what belongs under the cursor.
         // The whole passband is shown either side of it.
-        let dial = self.state.rx_freq_hz();
+        // Where the rig is actually tuned, a satellite lock's correction
+        // included — the audio is centred there (see `audio_rig_dial_hz`).
+        let dial = self.state.rx_freq_hz() + self.sat_rx_doppler_hz();
         self.state.center_hz = dial;
         self.state.sample_rate = self.audio_bw * 2.0;
         // Demodulated audio is not an ADC's output: the band the demodulator
@@ -9181,8 +9203,27 @@ impl Engine {
         // Symmetric about the dial: see `update_display_center` for why an
         // audio-only front end puts the tuned frequency in the middle, not at
         // the edge.
-        let dial = self.state.active_freq_hz();
+        let dial = self.audio_rig_dial_hz();
         (dial - self.audio_bw, dial + self.audio_bw)
+    }
+
+    /// Where a demod-audio rig is actually tuned, which is where its audio is
+    /// centred: the dial, plus a satellite lock's receive correction, which on
+    /// such a rig rides on its VFO rather than on a DDC. Everything that lays
+    /// that audio out against RF (the window, the frames) goes from here.
+    fn audio_rig_dial_hz(&self) -> f64 {
+        self.state.active_freq_hz() + if self.audio_mode { self.sat_rx_doppler_hz() } else { 0.0 }
+    }
+
+    /// While a CAT rig transmits under its own control with a satellite lock's
+    /// split held, the corrected uplink it is on — the frequency the panadapter
+    /// shows the over at, as it does one keyed from here.
+    fn rig_own_uplink_hz(&self) -> Option<f64> {
+        if !(self.audio_mode && self.rig_tx && self.sat_split_on) {
+            return None;
+        }
+        let up = self.sat_lock.as_ref()?.track.uplink_hz?;
+        Some(up + self.sat_tx_doppler_hz())
     }
 
     /// The viewport, when it lies inside the rig's own passband — and so when
@@ -9332,6 +9373,20 @@ impl Engine {
             return self.make_tx_frame();
         }
         let bins = self.cfg.bins();
+        // The rig keyed itself (its microphone) during a satellite lock: the
+        // over is shown at the uplink, as one keyed from here is — with what
+        // the rig sends on its audio output meanwhile, its monitor or nothing.
+        if let Some(up) = self.rig_own_uplink_hz() {
+            let vp = (up - self.audio_bw, up + self.audio_bw);
+            return self.analyzer.make_frame(
+                up,
+                self.radio_fs,
+                self.cfg.db_floor,
+                self.cfg.db_ceil,
+                bins,
+                Some(vp),
+            );
+        }
         if self.audio_mode {
             // Zoomed inside the rig's own passband: its audio resolves that
             // window by two orders of magnitude more than its scope can, so it
@@ -9339,7 +9394,7 @@ impl Engine {
             // test, because the scope is what owns the picture everywhere else.
             if let Some(vp) = self.audio_zoom_window() {
                 return self.analyzer.make_frame(
-                    self.state.active_freq_hz(),
+                    self.audio_rig_dial_hz(),
                     self.radio_fs,
                     self.cfg.db_floor,
                     self.cfg.db_ceil,
@@ -9358,7 +9413,7 @@ impl Engine {
             // RF panorama to read. USB's audio lands above the dial and LSB's
             // below; the other half is the real signal's own mirror, which is
             // what a real-audio spectrum has and no RF claim is made about it.
-            let dial = self.state.active_freq_hz();
+            let dial = self.audio_rig_dial_hz();
             let vp = (dial - self.audio_bw, dial + self.audio_bw);
             return self.analyzer.make_frame(
                 dial,
@@ -9575,6 +9630,10 @@ impl Engine {
                 }
                 self.update_tuning();
             }
+            // Under a satellite lock holding the rig's split, VFO A is the
+            // downlink and VFO B the uplink until the lock ends: a selection or a
+            // swap from a key binding (the chips are greyed out) is ignored.
+            SelectVfo(_) | SwapVfos if self.sat_lock.is_some() && self.sat_split_on => {}
             SelectVfo(v) => {
                 // The mode goes with the VFO, and so does the antenna socket.
                 // Shelve what the one being left was listening in, and put the
@@ -9602,7 +9661,12 @@ impl Engine {
                 // offset is taken for the mode it is about to be put in.
                 let mode = self.vfo_memory[v.index()].mode;
                 let rig_hz = self.state.active_freq_hz() + self.rig_cw_offset_hz_in(mode);
-                self.source.select_vfo(v, rig_hz);
+                // Except under a satellite lock holding the rig's split: the
+                // rig stays on VFO A (the downlink) with VFO B the uplink, and
+                // selecting B would put the Doppler writes onto the transmitter.
+                if !(self.sat_lock.is_some() && self.sat_split_on) {
+                    self.source.select_vfo(v, rig_hz);
+                }
                 self.recall_vfo_mode();
                 self.recall_vfo_antenna();
                 self.state.band = Band::containing(self.state.active_freq_hz());
@@ -9638,7 +9702,55 @@ impl Engine {
                 self.recall_vfo_antenna();
                 self.update_tuning();
             }
-            SetSplit(on) => self.state.split = on,
+            SetSplit(on) => {
+                self.state.split = on;
+                // Under a satellite lock SPLIT is the lock's split: on, VFO B
+                // carries the (corrected) uplink and the over goes out on it;
+                // off, the rig's split goes and an over borrows the dial onto
+                // the uplink instead.
+                if self.source.controls_rig_split() && self.sat_lock.is_some() {
+                    let uplink = self.sat_lock.as_ref().and_then(|l| l.track.uplink_hz);
+                    match (on, uplink) {
+                        (true, Some(up)) => {
+                            self.source.split_on();
+                            let f = up + self.sat_tx_doppler_hz();
+                            self.source.set_vfo_b_freq(f);
+                            self.sat_vfo_b_last_freq = f;
+                            self.source.set_sat_split_on(true);
+                            self.sat_split_on = true;
+                        }
+                        // A downlink-only lock has nothing to transmit on.
+                        (true, None) => self.state.split = false,
+                        (false, _) => {
+                            if self.sat_split_on {
+                                self.source.split_off();
+                                self.source.set_sat_split_on(false);
+                                self.sat_split_on = false;
+                            }
+                        }
+                    }
+                }
+                // A CAT rig carries SPLIT in its own split: VFO B gets the
+                // transmit frequency and an over goes out on it as the rig
+                // stands (once the rig has confirmed the split — until then, and
+                // if it never does, the over borrows the dial as before).
+                if self.source.controls_rig_split() && self.sat_lock.is_none() {
+                    if on {
+                        // The rig's own VFO keeps its mode: a VFO B mode write
+                        // goes through VFO B and back to A, which on a split
+                        // worked from B would leave the rig on the wrong VFO.
+                        self.source.split_on();
+                        let tx = self.state.tx_freq_hz();
+                        self.source.set_vfo_b_freq(tx);
+                        self.manual_vfo_b_hz = tx;
+                        self.source.set_sat_split_on(true);
+                    } else {
+                        self.source.split_off();
+                        self.source.set_sat_split_on(false);
+                        self.manual_vfo_b_hz = 0.0;
+                    }
+                }
+            }
             SetCenter(hz) => {
                 // Never onto the VFO itself: see `guarded_center`.
                 let hz = self.guarded_center(hz);
@@ -14342,26 +14454,83 @@ impl Engine {
             )));
             return;
         };
+        info!(
+            "satellite lock {} (norad {}): audio_mode {}, doppler {}, uplink {:?}, tone {:?}, \
+             split held {}, already locked {:?}",
+            cfg.name,
+            cfg.norad_id,
+            self.audio_mode,
+            cfg.doppler,
+            cfg.uplink,
+            cfg.ctcss_hz,
+            self.sat_split_on,
+            self.sat_lock.as_ref().map(|l| (l.cfg.norad_id, l.cfg.uplink)),
+        );
         if self.audio_mode && cfg.doppler {
             let _ = self.event_tx.send(RadioEvent::Notice(Some(
                 "CAT rig: satellite RX Doppler correction via CAT (experimental)"
                     .into(),
             )));
-            // Step 2: set VFO B to the initial uplink and enable split.
-            if let Some(u) = cfg.uplink {
+        }
+        // A CAT transceiver — on its own or behind a panadapter receiver —
+        // transmits on its own split for the lock.
+        if self.source.controls_rig_split() {
+            // Step 2: the rig's own split, VFO A on the downlink and VFO B on
+            // the uplink. Only for a link with an uplink: a downlink-only lock
+            // (a beacon, an APT bird) has nothing to put on VFO B.
+            //
+            // The order is the one both families need. Split first, which on
+            // Icom also puts the rig on VFO A in VFO mode; then mode and tone,
+            // which Yaesu sets on VFO A for the copy to B that comes with the
+            // frequency; the frequency last.
+            //
+            // The same lock arriving again — a DOPPLER or ROTATOR flip resends
+            // it whole — finds all of that done already; redoing it would take
+            // the rig through VFO B (on Icom, visibly) for nothing.
+            let relock = self.sat_split_on
+                && self.sat_lock.as_ref().is_some_and(|l| {
+                    l.cfg.norad_id == cfg.norad_id
+                        && l.cfg.uplink == cfg.uplink
+                        && l.cfg.ctcss_hz == cfg.ctcss_hz
+                });
+            info!(
+                "satellite lock: relock {relock}; the rig's split and VFO B are {}",
+                if cfg.uplink.is_some() && !relock { "being set up" } else { "left as they are" }
+            );
+            if let Some(u) = cfg.uplink
+                && !relock
+            {
+                // The rig on VFO A first (on Icom also off a memory channel):
+                // the Doppler writes are for the VFO in use, and that has to
+                // be the downlink one.
+                let down = if cfg.downlink_hz > 0.0 { cfg.downlink_hz } else { self.state.vfo_a_hz };
+                self.source.select_vfo(Vfo::A, down);
+                self.source.split_on();
+                self.source.set_vfo_b_mode(self.state.rx[0].mode);
+                // Only the tone the link names: a link without one gets none,
+                // rather than the ISS repeater's 67 Hz by default.
+                // A link that names none gets the tone switched off (zero),
+                // not left with the one an earlier link put on VFO B.
+                self.source.set_vfo_b_ctcss(cfg.ctcss_hz.unwrap_or(0.0));
+                // The nominal uplink now, so VFO B never transmits on whatever
+                // it held before; the Doppler-corrected one follows with the
+                // first track (`sat_vfo_b_last_freq` at zero makes sure of it,
+                // however small the correction is then).
                 let up = u.uplink_for(self.state.active_freq_hz()) + self.state.xit.effective_hz();
                 self.source.set_vfo_b_freq(up);
-                self.sat_vfo_b_last_freq = up;
+                self.sat_vfo_b_last_freq = 0.0;
+                self.source.set_sat_split_on(true);
+                self.sat_split_on = true;
+                // SPLIT as the operator had it before the *first* lock: moving
+                // the lock to another link finds SPLIT on already, but on
+                // because the lock put it there, and that is not what to give
+                // back when the lock ends.
+                if !self.sat_took_split {
+                    self.split_before_lock = self.state.split;
+                }
+                self.sat_took_split = true;
+                self.state.split = true;
             }
-            // Step 2c: set VFO B mode to the current mode (uplink mode).
-            self.source.set_vfo_b_mode(self.state.rx[0].mode);
-            // CTCSS on VFO B: use the tone from the lock config if present,
-            // otherwise default to 67 Hz (ISS repeater).
-            let tone = cfg.ctcss_hz.unwrap_or(67.0);
-            self.source.set_vfo_b_ctcss(tone);
-            self.source.split_on();
-            self.source.set_sat_split_on(true);
-            self.sat_split_on = true;
         }
         self.stop_scan_for_operator();
         // The dial goes to the nominal downlink through the normal tuning
@@ -14420,10 +14589,23 @@ impl Engine {
             self.source.set_sat_split_on(false);
             self.sat_split_on = false;
         }
+        // And SPLIT as it was before the lock switched it on — including the
+        // operator's own SPLIT, which on a CAT rig goes back into the rig.
+        if std::mem::take(&mut self.sat_took_split) {
+            self.state.split = std::mem::take(&mut self.split_before_lock);
+            if self.state.split && self.source.controls_rig_split() {
+                self.source.split_on();
+                let tx = self.state.tx_freq_hz();
+                self.source.set_vfo_b_freq(tx);
+                self.manual_vfo_b_hz = tx;
+                self.source.set_sat_split_on(true);
+            }
+        }
         if let Some(tx) = self.tx.as_mut() {
             tx.sat_nco = None;
         }
         self.update_tuning();
+        self.emit_state();
         // The antenna stops chasing a satellite nobody is locked to.
         self.drive_rotator();
         let _ = self.event_tx.send(RadioEvent::SatTrack(None));
@@ -14835,6 +15017,10 @@ impl Engine {
             return;
         }
         self.rig_tx = on;
+        // The screen too: a satellite lock's readout follows the rig onto the
+        // uplink while the operator talks into its microphone.
+        self.state.tx.rig_keyed = on;
+        self.emit_state();
         info!(
             "the radio is {} under {how}",
             match on {
@@ -18228,24 +18414,7 @@ impl Engine {
                 self.note_frequency_taken(corrected);
                 self.sat_cat_last_freq = corrected;
             }
-            // Step 2b/2c: VFO B + split (only when sat lock is active and
-            // corrections are on). Set VFO B to the corrected uplink and enable
-            // split once. Update VFO B when the uplink changes by > 1 Hz.
-            if !self.tx_active
-                && self.sat_lock.as_ref().is_some_and(|l| l.track.corrections_active)
-            {
-                let up = self.sat_lock.as_ref().unwrap().track.uplink_hz.unwrap_or(0.0)
-                    + self.sat_tx_doppler_hz()
-                    + self.state.xit.effective_hz();
-                if !self.sat_split_on {
-                    self.source.split_on();
-                    self.sat_split_on = true;
-                }
-                if (up - self.sat_vfo_b_last_freq).abs() > 500.0 || self.sat_vfo_b_last_freq == 0.0 {
-                    self.source.set_vfo_b_freq(up);
-                    self.sat_vfo_b_last_freq = up;
-                }
-            }
+            self.sync_rig_vfo_b();
             self.update_display_center();
             return;
         }
@@ -18303,12 +18472,52 @@ impl Engine {
         // Keep a wideband-IQ rig's own VFO on our dial (TCI); no-op elsewhere. This
         // way returning from TX doesn't snap the rig back to the IQ centre.
         self.source.set_if_offset(main_offset);
+        // A transceiver paired with this receiver keeps its own split: VFO B
+        // follows the satellite uplink (or SPLIT's transmit frequency) here too.
+        self.sync_rig_vfo_b();
         // On a screen wider than the skim window the dial decides which part of
         // it is skimmed ([`skim_center_for`]), and tuning inside the span moves
         // the dial without moving the front end or the client's view — so this
         // is the only place that would notice. A handful of comparisons, and the
         // dead band means ordinary tuning changes nothing.
         self.sync_skim_window();
+    }
+
+    /// Keep a CAT transceiver's VFO B — the transmit VFO of its own split — on
+    /// the frequency it has to transmit on: a satellite lock's corrected uplink,
+    /// or SPLIT's transmit frequency outside one. Never mid-over.
+    ///
+    /// The track's uplink already carries XIT; a downlink-only lock has none,
+    /// and then VFO B is left alone. With the corrections off (or the elements
+    /// stale) VFO B still follows the nominal mapping: `sat_tx_doppler_hz` is
+    /// zero then.
+    fn sync_rig_vfo_b(&mut self) {
+        if self.tx_active || !self.source.controls_rig_split() {
+            return;
+        }
+        let uplink = self.sat_lock.as_ref().and_then(|l| l.track.uplink_hz);
+        if self.sat_split_on
+            && let Some(uplink) = uplink
+        {
+            let up = uplink + self.sat_tx_doppler_hz();
+            // Finer than the receive side needs, but not every hertz: on Icom
+            // each VFO B write takes the rig through VFO B for a moment.
+            let due = self.sat_vfo_b_last_freq == 0.0
+                || ((up - self.sat_vfo_b_last_freq).abs() >= SAT_VFO_B_STEP_HZ
+                    && self.sat_vfo_b_last_at.is_none_or(|t| t.elapsed() >= SAT_VFO_B_GAP));
+            if due {
+                self.source.set_vfo_b_freq(up);
+                self.sat_vfo_b_last_freq = up;
+                self.sat_vfo_b_last_at = Some(Instant::now());
+            }
+        }
+        if self.state.split && self.sat_lock.is_none() && self.manual_vfo_b_hz != 0.0 {
+            let tx = self.state.tx_freq_hz();
+            if (tx - self.manual_vfo_b_hz).abs() >= 1.0 {
+                self.source.set_vfo_b_freq(tx);
+                self.manual_vfo_b_hz = tx;
+            }
+        }
     }
 
     /// Where a key-down would transmit: the dial's transmit frequency, or
@@ -18900,13 +19109,11 @@ impl Engine {
             // On a radio that makes its own CW carrier the VFO *is* the transmit
             // frequency, and the contact sits a sidetone above the dial — the
             // same offset the receive window already rides on.
-            // SAT Doppler (step 2): with split on, VFO B already carries the
-            // uplink, so VFO A stays on the downlink — no frequency change on TX.
-            let rig_txf = if self.sat_split_on {
-                self.state.active_freq_hz()
-            } else {
-                txf + self.rig_cw_offset_hz()
-            };
+            // Under a satellite lock with the rig's split on, this is still the
+            // real (corrected) uplink: the source keeps VFO A where it is only
+            // once the rig has confirmed its split, and otherwise borrows the
+            // dial onto this frequency for the over (see `AudioCatSource::tx_begin`).
+            let rig_txf = txf + self.rig_cw_offset_hz();
             // Every rail has passed and the station is about to be on the air.
             // The external T/R switch leads the RF — contacts first, drive
             // second, always — which is the one guarantee that whole subsystem

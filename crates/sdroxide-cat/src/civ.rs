@@ -191,13 +191,37 @@ pub fn set_mode_vfo_b_frames(radio: u8, mode_byte: u8) -> Vec<Vec<u8>> {
 
 /// Enable CTCSS tone on VFO B: select VFO B, set tone freq, tone on, select VFO A.
 pub fn set_ctcss_vfo_b_frames(radio: u8, tone_hz: f64) -> Vec<Vec<u8>> {
-    let tone = (tone_hz * 10.0).round() as u16;
+    let mut out = vec![frame(radio, 0x07, &[0x01])]; // select VFO B
+    out.extend(repeater_tone_frames(radio, tone_hz));
+    out.push(frame(radio, 0x07, &[0x00])); // select VFO A
+    out
+}
+
+/// The repeater (encode) tone on the selected VFO: its frequency, then the
+/// tone switched on. Tenths of a hertz as three bytes of packed BCD,
+/// big-endian — 67.0 Hz is `00 06 70` — the encoding Hamlib's
+/// `icom_set_ctcss_tone` uses.
+pub fn repeater_tone_frames(radio: u8, tone_hz: f64) -> Vec<Vec<u8>> {
+    // No tone (zero): switched off, so a VFO keeps none from an earlier link.
+    if tone_hz <= 0.0 {
+        return vec![frame(radio, 0x16, &[0x42, 0x00])];
+    }
+    let tenths = ((tone_hz * 10.0).round() as u32).min(9999);
+    let bcd = [
+        to_bcd((tenths / 10_000 % 100) as u8),
+        to_bcd((tenths / 100 % 100) as u8),
+        to_bcd((tenths % 100) as u8),
+    ];
     vec![
-        frame(radio, 0x07, &[0x01]), // select VFO B
-        frame(radio, 0x1B, &[0x00, (tone >> 8) as u8, (tone & 0xFF) as u8]), // tone freq
-        frame(radio, 0x16, &[0x42]), // tone on
-        frame(radio, 0x07, &[0x00]), // select VFO A
+        frame(radio, 0x1B, &[0x00, bcd[0], bcd[1], bcd[2]]), // repeater tone frequency
+        frame(radio, 0x16, &[0x42, 0x01]),                   // repeater tone on
     ]
+}
+
+/// Ask whether the rig's split is on (`0x0F` with no data). The answer carries
+/// `00`/`01` for split off/on, or `10`–`12` for a duplex setting.
+pub fn read_split_frame(radio: u8) -> Vec<u8> {
+    frame(radio, 0x0F, &[])
 }
 pub fn read_freq_frame(radio: u8) -> Vec<u8> {
     frame(radio, 0x03, &[])
@@ -1231,6 +1255,30 @@ pub fn parse_frames(buf: &mut Vec<u8>) -> Vec<CivReply> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The VFO B tone: BCD tenths of a hertz in three bytes, then the tone
+    /// switched *on* (`16 42 01`, not the bare `16 42` that is a read).
+    #[test]
+    fn the_vfo_b_tone_is_bcd_and_switched_on() {
+        let f = set_ctcss_vfo_b_frames(0x88, 67.0);
+        assert_eq!(f[0], vec![0xFE, 0xFE, 0x88, 0xE0, 0x07, 0x01, 0xFD]);
+        assert_eq!(f[1], vec![0xFE, 0xFE, 0x88, 0xE0, 0x1B, 0x00, 0x00, 0x06, 0x70, 0xFD]);
+        assert_eq!(f[2], vec![0xFE, 0xFE, 0x88, 0xE0, 0x16, 0x42, 0x01, 0xFD]);
+        assert_eq!(f[3], vec![0xFE, 0xFE, 0x88, 0xE0, 0x07, 0x00, 0xFD]);
+        let f = set_ctcss_vfo_b_frames(0x88, 141.3);
+        assert_eq!(f[1], vec![0xFE, 0xFE, 0x88, 0xE0, 0x1B, 0x00, 0x00, 0x14, 0x13, 0xFD]);
+    }
+
+    /// No tone is the repeater tone switched off, not left as it was.
+    #[test]
+    fn no_tone_switches_the_repeater_tone_off() {
+        assert_eq!(repeater_tone_frames(0x88, 0.0), vec![vec![0xFE, 0xFE, 0x88, 0xE0, 0x16, 0x42, 0x00, 0xFD]]);
+    }
+
+    #[test]
+    fn the_split_read_is_a_bare_0f() {
+        assert_eq!(read_split_frame(0x88), vec![0xFE, 0xFE, 0x88, 0xE0, 0x0F, 0xFD]);
+    }
 
     #[test]
     fn freq_roundtrips() {

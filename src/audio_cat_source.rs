@@ -77,6 +77,9 @@ pub struct AudioCatSource {
     /// When set, `tx_begin` skips the frequency write (VFO A stays on the
     /// downlink; the rig transmits on VFO B because split is on).
     sat_split_on: bool,
+    /// Which of its own VFOs the rig was last told to receive on (sdroxide's A/B).
+    /// The transmit frequency of a split goes to the other one.
+    rig_vfo: sdroxide_types::Vfo,
     /// Top of the `27 00` amplitude scale on the rig the model list names —
     /// 160 on the IC-7300 generation, 200 on an IC-7760. Taken at open, since
     /// the model cannot change under a session.
@@ -393,6 +396,7 @@ impl AudioCatSource {
             stream_scratch: Vec::new(),
             cat,
             sat_split_on: false,
+            rig_vfo: sdroxide_types::Vfo::A,
             scope_full_scale,
             cw_mcw,
             dial: Dial::at(center),
@@ -463,6 +467,7 @@ impl AudioCatSource {
             stream_scratch: Vec::new(),
             cat,
             sat_split_on: false,
+            rig_vfo: sdroxide_types::Vfo::A,
             scope_full_scale: 160.0,
             cw_mcw: sdroxide_cat::effective_cw_keying(&cfg) == sdroxide_types::CwKeying::Audio,
             // Where the band starts, not where the radio is — nothing reads
@@ -1020,8 +1025,14 @@ impl IqSource for AudioCatSource {
         }
     }
 
+    /// The transmit frequency of the rig's split. It goes to whichever VFO the
+    /// rig is *not* receiving on: VFO B normally, VFO A for a split worked
+    /// from B, exactly as the radio's own split pairs them.
     fn set_vfo_b_freq(&mut self, hz: f64) {
-        self.cat.set_freq_vfo_b(hz);
+        match self.rig_vfo {
+            sdroxide_types::Vfo::A => self.cat.set_freq_vfo_b(hz),
+            sdroxide_types::Vfo::B => self.cat.set_freq_vfo_a_unselected(hz),
+        }
     }
 
     fn split_on(&mut self) {
@@ -1033,8 +1044,9 @@ impl IqSource for AudioCatSource {
     }
 
     fn set_vfo_b_mode(&mut self, mode: sdroxide_types::Mode) {
-        let mode_byte = sdroxide_cat::civ::mode_to_civ(mode);
-        self.cat.set_mode_vfo_b(mode_byte);
+        // The family's own framing turns this into its mode code (Yaesu has no
+        // VFO B mode command and copies A instead) — never a CI-V byte here.
+        self.cat.set_mode_vfo_b(mode);
     }
 
     fn set_vfo_b_ctcss(&mut self, tone_hz: f64) {
@@ -1043,6 +1055,25 @@ impl IqSource for AudioCatSource {
 
     fn set_sat_split_on(&mut self, on: bool) {
         self.sat_split_on = on;
+    }
+
+    /// A transceiver on CAT has a split of its own. Not one that streams its
+    /// audio on the control link (the (tr)uSDX), which has no VFO B to give.
+    fn controls_rig_split(&self) -> bool {
+        !self.cat.streams_audio()
+    }
+
+    /// sdroxide's A/B told to the rig: its own VFO A or B is selected, and the
+    /// selected VFO is then given this VFO's frequency, even when the dial has
+    /// not moved — the rig's other VFO holds a number of its own until it is.
+    /// With SPLIT on, the transmit frequency then follows to the other VFO
+    /// (see `set_vfo_b_freq`). A satellite lock never gets here: the engine
+    /// keeps the rig on VFO A for the whole lock.
+    fn select_vfo(&mut self, vfo: sdroxide_types::Vfo, hz: f64) {
+        self.rig_vfo = vfo;
+        self.cat.select_vfo(vfo);
+        let f = self.dial.set_vfo(hz).unwrap_or_else(|| self.dial.rx_hz());
+        self.cat.set_freq(f);
     }
 
     /// The rig's synthesiser is the centre of the I/Q it sends us: there is no
@@ -1294,7 +1325,8 @@ impl IqSource for AudioCatSource {
                 | sdroxide_cat::CatUpdate::Po(_)
                 | sdroxide_cat::CatUpdate::FwdW(_)
                 | sdroxide_cat::CatUpdate::RflW(_)
-                | sdroxide_cat::CatUpdate::Signal(_) => {}
+                | sdroxide_cat::CatUpdate::Signal(_)
+                | sdroxide_cat::CatUpdate::Split(_) => {}
             }
         }
         out
@@ -1462,10 +1494,15 @@ impl IqSource for AudioCatSource {
         // where we listen borrows the dial for its duration. The frequency is
         // queued before PTT and the CAT thread writes a pending frequency out
         // ahead of keying, so nothing goes on air at the receive frequency.
-        if self.sat_split_on {
-            // Split is on: VFO B carries the uplink, so VFO A stays put and
-            // key-down is just PTT. No frequency write, no dial borrow.
-        } else if let Some(f) = self.dial.begin_tx(center_hz) {
+        //
+        // A satellite lock's split is the exception, but only once the *rig*
+        // has said its split is on: then VFO B carries the uplink, VFO A stays
+        // on the downlink and key-down is just PTT. Without that answer the
+        // over borrows the dial as above, onto the uplink `center_hz` carries,
+        // so a split the radio refused or dropped cannot put the transmitter
+        // on the downlink.
+        let rig_split = self.sat_split_on && self.cat.rig_split() == Some(true);
+        if !rig_split && let Some(f) = self.dial.begin_tx(center_hz) {
             self.cat.set_freq(f);
         }
         self.cat.set_ptt(true);
@@ -1481,10 +1518,9 @@ impl IqSource for AudioCatSource {
     fn tx_end(&mut self) -> Result<()> {
         self.cat.set_ptt(false);
         // Give the dial back, including any retune the operator asked for while
-        // the over held it.
-        if !self.sat_split_on
-            && let Some(f) = self.dial.end_tx()
-        {
+        // the over held it. `None` when the over never borrowed it (a split the
+        // rig confirmed), so nothing is written then.
+        if let Some(f) = self.dial.end_tx() {
             self.cat.set_freq(f);
         }
         self.last_telem = None; // drop the stale SWR reading on unkey

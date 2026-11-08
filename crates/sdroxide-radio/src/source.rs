@@ -202,6 +202,14 @@ pub trait IqSource: Send {
     /// write). No-op on non-CAT front ends.
     fn set_sat_split_on(&mut self, _on: bool) {}
 
+    /// Whether this source commands a CAT transceiver's own VFOs and split —
+    /// a CAT rig on its own, or one paired with a panadapter receiver. Where it
+    /// does, a satellite lock and SPLIT run on the rig's split (VFO B the
+    /// transmit frequency) rather than borrowing the dial for each over.
+    fn controls_rig_split(&self) -> bool {
+        false
+    }
+
     /// Blocking read. Returns the number of samples written to `buf`;
     /// 0 means a timeout (caller should just retry).
     fn read(&mut self, buf: &mut [Complex32]) -> Result<usize>;

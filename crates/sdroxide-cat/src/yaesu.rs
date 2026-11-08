@@ -14,7 +14,7 @@
 //! before the rig corrected us is re-issued — see [`Protocol::reframed`].
 
 use crate::{CatUpdate, Protocol};
-use sdroxide_types::Mode;
+use sdroxide_types::{Mode, Vfo};
 use tracing::{debug, info, warn};
 
 /// Frequency-field width assumed before the rig has answered a poll. The newer
@@ -220,9 +220,10 @@ impl Yaesu {
         vec![b"FT3;".to_vec()]
     }
 
-    /// Yaesu CAT frames to switch split off (`FT2;`).
+    /// Yaesu CAT frames to switch split off (`FT2;`), and the encode tone the
+    /// satellite lock put on VFO A with it (`CT00;`, see `set_ctcss_vfo_b`).
     pub fn split_off_frames() -> Vec<Vec<u8>> {
-        vec![b"FT2;".to_vec()]
+        vec![b"FT2;".to_vec(), b"CT00;".to_vec()]
     }
 
     pub fn new() -> Self {
@@ -316,6 +317,20 @@ impl Default for Yaesu {
     fn default() -> Self {
         Yaesu::new()
     }
+}
+
+/// The 50 CTCSS tones in the order `CN00<nnn>` numbers them — Hamlib's
+/// `COMMON_CTCSS_LIST`, which is what it sends an FT-991 by index.
+const CTCSS_TONES_HZ: [f64; 50] = [
+    67.0, 69.3, 71.9, 74.4, 77.0, 79.7, 82.5, 85.4, 88.5, 91.5, 94.8, 97.4, 100.0, 103.5, 107.2,
+    110.9, 114.8, 118.8, 123.0, 127.3, 131.8, 136.5, 141.3, 146.2, 151.4, 156.7, 159.8, 162.2,
+    165.5, 167.9, 171.3, 173.8, 177.3, 179.9, 183.5, 186.2, 189.9, 192.8, 196.6, 199.5, 203.5,
+    206.5, 210.7, 218.1, 225.7, 229.1, 233.6, 241.8, 250.3, 254.1,
+];
+
+/// The `CN` index of a tone, or `None` for a frequency that is not one of them.
+fn ctcss_index(tone_hz: f64) -> Option<usize> {
+    CTCSS_TONES_HZ.iter().position(|t| (t - tone_hz).abs() < 0.05)
 }
 
 fn mode_digit(m: Mode) -> char {
@@ -450,18 +465,53 @@ impl Protocol for Yaesu {
     }
 
     fn set_freq_vfo_b(&mut self, hz: f64) -> Vec<Vec<u8>> {
-        vec![self.set_freq_vfo_b(hz)]
+        // `AB` first: VFO B becomes a copy of A, mode and tone included, and
+        // `FB` then moves only its frequency. This generation has no command
+        // that sets VFO B's mode or tone directly, so this is how the uplink
+        // VFO gets the downlink's FM and the CTCSS set on A.
+        vec![b"AB;".to_vec(), self.set_freq_vfo_b(hz)]
     }
 
-    fn set_mode_vfo_b(&mut self, mode_byte: u8) -> Vec<Vec<u8>> {
-        // Yaesu: no VFO select command, so mode is set on the current VFO.
-        // Best-effort: send MD0 on the current VFO.
-        vec![format!("MD0{};", mode_byte).into_bytes()]
+    fn set_freq_vfo_a_unselected(&mut self, hz: f64) -> Vec<Vec<u8>> {
+        // `FA` names VFO A whichever VFO the rig is on.
+        vec![Protocol::set_freq(self, hz)]
     }
 
-    fn set_ctcss_vfo_b(&mut self, _tone_hz: f64) -> Vec<Vec<u8>> {
-        // Yaesu CTCSS is model-specific; not implemented.
+    fn set_mode_vfo_b(&mut self, _mode: Mode) -> Vec<Vec<u8>> {
+        // Nothing to send: VFO B takes A's mode from the `AB` in front of every
+        // `FB` (see `set_freq_vfo_b`). An `MD0` here would land on VFO A, the
+        // receive VFO.
         Vec::new()
+    }
+
+    fn set_ctcss_vfo_b(&mut self, tone_hz: f64) -> Vec<Vec<u8>> {
+        // Set on VFO A, the only VFO this generation addresses, as encode only
+        // (`CT02`), which leaves reception alone; the `AB` ahead of the next
+        // `FB` copies it to VFO B. The same frames Hamlib sends an FT-991. No
+        // tone (zero) is the tone switched off, so VFO B copies none from an
+        // earlier link.
+        if tone_hz <= 0.0 {
+            return vec![b"CT00;".to_vec()];
+        }
+        match ctcss_index(tone_hz) {
+            Some(i) => vec![format!("CN00{i:03};").into_bytes(), b"CT02;".to_vec()],
+            None => {
+                warn!("Yaesu CAT: {tone_hz} Hz is not a CTCSS tone this rig has; no tone set");
+                Vec::new()
+            }
+        }
+    }
+
+    fn split_query(&self) -> Vec<u8> {
+        b"FT;".to_vec()
+    }
+
+    fn select_vfo(&self, vfo: Vfo) -> Vec<Vec<u8>> {
+        // `VS0` / `VS1`: VFO select, the same command Hamlib's newcat sends.
+        vec![match vfo {
+            Vfo::A => b"VS0;".to_vec(),
+            Vfo::B => b"VS1;".to_vec(),
+        }]
     }
 
     fn split_on(&mut self) -> Vec<Vec<u8>> {
@@ -649,6 +699,15 @@ impl Protocol for Yaesu {
                 // not told apart here.
                 if let Some(d) = rest.chars().next().filter(char::is_ascii_digit) {
                     out.push(CatUpdate::Ptt(d != '0'));
+                }
+            } else if let Some(rest) = msg.strip_prefix("FT") {
+                // `FT0` / `FT1`: the answer to the split read, which VFO
+                // transmits. The set commands are `FT2`/`FT3` and are never
+                // answered, so only the read lands here.
+                match rest {
+                    "0" => out.push(CatUpdate::Split(false)),
+                    "1" => out.push(CatUpdate::Split(true)),
+                    _ => {}
                 }
             } else if msg == "?" {
                 // The rig refused the last command. Nothing identifies which,
@@ -958,5 +1017,25 @@ mod tests {
             .map(|f| String::from_utf8_lossy(f).into_owned())
             .collect();
         assert_eq!(frames, vec!["ID;", "RC;", "RT0;", "XT0;", "FT2;"]);
+    }
+
+    /// The split read's answer, and the satellite lock's VFO B frames: the tone
+    /// by `CN` index as encode only, VFO B as a copy of A before its frequency,
+    /// and no mode frame that would land on VFO A.
+    #[test]
+    fn the_satellite_split_frames_and_the_split_read() {
+        let mut y = Yaesu::new();
+        assert!(matches!(parse_str(&mut y, "FT1;").as_slice(), [CatUpdate::Split(true)]));
+        assert!(matches!(parse_str(&mut y, "FT0;").as_slice(), [CatUpdate::Split(false)]));
+        assert_eq!(y.split_query(), b"FT;".to_vec());
+        assert_eq!(y.set_ctcss_vfo_b(67.0), vec![b"CN00000;".to_vec(), b"CT02;".to_vec()]);
+        assert_eq!(y.set_ctcss_vfo_b(141.3), vec![b"CN00022;".to_vec(), b"CT02;".to_vec()]);
+        assert!(y.set_ctcss_vfo_b(100.1).is_empty(), "not a tone the rig has");
+        assert_eq!(y.set_ctcss_vfo_b(0.0), vec![b"CT00;".to_vec()], "no tone is the tone off");
+        assert!(y.set_mode_vfo_b(Mode::Nfm).is_empty());
+        let b = Protocol::set_freq_vfo_b(&mut y, 145_990_000.0);
+        assert_eq!(b.first(), Some(&b"AB;".to_vec()));
+        assert!(String::from_utf8_lossy(&b[1]).starts_with("FB"));
+        assert_eq!(Yaesu::split_off_frames(), vec![b"FT2;".to_vec(), b"CT00;".to_vec()]);
     }
 }

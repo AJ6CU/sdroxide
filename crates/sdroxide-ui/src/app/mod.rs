@@ -1583,6 +1583,9 @@ pub struct SdroxideApp {
     /// `Some` while a lock is active — the SAT window's live pane, the top-bar
     /// accent and the 3D view's highlight all read this one field.
     sat_track: Option<sdroxide_types::SatTrackStatus>,
+    /// The panadapter span in force when a satellite over began, while the
+    /// view is following the uplink; `None` while receiving.
+    sat_tx_view_span: Option<f64>,
     /// The SAT window and everything it remembers between frames.
     show_sat: bool,
     sat_win: sat::SatWinState,
@@ -2548,6 +2551,7 @@ impl SdroxideApp {
             sat_cfg_edit: Default::default(),
             sat_cfg_seeded: false,
             sat_track: None,
+            sat_tx_view_span: None,
             show_sat: false,
             sat_win: Default::default(),
             sat_tab: sat::SatTab::default(),

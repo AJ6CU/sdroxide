@@ -26,7 +26,7 @@ use std::time::{Duration, Instant};
 use crossbeam_channel::{Receiver, Sender, TryRecvError};
 use sdroxide_types::{
     CatConfig, CatFamily, CwKeying, DigiMode, LineState, Mode, ModeControl, Parity, PttMethod,
-    SoundFormat, StopBits, TxTelemetry,
+    SoundFormat, StopBits, TxTelemetry, Vfo,
 };
 use tracing::{info, warn};
 
@@ -232,6 +232,11 @@ pub enum CatUpdate {
     /// engine already knows about, and reporting it back would be an echo. See
     /// the suppression around `ptt_ours` in the serial thread.
     Ptt(bool),
+    /// The rig's own split, as it answered the split read (Yaesu `FT;`, Icom
+    /// `0F`): `true` when it transmits on VFO B. Asked only while a satellite
+    /// lock holds the split, and kept in the serial thread (see
+    /// [`CatHandle::rig_split`]) rather than forwarded.
+    Split(bool),
 }
 
 /// Enumerate serial ports for the settings UI. USB-style ports (ttyACM/ttyUSB,
@@ -262,13 +267,40 @@ trait Protocol: Send {
     fn set_freq_vfo_b(&mut self, _hz: f64) -> Vec<Vec<u8>> {
         Vec::new()
     }
+    /// Set VFO A's frequency while the rig is receiving on VFO B — the
+    /// transmit VFO of a split worked from B. Returns the frames to send.
+    fn set_freq_vfo_a_unselected(&mut self, _hz: f64) -> Vec<Vec<u8>> {
+        Vec::new()
+    }
     /// Set VFO B's mode. Returns the frames to send.
-    fn set_mode_vfo_b(&mut self, _mode_byte: u8) -> Vec<Vec<u8>> {
+    fn set_mode_vfo_b(&mut self, _mode: Mode) -> Vec<Vec<u8>> {
         Vec::new()
     }
     /// Set CTCSS tone on VFO B. Returns the frames to send.
     fn set_ctcss_vfo_b(&mut self, _tone_hz: f64) -> Vec<Vec<u8>> {
         Vec::new()
+    }
+    /// VFO B's mode, tone and frequency in one go, whichever are given, so a
+    /// family that reaches VFO B by selecting it does so once. The default is
+    /// the three writes one after another, in the order Yaesu needs: the tone
+    /// on VFO A before the copy to B that comes with the frequency.
+    fn set_vfo_b_all(
+        &mut self,
+        mode: Option<Mode>,
+        tone_hz: Option<f64>,
+        hz: Option<f64>,
+    ) -> Vec<Vec<u8>> {
+        let mut out = Vec::new();
+        if let Some(m) = mode {
+            out.extend(self.set_mode_vfo_b(m));
+        }
+        if let Some(t) = tone_hz {
+            out.extend(self.set_ctcss_vfo_b(t));
+        }
+        if let Some(f) = hz {
+            out.extend(self.set_freq_vfo_b(f));
+        }
+        out
     }
     /// Switch split on. Returns the frames to send.
     fn split_on(&mut self) -> Vec<Vec<u8>> {
@@ -276,6 +308,23 @@ trait Protocol: Send {
     }
     /// Switch split off. Returns the frames to send.
     fn split_off(&mut self) -> Vec<Vec<u8>> {
+        Vec::new()
+    }
+    /// The frame that asks whether the rig's own split is on, answered as
+    /// [`CatUpdate::Split`]. Empty for a family with no such read.
+    fn split_query(&self) -> Vec<u8> {
+        Vec::new()
+    }
+    /// Whether [`Self::set_freq`] lands on whichever VFO the rig is using
+    /// rather than on VFO A by name. On such a rig (CI-V `05`) the VFO in use
+    /// during a split over is VFO B, so a frequency written while it transmits
+    /// moves the *transmitter*; see the split guard in the serial thread.
+    fn freq_write_targets_selected_vfo(&self) -> bool {
+        false
+    }
+    /// Frames that make the rig work on `vfo`, so its own A/B agrees with
+    /// sdroxide's. Empty for a family with no such command.
+    fn select_vfo(&self, _vfo: Vfo) -> Vec<Vec<u8>> {
         Vec::new()
     }
     fn set_mode(&mut self, m: Mode) -> Vec<u8>;
@@ -928,20 +977,75 @@ impl Protocol for Civ {
         civ::set_freq_vfo_b_frames(self.radio, hz)
     }
 
-    fn set_mode_vfo_b(&mut self, mode_byte: u8) -> Vec<Vec<u8>> {
-        civ::set_mode_vfo_b_frames(self.radio, mode_byte)
+    fn set_mode_vfo_b(&mut self, mode: Mode) -> Vec<Vec<u8>> {
+        civ::set_mode_vfo_b_frames(self.radio, civ::mode_to_civ(mode))
     }
 
     fn set_ctcss_vfo_b(&mut self, tone_hz: f64) -> Vec<Vec<u8>> {
         civ::set_ctcss_vfo_b_frames(self.radio, tone_hz)
     }
 
+    fn set_vfo_b_all(
+        &mut self,
+        mode: Option<Mode>,
+        tone_hz: Option<f64>,
+        hz: Option<f64>,
+    ) -> Vec<Vec<u8>> {
+        if mode.is_none() && tone_hz.is_none() && hz.is_none() {
+            return Vec::new();
+        }
+        // One trip through VFO B for all of it: each select-B / select-A pair
+        // is a moment the receiver is on the uplink, and the operator sees it.
+        let mut out = vec![civ::frame(self.radio, 0x07, &[0x01])];
+        if let Some(m) = mode {
+            out.push(civ::frame(self.radio, 0x06, &[civ::mode_to_civ(m)]));
+        }
+        if let Some(t) = tone_hz {
+            out.extend(civ::repeater_tone_frames(self.radio, t));
+        }
+        if let Some(f) = hz {
+            out.push(civ::set_freq_frame(self.radio, f));
+        }
+        out.push(civ::frame(self.radio, 0x07, &[0x00]));
+        out
+    }
+
     fn split_on(&mut self) -> Vec<Vec<u8>> {
+        // Split alone: which VFO the rig receives on is sdroxide's A/B, sent by
+        // `select_vfo` (a satellite lock selects VFO A before it gets here).
         vec![civ::split_on_frame(self.radio)]
+    }
+
+    fn set_freq_vfo_a_unselected(&mut self, hz: f64) -> Vec<Vec<u8>> {
+        // The mirror of `set_freq_vfo_b`, for a rig receiving on VFO B: select
+        // A, set it, and back to B.
+        vec![
+            civ::frame(self.radio, 0x07, &[0x00]),
+            civ::set_freq_frame(self.radio, hz),
+            civ::frame(self.radio, 0x07, &[0x01]),
+        ]
     }
 
     fn split_off(&mut self) -> Vec<Vec<u8>> {
         vec![civ::split_off_frame(self.radio)]
+    }
+
+    fn split_query(&self) -> Vec<u8> {
+        civ::read_split_frame(self.radio)
+    }
+
+    fn freq_write_targets_selected_vfo(&self) -> bool {
+        true
+    }
+
+    fn select_vfo(&self, vfo: Vfo) -> Vec<Vec<u8>> {
+        // VFO mode first (`07` with no data), so a rig left on a memory channel
+        // comes off it, then the VFO itself.
+        let which = match vfo {
+            Vfo::A => 0x00,
+            Vfo::B => 0x01,
+        };
+        vec![civ::frame(self.radio, 0x07, &[]), civ::frame(self.radio, 0x07, &[which])]
     }
     fn set_mode(&mut self, m: Mode) -> Vec<u8> {
         self.seen_mode = Some(civ::mode_to_civ(m));
@@ -1171,6 +1275,20 @@ impl Protocol for Civ {
                         if let Some(m) = civ::civ_to_mode(b) {
                             out.push(CatUpdate::Mode(m));
                         }
+                    }
+                }
+                // The split read (0x0F): `00`/`01` split off/on, `10`–`12` a
+                // duplex setting, which is split off as far as transmitting on
+                // VFO B goes. Our own `0F 01` is acknowledged with `FB`, not
+                // answered here.
+                0x0F => {
+                    if !self.ours(&reply) {
+                        continue;
+                    }
+                    match reply.data.first() {
+                        Some(0x01) => out.push(CatUpdate::Split(true)),
+                        Some(0x00 | 0x10..=0x12) => out.push(CatUpdate::Split(false)),
+                        _ => {}
                     }
                 }
                 // The antenna (0x12): which socket the rig is on, and behind
@@ -1409,12 +1527,16 @@ enum CatCmd {
     Freq(f64),
     /// Set VFO B's frequency (SAT uplink).
     FreqVfoB(f64),
+    /// Set VFO A's frequency while the rig receives on VFO B (split from B).
+    FreqVfoAUnselected(f64),
     /// Switch split on.
     SplitOn,
     /// Switch split off.
     SplitOff,
+    /// Make the rig work on this VFO (sdroxide's A/B button).
+    SelectVfo(Vfo),
     /// Set VFO B's mode.
-    ModeVfoB(u8),
+    ModeVfoB(Mode),
     /// Set CTCSS tone on VFO B.
     CtcssVfoB(f64),
     Mode(Mode),
@@ -1462,6 +1584,9 @@ struct Learned {
     /// The receiving antenna's setting as the radio last reported it: `0`
     /// nothing said, `1` out of circuit, `2` in it.
     rx_antenna: std::sync::Arc<std::sync::atomic::AtomicU8>,
+    /// The rig's own split as it last answered the split read: `0` nothing
+    /// said (or switched off from here since), `1` off, `2` on.
+    rig_split: std::sync::Arc<std::sync::atomic::AtomicU8>,
 }
 
 /// Opaque handle to the running serial thread.
@@ -1521,24 +1646,46 @@ impl CatHandle {
         let _ = self.cmd_tx.send(CatCmd::FreqVfoB(hz));
     }
 
+    /// Set VFO A's frequency while the rig receives on VFO B: the transmit VFO
+    /// of a split worked from B.
+    pub fn set_freq_vfo_a_unselected(&self, hz: f64) {
+        let _ = self.cmd_tx.send(CatCmd::FreqVfoAUnselected(hz));
+    }
+
     /// Switch the rig's split on.
     pub fn split_on(&self) {
         let _ = self.cmd_tx.send(CatCmd::SplitOn);
     }
 
     /// Switch the rig's split off.
+    /// Make the rig work on `vfo` (its own A/B), where the family has a command
+    /// for it.
+    pub fn select_vfo(&self, vfo: Vfo) {
+        let _ = self.cmd_tx.send(CatCmd::SelectVfo(vfo));
+    }
+
     pub fn split_off(&self) {
         let _ = self.cmd_tx.send(CatCmd::SplitOff);
     }
 
-    /// Set VFO B's mode (Icom only).
-    pub fn set_mode_vfo_b(&self, mode_byte: u8) {
-        let _ = self.cmd_tx.send(CatCmd::ModeVfoB(mode_byte));
+    /// Set VFO B's mode.
+    pub fn set_mode_vfo_b(&self, mode: Mode) {
+        let _ = self.cmd_tx.send(CatCmd::ModeVfoB(mode));
     }
 
-    /// Set CTCSS tone on VFO B (Icom only).
+    /// Set CTCSS tone on VFO B.
     pub fn set_ctcss_vfo_b(&self, tone_hz: f64) {
         let _ = self.cmd_tx.send(CatCmd::CtcssVfoB(tone_hz));
+    }
+
+    /// The rig's own split as it last answered the split read: `Some(true)`
+    /// when it transmits on VFO B. `None` until it has answered, and again once
+    /// split has been switched off from here.
+    pub fn rig_split(&self) -> Option<bool> {
+        match self.learned.rig_split.load(std::sync::atomic::Ordering::Relaxed) {
+            0 => None,
+            n => Some(n == 2),
+        }
     }
     pub fn set_mode(&self, m: Mode) {
         let _ = self.cmd_tx.send(CatCmd::Mode(m));
@@ -1870,7 +2017,8 @@ pub fn query_once(cfg: &CatConfig) -> Option<(Option<f64>, Option<Mode>)> {
                 | CatUpdate::Squelch(_)
                 | CatUpdate::Antenna(_)
                 | CatUpdate::RxAntenna(_)
-                | CatUpdate::Ptt(_) => {}
+                | CatUpdate::Ptt(_)
+                | CatUpdate::Split(_) => {}
             }
         }
     }
@@ -2011,6 +2159,8 @@ pub fn spawn(cfg: CatConfig) -> CatHandle {
         )),
         // Nothing said yet — see `CatHandle::rx_antenna` for the three values.
         rx_antenna: std::sync::Arc::new(std::sync::atomic::AtomicU8::new(0)),
+        // Nothing said yet — see `CatHandle::rig_split`.
+        rig_split: std::sync::Arc::new(std::sync::atomic::AtomicU8::new(0)),
     };
     let learned_in = learned.clone();
     let scope = std::sync::Arc::new(std::sync::Mutex::new(None));
@@ -2121,6 +2271,32 @@ fn map_data_bits(n: u8) -> serialport::DataBits {
 /// entirely when the rig is already in it, which is what makes key-down a single
 /// frame in the ordinary case.
 const FRAME_GAP: Duration = Duration::from_millis(30);
+
+/// How long after a VFO B write the rig's frequency and mode reports are
+/// ignored. Long enough for the select-B / set / select-A round trip on a
+/// 9600-baud CI-V link and the transceive broadcasts it sets off, short enough
+/// that a knob turned straight afterwards is still followed.
+const VFO_B_QUIET: Duration = Duration::from_millis(400);
+
+/// How often the transmit state is read while a satellite split is held — the
+/// split guard's only sign that the rig has keyed itself from its microphone.
+const SPLIT_TX_POLL: Duration = Duration::from_millis(100);
+
+/// How recent an answer that the rig is receiving must be for the split guard
+/// to let a frequency out. Just over one `SPLIT_TX_POLL`, so the writes follow
+/// the answers rather than run ahead of them.
+const RX_FRESH: Duration = Duration::from_millis(120);
+
+/// The fewest seconds between two VFO A writes under the split on a rig whose
+/// write lands on the VFO in use. Each one is a moment the rig's own PTT could
+/// catch, so fewer of them is a smaller chance of one reaching the transmitter;
+/// a second is still a fine Doppler step on 70 cm (tens of hertz).
+const SPLIT_FREQ_GAP: Duration = Duration::from_millis(1000);
+
+/// How soon after a VFO A write the rig reporting itself keyed is taken to mean
+/// the write may have reached VFO B. Covers the transmit read's own period and
+/// the round trip of its answer.
+const SPLIT_REPAIR_WINDOW: Duration = Duration::from_millis(400);
 
 /// Shortest gap between two output-power writes. A slider drag is worth one
 /// frame every so often, not one per pixel; a hundred milliseconds is faster
@@ -2612,7 +2788,89 @@ fn open_link(cfg: &CatConfig) -> std::io::Result<Box<dyn Link>> {
         .timeout(READ_TIMEOUT)
         .open()
         .map_err(std::io::Error::other)?;
-    Ok(Box::new(port))
+    let port: Box<dyn Link> = Box::new(port);
+    Ok(match std::env::var_os("SDROXIDE_CAT_LOG").filter(|p| !p.is_empty()) {
+        Some(path) => FrameLog::wrap(port, std::path::Path::new(&path), &link_label(cfg)),
+        None => port,
+    })
+}
+
+/// Every byte written to and read from a serial CAT link, with the time,
+/// appended to the file `SDROXIDE_CAT_LOG` names. A diagnostic for checking
+/// what a radio actually answers; off unless the variable is set.
+struct FrameLog {
+    inner: Box<dyn Link>,
+    out: std::fs::File,
+}
+
+impl FrameLog {
+    fn wrap(inner: Box<dyn Link>, path: &std::path::Path, label: &str) -> Box<dyn Link> {
+        match std::fs::OpenOptions::new().create(true).append(true).open(path) {
+            Ok(out) => {
+                let mut log = FrameLog { inner, out };
+                log.line(&format!("--- opened {label}"));
+                Box::new(log)
+            }
+            Err(e) => {
+                warn!("CAT frame log {}: {e}; logging off", path.display());
+                inner
+            }
+        }
+    }
+
+    fn line(&mut self, text: &str) {
+        use std::io::Write as _;
+        let ms = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_millis())
+            .unwrap_or(0);
+        let day_ms = ms % 86_400_000;
+        let _ = writeln!(
+            self.out,
+            "{:02}:{:02}:{:02}.{:03} UTC {text}",
+            day_ms / 3_600_000,
+            day_ms / 60_000 % 60,
+            day_ms / 1000 % 60,
+            day_ms % 1000
+        );
+    }
+
+    fn frame(&mut self, dir: &str, bytes: &[u8]) {
+        let hex: Vec<String> = bytes.iter().map(|b| format!("{b:02X}")).collect();
+        let text: String =
+            bytes.iter().map(|&b| if b.is_ascii_graphic() { b as char } else { '.' }).collect();
+        self.line(&format!("{dir} {} |{text}|", hex.join(" ")));
+    }
+}
+
+impl Link for FrameLog {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        let r = self.inner.read(buf);
+        if let Ok(n) = r
+            && n > 0
+        {
+            self.frame("RX", &buf[..n]);
+        }
+        r
+    }
+    fn write_all(&mut self, buf: &[u8]) -> std::io::Result<()> {
+        self.frame("TX", buf);
+        self.inner.write_all(buf)
+    }
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.inner.flush()
+    }
+    fn set_rts(&mut self, on: bool) {
+        self.line(&format!("RTS {}", if on { "on" } else { "off" }));
+        self.inner.set_rts(on);
+    }
+    fn set_dtr(&mut self, on: bool) {
+        self.line(&format!("DTR {}", if on { "on" } else { "off" }));
+        self.inner.set_dtr(on);
+    }
+    fn closed_on_empty_read(&self) -> bool {
+        self.inner.closed_on_empty_read()
+    }
 }
 
 /// What to call this link in the log — a port and a baud rate, or a host.
@@ -3098,6 +3356,40 @@ fn serial_thread(
         // opening poll's answer, a round trip after the port opens — asserts it
         // once, and a move after that re-asserts it.
         let mut simplex_dial: Option<f64> = None;
+        // Whether a satellite lock has switched the rig's own split on through
+        // this connection. While it holds, the simplex assertion above stays
+        // off the wire: on Icom it shares command `0F` with split, so every
+        // `0F 10` after a Doppler step would switch the split straight off
+        // again. A fresh connection starts without it (`clear_offsets` has just
+        // switched the rig's split off), and with nothing known about the rig's.
+        let mut split_held = false;
+        learned.rig_split.store(0, std::sync::atomic::Ordering::Relaxed);
+        // Until when frequency and mode reports are put down to the VFO B
+        // sequence rather than adopted: on Icom it selects VFO B for a moment,
+        // and a rig with CI-V transceive on announces that VFO's frequency as
+        // if the dial had moved there.
+        let mut vfo_b_quiet_until = Instant::now();
+        // The split guard. While the rig's split is held it transmits on VFO B,
+        // and a VFO B (or, on a rig whose frequency write lands on the VFO in
+        // use, any) frequency written during an over moves the transmitter —
+        // onto the downlink, at the rate the Doppler writes go out. The rig can
+        // key itself at any moment (its microphone), and the only sign of it is
+        // its answer to the transmit read; so while the split is held that is
+        // read every `SPLIT_TX_POLL`, and those writes go out only just after
+        // an answer that said the rig was receiving.
+        let mut rx_confirmed_at: Option<Instant> = None;
+        let mut next_split_tx_poll = Instant::now();
+        let mut last_vfo_a_write: Option<Instant> = None;
+        // The transmit VFO's frequency — VFO B, or VFO A for a split worked
+        // from B — the last one asked for, and one still to be written.
+        let mut last_tx_vfo: Option<(Vfo, f64)> = None;
+        let mut pending_tx_vfo: Option<(Vfo, f64)> = None;
+        // VFO B's mode and tone, still to be written with the frequency.
+        let mut pending_vfo_b_mode: Option<Mode> = None;
+        let mut pending_vfo_b_tone: Option<f64> = None;
+        // Set by an answer that the rig has keyed itself right after a VFO A
+        // write; acted on once the updates are dispatched (see below).
+        let mut repair_vfo_b = false;
         // The rig's own transmit state as last reported upwards, and when its
         // last answer arrived. `None` = never answered, which is where a family
         // with no such read stays for good.
@@ -3118,32 +3410,53 @@ fn serial_thread(
                         dial_hz = Some(hz);
                     }
                     Ok(CatCmd::FreqVfoB(hz)) => {
-                        // Set VFO B's frequency. Yaesu: FB…;  Icom: select B, set, select A.
-                        let frames = protocol.set_freq_vfo_b(hz);
-                        for f in frames {
+                        // Set VFO B's frequency (Yaesu: AB; FB…;  Icom: select B, set,
+                        // select A) — but never while the rig may be transmitting on
+                        // it: held here and written by the split guard below.
+                        last_tx_vfo = Some((Vfo::B, hz));
+                        pending_tx_vfo = last_tx_vfo;
+                    }
+                    Ok(CatCmd::FreqVfoAUnselected(hz)) => {
+                        // The same for a split worked from VFO B: VFO A transmits.
+                        last_tx_vfo = Some((Vfo::A, hz));
+                        pending_tx_vfo = last_tx_vfo;
+                    }
+                    Ok(CatCmd::SelectVfo(vfo)) => {
+                        for f in protocol.select_vfo(vfo) {
                             let _ = write_frame(&mut *port, &mut *protocol, &f, &mut last_write, &mut io);
                         }
+                        // The rig is now on another VFO: what it reports next is that
+                        // VFO's dial, which the engine is about to overwrite anyway.
+                        vfo_b_quiet_until = Instant::now() + VFO_B_QUIET;
                     }
                     Ok(CatCmd::SplitOn) => {
+                        split_held = true;
                         for f in protocol.split_on() {
                             let _ = write_frame(&mut *port, &mut *protocol, &f, &mut last_write, &mut io);
                         }
+                        // Ask straight away rather than at the next poll, which on a
+                        // rig reporting itself is seconds off: the answer is what
+                        // lets an over go out on VFO B without borrowing the dial.
+                        let q = protocol.split_query();
+                        if !q.is_empty() {
+                            let _ = write_frame(&mut *port, &mut *protocol, &q, &mut last_write, &mut io);
+                        }
                     }
                     Ok(CatCmd::SplitOff) => {
+                        split_held = false;
+                        pending_tx_vfo = None;
+                        last_tx_vfo = None;
+                        pending_vfo_b_mode = None;
+                        pending_vfo_b_tone = None;
+                        learned.rig_split.store(0, std::sync::atomic::Ordering::Relaxed);
                         for f in protocol.split_off() {
                             let _ = write_frame(&mut *port, &mut *protocol, &f, &mut last_write, &mut io);
                         }
                     }
-                    Ok(CatCmd::ModeVfoB(mode_byte)) => {
-                        for f in protocol.set_mode_vfo_b(mode_byte) {
-                            let _ = write_frame(&mut *port, &mut *protocol, &f, &mut last_write, &mut io);
-                        }
-                    }
-                    Ok(CatCmd::CtcssVfoB(tone_hz)) => {
-                        for f in protocol.set_ctcss_vfo_b(tone_hz) {
-                            let _ = write_frame(&mut *port, &mut *protocol, &f, &mut last_write, &mut io);
-                        }
-                    }
+                    // Held like the frequency, and written with it in one trip
+                    // through VFO B (see the split guard below).
+                    Ok(CatCmd::ModeVfoB(mode)) => pending_vfo_b_mode = Some(mode),
+                    Ok(CatCmd::CtcssVfoB(tone_hz)) => pending_vfo_b_tone = Some(tone_hz),
                     Ok(CatCmd::Mode(m)) => {
                         if let Some(mm) = mode_cmd(m, dial_hz) {
                             let f = protocol.set_mode(mm);
@@ -3229,7 +3542,7 @@ fn serial_thread(
                         // queued in front of it.
                         if on {
                             let mut failed = false;
-                            if needs_simplex(emit_freq, &mut simplex_dial) {
+                            if !split_held && needs_simplex(emit_freq, &mut simplex_dial) {
                                 for f in protocol.clear_duplex() {
                                     failed |= write_frame(
                                         &mut *port,
@@ -3631,10 +3944,57 @@ fn serial_thread(
                 }
             }
 
+            // The split guard (see where `rx_confirmed_at` is declared): may a
+            // frequency go to the rig right now without risking the transmitter?
+            // Never while keyed, by us or by the rig; and while the split is held,
+            // only within `RX_FRESH` of an answer that the rig was receiving. A
+            // family with no transmit read cannot be asked, and is trusted.
+            let rx_safe = !ptt
+                && emit_rig_tx != Some(true)
+                && (!split_held
+                    || protocol.tx_state_requests().is_empty()
+                    || rx_confirmed_at.is_some_and(|t| t.elapsed() < RX_FRESH));
+
+            // The transmit VFO's frequency, and VFO B's mode and tone, held by
+            // `CatCmd::FreqVfoB` / `FreqVfoAUnselected` / `ModeVfoB` / `CtcssVfoB`
+            // until it is safe — and then written together, so a lock's mode,
+            // tone, nominal and corrected uplink cost one trip through VFO B
+            // rather than four.
+            if (pending_tx_vfo.is_some() || pending_vfo_b_mode.is_some() || pending_vfo_b_tone.is_some())
+                && rx_safe
+            {
+                let (mode, tone) = (pending_vfo_b_mode.take(), pending_vfo_b_tone.take());
+                let frames = match pending_tx_vfo.take() {
+                    Some((Vfo::B, hz)) => protocol.set_vfo_b_all(mode, tone, Some(hz)),
+                    // A split worked from B: VFO A transmits, and VFO B — the one
+                    // receiving — takes no mode or tone from here.
+                    Some((Vfo::A, hz)) => protocol.set_freq_vfo_a_unselected(hz),
+                    None => protocol.set_vfo_b_all(mode, tone, None),
+                };
+                for f in frames {
+                    if write_frame(&mut *port, &mut *protocol, &f, &mut last_write, &mut io) {
+                        break 'io true;
+                    }
+                }
+                vfo_b_quiet_until = Instant::now() + VFO_B_QUIET;
+            }
+
             // Debounced frequency write (rate-limit to ~50 ms, only on change).
-            if let Some(hz) = pending_freq {
+            // Under the split on a rig whose write lands on the VFO in use, also
+            // only when `rx_safe` and no more often than `SPLIT_FREQ_GAP`: each
+            // write is a moment the rig's own PTT could turn into a transmitter
+            // retuned to the downlink.
+            let split_gated = split_held && protocol.freq_write_targets_selected_vfo();
+            let gate_open = !split_gated
+                || (rx_safe && last_vfo_a_write.is_none_or(|t| t.elapsed() >= SPLIT_FREQ_GAP));
+            if let Some(hz) = pending_freq
+                && gate_open
+            {
                 let now = Instant::now();
                 if last_sent_freq != Some(hz) && now >= freq_deadline {
+                    if split_gated {
+                        last_vfo_a_write = Some(now);
+                    }
                     let f = protocol.set_freq(hz);
                     if write_frame(&mut *port, &mut *protocol, &f, &mut last_write, &mut io) {
                         break 'io true;
@@ -3659,7 +4019,7 @@ fn serial_thread(
             // transmit frequency went out with the key-down — and the one
             // moment the bus must not carry a receive setting is the one the
             // meters are being read in.
-            if !ptt && needs_simplex(emit_freq, &mut simplex_dial) {
+            if !ptt && !split_held && needs_simplex(emit_freq, &mut simplex_dial) {
                 let mut failed = false;
                 for f in protocol.clear_duplex() {
                     failed |= write_frame(&mut *port, &mut *protocol, &f, &mut last_write, &mut io);
@@ -3712,6 +4072,29 @@ fn serial_thread(
                 let reqs =
                     if with_mode { protocol.poll_requests() } else { protocol.dial_requests() };
                 for req in reqs {
+                    if write_frame(&mut *port, &mut *protocol, &req, &mut last_write, &mut io) {
+                        break 'io true;
+                    }
+                }
+                // While a satellite lock holds the split, keep asking whether the
+                // rig still has it: the answer decides whether an over may go
+                // out on VFO B as it stands, and the front panel can take it off.
+                if split_held {
+                    let q = protocol.split_query();
+                    if !q.is_empty()
+                        && write_frame(&mut *port, &mut *protocol, &q, &mut last_write, &mut io)
+                    {
+                        break 'io true;
+                    }
+                }
+            }
+
+            // While the split is held, ask whether the rig has keyed itself every
+            // `SPLIT_TX_POLL`: the split guard lets frequencies out only just after
+            // an answer that it is receiving.
+            if split_held && !ptt && Instant::now() >= next_split_tx_poll {
+                next_split_tx_poll = Instant::now() + SPLIT_TX_POLL;
+                for req in protocol.tx_state_requests() {
                     if write_frame(&mut *port, &mut *protocol, &req, &mut last_write, &mut io) {
                         break 'io true;
                     }
@@ -3868,6 +4251,26 @@ fn serial_thread(
                 break 'io true;
             }
             for u in io.updates.drain(..) {
+                // The split read's answer is for `CatHandle::rig_split`, not the engine.
+                if let CatUpdate::Split(on) = u {
+                    if split_held {
+                        learned
+                            .rig_split
+                            .store(if on { 2 } else { 1 }, std::sync::atomic::Ordering::Relaxed);
+                    }
+                    continue;
+                }
+                // VFO B's frequency and mode, briefly the selected VFO's, are not
+                // a dial the operator moved (see `vfo_b_quiet_until`). Nor is
+                // anything the rig reports while the split is held: during an over
+                // it reports VFO B, the uplink, and adopted as the dial that would
+                // put the next Doppler write — VFO A — onto the uplink's band. The
+                // lock is driving both VFOs then, and the radio's knob is not.
+                if matches!(u, CatUpdate::Freq(_) | CatUpdate::Mode(_))
+                    && (split_held || Instant::now() < vfo_b_quiet_until)
+                {
+                    continue;
+                }
                 // The meters are telemetry, not control changes: they go to their own channels and
                 // skip the freq/mode dedup below — a reading that repeats is still current, and
                 // dropping it would freeze the meter.
@@ -3919,6 +4322,9 @@ fn serial_thread(
                 // was issued on.
                 if let CatUpdate::Ptt(on) = u {
                     last_tx_reply = Instant::now();
+                    // The split guard's evidence: when the rig last said it was
+                    // receiving.
+                    rx_confirmed_at = if on { None } else { Some(Instant::now()) };
                     if ptt || ptt_edge.elapsed() < PTT_SETTLE {
                         // Still worth recording: this is what the poll above switches meters on,
                         // and after our own over it must not be left saying "keyed".
@@ -3926,6 +4332,21 @@ fn serial_thread(
                         continue;
                     }
                     if emit_rig_tx != Some(on) {
+                        // The split guard, on a rig whose frequency write lands on
+                        // the VFO in use. Keyed right after a VFO A write: that write
+                        // may have reached VFO B, the transmitter, so put the uplink
+                        // back (after the dispatch, see `repair_vfo_b`). Unkeyed after
+                        // an over of its own: write VFO B's uplink again in case one
+                        // landed there unseen.
+                        if split_held && protocol.freq_write_targets_selected_vfo() {
+                            if on && last_vfo_a_write.is_some_and(|t| t.elapsed() < SPLIT_REPAIR_WINDOW)
+                            {
+                                repair_vfo_b = true;
+                            }
+                            if !on && emit_rig_tx == Some(true) && pending_tx_vfo.is_none() {
+                                pending_tx_vfo = last_tx_vfo;
+                            }
+                        }
                         emit_rig_tx = Some(on);
                         let _ = event_tx.send(u);
                     }
@@ -4035,12 +4456,31 @@ fn serial_thread(
                     // their own dedup and their own suppression.
                     | CatUpdate::Antenna(_)
                     | CatUpdate::RxAntenna(_)
-                    | CatUpdate::Ptt(_) => false,
+                    | CatUpdate::Ptt(_)
+                    | CatUpdate::Split(_) => false,
                 };
                 if changed {
                     let _ = event_tx.send(u);
                 }
             }
+            // The rig keyed itself right after a VFO A write (see the split guard):
+            // on a rig whose write lands on the VFO in use, that write may have
+            // gone to VFO B, which it now transmits on. The same plain write puts
+            // the uplink back, since during the over it lands on VFO B too.
+            if repair_vfo_b {
+                repair_vfo_b = false;
+                if let Some((_, hz)) = last_tx_vfo {
+                    warn!(
+                        "the radio keyed itself right after a VFO A write; \
+                         putting the transmitter back on the uplink"
+                    );
+                    let f = protocol.set_freq(hz);
+                    if write_frame(&mut *port, &mut *protocol, &f, &mut last_write, &mut io) {
+                        break 'io true;
+                    }
+                }
+            }
+
             // The rate the in-band stream is running at can move with the mode:
             // a (tr)uSDX nG half-rates its receive stream in CW with the 1450 Hz
             // filter. Republished after every parse so the source resamples from

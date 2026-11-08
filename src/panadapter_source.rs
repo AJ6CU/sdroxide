@@ -705,6 +705,47 @@ impl IqSource for PanadapterSource {
         self.ctrl.set_tx_freq_hz(hz + self.cw_offset_hz());
     }
 
+    // The transceiver's own split and VFOs are the transceiver's, panadapter
+    // or not: a satellite lock and SPLIT command them through to it, with the
+    // same CW offset every other frequency handed to it carries.
+    fn controls_rig_split(&self) -> bool {
+        self.ctrl.controls_rig_split()
+    }
+
+    fn split_on(&mut self) {
+        self.ctrl.split_on();
+    }
+
+    fn split_off(&mut self) {
+        self.ctrl.split_off();
+    }
+
+    fn set_vfo_b_freq(&mut self, hz: f64) {
+        self.ctrl.set_vfo_b_freq(hz + self.cw_offset_hz());
+    }
+
+    fn set_vfo_b_mode(&mut self, mode: Mode) {
+        self.ctrl.set_vfo_b_mode(mode);
+    }
+
+    fn set_vfo_b_ctcss(&mut self, tone_hz: f64) {
+        self.ctrl.set_vfo_b_ctcss(tone_hz);
+    }
+
+    fn set_sat_split_on(&mut self, on: bool) {
+        self.ctrl.set_sat_split_on(on);
+    }
+
+    /// sdroxide's A/B onto the transceiver's, and the dial with it — the
+    /// transceiver is now on that VFO, and the next `set_dial` must not be
+    /// skipped as a frequency it is already on.
+    fn select_vfo(&mut self, vfo: sdroxide_types::Vfo, hz: f64) {
+        let hz = hz + self.cw_offset_hz();
+        self.ctrl.select_vfo(vfo, hz);
+        self.dial_known = true;
+        self.dial_hz = hz;
+    }
+
     /// The pitch the operator is copying CW at, which is the whole of
     /// [`Self::cw_offset_hz`]. Moving it moves where a self-keying transceiver
     /// belongs, so the rig is put back there rather than left where the old
