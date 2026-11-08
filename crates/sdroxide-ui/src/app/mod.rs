@@ -5534,10 +5534,10 @@ mod tests {
         assert!(r.top() >= bar && r.top() < bar + 12.0, "under the top bar: {r:?} vs {bar}");
         assert!(r.right() > w - 12.0, "at the right of the frame: {r:?}");
         let saved =
-            sdroxide_types::DetachedWindow { size: [720.0, 230.0], pos: Some([200.0, 300.0]) };
+            sdroxide_types::DetachedWindow { size: [800.0, 230.0], pos: Some([200.0, 300.0]) };
         let (r, _) = open_rect(Some(saved));
         assert!((r.min.x - 200.0).abs() < 2.0 && (r.min.y - 300.0).abs() < 2.0, "place: {r:?}");
-        assert!((r.width() - 720.0).abs() < 2.0, "size: {r:?}");
+        assert!((r.width() - 800.0).abs() < 2.0, "size: {r:?}");
     }
 
     /// Render the **operating panel as a floating window** to a PNG to look at.

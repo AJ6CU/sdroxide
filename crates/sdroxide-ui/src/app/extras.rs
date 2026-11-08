@@ -339,9 +339,9 @@ mod tests {
 
     #[test]
     fn a_remembered_place_and_size_win() {
-        let g = sdroxide_types::DetachedWindow { size: [700.0, 200.0], pos: Some([300.0, 400.0]) };
+        let g = sdroxide_types::DetachedWindow { size: [800.0, 200.0], pos: Some([300.0, 400.0]) };
         let (pos, size) = extras_place(Some(g), screen(), screen());
-        assert_eq!((pos, size), (egui::pos2(300.0, 400.0), egui::vec2(700.0, 200.0)));
+        assert_eq!((pos, size), (egui::pos2(300.0, 400.0), egui::vec2(800.0, 200.0)));
     }
 
     #[test]
