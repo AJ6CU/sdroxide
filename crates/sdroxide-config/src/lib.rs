@@ -3033,7 +3033,11 @@ pub fn cached_broadcast_sources() -> Vec<(sdroxide_types::ScheduleSource, Option
 /// may carry any unit** — kHz or MHz — and where none is written the **number**
 /// decides, by the same rule the schedule files are read by.
 pub fn import_broadcast_stations(path: &std::path::Path) -> Result<usize, String> {
-    let text = fs::read_to_string(path).map_err(|e| format!("{}: {e}", path.display()))?;
+    // **Not `read_to_string`**: lists saved by Windows tools and by EiBi itself
+    // are Latin-1, and a strict UTF-8 read refused them outright.
+    let raw = fs::read(path).map_err(|e| format!("{}: {e}", path.display()))?;
+    let text = String::from_utf8(raw)
+        .unwrap_or_else(|e| sdroxide_types::broadcast::decode_latin1(e.as_bytes()));
     let mut rows: Vec<sdroxide_types::BroadcastStation> =
         serde_json::from_str::<sdroxide_types::BroadcastStations>(&text)
             .map(|f| f.stations)
@@ -3075,6 +3079,63 @@ pub fn import_broadcast_stations(path: &std::path::Path) -> Result<usize, String
     Ok(n)
 }
 
+/// Which publisher's schedule these bytes are, and the season to file it under.
+///
+/// **Told apart by what is in the file, not by what it is called.** A browser
+/// saves Aoki's `xta26.zip` and `xta26.txt` with the same stem, and an operator
+/// who renamed either should still get the right reader. `None` is "not a
+/// schedule at all", which is how [`import_any_file`] knows to read it as a
+/// listener's own list instead.
+fn sniff_schedule(
+    path: &std::path::Path,
+    bytes: &[u8],
+    ours: &str,
+) -> Option<(sdroxide_types::ScheduleSource, String)> {
+    use sdroxide_types::ScheduleSource as S;
+
+    if bytes.starts_with(b"PK\x03\x04") {
+        return Some((S::Aoki, aoki_season_from_path(path).unwrap_or_else(|| format!("xt{ours}"))));
+    }
+    let head = sdroxide_types::broadcast::decode_latin1(&bytes[..bytes.len().min(512)]);
+    // Aoki's title line says "… Frequecy List" (their spelling), and the column
+    // header under it says `FRE STATION … UTC`, which is what the parser itself
+    // looks for — so a file saved without its first line is still recognised.
+    let aoki_head = head.contains("Frequecy List")
+        || head.contains("Frequency List")
+        || (head.contains("STATION") && head.contains("UTC"));
+    if aoki_head {
+        Some((S::Aoki, aoki_season_from_path(path).unwrap_or_else(|| format!("xt{ours}"))))
+    } else if head.contains("kHz:") && head.contains(';') {
+        Some((S::Eibi, ours.to_string()))
+    } else {
+        None
+    }
+}
+
+/// What [`import_any_file`] did with the file.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ImportedFile {
+    /// A published schedule (EiBi, Aoki): cached like a download.
+    Schedule(ImportedSchedule),
+    /// A listener's own list: `n` stations now in the operator's own file.
+    List(usize),
+}
+
+/// **One import for whatever the operator has.** A published schedule goes the
+/// way a download does; anything else is read as a listener's own list. The
+/// operator should not have to know which of the two a file is — a file from
+/// EiBi handed to the "own list" reader used to be refused as unreadable, which
+/// told them nothing.
+pub fn import_any_file(path: &std::path::Path) -> Result<ImportedFile, String> {
+    let bytes = fs::read(path).map_err(|e| format!("{}: {e}", path.display()))?;
+    let ours = sdroxide_types::broadcast::season_file(now_unix());
+    if sniff_schedule(path, &bytes, &ours).is_some() {
+        import_schedule_file(path).map(ImportedFile::Schedule)
+    } else {
+        import_broadcast_stations(path).map(ImportedFile::List)
+    }
+}
+
 /// What [`import_schedule_file`] found in the file it was handed.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ImportedSchedule {
@@ -3111,33 +3172,14 @@ pub fn import_schedule_file(path: &std::path::Path) -> Result<ImportedSchedule, 
         return Err(format!("{} is empty", path.display()));
     }
     let ours = sdroxide_types::broadcast::season_file(now_unix());
-    // **Told apart by what is in the file, not by what it is called.** A browser
-    // saves Aoki's `xta26.zip` and `xta26.txt` with the same stem, and an
-    // operator who renamed either should still get the right reader.
-    let (source, season) = if bytes.starts_with(b"PK\x03\x04") {
-        (S::Aoki, aoki_season_from_path(path).unwrap_or_else(|| format!("xt{ours}")))
-    } else {
-        let head = sdroxide_types::broadcast::decode_latin1(&bytes[..bytes.len().min(512)]);
-        // Aoki's title line says "… Frequecy List" (their spelling), and the
-        // column header under it says `FRE STATION … UTC`, which is what the
-        // parser itself looks for — so a file saved without its first line is
-        // still recognised as Aoki's.
-        let aoki_head = head.contains("Frequecy List")
-            || head.contains("Frequency List")
-            || (head.contains("STATION") && head.contains("UTC"));
-        if aoki_head {
-            (S::Aoki, aoki_season_from_path(path).unwrap_or_else(|| format!("xt{ours}")))
-        } else if head.contains("kHz:") && head.contains(';') {
-            (S::Eibi, ours)
-        } else {
-            return Err(format!(
-                "{} is not a schedule this program knows: an Aoki file is the \
-                 .zip Aoki publishes or the .txt from inside it, and an EiBi file is \
-                 its sked .csv.",
-                path.display()
-            ));
-        }
-    };
+    let (source, season) = sniff_schedule(path, &bytes, &ours).ok_or_else(|| {
+        format!(
+            "{} is not a schedule this program knows: an Aoki file is the \
+             .zip Aoki publishes or the .txt from inside it, and an EiBi file is \
+             its sked .csv.",
+            path.display()
+        )
+    })?;
 
     // Read it exactly the way the cache is read, so a file that would not work
     // from the cache does not look fine here and fail after the restart.
