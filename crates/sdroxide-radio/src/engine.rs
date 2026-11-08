@@ -4978,6 +4978,13 @@ fn engine_thread(
     // [`Engine::emit_radio_config`]), and this one table is consulted on every
     // transmitted block.
     let mut radio_cfg = engine_cfg.store.load_radio_config();
+    // The "Other" row is gone from both lists; an older file may still name it.
+    if radio_cfg.drop_other_band() {
+        info!("radio.json named the \"Other\" band — removed from the band lists");
+        if let Err(e) = engine_cfg.store.save_radio_config(&radio_cfg) {
+            warn!("saving the cleaned band lists: {e}");
+        }
+    }
     // An upgrade: the bands the radio could already key become the operator's
     // list, still unconfirmed, so nothing transmits until they have checked it.
     if radio_cfg.migrate_tx_bands(|hz| caps.may_tx_hz(hz)) {
@@ -12305,6 +12312,7 @@ impl Engine {
             // screen asking for the change may be in another country.
             SetRadioConfig { cfg, reopen } => {
                 let mut cfg = cfg;
+                cfg.drop_other_band();
                 self.vet_band_confirmations(&mut cfg);
                 if let Err(e) = self.store.save_radio_config(&cfg) {
                     warn!("saving radio config: {e}");
@@ -17593,7 +17601,10 @@ impl Engine {
         if !self.tx_bands_confirmed {
             return Some(TxBlock::Unconfirmed);
         }
-        if !self.tx_band_enable.contains(&band) {
+        // "Other" is never a transmit band: no list can grant a key-down
+        // outside every band (the row is gone from the screen, and a list
+        // that still names it — an old file, a remote client — is ignored).
+        if band == Band::Gen || !self.tx_band_enable.contains(&band) {
             return Some(TxBlock::BandOff(band));
         }
         None
@@ -17615,7 +17626,9 @@ impl Engine {
         if !self.rx_bands_confirmed {
             return Some(sdroxide_types::RxBlock::Unconfirmed);
         }
-        if !self.rx_band_enable.contains(&band) {
+        // Outside every band (ADS-B, DAB, AIS...) is listening only and has
+        // no row of its own: a confirmed list covers it.
+        if band != Band::Gen && !self.rx_band_enable.contains(&band) {
             return Some(sdroxide_types::RxBlock::BandOff(band));
         }
         None

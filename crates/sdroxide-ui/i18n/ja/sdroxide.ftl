@@ -9340,3 +9340,5 @@ smeter-arrow-prev-hover = 前の表示: { $view }{ $when }
 smeter-arrow-next-hover = 次の表示: { $view }{ $when }
 
 smeter-arrow-on-receive = (送信中に使われます)
+
+tx-bands-outside-note = ここに載っているバンド以外では送信できません。バンド外の受信（ADS-B、DAB、AIS など）に行は不要です。

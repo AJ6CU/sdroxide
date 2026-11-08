@@ -1003,12 +1003,10 @@ fn band_plan_table(
                 ui.label(RichText::new(tr!("band-plan-col-rx")).strong());
             }
             ui.end_row();
-            for (i, band) in Band::ALL.iter().enumerate() {
-                ui.label(if *band == Band::Gen {
-                    tr!("settings-other")
-                } else {
-                    super::tx_bands::tx_band_label(*band)
-                });
+            // No "Other" row: outside every band nothing can be keyed, and a
+            // row that reads YES/NO with no band behind it invites a mistake.
+            for (i, band) in Band::ALL.iter().filter(|b| **b != Band::Gen).enumerate() {
+                ui.label(super::tx_bands::tx_band_label(*band));
                 if tx {
                     let on = listed.contains(band);
                     let mut choice = on;
@@ -1091,6 +1089,8 @@ fn band_plan_table(
     if tx {
         ui.add_space(2.0);
         note(ui, &tr!("tx-bands-power-note"));
+        ui.add_space(2.0);
+        note(ui, &tr!("tx-bands-outside-note"));
         ui.add_space(6.0);
         ui.label(RichText::new(tr!("tx-bands-title")).strong());
         bands_confirmation(ui, "tx-bands", &mut cfg.tx_bands_confirmed, true);

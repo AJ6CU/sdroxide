@@ -9416,3 +9416,5 @@ smeter-arrow-prev-hover = Previous reading: { $view }{ $when }
 smeter-arrow-next-hover = Next reading: { $view }{ $when }
 
 smeter-arrow-on-receive = (used when transmitting)
+
+tx-bands-outside-note = Outside the bands listed here nothing can be transmitted. Reception outside the bands (ADS-B, DAB, AIS...) needs no row.

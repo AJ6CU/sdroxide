@@ -9392,3 +9392,5 @@ smeter-arrow-prev-hover = Önceki ölçüm: { $view }{ $when }
 smeter-arrow-next-hover = Sonraki ölçüm: { $view }{ $when }
 
 smeter-arrow-on-receive = (vericiyle yayın yaparken kullanılır)
+
+tx-bands-outside-note = Burada listelenen bantların dışında hiçbir şey yayınlanamaz. Bant dışı alım (ADS-B, DAB, AIS...) için satır gerekmez.
