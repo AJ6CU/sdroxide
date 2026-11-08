@@ -830,21 +830,10 @@ impl Store {
         if (!existed || quarantined) && cfg.tx_band_enable.is_none() {
             cfg.tx_band_enable = Some(Vec::new());
         }
-        // **"Allow transmit on 11 m (CB)" and the 11M-CB tick are one setting
-        // shown twice**, and the settings dialog keeps them in step — but only
-        // while it is open and one of the two changes. A `radio.json` written
-        // before the tick existed, or one whose dialog was never opened, keeps
-        // the permission without the band: the operator ticks "Allow transmit
-        // on 11 m", the band list still has no 11 m, and every key-down on the
-        // citizens' band is refused with nothing on screen connecting the two
-        // (reported on the bench, 2026-11-01, chasing a transmitter that would
-        // not hold a burst).
-        //
-        // Reconciled here, in memory, rather than written back: this is a
-        // getter, and the operator's next Apply is what persists it.
-        if cfg.tx_band_enable.is_some() && load_cb_tx_allowed() {
-            cfg.set_tx_band(sdroxide_types::Band::M11, true);
-        }
+        // 11 m has two locks and they are **not** tied: the operator's TX band
+        // list (11M-CB = YES, confirmed) comes first and "Allow transmit on
+        // 11 m (CB)" second. A permission without the band stays that way —
+        // nothing is ticked on the operator's behalf.
         if quarantined {
             warn!(
                 "radio.json was reset, so no interface is selected — pick one in \

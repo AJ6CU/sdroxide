@@ -2284,8 +2284,15 @@ use sdroxide_types::{
 /// `ServerMsg::ClientSettings` whole, so the appended field moves its layout.
 /// `#[serde(default)]`, so a `config.toml` written before this loads unchanged.
 /// `PROTO_VERSION` 278 → 279, `VERSION_BYTE` 0x62 → 0x63.
-pub const PROTO_VERSION: u16 = 279;
-const VERSION_BYTE: u8 = 0x63;
+///
+/// v280: **11 m (CB) has its own refusal.** [`sdroxide_types::TxBlock`] gains
+/// `CbOff` at its tail: the band is ticked and confirmed in the transmit list,
+/// but "Allow transmit on 11 m (CB)" is off. `RadioEvent::TxRefused` /
+/// `ServerMsg::TxRefused` carry it, so the screen says so in the operator's
+/// language. Nothing else moves. `PROTO_VERSION` 279 → 280, `VERSION_BYTE`
+/// 0x63 → 0x64.
+pub const PROTO_VERSION: u16 = 280;
+const VERSION_BYTE: u8 = 0x64;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -3583,7 +3590,18 @@ mod tests {
             ServerMsg::TxRefused(w, hz) => assert_eq!((w, hz), (why, 7_074_000.0)),
             _ => panic!("TxRefused did not round-trip"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (279, 0x63));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (280, 0x64));
+        // v280: the CB refusal is a new tail variant of `TxBlock`; the ones
+        // before it keep their positions.
+        let cb = ServerMsg::TxRefused(sdroxide_types::TxBlock::CbOff, 27_185_000.0);
+        match decode::<ServerMsg>(&encode(&cb).unwrap()).unwrap() {
+            ServerMsg::TxRefused(w, hz) => {
+                assert_eq!((w, hz), (sdroxide_types::TxBlock::CbOff, 27_185_000.0))
+            }
+            _ => panic!("TxRefused(CbOff) did not round-trip"),
+        }
+        let (band_off, cb_off) = (encode(&refused).unwrap(), encode(&cb).unwrap());
+        assert_eq!(cb_off[2], band_off[2] + 1, "CbOff follows BandOff in TxBlock");
     }
 
     /// The dynamic-DNS answer rides last on [`ServerMsg`], and it has to: the
@@ -3614,7 +3632,7 @@ mod tests {
             }
             other => panic!("the answer did not round-trip: {other:?}"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (279, 0x63));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (280, 0x64));
     }
 
     /// The VOR read-out rides the wire whole, locked or not, and the message is

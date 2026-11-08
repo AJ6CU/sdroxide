@@ -17607,6 +17607,11 @@ impl Engine {
         if band == Band::Gen || !self.tx_band_enable.contains(&band) {
             return Some(TxBlock::BandOff(band));
         }
+        // 11 m is the one band with a second lock: the list says the operator
+        // wants it, "Allow transmit on 11 m (CB)" says they accepted the rules.
+        if band == Band::M11 && !self.cb_tx_allowed {
+            return Some(TxBlock::CbOff);
+        }
         None
     }
 

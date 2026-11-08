@@ -14,6 +14,7 @@ and the [README](https://github.com/madmedicnl/sdroxide-brown#readme).
 ## [Unreleased]
 
 ### Changed
+- **11 m (CB) has two locks, in a fixed order** — the radio's TX band list comes first (**11M-CB = YES**, list confirmed) and **Allow transmit on 11 m (CB)** second; both are needed to transmit on 11 m. They used to be tied in both directions (ticking one ticked the other, and a stored permission re-ticked the band at every load), so it was impossible to say which one was in charge. Now the box is greyed until 11M-CB is listed, ticking either does not tick the other, and taking 11M-CB off the list clears the box. With the band listed and the box off, PTT is refused with a notice naming the box (Settings → General), in the 11 languages. Wire 279 → 280 (`TxBlock::CbOff`). **A station that had the box on and no 11M-CB in a radio's list must tick 11M-CB once** (the old load-time re-tick is gone).
 - **No more "Other" row in the TX and RX band lists** — the row (YES/NO, no band behind it) could be set to YES and allowed transmitting anywhere outside the bands. It is gone from Settings → Radio. **Nothing is ever transmitted outside the listed bands**, whatever an old `radio.json` or a remote client still says (the engine refuses `Band::Gen`, and the row is stripped from both lists at start-up and on every save). Reception outside the bands (ADS-B, DAB, AIS…) needs no row: a confirmed RX list covers it. The drive-trim, relay and OC tables keep their "Other" line (they grant nothing). No wire change.
 
 ### Added

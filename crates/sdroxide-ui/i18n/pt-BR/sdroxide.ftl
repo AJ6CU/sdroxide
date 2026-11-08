@@ -9394,3 +9394,9 @@ smeter-arrow-next-hover = Próxima medição: { $view }{ $when }
 smeter-arrow-on-receive = (usada ao transmitir)
 
 tx-bands-outside-note = Fora das bandas listadas aqui nada pode ser transmitido. A recepção fora das bandas (ADS-B, DAB, AIS...) não precisa de linha.
+
+tx-off-cb = TRANSMISSÃO PROIBIDA em 11 m (CB) — a banda está na sua lista de transmissão, mas "Permitir transmitir em 11 m (CB)" está desligado. Marque-o em Configurações → Geral.
+
+settings-cb-allow-tx-needs-band = Primeiro coloque 11M-CB em SIM na lista TX deste rádio (Configurações → Rádio) e depois permita aqui.
+
+settings-cb-allow-tx-order-note = Dois bloqueios, nesta ordem: 1) 11M-CB em SIM na lista de bandas TX do rádio, confirmada; 2) esta caixa. Os dois são necessários para transmitir em 11 m. Tirar 11M-CB da lista também desmarca esta caixa.

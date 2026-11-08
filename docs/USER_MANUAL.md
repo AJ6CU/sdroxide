@@ -8217,6 +8217,15 @@ decides every band plan sdroxide draws and enforces:
   per screen. It opens 11 m and nothing else. A station setting
   (`cb_tx_allowed` in `config.toml`), so it travels to every client along with
   the CB plan.
+
+  **11 m has two locks, in this order.** First the radio's own TX band list
+  ([6.2](#62-radio-choosing-and-configuring-the-rig)): **11M-CB** must be **YES**
+  and the list confirmed. Only then can the box above be ticked — it is greyed
+  until the band is listed, with a hover text that says so — and it does nothing
+  on its own. Both are needed to transmit on 11 m; with the band listed and the
+  box off, PTT is refused with a red notice that names the box. Ticking the band
+  does not tick the box, and ticking the box does not tick the band. Taking
+  **11M-CB** off the list also clears the box.
 - **Longwave, medium wave, shortwave and FM broadcast** — `LW`, `MW`, `SW` and
   `FM` are on the bar for the listener the way 11 m is for the CB operator.
   None is an amateur allocation, so with `tx_ham_only` set (the default) the

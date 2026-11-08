@@ -4894,11 +4894,6 @@ impl SdroxideApp {
             self.cb_tx_edit = true;
             sdroxide_types::set_cb_tx_allowed(true);
             cmds.push(Command::SetCbTxAllowed(true));
-            // The 11M-CB tick follows the permission, as everywhere else.
-            if let Some(cfg) = self.radio_cfg.as_mut() {
-                cfg.set_tx_band(Band::M11, true);
-                self.ctrl.set_radio_config(cfg.clone());
-            }
             self.cb_tx_confirm_open = false;
         } else if cancel {
             self.cb_tx_confirm_open = false;

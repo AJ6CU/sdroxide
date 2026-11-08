@@ -9392,3 +9392,9 @@ smeter-arrow-next-hover = Nächster Messwert: { $view }{ $when }
 smeter-arrow-on-receive = (gilt beim Senden)
 
 tx-bands-outside-note = Außerhalb der hier aufgeführten Bänder kann nicht gesendet werden. Empfang außerhalb der Bänder (ADS-B, DAB, AIS...) braucht keine Zeile.
+
+tx-off-cb = SENDEN GESPERRT auf 11 m (CB) — das Band steht in Ihrer Sendeliste, aber „Senden auf 11 m (CB) erlauben“ ist aus. Aktivieren Sie es unter Einstellungen → Allgemein.
+
+settings-cb-allow-tx-needs-band = Setzen Sie zuerst 11M-CB in der TX-Bandliste dieses Funkgeräts auf JA (Einstellungen → Radio) und erlauben Sie es dann hier.
+
+settings-cb-allow-tx-order-note = Zwei Sperren, in dieser Reihenfolge: 1) 11M-CB steht in der TX-Bandliste des Funkgeräts auf JA und ist bestätigt; 2) dieses Kästchen. Zum Senden auf 11 m sind beide nötig. Wird 11M-CB aus der Liste genommen, wird auch dieses Kästchen abgewählt.
