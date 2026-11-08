@@ -7966,6 +7966,9 @@ pub enum TxBlock {
     Unconfirmed,
     /// The frequency is in this band, which is not ticked.
     BandOff(Band),
+    /// 11 m (CB) is ticked and confirmed, but "Allow transmit on 11 m (CB)" is
+    /// off. The band list comes first; this is the second lock.
+    CbOff,
 }
 
 /// The lowest S-meter calibration offered, in S-units.
@@ -7977,15 +7980,28 @@ pub const DB_PER_S_UNIT: f32 = 6.0;
 
 impl RadioConfig {
     /// Whether this radio may transmit on `band`: validated, and listed.
+    ///
+    /// [`Band::Gen`] ("Other", everywhere outside the bands) is never a
+    /// transmit band, whatever the list says.
+    ///
+    /// 11 m (CB) needs a second lock on top of the list: the station's "Allow
+    /// transmit on 11 m (CB)" ([`crate::cb_tx_allowed`]).
     pub fn tx_band_allowed(&self, band: Band) -> bool {
-        self.tx_bands_confirmed
+        self.tx_band_allowed_with(band, crate::cb_tx_allowed())
+    }
+
+    /// [`Self::tx_band_allowed`] with the CB permission given, not read.
+    pub fn tx_band_allowed_with(&self, band: Band, cb_allowed: bool) -> bool {
+        band != Band::Gen
+            && (band != Band::M11 || cb_allowed)
+            && self.tx_bands_confirmed
             && self.tx_band_enable.as_ref().is_some_and(|bands| bands.contains(&band))
     }
 
     /// Whether this radio may transmit at `dial_hz`. The band is the one the
     /// frequency is in, never the selector the operator last clicked.
     pub fn tx_dial_allowed(&self, dial_hz: f64) -> bool {
-        self.tx_band_allowed(Band::containing(dial_hz))
+        self.tx_block_reason(dial_hz).is_none()
     }
 
     /// Why this radio may not transmit at `dial_hz`, or `None` when it may.
@@ -7994,15 +8010,24 @@ impl RadioConfig {
     /// allowed on the bands that are ticked in the list *and* validated, and
     /// refused everywhere else — listening bands, broadcast, "Other" included.
     pub fn tx_block_reason(&self, dial_hz: f64) -> Option<TxBlock> {
+        self.tx_block_reason_with(dial_hz, crate::cb_tx_allowed())
+    }
+
+    /// [`Self::tx_block_reason`] with the CB permission given, not read. The
+    /// locks come in this order: the list confirmed, the band ticked, and for
+    /// 11 m the station's CB permission last.
+    pub fn tx_block_reason_with(&self, dial_hz: f64, cb_allowed: bool) -> Option<TxBlock> {
         if !self.tx_bands_confirmed {
             return Some(TxBlock::Unconfirmed);
         }
         let band = Band::containing(dial_hz);
-        if self.tx_band_enable.as_ref().is_some_and(|b| b.contains(&band)) {
-            None
-        } else {
-            Some(TxBlock::BandOff(band))
+        if band == Band::Gen || !self.tx_band_enable.as_ref().is_some_and(|b| b.contains(&band)) {
+            return Some(TxBlock::BandOff(band));
         }
+        if band == Band::M11 && !cb_allowed {
+            return Some(TxBlock::CbOff);
+        }
+        None
     }
 
     /// Tick or untick one band of the transmit list.
@@ -8015,6 +8040,9 @@ impl RadioConfig {
     /// (Bench report, 2026-11-01: the confirmation could only ever be given
     /// once, so there was no way to change the list and check it again.)
     pub fn set_tx_band(&mut self, band: Band, on: bool) {
+        if band == Band::Gen {
+            return;
+        }
         let bands = self.tx_band_enable.get_or_insert_with(Vec::new);
         let had = bands.contains(&band);
         bands.retain(|b| *b != band);
@@ -8024,6 +8052,20 @@ impl RadioConfig {
         if had != on {
             self.tx_bands_confirmed = false;
         }
+    }
+
+    /// Take the "Other" row out of both band lists. It had a row once; now it
+    /// has none, so an old file or a client that still sends it is cleaned. The
+    /// confirmations are left alone: the row never granted anything the rest of
+    /// the list shows. Returns whether anything changed.
+    pub fn drop_other_band(&mut self) -> bool {
+        let mut changed = false;
+        for list in [&mut self.tx_band_enable, &mut self.rx_band_enable].into_iter().flatten() {
+            let n = list.len();
+            list.retain(|b| *b != Band::Gen);
+            changed |= list.len() != n;
+        }
+        changed
     }
 
     /// Fill in [`Self::tx_band_enable`] for a `radio.json` that predates it:
@@ -8044,9 +8086,13 @@ impl RadioConfig {
     }
 
     /// Whether this radio may receive on `band`: validated, and listed.
+    ///
+    /// [`Band::Gen`] (outside every band: ADS-B, DAB, AIS...) has no row of its
+    /// own and is covered by a confirmed list.
     pub fn rx_band_allowed(&self, band: Band) -> bool {
         self.rx_bands_confirmed
-            && self.rx_band_enable.as_ref().is_some_and(|bands| bands.contains(&band))
+            && (band == Band::Gen
+                || self.rx_band_enable.as_ref().is_some_and(|bands| bands.contains(&band)))
     }
 
     /// Whether this radio may be tuned to `dial_hz`. The band is the one the
@@ -8062,7 +8108,7 @@ impl RadioConfig {
             return Some(RxBlock::Unconfirmed);
         }
         let band = Band::containing(dial_hz);
-        if self.rx_band_enable.as_ref().is_some_and(|b| b.contains(&band)) {
+        if band == Band::Gen || self.rx_band_enable.as_ref().is_some_and(|b| b.contains(&band)) {
             None
         } else {
             Some(RxBlock::BandOff(band))
@@ -8072,6 +8118,9 @@ impl RadioConfig {
     /// Tick or untick one band of the receive list. A change withdraws the
     /// confirmation, exactly as [`Self::set_tx_band`] does for transmit.
     pub fn set_rx_band(&mut self, band: Band, on: bool) {
+        if band == Band::Gen {
+            return;
+        }
         let bands = self.rx_band_enable.get_or_insert_with(Vec::new);
         let had = bands.contains(&band);
         bands.retain(|b| *b != band);
@@ -8084,20 +8133,17 @@ impl RadioConfig {
     }
 
     /// Fill in [`Self::rx_band_enable`] for a `radio.json` that predates it:
-    /// every band `may_rx` says the hardware reaches (its published range), plus
-    /// "Other" ([`Band::Gen`]) when it reaches anything, left unconfirmed.
+    /// every band `may_rx` says the hardware reaches (its published range), left
+    /// unconfirmed. "Other" ([`Band::Gen`]) has no row and is never listed.
     /// Returns whether anything changed. A list that exists is never touched.
     pub fn migrate_rx_bands(&mut self, may_rx: impl Fn(f64) -> bool) -> bool {
         if self.rx_band_enable.is_some() {
             return false;
         }
-        let mut bands: Vec<Band> = Band::ALL
+        let bands: Vec<Band> = Band::ALL
             .into_iter()
             .filter(|b| b.edges().is_some_and(|(lo, hi)| may_rx(lo) || may_rx(hi)))
             .collect();
-        if !bands.is_empty() {
-            bands.push(Band::Gen);
-        }
         self.rx_band_enable = Some(bands);
         self.rx_bands_confirmed = false;
         true
@@ -9705,12 +9751,12 @@ mod tests {
         let sw75 = 3_912_000.0; // broadcast "SW 75m"
         // 11 m alone: CB only.
         let cb = tx_list(&[Band::M11], true);
-        assert_eq!(cb.tx_block_reason(27_185_000.0), None);
+        assert_eq!(cb.tx_block_reason_with(27_185_000.0, true), None);
         assert_eq!(cb.tx_block_reason(7_074_000.0), Some(TxBlock::BandOff(Band::M40)));
         assert!(cb.tx_block_reason(sw41).is_some() && cb.tx_block_reason(sw75).is_some());
         // 11 m + 40 m: those two, nothing else.
         let two = tx_list(&[Band::M11, Band::M40], true);
-        assert_eq!(two.tx_block_reason(27_185_000.0), None);
+        assert_eq!(two.tx_block_reason_with(27_185_000.0, true), None);
         assert_eq!(two.tx_block_reason(7_074_000.0), None);
         assert!(two.tx_block_reason(14_074_000.0).is_some());
         // 11 m unticked: no CB.
@@ -9757,8 +9803,10 @@ mod tests {
         assert_eq!(c.rx_block_reason(1_850_000.0), None);
         assert_eq!(c.rx_block_reason(adsb), None, "ADS-B falls on Other");
         assert_eq!(c.rx_block_reason(7_074_000.0), Some(RxBlock::BandOff(Band::M40)));
+        // "Other" has no row: a confirmed list covers it, listed or not.
         let no_other = rx_list(&[Band::M160], true);
-        assert_eq!(no_other.rx_block_reason(adsb), Some(RxBlock::BandOff(Band::Gen)));
+        assert_eq!(no_other.rx_block_reason(adsb), None, "ADS-B needs no Other row");
+        assert_eq!(rx_list(&[], false).rx_block_reason(adsb), Some(RxBlock::Unconfirmed));
         let unvalidated = rx_list(&[Band::M160], false);
         assert_eq!(unvalidated.rx_block_reason(1_850_000.0), Some(RxBlock::Unconfirmed));
         assert_eq!(RadioConfig::default().rx_block_reason(1_850_000.0), Some(RxBlock::Unconfirmed));
@@ -9770,6 +9818,40 @@ mod tests {
     }
 
     /// TX and RX lists are independent: 160 m TX off, RX on.
+    /// Two locks on 11 m, in order: the list (confirmed, ticked), then the
+    /// station's CB permission. Neither opens anything alone.
+    #[test]
+    fn eleven_metres_needs_the_list_first_and_the_cb_permission_second() {
+        let cb = 27_185_000.0;
+        let listed = tx_list(&[Band::M11, Band::M40], true);
+        assert_eq!(listed.tx_block_reason_with(cb, true), None);
+        assert_eq!(listed.tx_block_reason_with(cb, false), Some(TxBlock::CbOff));
+        assert_eq!(listed.tx_block_reason_with(7_074_000.0, false), None, "40 m is not CB");
+        assert!(!listed.tx_band_allowed_with(Band::M11, false));
+        // Permission without the band: the list's own refusal comes first.
+        let unlisted = tx_list(&[Band::M40], true);
+        assert_eq!(unlisted.tx_block_reason_with(cb, true), Some(TxBlock::BandOff(Band::M11)));
+        assert_eq!(unlisted.tx_block_reason_with(cb, false), Some(TxBlock::BandOff(Band::M11)));
+        // An unconfirmed list says so before anything about CB.
+        let unconfirmed = tx_list(&[Band::M11], false);
+        assert_eq!(unconfirmed.tx_block_reason_with(cb, false), Some(TxBlock::Unconfirmed));
+    }
+
+    #[test]
+    fn other_is_never_a_transmit_band() {
+        let hz = 35_000_000.0;
+        assert_eq!(Band::containing(hz), Band::Gen);
+        let mut c = tx_list(&[Band::M40, Band::Gen], true);
+        assert_eq!(c.tx_block_reason(hz), Some(TxBlock::BandOff(Band::Gen)));
+        assert!(!c.tx_dial_allowed(hz));
+        assert!(!c.tx_band_allowed(Band::Gen));
+        c.set_tx_band(Band::Gen, true);
+        assert!(c.tx_bands_confirmed, "the row cannot be ticked, so nothing was changed");
+        assert!(c.drop_other_band());
+        assert_eq!(c.tx_band_enable, Some(vec![Band::M40]));
+        assert!(!c.drop_other_band(), "nothing left to drop");
+    }
+
     #[test]
     fn rx_and_tx_lists_are_independent() {
         let c = RadioConfig {
@@ -9805,14 +9887,14 @@ mod tests {
         assert!(pluto.migrate_rx_bands(|hz| hz >= 70e6));
         let bands = pluto.rx_band_enable.clone().unwrap();
         assert!(!bands.contains(&Band::M80) && !bands.contains(&Band::M20));
-        assert!(bands.contains(&Band::M2) && bands.contains(&Band::Gen));
+        assert!(bands.contains(&Band::M2) && !bands.contains(&Band::Gen));
         assert!(!pluto.rx_bands_confirmed, "carried over, never confirmed");
         assert!(!pluto.migrate_rx_bands(|_| true), "an existing list is left alone");
         // An HF radio.
         let mut hf = RadioConfig::default();
         hf.migrate_rx_bands(|hz| hz < 30e6);
         let bands = hf.rx_band_enable.unwrap();
-        assert!(bands.contains(&Band::M160) && bands.contains(&Band::Gen));
+        assert!(bands.contains(&Band::M160) && !bands.contains(&Band::Gen));
         assert!(!bands.contains(&Band::M2));
         // Reaches nothing: nothing ticked.
         let mut none = RadioConfig::default();

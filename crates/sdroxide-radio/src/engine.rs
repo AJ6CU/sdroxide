@@ -4978,6 +4978,13 @@ fn engine_thread(
     // [`Engine::emit_radio_config`]), and this one table is consulted on every
     // transmitted block.
     let mut radio_cfg = engine_cfg.store.load_radio_config();
+    // The "Other" row is gone from both lists; an older file may still name it.
+    if radio_cfg.drop_other_band() {
+        info!("radio.json named the \"Other\" band — removed from the band lists");
+        if let Err(e) = engine_cfg.store.save_radio_config(&radio_cfg) {
+            warn!("saving the cleaned band lists: {e}");
+        }
+    }
     // An upgrade: the bands the radio could already key become the operator's
     // list, still unconfirmed, so nothing transmits until they have checked it.
     if radio_cfg.migrate_tx_bands(|hz| caps.may_tx_hz(hz)) {
@@ -10216,11 +10223,8 @@ impl Engine {
                 // service bands.
                 let band = self.state.band;
                 if !band.accepts_mode(mode) {
-                    self.notice(&format!(
-                        "{} is not used on {} — pick a band it belongs to",
-                        mode.label(),
-                        band.label()
-                    ));
+                    warn!("mode change refused: {} is not used on {}", mode.label(), band.label());
+                    let _ = self.event_tx.send(RadioEvent::ModeRefused(mode, band));
                     return;
                 }
                 // Decided before the mode is applied, because knowing whether
@@ -12305,6 +12309,7 @@ impl Engine {
             // screen asking for the change may be in another country.
             SetRadioConfig { cfg, reopen } => {
                 let mut cfg = cfg;
+                cfg.drop_other_band();
                 self.vet_band_confirmations(&mut cfg);
                 if let Err(e) = self.store.save_radio_config(&cfg) {
                     warn!("saving radio config: {e}");
@@ -17593,8 +17598,16 @@ impl Engine {
         if !self.tx_bands_confirmed {
             return Some(TxBlock::Unconfirmed);
         }
-        if !self.tx_band_enable.contains(&band) {
+        // "Other" is never a transmit band: no list can grant a key-down
+        // outside every band (the row is gone from the screen, and a list
+        // that still names it — an old file, a remote client — is ignored).
+        if band == Band::Gen || !self.tx_band_enable.contains(&band) {
             return Some(TxBlock::BandOff(band));
+        }
+        // 11 m is the one band with a second lock: the list says the operator
+        // wants it, "Allow transmit on 11 m (CB)" says they accepted the rules.
+        if band == Band::M11 && !self.cb_tx_allowed {
+            return Some(TxBlock::CbOff);
         }
         None
     }
@@ -17615,7 +17628,9 @@ impl Engine {
         if !self.rx_bands_confirmed {
             return Some(sdroxide_types::RxBlock::Unconfirmed);
         }
-        if !self.rx_band_enable.contains(&band) {
+        // Outside every band (ADS-B, DAB, AIS...) is listening only and has
+        // no row of its own: a confirmed list covers it.
+        if band != Band::Gen && !self.rx_band_enable.contains(&band) {
             return Some(sdroxide_types::RxBlock::BandOff(band));
         }
         None

@@ -52,6 +52,7 @@ fn tx_block_text(why: Option<sdroxide_types::TxBlock>, hz: f64) -> String {
         Some(sdroxide_types::TxBlock::BandOff(_)) => {
             tr!("tx-off-band", freq = format!("{:.3}", hz / 1e6), band = band_name(hz))
         }
+        Some(sdroxide_types::TxBlock::CbOff) => tr!("tx-off-cb"),
         _ => tr!("tx-off-unconfirmed"),
     }
 }
@@ -180,23 +181,6 @@ impl SdroxideApp {
         }
     }
 
-    /// Keep "Allow transmit on 11 m (CB)" and the 11M-CB band tick as one
-    /// setting. The settings window keeps them in step when either is edited;
-    /// this also settles a configuration saved before they were tied together.
-    fn sync_cb_with_m11_band(&mut self) {
-        let Some(cfg) = self.radio_cfg.as_mut() else { return };
-        let Some(bands) = cfg.tx_band_enable.as_ref() else { return };
-        let ticked = bands.contains(&Band::M11);
-        if self.cb_tx_edit && !ticked {
-            cfg.set_tx_band(Band::M11, true);
-            self.ctrl.set_radio_config(cfg.clone());
-        } else if !self.cb_tx_edit && ticked {
-            self.cb_tx_edit = true;
-            sdroxide_types::set_cb_tx_allowed(true);
-            self.ctrl.send(sdroxide_types::Command::SetCbTxAllowed(true));
-        }
-    }
-
     /// The notice for an unconfirmed list, or `None` when there is nothing to say.
     ///
     /// One banner for both lists: the transmit text, then the receive one when
@@ -229,7 +213,6 @@ impl SdroxideApp {
     /// [`TX_BAND_NOTICES_MAX`] per session and per radio tab — the count is
     /// not saved, so it starts again at the next launch.
     pub(in crate::app) fn tx_band_guard(&mut self) {
-        self.sync_cb_with_m11_band();
         if self.tx_bands_status() != TxBands::Confirmed || self.state.playback.is_some() {
             self.tx_band_msg = None;
             self.tx_band_refused_in = None;
@@ -249,8 +232,10 @@ impl SdroxideApp {
         self.tx_band_refused_in = Some(band);
         if self.tx_band_shown < TX_BAND_NOTICES_MAX {
             self.tx_band_shown += 1;
-            self.tx_band_msg =
-                Some(tr!("tx-bands-off", band = band_name(hz), max = TX_BAND_NOTICES_MAX));
+            self.tx_band_msg = Some(match cfg.tx_block_reason(hz) {
+                Some(sdroxide_types::TxBlock::CbOff) => tr!("tx-off-cb"),
+                _ => tr!("tx-bands-off", band = band_name(hz), max = TX_BAND_NOTICES_MAX),
+            });
         } else {
             self.tx_band_msg = None;
         }
@@ -282,14 +267,15 @@ mod tests {
         assert!(!RadioConfig::default().tx_dial_allowed(7_074_000.0), "no list, no band");
     }
 
-    /// ALL is a selector, not a permission: the check is on the real frequency.
+    /// ALL is a selector, not a permission: the check is on the real frequency,
+    /// and outside every band nothing is ever keyed, whatever the list holds.
     #[test]
-    fn a_frequency_outside_every_band_needs_the_other_row() {
+    fn a_frequency_outside_every_band_is_never_keyed() {
         assert_eq!(Band::containing(35_000_000.0), Band::Gen);
         let cfg = confirmed(&[Band::M40, Band::M20]);
         assert!(!cfg.tx_dial_allowed(35_000_000.0));
         let cfg = confirmed(&[Band::Gen]);
-        assert!(cfg.tx_dial_allowed(35_000_000.0));
+        assert!(!cfg.tx_dial_allowed(35_000_000.0), "an old list naming Other grants nothing");
         assert!(!cfg.tx_dial_allowed(7_074_000.0));
     }
 

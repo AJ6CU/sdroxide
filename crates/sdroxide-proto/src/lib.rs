@@ -2284,8 +2284,21 @@ use sdroxide_types::{
 /// `ServerMsg::ClientSettings` whole, so the appended field moves its layout.
 /// `#[serde(default)]`, so a `config.toml` written before this loads unchanged.
 /// `PROTO_VERSION` 278 → 279, `VERSION_BYTE` 0x62 → 0x63.
-pub const PROTO_VERSION: u16 = 279;
-const VERSION_BYTE: u8 = 0x63;
+///
+/// v280: **11 m (CB) has its own refusal.** [`sdroxide_types::TxBlock`] gains
+/// `CbOff` at its tail: the band is ticked and confirmed in the transmit list,
+/// but "Allow transmit on 11 m (CB)" is off. `RadioEvent::TxRefused` /
+/// `ServerMsg::TxRefused` carry it, so the screen says so in the operator's
+/// language. Nothing else moves. `PROTO_VERSION` 279 → 280, `VERSION_BYTE`
+/// 0x63 → 0x64.
+///
+/// v281: **a refused mode is typed.** `ServerMsg` gains `ModeRefused { mode,
+/// band }` at its tail, carrying `RadioEvent::ModeRefused`, so the screen says
+/// "X is not used on Y" in the operator's language (it was an English notice
+/// that a remote screen never received). `PROTO_VERSION` 280 → 281,
+/// `VERSION_BYTE` 0x64 → 0x65.
+pub const PROTO_VERSION: u16 = 281;
+const VERSION_BYTE: u8 = 0x65;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -2884,6 +2897,9 @@ pub enum ServerMsg {
     /// The file of a band plan, for the screen that asked to save it on its own
     /// computer. Appended last.
     BandPlanExport { file: String, json: String },
+    /// `RadioEvent::ModeRefused`: a mode the band the receiver is on does not
+    /// carry was asked for. Appended last (v281).
+    ModeRefused { mode: sdroxide_types::Mode, band: sdroxide_types::Band },
 }
 
 /// What [`ServerMsg::ClientSettings`] carries.
@@ -3583,7 +3599,32 @@ mod tests {
             ServerMsg::TxRefused(w, hz) => assert_eq!((w, hz), (why, 7_074_000.0)),
             _ => panic!("TxRefused did not round-trip"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (279, 0x63));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (281, 0x65));
+        // v280: the CB refusal is a new tail variant of `TxBlock`; the ones
+        // before it keep their positions.
+        let cb = ServerMsg::TxRefused(sdroxide_types::TxBlock::CbOff, 27_185_000.0);
+        match decode::<ServerMsg>(&encode(&cb).unwrap()).unwrap() {
+            ServerMsg::TxRefused(w, hz) => {
+                assert_eq!((w, hz), (sdroxide_types::TxBlock::CbOff, 27_185_000.0))
+            }
+            _ => panic!("TxRefused(CbOff) did not round-trip"),
+        }
+        let (band_off, cb_off) = (encode(&refused).unwrap(), encode(&cb).unwrap());
+        assert_eq!(cb_off[2], band_off[2] + 1, "CbOff follows BandOff in TxBlock");
+    }
+
+    /// v281: a refused mode rides after the band plan export, whole.
+    #[test]
+    fn a_refused_mode_is_appended_after_the_band_plan_export() {
+        use sdroxide_types::{Band, Mode};
+        let export = ServerMsg::BandPlanExport { file: "a".into(), json: "{}".into() };
+        let refused = ServerMsg::ModeRefused { mode: Mode::Wfm, band: Band::M11 };
+        let (a, b) = (encode(&export).unwrap()[1], encode(&refused).unwrap()[1]);
+        assert_eq!(b, a + 1, "ModeRefused must directly follow BandPlanExport");
+        match decode::<ServerMsg>(&encode(&refused).unwrap()).unwrap() {
+            ServerMsg::ModeRefused { mode, band } => assert_eq!((mode, band), (Mode::Wfm, Band::M11)),
+            other => panic!("did not round-trip: {other:?}"),
+        }
     }
 
     /// The dynamic-DNS answer rides last on [`ServerMsg`], and it has to: the
@@ -3614,7 +3655,7 @@ mod tests {
             }
             other => panic!("the answer did not round-trip: {other:?}"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (279, 0x63));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (281, 0x65));
     }
 
     /// The VOR read-out rides the wire whole, locked or not, and the message is

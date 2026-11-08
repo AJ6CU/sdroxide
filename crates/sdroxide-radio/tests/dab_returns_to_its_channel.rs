@@ -12,10 +12,11 @@ use std::time::Duration;
 
 use sdroxide_radio::{Complex32, EngineConfig, IqSource, Result, start_engine};
 use sdroxide_types::{
-    Command, DabKnownStation, DabSettings, DeviceCaps, Mode, RadioEvent, RxId, Vfo,
+    Band, Command, DabKnownStation, DabSettings, DeviceCaps, Mode, RadioEvent, RxId, Vfo,
 };
 
 const RATE: f64 = 2_500_000.0;
+
 const CH_8D: f64 = 201_072_000.0;
 const CH_11D: f64 = 222_064_000.0;
 const SIX_METRES: f64 = 50_150_000.0;
@@ -48,7 +49,12 @@ impl IqSource for Silence {
 
 /// Run `cmds` on a fresh engine and return the dial and the front end's centre
 /// from its last state.
-fn dial_after(cmds: Vec<Command>) -> (f64, f64) {
+fn dial_after(cmds: Vec<Command>) -> (f64, f64, Mode) {
+    dial_after_seen(cmds).0
+}
+
+/// [`dial_after`], and whether a `ModeRefused` event came out.
+fn dial_after_seen(cmds: Vec<Command>) -> ((f64, f64, Mode), bool) {
     static ONCE: std::sync::Once = std::sync::Once::new();
     ONCE.call_once(|| {
         let root = std::env::temp_dir().join(format!("sdroxide-dab-return-{}", std::process::id()));
@@ -74,16 +80,19 @@ fn dial_after(cmds: Vec<Command>) -> (f64, f64) {
     }
     std::thread::sleep(Duration::from_millis(200));
     let mut last = None;
+    let mut refused = false;
     while let Ok(ev) = h.event_rx.try_recv() {
-        if let RadioEvent::State(s) = ev {
-            last = Some((s.vfo_a_hz, s.center_hz));
+        match ev {
+            RadioEvent::State(s) => last = Some((s.vfo_a_hz, s.center_hz, s.rx[0].mode)),
+            RadioEvent::ModeRefused(..) => refused = true,
+            _ => {}
         }
     }
     drop(h.cmd_tx);
     if let Some(t) = thread {
         let _ = t.join();
     }
-    last.expect("the engine publishes state")
+    (last.expect("the engine publishes state"), refused)
 }
 
 fn dab(channel: &str, found: &[&str]) -> DabSettings {
@@ -94,7 +103,7 @@ fn dab(channel: &str, found: &[&str]) -> DabSettings {
     }
 }
 
-fn on_channel((dial, centre): (f64, f64), hz: f64, what: &str) {
+fn on_channel((dial, centre, _): (f64, f64, Mode), hz: f64, what: &str) {
     assert!(
         (dial - hz).abs() < 1_000.0,
         "{what}: the dial is on {:.3} MHz, not the DAB channel at {:.3}",
@@ -171,4 +180,28 @@ fn a_radio_already_on_its_channel_is_left_there() {
         set_mode(Mode::Dab),
     ]);
     assert_eq!(at.0, CH_8D + 200.0, "a dial already on the channel is not moved");
+}
+
+/// The bug: DAB chosen while the dial sat on the FM broadcast band (the classic
+/// radio's own band) was refused with "DAB is not used on FM". DAB lives on its
+/// own channels, so the mode is taken and the dial goes to the channel.
+#[test]
+fn dab_from_the_fm_band_is_taken_and_goes_to_its_channel() {
+    let (at, refused) = dial_after_seen(vec![
+        Command::SetDabConfig(dab("8D", &["8D"])),
+        Command::SetBand(Band::Fm),
+        set_mode(Mode::Dab),
+    ]);
+    assert_eq!(at.2, Mode::Dab, "the mode was taken");
+    assert!(!refused, "nothing was refused");
+    on_channel(at, CH_8D, "DAB chosen from the FM band");
+}
+
+/// A mode a band really does not carry is still refused — now as a typed event
+/// the screen words in the operator's language, not an English notice.
+#[test]
+fn a_mode_the_band_does_not_carry_is_refused_with_a_typed_event() {
+    let (at, refused) = dial_after_seen(vec![Command::SetBand(Band::Fm), set_mode(Mode::Usb)]);
+    assert!(refused, "ModeRefused was sent");
+    assert_ne!(at.2, Mode::Usb, "the mode did not change");
 }

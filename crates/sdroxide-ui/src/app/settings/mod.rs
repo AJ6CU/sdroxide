@@ -1003,12 +1003,10 @@ fn band_plan_table(
                 ui.label(RichText::new(tr!("band-plan-col-rx")).strong());
             }
             ui.end_row();
-            for (i, band) in Band::ALL.iter().enumerate() {
-                ui.label(if *band == Band::Gen {
-                    tr!("settings-other")
-                } else {
-                    super::tx_bands::tx_band_label(*band)
-                });
+            // No "Other" row: outside every band nothing can be keyed, and a
+            // row that reads YES/NO with no band behind it invites a mistake.
+            for (i, band) in Band::ALL.iter().filter(|b| **b != Band::Gen).enumerate() {
+                ui.label(super::tx_bands::tx_band_label(*band));
                 if tx {
                     let on = listed.contains(band);
                     let mut choice = on;
@@ -1091,6 +1089,8 @@ fn band_plan_table(
     if tx {
         ui.add_space(2.0);
         note(ui, &tr!("tx-bands-power-note"));
+        ui.add_space(2.0);
+        note(ui, &tr!("tx-bands-outside-note"));
         ui.add_space(6.0);
         ui.label(RichText::new(tr!("tx-bands-title")).strong());
         bands_confirmation(ui, "tx-bands", &mut cfg.tx_bands_confirmed, true);
@@ -2510,30 +2510,25 @@ impl SdroxideApp {
         self.converter_edit_hz = converter_hz;
         self.range_edit = ranges;
         self.rx_site_edit = rx_site;
-        // 11 m is one setting shown twice: the 11M-CB tick of the transmit
-        // bands and "Allow transmit on 11 m (CB)". Whichever the operator just
-        // changed drives the other, in both directions.
+        // 11 m has two locks, in this order. The operator's TX band list comes
+        // first: 11M-CB must be YES there. "Allow transmit on 11 m (CB)" comes
+        // second and does nothing alone. The two are not tied: ticking the band
+        // grants nothing and the checkbox ticks nothing. Taking the band off the
+        // list does take the permission back, so the second lock never stands
+        // alone behind a band the operator no longer lists.
         {
             let has_m11 = |c: &Option<sdroxide_types::RadioConfig>| {
                 c.as_ref().is_some_and(|c| {
                     c.tx_band_enable.as_ref().is_some_and(|b| b.contains(&sdroxide_types::Band::M11))
                 })
             };
-            let (m11_old, m11_new) = (has_m11(&self.radio_cfg), has_m11(&radio_edit));
-            let acked = self.ui_settings.cb_tx_warning_ack;
-            if let Some(cfg) = radio_edit.as_mut() {
-                if m11_new != m11_old {
-                    if m11_new && !cb_tx_edit && !acked {
-                        // First time on: the CB warning must be acknowledged
-                        // before anything is granted; the tick waits for it.
-                        cfg.set_tx_band(sdroxide_types::Band::M11, false);
-                        self.cb_tx_confirm_open = true;
-                    } else {
-                        cb_tx_edit = m11_new;
-                    }
-                } else if cb_tx_edit != self.cb_tx_edit && (!cb_tx_edit || acked) {
-                    cfg.set_tx_band(sdroxide_types::Band::M11, cb_tx_edit);
-                }
+            if has_m11(&self.radio_cfg) && !has_m11(&radio_edit) {
+                cb_tx_edit = false;
+            }
+            // The checkbox is greyed until the band is listed; a client that
+            // gets past that is put back.
+            if cb_tx_edit && !self.cb_tx_edit && !has_m11(&radio_edit) {
+                cb_tx_edit = false;
             }
         }
         let hide_changed =
@@ -2974,10 +2969,22 @@ impl SdroxideApp {
                     &tr!("settings-cb-plan-note", plan = general::cb_plan_label(*io.cb_plan_edit)),
                 );
                 ui.add_space(8.0);
-                crate::chrome::checkbox(ui, io.cb_tx_edit, tr!("settings-cb-allow-tx"))
-                    .on_hover_text(
-                        tr!("settings-cb-allow-tx-hint"),
-                    );
+                // Second lock: only once 11M-CB is YES in the TX band list of
+                // the radio on screen. Switching it off is always possible.
+                let m11_listed = self.radio_cfg.as_ref().is_some_and(|c| {
+                    c.tx_band_enable
+                        .as_ref()
+                        .is_some_and(|b| b.contains(&sdroxide_types::Band::M11))
+                });
+                let cb_enabled = m11_listed || *io.cb_tx_edit;
+                ui.add_enabled_ui(cb_enabled, |ui| {
+                    crate::chrome::checkbox(ui, io.cb_tx_edit, tr!("settings-cb-allow-tx"))
+                        .on_hover_text(tr!("settings-cb-allow-tx-hint"));
+                })
+                .response
+                .on_disabled_hover_text(tr!("settings-cb-allow-tx-needs-band"));
+                ui.add_space(2.0);
+                note(ui, &tr!("settings-cb-allow-tx-order-note"));
                 ui.add_space(4.0);
                 note(
                     ui,

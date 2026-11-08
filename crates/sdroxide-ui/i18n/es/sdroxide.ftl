@@ -9401,3 +9401,10 @@ sonde-card-stale-value = Ya no está en la lista: última posición conocida
 sonde-card-detach = Separar
 
 sonde-card-attach = Fijar
+tx-bands-outside-note = Fuera de las bandas listadas aquí no se puede transmitir nada. La recepción fuera de las bandas (ADS-B, DAB, AIS...) no necesita fila.
+
+tx-off-cb = TRANSMISIÓN PROHIBIDA en 11 m (CB): la banda está en su lista de transmisión, pero «Permitir transmitir en 11 m (CB)» está desactivado. Actívelo en Ajustes → General.
+
+settings-cb-allow-tx-needs-band = Primero ponga 11M-CB en SÍ en la lista TX de esta radio (Ajustes → Radio) y luego permítalo aquí.
+
+settings-cb-allow-tx-order-note = Dos bloqueos, en este orden: 1) 11M-CB en SÍ en la lista de bandas TX de la radio, confirmada; 2) esta casilla. Se necesitan ambos para transmitir en 11 m. Quitar 11M-CB de la lista también desmarca esta casilla.

@@ -1432,6 +1432,7 @@ fn handle_event(shared: &Shared, ev: RadioEvent) {
             // has no other way to draw a meter that follows it.
             RadioEvent::AudioLevel(l) => Some(ServerMsg::AudioLevel(l)),
             RadioEvent::TxRefused(why, hz) => Some(ServerMsg::TxRefused(why, hz)),
+            RadioEvent::ModeRefused(mode, band) => Some(ServerMsg::ModeRefused { mode, band }),
             // Found where the sound reaches the speakers, so a remote client
             // finds its own from the audio it is sent.
             RadioEvent::HeardFrame(_) => None,

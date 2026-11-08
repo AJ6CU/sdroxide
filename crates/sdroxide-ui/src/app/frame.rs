@@ -4476,6 +4476,13 @@ impl SdroxideApp {
                     }
                 }
                 RadioEvent::TxRefused(why, hz) => self.on_tx_refused(why, hz),
+                RadioEvent::ModeRefused(mode, band) => {
+                    self.radio_notice = Some(tr!(
+                        "topbar-mode-not-on-band",
+                        mode = mode.label(),
+                        band = super::tx_bands::tx_band_label(band)
+                    ));
+                }
                 RadioEvent::AudioLevel(l) => {
                     self.audio_level = Some((crate::time::now_unix_f64(), *l))
                 }
@@ -4894,11 +4901,6 @@ impl SdroxideApp {
             self.cb_tx_edit = true;
             sdroxide_types::set_cb_tx_allowed(true);
             cmds.push(Command::SetCbTxAllowed(true));
-            // The 11M-CB tick follows the permission, as everywhere else.
-            if let Some(cfg) = self.radio_cfg.as_mut() {
-                cfg.set_tx_band(Band::M11, true);
-                self.ctrl.set_radio_config(cfg.clone());
-            }
             self.cb_tx_confirm_open = false;
         } else if cancel {
             self.cb_tx_confirm_open = false;

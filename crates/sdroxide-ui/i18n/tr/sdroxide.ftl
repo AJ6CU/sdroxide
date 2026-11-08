@@ -9402,3 +9402,10 @@ sonde-card-stale-value = Listede yok: bilinen son konum
 sonde-card-detach = Ayır
 
 sonde-card-attach = Yapıştır
+tx-bands-outside-note = Burada listelenen bantların dışında hiçbir şey yayınlanamaz. Bant dışı alım (ADS-B, DAB, AIS...) için satır gerekmez.
+
+tx-off-cb = 11 m (CB) üzerinde YAYIN YASAK — bant yayın listenizde, ancak "11 m (CB) üzerinde yayına izin ver" kapalı. Ayarlar → Genel bölümünden işaretleyin.
+
+settings-cb-allow-tx-needs-band = Önce bu telsizin TX bant listesinde 11M-CB'yi EVET yapın (Ayarlar → Radyo), sonra burada izin verin.
+
+settings-cb-allow-tx-order-note = İki kilit, bu sırayla: 1) telsizin TX bant listesinde 11M-CB EVET ve onaylı; 2) bu kutu. 11 m'de yayın için ikisi de gerekir. 11M-CB'yi listeden çıkarmak bu kutunun işaretini de kaldırır.

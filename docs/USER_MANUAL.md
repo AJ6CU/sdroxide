@@ -8217,6 +8217,15 @@ decides every band plan sdroxide draws and enforces:
   per screen. It opens 11 m and nothing else. A station setting
   (`cb_tx_allowed` in `config.toml`), so it travels to every client along with
   the CB plan.
+
+  **11 m has two locks, in this order.** First the radio's own TX band list
+  ([6.2](#62-radio-choosing-and-configuring-the-rig)): **11M-CB** must be **YES**
+  and the list confirmed. Only then can the box above be ticked — it is greyed
+  until the band is listed, with a hover text that says so — and it does nothing
+  on its own. Both are needed to transmit on 11 m; with the band listed and the
+  box off, PTT is refused with a red notice that names the box. Ticking the band
+  does not tick the box, and ticking the box does not tick the band. Taking
+  **11M-CB** off the list also clears the box.
 - **Longwave, medium wave, shortwave and FM broadcast** — `LW`, `MW`, `SW` and
   `FM` are on the bar for the listener the way 11 m is for the CB operator.
   None is an amateur allocation, so with `tx_ham_only` set (the default) the
@@ -8507,7 +8516,7 @@ URL is used exactly as typed and leaves those two boxes greyed out. See
 
 ### 6.2 Radio: choosing and configuring the rig
 
-**Band plan of each radio (TX and RX).** Radio settings holds, for every radio on its own, a table with one **TX** menu and one **RX** menu per band (the last row, *Other*, is any frequency outside the listed bands, ADS-B at 1090 MHz for example). The two lists are independent: 160 m can be TX **NO** and RX **YES**. A radio never tunes to a band that is **NO** in its RX list, and does not tune at all until the RX list is confirmed; a banner asks for that check at launch, once per radio, exactly like the TX list. A band the hardware's published range does not reach is greyed and stays **NO**. A new radio starts with RX **YES** on every band its hardware reaches, still to be confirmed. The band buttons follow the RX list, and while the dial sits on a band that is **NO** (or the list is not confirmed yet) the radio is silent and nothing is recorded; the decoders keep running.
+**Band plan of each radio (TX and RX).** Radio settings holds, for every radio on its own, a table with one **TX** menu and one **RX** menu per band (there is no *Other* row: **outside the listed bands nothing can be transmitted**, ever, and reception outside the bands — ADS-B at 1090 MHz, DAB, AIS — needs no row, a confirmed RX list covers it). The two lists are independent: 160 m can be TX **NO** and RX **YES**. A radio never tunes to a band that is **NO** in its RX list, and does not tune at all until the RX list is confirmed; a banner asks for that check at launch, once per radio, exactly like the TX list. A band the hardware's published range does not reach is greyed and stays **NO**. A new radio starts with RX **YES** on every band its hardware reaches, still to be confirmed. The band buttons follow the RX list, and while the dial sits on a band that is **NO** (or the list is not confirmed yet) the radio is silent and nothing is recorded; the decoders keep running.
 
 In the native application the very top of the tab carries the **radio
 roster** — one button per radio, with the same TX / warning / mute markers as

@@ -9410,3 +9410,10 @@ sonde-card-stale-value = Niet meer in de lijst: laatst bekende positie
 sonde-card-detach = Losmaken
 
 sonde-card-attach = Vastmaken
+tx-bands-outside-note = Buiten de hier genoemde banden kan niet worden gezonden. Ontvangst buiten de banden (ADS-B, DAB, AIS...) heeft geen rij nodig.
+
+tx-off-cb = ZENDEN VERBODEN op 11 m (CB) — de band staat in uw zendlijst, maar "Zenden op 11 m (CB) toestaan" staat uit. Zet het aan bij Instellingen → Algemeen.
+
+settings-cb-allow-tx-needs-band = Zet eerst 11M-CB op JA in de TX-bandlijst van deze radio (Instellingen → Radio) en sta het daarna hier toe.
+
+settings-cb-allow-tx-order-note = Twee sloten, in deze volgorde: 1) 11M-CB staat op JA in de TX-bandlijst van de radio, bevestigd; 2) dit vakje. Beide zijn nodig om op 11 m te zenden. 11M-CB uit de lijst halen zet dit vakje ook uit.
