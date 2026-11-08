@@ -9480,3 +9480,21 @@ wxsat-frames = хороших кадров: { $n }
 wxsat-waiting-lrpt = Снимка пока нет. LRPT у Meteor цифровой: снимок начинается через несколько секунд после приёма спутника, ряд за рядом, и каждый канал — отдельный снимок.
 
 wxsat-searching-frame = Поиск синхронизации кадров
+
+qrzcard-loading = Запрос к QRZ…
+
+qrzcard-not-found = На QRZ не найден.
+
+qrzcard-years = { $n } лет
+
+qrzcard-class = Класс: { $class }
+
+qrzcard-qsl-paper = бумажная
+
+qrzcard-qsl-via = через { $mgr }
+
+qrzcard-switch = Показывать карточку QRZ при наведении на позывной
+
+qrzcard-switch-hint = Фото, имя, возраст, адрес, локатор и QSL с QRZ.com — в водопаде, декодерах и списках спотов. Для фото, e-mail и даты рождения нужна подписка QRZ XML.
+
+qrzcard-needs-login = Выберите QRZ в качестве поставщика и введите логин и пароль QRZ, чтобы включить карточку.

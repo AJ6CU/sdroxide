@@ -9476,3 +9476,21 @@ wxsat-frames = { $n } trames bonnes
 wxsat-waiting-lrpt = Pas encore d'image. Le LRPT de Meteor est numérique : l'image commence quelques secondes après la réception du satellite, rangée par rangée, et chaque canal est une image séparée.
 
 wxsat-searching-frame = Recherche de la synchro trame
+
+qrzcard-loading = Recherche QRZ…
+
+qrzcard-not-found = Introuvable sur QRZ.
+
+qrzcard-years = { $n } ans
+
+qrzcard-class = Classe : { $class }
+
+qrzcard-qsl-paper = papier
+
+qrzcard-qsl-via = via { $mgr }
+
+qrzcard-switch = Afficher la fiche QRZ au survol d'un indicatif
+
+qrzcard-switch-hint = Photo, nom, âge, adresse, locator et QSL depuis QRZ.com, dans le waterfall, les décodeurs et les listes de spots. La photo, l'e-mail et la date de naissance demandent un abonnement QRZ XML.
+
+qrzcard-needs-login = Choisissez QRZ comme fournisseur et renseignez votre identifiant et votre mot de passe QRZ pour activer la fiche.

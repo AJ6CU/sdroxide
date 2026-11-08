@@ -9403,3 +9403,21 @@ wxsat-frames = { $n } 个好帧
 wxsat-waiting-lrpt = 尚无图像。Meteor 的 LRPT 是数字信号：收到卫星几秒后图像开始逐排出现，每个通道是一幅单独的图像。
 
 wxsat-searching-frame = 正在搜索帧同步
+
+qrzcard-loading = 正在查询 QRZ…
+
+qrzcard-not-found = QRZ 上未找到。
+
+qrzcard-years = { $n } 岁
+
+qrzcard-class = 级别：{ $class }
+
+qrzcard-qsl-paper = 纸质
+
+qrzcard-qsl-via = 经 { $mgr }
+
+qrzcard-switch = 指针停在呼号上时显示 QRZ 卡片
+
+qrzcard-switch-hint = 在瀑布图、解码器和 Spot 列表中显示来自 QRZ.com 的照片、姓名、年龄、地址、定位格和 QSL。照片、电子邮件和出生日期需要 QRZ XML 订阅。
+
+qrzcard-needs-login = 请选择 QRZ 作为提供方，并输入 QRZ 用户名和密码以启用卡片。

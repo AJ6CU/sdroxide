@@ -2962,6 +2962,10 @@ pub fn show_ext(
         );
         painter.circle_filled(pos2(b.sig_x, cy), 1.8, fade(border, a));
         draw_spot_box(&painter, b, spot, hovered, a, click_sets_offset);
+        // The QRZ card for the station this box names (when it is on).
+        if let Some(call) = &spot.callsign {
+            crate::callsign_card::tooltip(&resp, hovered, call);
+        }
     }
 
     // Network spot boxes (bottom-anchored lanes) — DX cluster / POTA / SOTA /
@@ -2991,6 +2995,7 @@ pub fn show_ext(
         );
         painter.circle_filled(pos2(b.sig_x, cy), 1.8, fade(border, a));
         draw_net_box(&painter, b, spot, hovered, a);
+        crate::callsign_card::tooltip(&resp, hovered, &spot.call);
     }
 
     // ISM device labels. No fade: a device that has stopped transmitting is

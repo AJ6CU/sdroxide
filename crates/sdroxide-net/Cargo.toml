@@ -18,6 +18,9 @@ ureq = "3.4.0"
 rustls = { version = "0.23", default-features = false, features = ["std", "tls12", "ring"] }
 ring = "0.17"
 roxmltree = "0.21.1"
+# Shrinks a QRZ operator's picture to a thumbnail before it crosses the link
+# (the QRZ card). JPEG only: that is what QRZ serves.
+image = { version = "0.25", default-features = false, features = ["jpeg"] }
 # Blocking WebSocket client for the FreeDV Reporter Socket.IO session
 # (ws:// only — `handshake` for the client, no TLS).
 tungstenite = { version = "0.30", default-features = false, features = ["handshake"] }

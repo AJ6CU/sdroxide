@@ -875,6 +875,7 @@ impl SdroxideApp {
                                 ui, &mut flags, &d, entity, dist_km, &my_grid, novelty, band,
                                 false, calling,
                             );
+                            crate::callsign_card::section(ui, &h.call);
                         });
                     if selected {
                         // The composer is aimed here: the same amber outline the

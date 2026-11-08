@@ -4563,6 +4563,28 @@ impl SdroxideApp {
                     }
                 }
 
+                // The QRZ card: a card of the operator (photo, name, age,
+                // address, locator, QSL) when the pointer rests on a callsign.
+                // Greyed until QRZ is the provider and its login is filled in —
+                // without them there is nothing to ask, and nothing is asked.
+                ui.add_space(4.0);
+                let card_ready = io.net_edit.qrz_card_ready();
+                ui.add_enabled_ui(card_ready, |ui| {
+                    crate::chrome::checkbox(
+                        ui,
+                        &mut io.net_edit.qrz_card,
+                        tr!("qrzcard-switch"),
+                    )
+                    .on_hover_text(tr!("qrzcard-switch-hint"));
+                });
+                if !card_ready {
+                    ui.label(
+                        RichText::new(tr!("qrzcard-needs-login"))
+                            .size(10.5)
+                            .color(crate::theme::gray(140)),
+                    );
+                }
+
                 net_heading(ui, &tr!("settings-upload"));
                 crate::chrome::checkbox(
                     ui,

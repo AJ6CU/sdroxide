@@ -2,7 +2,7 @@
 
 Working queue. Rules in AGENTS.md. Last updated 2026-11-08.
 
-State: `main` at crate 2.3.0, PROTO_VERSION 285 (0x69). Latest release v2.2.3.6.5_brown (pre-release); full release 2.3.0_brown due 2026-11-06 18:00 UTC. Open PRs: 0 (re-measured 2026-11-08). Open issues: 10 (re-measured 2026-11-07).
+State: `main` at crate 2.3.0, PROTO_VERSION 286 (0x6A). Latest release v2.2.3.6.5_brown (pre-release); full release 2.3.0_brown due 2026-11-06 18:00 UTC. Open PRs: 0 (re-measured 2026-11-08). Open issues: 10 (re-measured 2026-11-07).
 
 ## Task tracking rules
 
@@ -18,6 +18,7 @@ State: `main` at crate 2.3.0, PROTO_VERSION 285 (0x69). Latest release v2.2.3.6.
   kept current in the state line.
 
 ## Now
+- **QRZ card on every callsign** (added by F4NRM, owned by Claude) - a card (photo thumbnail, name, age, class, address, locator, DXCC/CQ/ITU, e-mail, QSL) appears when the pointer rests on a callsign in the decode lists (FT8/FT4/JS8...), over the waterfall's boxes (FT8 stations, net spots) and in the spot lists. Own switch in Settings > Uploads > Callsign lookup (`NetworkConfig.qrz_card`), independent of `auto_lookup`; greyed and inactive (no request, no card) unless QRZ is the provider and its login is filled in. The lookup runs on the station through the existing `LookupCallsign` -> `CallsignResult` relay, so every radio, the desktop and the web client get it from one QRZ session; the age is worked out on the station and the date of birth never leaves it; the photo is shrunk to a 96 px JPEG server-side; cards are kept 24 h, one lookup per call at a time, four at most. `CallsignInfo` and `NetworkConfig` gain fields at their tails: wire 285 -> 286 (`0x6A`), postcard round trip. Nine messages in eleven languages. Photo, e-mail and date of birth need a QRZ XML subscription. Not tried against live QRZ here (no login on this machine); parser tested on a QRZ-shaped record.
 - **Web client carries English only; the other languages are fetched** (added by F4NRM, owned by Claude) — the wasm embedded all eleven `.ftl` files (about 6 MB of text nobody reads twice). It now embeds `en-US` only; the page asks the station for `i18n/<tag>/sdroxide.ftl` (copied into `dist` by trunk, served `no-cache` so an update never meets an old file) when the language is picked, stored in the profile, or read from the browser's own list. English stays as the fallback. `ClientScreen` gains `language` at its tail so the profile keeps it: wire 281 -> 282 (`0x66`), postcard round trip, an old profile does not override the client's pick. The picker lists `LANGUAGES` (`src/i18n.rs`), checked against `i18n/` by a test. Native keeps all eleven embedded. Not tried in a real browser yet.
 - **#427 SSTV stays in RX on voice** (added by F4NRM, owned by Claude) — a free-run lock that the next lines do not bear out used to draw the whole mode (PD290 is nearly five minutes). It now goes back to hunting and the panel wipes the strip.
 - **#444 WEFAX stops at the thick black line** (added by DK8JV, owned by Claude) — a chart's thick black bar could pass phasing_skew_strict when its bright patch was narrow enough. The pulse width is now capped at twice the standard width in strict mode.

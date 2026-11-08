@@ -381,15 +381,28 @@ impl SpotManager {
         let provider = self.cfg.lookup_provider;
         let qrz = self.cfg.qrz.clone();
         let hamqth = self.cfg.hamqth.clone();
+        let card = self.cfg.qrz_card_active();
         let tx = self.event_tx.clone();
+        // The card makes lookups far more frequent (a pointer rests on a
+        // callsign): the same call is not looked up twice at once, and a crowd
+        // of them is bounded. The screen asks again if it was dropped.
+        if card && !crate::lookup::begin(&call) {
+            return;
+        }
         std::thread::Builder::new()
             .name("sdroxide-lookup".into())
-            .spawn(move || match crate::lookup::lookup(provider, &qrz, &hamqth, &call) {
-                Ok(info) => {
-                    let _ = tx.send(NetEvent::Callsign(info));
+            .spawn(move || {
+                let r = crate::lookup::lookup(provider, &qrz, &hamqth, &call, card);
+                if card {
+                    crate::lookup::finish(&call);
                 }
-                Err(e) => {
-                    let _ = tx.send(NetEvent::Status(Some(format!("Lookup {call}: {e}"))));
+                match r {
+                    Ok(info) => {
+                        let _ = tx.send(NetEvent::Callsign(info));
+                    }
+                    Err(e) => {
+                        let _ = tx.send(NetEvent::Status(Some(format!("Lookup {call}: {e}"))));
+                    }
                 }
             })
             .ok();

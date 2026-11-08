@@ -137,9 +137,17 @@ fn spot_row(ui: &mut egui::Ui, s: &Spot, now_utc: i64, needed: bool) -> egui::Re
                 ui.add(egui::Label::new(RichText::new(info).size(11.0).color(gray)).truncate());
             });
         });
-    let resp = inner.response.interact(egui::Sense::click());
+    let mut resp = inner.response.interact(egui::Sense::click());
     if resp.hovered() {
         ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+    }
+    // The QRZ card, for a spot that names a station (a broadcaster is not one).
+    if s.kind != SpotKind::Broadcast && crate::callsign_card::applies(ui.ctx(), &s.call) {
+        resp = resp.on_hover_ui(|ui| {
+            ui.set_max_width(300.0);
+            ui.label(RichText::new(&s.call).size(14.0).strong().color(crate::theme::TEXT_STRONG()));
+            crate::callsign_card::section(ui, &s.call);
+        });
     }
     resp
 }
