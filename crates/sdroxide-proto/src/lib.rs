@@ -2314,8 +2314,16 @@ use sdroxide_types::{
 /// the address back so several checks in flight each find their row. Both
 /// appended last; a v282 peer has no name for either.
 /// `PROTO_VERSION` 282 → 283, `VERSION_BYTE` 0x66 → 0x67.
-pub const PROTO_VERSION: u16 = 283;
-const VERSION_BYTE: u8 = 0x67;
+///
+/// v284: **the weather-satellite (NOAA APT) decoder.**
+/// [`sdroxide_types::RadioState`] gains `wxsat` ([`sdroxide_types::WxsatSettings`]:
+/// on, channel) at its tail, `Command` gains `SetWxsatConfig` last, and
+/// `ServerMsg` gains `WxsatStatus(Box<..>)` last, which carries the picture
+/// lines new since the previous one (the client builds the image). `RadioState`
+/// crosses the link whole, so the appended field moves its layout.
+/// `PROTO_VERSION` 283 → 284, `VERSION_BYTE` 0x67 → 0x68.
+pub const PROTO_VERSION: u16 = 284;
+const VERSION_BYTE: u8 = 0x68;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -2917,6 +2925,9 @@ pub enum ServerMsg {
     /// `RadioEvent::ModeRefused`: a mode the band the receiver is on does not
     /// carry was asked for. Appended last (v281).
     ModeRefused { mode: sdroxide_types::Mode, band: sdroxide_types::Band },
+    /// The weather-satellite decoder: its state and the picture lines new since
+    /// the previous message (the client builds the image). Appended last (v284).
+    WxsatStatus(Box<sdroxide_types::WxsatStatus>),
 }
 
 /// What [`ServerMsg::ClientSettings`] carries.
@@ -3616,7 +3627,7 @@ mod tests {
             ServerMsg::TxRefused(w, hz) => assert_eq!((w, hz), (why, 7_074_000.0)),
             _ => panic!("TxRefused did not round-trip"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (283, 0x67));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (284, 0x68));
         // v280: the CB refusal is a new tail variant of `TxBlock`; the ones
         // before it keep their positions.
         let cb = ServerMsg::TxRefused(sdroxide_types::TxBlock::CbOff, 27_185_000.0);
@@ -3672,7 +3683,7 @@ mod tests {
             }
             other => panic!("the answer did not round-trip: {other:?}"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (283, 0x67));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (284, 0x68));
     }
 
     /// The VOR read-out rides the wire whole, locked or not, and the message is
@@ -4254,6 +4265,31 @@ mod tests {
         let ServerMsg::State(back) = back else { panic!("not a state") };
         assert_eq!(back.rx[0].cw_peak, peak);
         assert_ne!(back.rx[1].cw_peak, sdroxide_types::CwPeak::default());
+    }
+
+    /// The weather-satellite lane's settings cross the wire both ways, and its
+    /// picture lines ride the last `ServerMsg` variant.
+    #[test]
+    fn roundtrip_wxsat_config_and_status() {
+        let cfg = sdroxide_types::WxsatSettings { enabled: true, frequency_hz: 137_620_000.0 };
+        let m = ClientMsg::Command(Command::SetWxsatConfig(cfg));
+        let back: ClientMsg = decode(&encode(&m).unwrap()).unwrap();
+        assert_eq!(back, m);
+        let mut state = sdroxide_types::RadioState::default();
+        state.wxsat = cfg;
+        let back: sdroxide_types::RadioState = decode(&encode(&state).unwrap()).unwrap();
+        assert_eq!(back.wxsat, cfg);
+        let st = ServerMsg::WxsatStatus(Box::new(sdroxide_types::WxsatStatus {
+            running: true,
+            locked: true,
+            pass: 3,
+            total_lines: 5,
+            first_line: 4,
+            new_lines: vec![vec![9; sdroxide_types::WXSAT_LINE_PIXELS]],
+            ..Default::default()
+        }));
+        let back: ServerMsg = decode(&encode(&st).unwrap()).unwrap();
+        assert_eq!(back, st);
     }
 
     /// The radiosonde lane's settings cross the wire both ways: the command,

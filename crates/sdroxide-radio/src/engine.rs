@@ -35,6 +35,7 @@ use sdroxide_dsp::{
 };
 use sdroxide_hfdl::HfdlController;
 use sdroxide_sonde::SondeBank;
+use sdroxide_wxsat::WxsatLane;
 use sdroxide_ism::{IsmAction, IsmController};
 use sdroxide_nrsc5::{HdDemod, Mode as HdMode};
 use sdroxide_qo100::Qo100Controller;
@@ -3666,6 +3667,12 @@ struct Engine {
     sonde: Option<SondeBank>,
     /// The stream rate `sonde` was built for.
     sonde_in_rate: f64,
+    /// Weather-satellite (NOAA APT) decoder lane: one 48 kS/s channel mixed
+    /// from the wide window, only while the operator has it enabled. See
+    /// `sdroxide_wxsat::WxsatLane`.
+    wxsat: Option<WxsatLane>,
+    /// Counts the times the lane was switched on: the picture's number.
+    wxsat_pass: u32,
     /// Open capture file for `--record-iq`, and the interleaving scratch it is
     /// written from.
     iq_rec: Option<std::io::BufWriter<std::fs::File>>,
@@ -4847,6 +4854,12 @@ fn engine_thread(
     } else {
         hfdl_cfg
     };
+    let wxsat_cfg = sdroxide_config::load_wxsat_config();
+    state.wxsat = if audio_mode {
+        sdroxide_types::WxsatSettings { enabled: false, ..wxsat_cfg } // wideband-only
+    } else {
+        wxsat_cfg
+    };
     let sonde_cfg = sdroxide_config::load_sonde_config();
     state.sonde = if audio_mode {
         sdroxide_types::SondeSettings { enabled: false, ..sonde_cfg } // wideband-only
@@ -5344,6 +5357,8 @@ fn engine_thread(
         hfdl_in_rate: 0.0,
         sonde: None,
         sonde_in_rate: 0.0,
+        wxsat: None,
+        wxsat_pass: 0,
         // From `hfdl.json`, as `qo100_cfg` is.
         hfdl_cfg: sdroxide_config::load_hfdl_config(),
         iq_rec,
@@ -5521,6 +5536,7 @@ fn engine_thread(
         engine.sync_qo100(); // and the beacon lane, from qo100.json
         engine.sync_hfdl(); // ...and the HFDL lane, likewise
         engine.sync_sonde(); // ...and the radiosonde lane, likewise
+        engine.sync_wxsat(); // ...and the weather-satellite lane, likewise
     }
     // This radio's callsign override, read once here so the hot paths never
     // have to touch the file. `SetRadioConfig` is the other writer.
@@ -5791,6 +5807,7 @@ fn engine_thread(
         engine.poll_qo100();
         engine.poll_hfdl();
         engine.poll_sonde();
+        engine.poll_wxsat();
         engine.poll_scanner();
         engine.poll_tci_server();
         engine.poll_rigctld();
@@ -7062,6 +7079,17 @@ impl Engine {
         if let Some(bank) = self.sonde.as_mut() {
             bank.on_wide_iq(iq, unix_now());
         }
+        // ...and the weather-satellite lane, only while the channel is inside
+        // the window (a window parked elsewhere has nothing of it to decode).
+        if let Some(lane) = self.wxsat.as_mut() {
+            if sdroxide_types::wxsat_window_covers(
+                self.state.center_hz,
+                self.state.sample_rate,
+                lane.frequency_hz(),
+            ) {
+                lane.on_wide_iq(iq);
+            }
+        }
         // Feed TCI clients: the same clean tap the digital decoders use (so
         // muting or turning down sdroxide can't silence somebody's decoder),
         // resampled to the 48 kHz TCI mandates.
@@ -7626,6 +7654,7 @@ impl Engine {
                 self.sync_qo100_window();
                 self.sync_hfdl_window();
                 self.sync_sonde_window();
+                self.sync_wxsat_window();
                 self.update_tuning();
                 let _ = self.event_tx.send(RadioEvent::State(self.state.clone()));
             }
@@ -7910,6 +7939,7 @@ impl Engine {
         // is just re-seating the mixer.
         self.sync_hfdl_window();
                 self.sync_sonde_window();
+                self.sync_wxsat_window();
         // Re-seat the DDCs on the new centre. Without this the main receiver
         // keeps the offset it had against the old one, which is exactly how a
         // rig-initiated retune ends up demodulating somewhere the readout does
@@ -10091,6 +10121,7 @@ impl Engine {
                         // channel.
                         self.sync_hfdl_window();
                 self.sync_sonde_window();
+                self.sync_wxsat_window();
                     }
                 }
                 self.update_tuning();
@@ -11503,6 +11534,15 @@ impl Engine {
                 }
                 // `sync_sonde` hands the new settings to a running bank itself.
                 self.sync_sonde();
+            }
+
+            SetWxsatConfig(cfg) => {
+                let cfg = cfg.sane();
+                self.state.wxsat = cfg;
+                if let Err(e) = sdroxide_config::save_wxsat_config(&cfg) {
+                    warn!("saving weather-satellite config: {e}");
+                }
+                self.sync_wxsat();
             }
 
             ReloadIsmDecoders => {
@@ -13378,6 +13418,58 @@ impl Engine {
         let Some(bank) = self.sonde.as_mut() else { return };
         let Some(status) = bank.poll(now) else { return };
         let _ = self.event_tx.send(RadioEvent::SondeStatus(Box::new(status)));
+    }
+
+    /// Construct or tear down the weather-satellite lane: one fixed-frequency
+    /// channel mixed from the sample window, like [`Self::sync_sonde`]. The
+    /// channel has to lie inside the window with room for its 40 kHz.
+    fn sync_wxsat(&mut self) {
+        // Wideband-only, for the same reason as the HFDL lane.
+        if self.audio_mode {
+            self.state.wxsat.enabled = false;
+        }
+        match (self.state.wxsat.enabled, self.wxsat.is_some()) {
+            (true, false) => {
+                self.wxsat_pass = self.wxsat_pass.wrapping_add(1);
+                self.wxsat = Some(WxsatLane::new(
+                    self.state.sample_rate,
+                    self.state.center_hz,
+                    self.state.wxsat,
+                    self.wxsat_pass,
+                ));
+                info!(hz = self.state.wxsat.frequency_hz, "weather-satellite decoder started");
+            }
+            (false, true) => {
+                self.wxsat = None;
+                info!("weather-satellite decoder stopped");
+            }
+            (true, true) => self.sync_wxsat_window(),
+            _ => {}
+        }
+    }
+
+    /// Re-seat the weather-satellite mixer after a retune, and rebuild the lane
+    /// if the sample rate feeding it changed (a `Ddc` bakes its input rate in).
+    /// A new lane keeps the picture's number: it is the same picture.
+    fn sync_wxsat_window(&mut self) {
+        let Some(lane) = self.wxsat.as_mut() else { return };
+        if (self.state.sample_rate - lane.in_rate()).abs() >= 1.0 {
+            let pass = lane.pass();
+            self.wxsat =
+                Some(WxsatLane::new(self.state.sample_rate, self.state.center_hz, self.state.wxsat, pass));
+            info!("weather-satellite window rebuilt");
+            return;
+        }
+        lane.set_tuning(self.state.center_hz, self.state.wxsat.frequency_hz);
+    }
+
+    /// Drain the weather-satellite decoder's statuses and forward them. Each
+    /// carries lines nobody else has, so none is dropped.
+    fn poll_wxsat(&mut self) {
+        let Some(lane) = self.wxsat.as_ref() else { return };
+        for status in lane.poll() {
+            let _ = self.event_tx.send(RadioEvent::WxsatStatus(Box::new(status)));
+        }
     }
 
     /// What the VOR lane should be doing for the dial and the front end as they
@@ -19323,6 +19415,7 @@ impl Engine {
             self.sync_qo100();
             self.sync_hfdl();
             self.sync_sonde();
+            self.sync_wxsat();
         }
         // Re-derive the TCI streams at the new device rate and push a fresh
         // state burst, so connected clients follow the swap.
@@ -21665,6 +21758,7 @@ impl Engine {
                 self.sync_qo100_window();
                 self.sync_hfdl_window();
                 self.sync_sonde_window();
+                self.sync_wxsat_window();
                 true
             }
             Err(e) => {

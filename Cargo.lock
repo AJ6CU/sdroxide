@@ -5887,6 +5887,7 @@ dependencies = [
  "sdroxide-vor",
  "sdroxide-winlink",
  "sdroxide-wsjtx",
+ "sdroxide-wxsat",
  "shine-rs",
  "soapysdr",
  "symphonia",

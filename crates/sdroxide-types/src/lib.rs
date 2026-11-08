@@ -45,6 +45,7 @@ mod geo;
 mod hd;
 mod hfdl;
 mod sonde;
+mod wxsat;
 pub mod sonde_export;
 pub mod sonde_online;
 mod ibp;
@@ -223,6 +224,10 @@ pub use vor::{VOR_BAND_HZ, VorStatus, VorUnavailable};
 pub use sonde::{
     SONDE_BAND_HZ, SONDE_DEFAULT_HZ, SONDE_MAX_TRACKS, SONDE_TRACK_DEPTH, SondePoint,
     SondeSettings, SondeStatus, SondeTrack, window_reaches_band as sonde_window_reaches_band,
+};
+pub use wxsat::{
+    WXSAT_BAND_HZ, WXSAT_DEFAULT_HZ, WXSAT_LINE_PIXELS, WXSAT_MAX_NEW_LINES,
+    WXSAT_PICTURE_MAX_LINES, WxsatPicture, WxsatSettings, WxsatStatus, window_covers as wxsat_window_covers,
 };
 pub use hfdl::{
     HFDL_DEFAULT_HZ, HFDL_LANE_RATE_HZ, HFDL_LOG_DEPTH, HfdlDecode, HfdlFix, HfdlSettings,

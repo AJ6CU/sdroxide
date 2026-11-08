@@ -763,6 +763,11 @@ pub struct SdroxideApp {
     hfdl_status: Option<sdroxide_types::HfdlStatus>,
     /// The radiosonde decoder's latest status (level, sondes heard, tracks).
     sonde_status: Option<Box<sdroxide_types::SondeStatus>>,
+    /// The weather-satellite decoder's latest state (level, lock, line count);
+    /// its `new_lines` are moved into `wxsat_picture` and left empty here.
+    wxsat_status: Option<Box<sdroxide_types::WxsatStatus>>,
+    /// The picture the weather-satellite statuses have built so far.
+    wxsat_picture: sdroxide_types::WxsatPicture,
     /// HFDL: the aircraft plot table and the map's pan/zoom and selection. Its
     /// own table rather than the decode log's, so an aircraft stays on the map
     /// after its earliest decodes have scrolled out of the log.
@@ -2370,6 +2375,8 @@ impl SdroxideApp {
             qo100_status: None,
             hfdl_status: None,
             sonde_status: None,
+            wxsat_status: None,
+            wxsat_picture: sdroxide_types::WxsatPicture::default(),
             hfdl_map: crate::hfdl_map::HfdlMapState::default(),
             sonde_map: crate::sonde_map::SondeMapState::default(),
             sonde_online: crate::sonde_online::Online::default(),

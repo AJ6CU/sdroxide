@@ -1277,6 +1277,10 @@ fn handle_event(shared: &Shared, ev: RadioEvent) {
                 latest.sonde_status = Some(st.clone());
                 Some(ServerMsg::SondeStatus(st))
             }
+            // Not kept for replay: each carries only the lines new since the
+            // last, so a client that attaches late picks the picture up from
+            // the next ones.
+            RadioEvent::WxsatStatus(st) => Some(ServerMsg::WxsatStatus(st)),
             RadioEvent::VorStatus(st) => {
                 latest.vor_status = Some(st.clone());
                 Some(ServerMsg::VorStatus(st))

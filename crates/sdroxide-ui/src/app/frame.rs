@@ -4501,6 +4501,11 @@ impl SdroxideApp {
                     self.hfdl_status = Some(st);
                 }
                 RadioEvent::SondeStatus(st) => self.sonde_status = Some(st),
+                RadioEvent::WxsatStatus(mut st) => {
+                    self.wxsat_picture.apply(&st);
+                    st.new_lines = Vec::new();
+                    self.wxsat_status = Some(st);
+                }
                 RadioEvent::VorStatus(st) => self.vor_status = Some(st),
                 RadioEvent::SstvStatus(s) => {
                     // Adopt a *newly* detected RX mode for the next transmit, but

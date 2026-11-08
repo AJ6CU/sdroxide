@@ -338,6 +338,10 @@ pub enum RadioEvent {
     /// The radiosonde decoder's level and the sondes it has heard, with their
     /// tracks. Bridged to remote and web clients as `ServerMsg::SondeStatus`.
     SondeStatus(Box<crate::SondeStatus>),
+    /// The weather-satellite decoder's state and the picture lines new since
+    /// the last one. Bridged to remote and web clients as
+    /// `ServerMsg::WxsatStatus`.
+    WxsatStatus(Box<crate::WxsatStatus>),
     /// The VOR beacon the receiver is parked on: radial, ident and how well the
     /// two 30 Hz signals are heard. Rides `ServerMsg::VorStatus`.
     VorStatus(Box<crate::VorStatus>),
