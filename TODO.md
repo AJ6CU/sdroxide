@@ -2,7 +2,7 @@
 
 Working queue. Rules in AGENTS.md. Last updated 2026-11-08.
 
-State: `main` at crate 2.3.0, PROTO_VERSION 279 (0x63). Latest release v2.2.3.6.5_brown (pre-release); full release 2.3.0_brown due 2026-11-06 18:00 UTC. Open PRs: 0. Open issues: 10 (re-measured 2026-11-07).
+State: `main` at crate 2.3.0, PROTO_VERSION 283 (0x67; 284, `0x68`, once #586 merges). Latest release v2.2.3.6.5_brown (pre-release); full release 2.3.0_brown due 2026-11-06 18:00 UTC. Open PRs: 7 (re-measured 2026-11-08). Open issues: 10 (re-measured 2026-11-07).
 
 ## Task tracking rules
 
@@ -18,6 +18,9 @@ State: `main` at crate 2.3.0, PROTO_VERSION 279 (0x63). Latest release v2.2.3.6.
   kept current in the state line.
 
 ## Now
+- **PR #585 — weather satellites 1/3: NOAA APT decoder core** (added by F4NRM, owned by Claude): new `sdroxide-wxsat` crate. FM discriminator, 2400 Hz subcarrier envelope, 4160 px/s, sync A line finder (first sync confirmed one line later, so noise alone does not lock), per-line brightness from the sync swing, worker thread and downconverter lane. Written from the public NOAA KLM description, not from SDR++ (GPL). Seven tests on a synthetic transmitter; **no real recording yet** and the telemetry wedges are not read.
+- **PR #586 — weather satellites 2/3: engine lane, wire 284, config** (added by F4NRM, owned by Claude): `WxsatSettings`, `WxsatStatus` (the lines new since the last status), `WxsatPicture` (client side, by line number), `Command::SetWxsatConfig`, `RadioState.wxsat`, `RadioEvent`/`ServerMsg::WxsatStatus`, `wxsat.json`, an engine lane like the radiosonde one (not a `Mode`). Wire 283 -> **284** (`0x68`), postcard round trip. Stacked on #585. CPU cost at 2.4 MS/s not measured; the server does not replay the picture to a late client.
+- **PR #587 — weather satellites 3/3: WEATHER SATELLITES window** (added by F4NRM, owned by Claude): WXSAT chip in EXTRAS (EXTRAS gets a sixth slot), tool window with satellite picker (NOAA-15/18/19), Tune here, status line, flip, clear, save PNG; sixteen messages in eleven languages, manual paragraph. Stacked on #586. **Not seen on a display** and no pass heard.
 - **Web client carries English only; the other languages are fetched** (added by F4NRM, owned by Claude) — the wasm embedded all eleven `.ftl` files (about 6 MB of text nobody reads twice). It now embeds `en-US` only; the page asks the station for `i18n/<tag>/sdroxide.ftl` (copied into `dist` by trunk, served `no-cache` so an update never meets an old file) when the language is picked, stored in the profile, or read from the browser's own list. English stays as the fallback. `ClientScreen` gains `language` at its tail so the profile keeps it: wire 281 -> 282 (`0x66`), postcard round trip, an old profile does not override the client's pick. The picker lists `LANGUAGES` (`src/i18n.rs`), checked against `i18n/` by a test. Native keeps all eleven embedded. Not tried in a real browser yet.
 - **#427 SSTV stays in RX on voice** (added by F4NRM, owned by Claude) — a free-run lock that the next lines do not bear out used to draw the whole mode (PD290 is nearly five minutes). It now goes back to hunting and the panel wipes the strip.
 - **#444 WEFAX stops at the thick black line** (added by DK8JV, owned by Claude) — a chart's thick black bar could pass phasing_skew_strict when its bright patch was narrow enough. The pulse width is now capped at twice the standard width in strict mode.
@@ -92,6 +95,7 @@ Everything else that was in this list has been merged or closed since â€” s
 - #132 Wrong frequency display (added by emi83170, owned by Roy).
 
 ## Waiting on other people
+- **Meteor-M2 LRPT decoder** (added by F4NRM, owned by Claude) — blocked, one question for F4NRM: can you supply a real Meteor LRPT recording (I/Q at 72 ksym/s or more, or soft symbols)? LRPT is QPSK, Viterbi, Reed-Solomon, CCSDS frames and a JPEG-like image coder with fixed Huffman and quantisation tables; those tables must come from the public spec or a real recording, never from memory or copied GPL code, and without a recording none of the four stages could be checked on a real signal. APT (#585 to #587) is done first as agreed.
 - **Custom band plans: seen on a screen** (added by Claude, owned by madmedicnl) — the plan manager's layout (Settings → General, the row of RUN / THIS RADIO ONLY / DOWNLOAD / DELETE) and the browser download were never seen on a display, only built and tested. Does the manager lay out and download correctly in a browser and on a native screen?
 - **Per-decoder remembered zoom (b)** (added by madmedicnl, owned by Claude) â€” waits on F4NRM's reaction to PR #486 (wider NAVTEX default span). If that is not enough, scope (b) properly: per-mode view save/restore, CTR invariants, tests. Large feature, not to be rushed.
 
