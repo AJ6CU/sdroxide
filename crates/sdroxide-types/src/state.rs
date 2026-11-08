@@ -701,6 +701,11 @@ pub struct RadioState {
     /// Appended last: postcard numbers fields by position.
     #[serde(default)]
     pub sonde: crate::SondeSettings,
+    /// The weather-satellite (NOAA APT) decoder: whether it runs and which
+    /// channel it listens on. The picture is [`crate::WxsatStatus`], sent
+    /// separately. Appended last: postcard numbers fields by position.
+    #[serde(default)]
+    pub wxsat: crate::WxsatSettings,
 }
 
 impl Default for RadioState {
@@ -717,6 +722,7 @@ impl Default for RadioState {
             // display that guessed a fraction here would be inventing one.
             usable_hz: 0.0,
             sonde: crate::SondeSettings::default(),
+            wxsat: crate::WxsatSettings::default(),
             decimation: no_decimation(),
             rx: [RxState::with_mode(mode), RxState::with_mode(mode)],
             sub_rx_enabled: false,

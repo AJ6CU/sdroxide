@@ -9414,3 +9414,54 @@ publicsdr-close-hint = Public SDRs schließen
 settings-net-hfcc-file-hint = Den HFCC-Sendeplan aus einem selbst gespeicherten Paket übernehmen: das von HFCC veröffentlichte ZIP (zum Beispiel b26allx2.zip) mit Sendeplan und den beiden Tabellen.
 
 schedule-import = Import…
+wxsat-title = WETTERSATELLITEN
+
+extras-wxsat-hint = WETTERSATELLITEN — das Bild, das ein NOAA- (APT) oder Meteor-Satellit (LRPT) auf 137 MHz sendet, beim Empfang gezeichnet, in einem abtrennbaren Fenster
+
+wxsat-decode = Dekodieren
+
+wxsat-channel = Satellit
+
+wxsat-tune = Hier abstimmen
+
+wxsat-tune-hint = Schaltet den Dekoder ein und stellt die Frequenz auf diesen Kanal, damit das Signal im Abtastfenster liegt.
+
+wxsat-clear = Löschen
+
+wxsat-save = Als PNG speichern
+
+wxsat-flip = Drehen
+
+wxsat-flip-hint = Dreht das Bild um: Ein Satellit auf dem Weg nach Süden wird kopfstehend gezeichnet.
+
+wxsat-state-off = Dekoder aus
+
+wxsat-level = Pegel { $db } dBFS
+
+wxsat-locked = Zeilensync eingerastet
+
+wxsat-searching = Suche nach dem Zeilensync
+
+wxsat-lines = { $n } Zeilen
+
+wxsat-outside-window = Der Kanal liegt außerhalb des Abtastfensters oder zu nah an dessen Rand für das ganze Signal. Nutzen Sie Hier abstimmen oder ein breiteres Fenster.
+
+wxsat-waiting = Noch kein Bild. Schalten Sie den Dekoder ein, wenn ein Satellit über dem Horizont steht; ein Überflug dauert etwa zehn Minuten.
+
+wxsat-signal = Signal
+
+wxsat-kind-apt = APT
+
+wxsat-kind-lrpt = LRPT
+
+wxsat-image-channel = Kanal { $n }
+
+wxsat-rows = { $n } Reihen
+
+wxsat-frame-locked = Rahmensync eingerastet
+
+wxsat-frames = { $n } gute Rahmen
+
+wxsat-waiting-lrpt = Noch kein Bild. Meteor LRPT ist digital: Das Bild beginnt einige Sekunden nach dem Empfang des Satelliten, Reihe für Reihe, und jeder Kanal ist ein eigenes Bild.
+
+wxsat-searching-frame = Suche nach dem Rahmensync

@@ -716,6 +716,7 @@ impl RemoteController {
             ServerMsg::Qo100Status(s) => self.pending.push_back(RadioEvent::Qo100Status(s)),
             ServerMsg::HfdlStatus(s) => self.pending.push_back(RadioEvent::HfdlStatus(s)),
             ServerMsg::SondeStatus(s) => self.pending.push_back(RadioEvent::SondeStatus(s)),
+            ServerMsg::WxsatStatus(s) => self.pending.push_back(RadioEvent::WxsatStatus(s)),
             ServerMsg::DabStatus(s) => self.pending.push_back(RadioEvent::DabStatus(s)),
             ServerMsg::RifpRows { image_id, y, w, h, rows } => {
                 self.pending.push_back(RadioEvent::RifpRows { image_id, y, w, h, rows })

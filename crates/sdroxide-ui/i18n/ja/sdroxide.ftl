@@ -9362,3 +9362,54 @@ publicsdr-close-hint = Public SDRs を閉じる
 settings-net-hfcc-file-hint = ご自身で保存したパッケージから HFCC の番組表を読み込みます。HFCC が公開している zip（例: b26allx2.zip）で、番組表と 2 つの表が入っています。
 
 schedule-import = 取り込み…
+wxsat-title = 気象衛星
+
+extras-wxsat-hint = 気象衛星 — NOAA（APT）または Meteor（LRPT）衛星が137 MHzで送る画像を、受信しながら描画します（別ウィンドウに切り離せます）
+
+wxsat-decode = デコード
+
+wxsat-channel = 衛星
+
+wxsat-tune = ここに同調
+
+wxsat-tune-hint = デコーダーをオンにし、ダイヤルをこのチャンネルに合わせて、信号がサンプルウィンドウ内に入るようにします。
+
+wxsat-clear = 消去
+
+wxsat-save = PNGで保存
+
+wxsat-flip = 反転
+
+wxsat-flip-hint = 画像を上下左右反転します。南へ飛ぶ衛星の画像は逆さまに描かれます。
+
+wxsat-state-off = デコーダーはオフ
+
+wxsat-level = レベル { $db } dBFS
+
+wxsat-locked = ライン同期ロック
+
+wxsat-searching = ライン同期を探しています
+
+wxsat-lines = { $n } ライン
+
+wxsat-outside-window = チャンネルがサンプルウィンドウの外か、信号全体には端に近すぎます。「ここに同調」を使うか、より広いウィンドウにしてください。
+
+wxsat-waiting = まだ画像がありません。衛星が地平線の上にあるときにデコーダーをオンにしてください。1回の通過は約10分です。
+
+wxsat-signal = 信号
+
+wxsat-kind-apt = APT
+
+wxsat-kind-lrpt = LRPT
+
+wxsat-image-channel = チャンネル { $n }
+
+wxsat-rows = { $n } 行
+
+wxsat-frame-locked = フレーム同期ロック
+
+wxsat-frames = 良好なフレーム { $n }
+
+wxsat-waiting-lrpt = まだ画像がありません。Meteor の LRPT はデジタルです。衛星を受信して数秒後から1行ずつ画像が現れ、各チャンネルは別々の画像です。
+
+wxsat-searching-frame = フレーム同期を探しています

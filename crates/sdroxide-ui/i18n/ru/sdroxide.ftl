@@ -9429,3 +9429,54 @@ publicsdr-close-hint = Закрыть Public SDRs
 settings-net-hfcc-file-hint = Взять расписание HFCC из сохранённого вами пакета: zip, который публикует HFCC (например, b26allx2.zip), с расписанием и двумя таблицами.
 
 schedule-import = Импорт…
+wxsat-title = МЕТЕОСПУТНИКИ
+
+extras-wxsat-hint = МЕТЕОСПУТНИКИ — снимок, который спутник NOAA (APT) или Meteor (LRPT) передаёт на 137 МГц, рисуется по мере приёма, в отделяемом окне
+
+wxsat-decode = Декодировать
+
+wxsat-channel = Спутник
+
+wxsat-tune = Настроить сюда
+
+wxsat-tune-hint = Включает декодер и переводит частоту на этот канал, чтобы сигнал попал в окно выборки.
+
+wxsat-clear = Очистить
+
+wxsat-save = Сохранить PNG
+
+wxsat-flip = Перевернуть
+
+wxsat-flip-hint = Переворачивает снимок: спутник, летящий на юг, рисуется вверх ногами.
+
+wxsat-state-off = Декодер выключен
+
+wxsat-level = Уровень { $db } dBFS
+
+wxsat-locked = Синхронизация строк захвачена
+
+wxsat-searching = Поиск синхронизации строк
+
+wxsat-lines = строк: { $n }
+
+wxsat-outside-window = Канал вне окна выборки или слишком близко к его краю для всего сигнала. Нажмите «Настроить сюда» или возьмите более широкое окно.
+
+wxsat-waiting = Снимка пока нет. Включите декодер, когда спутник над горизонтом; пролёт длится около десяти минут.
+
+wxsat-signal = Сигнал
+
+wxsat-kind-apt = APT
+
+wxsat-kind-lrpt = LRPT
+
+wxsat-image-channel = Канал { $n }
+
+wxsat-rows = рядов: { $n }
+
+wxsat-frame-locked = Синхронизация кадров захвачена
+
+wxsat-frames = хороших кадров: { $n }
+
+wxsat-waiting-lrpt = Снимка пока нет. LRPT у Meteor цифровой: снимок начинается через несколько секунд после приёма спутника, ряд за рядом, и каждый канал — отдельный снимок.
+
+wxsat-searching-frame = Поиск синхронизации кадров
