@@ -2298,14 +2298,24 @@ use sdroxide_types::{
 /// that a remote screen never received). `PROTO_VERSION` 280 → 281,
 /// `VERSION_BYTE` 0x64 → 0x65.
 ///
-/// v282: the public-SDR map's receiver check.
+/// v282: **the interface language is kept with the profile.**
+/// [`sdroxide_types::ClientScreen`] gains `language` (`UiLanguage`: a BCP 47
+/// tag, or empty for the system's) at its tail. The browser build carries only
+/// English and fetches the operator's language from the station, so the
+/// station has to know which one it is, and a browser with its storage cleared
+/// comes back in it. `ClientScreen` rides `ClientMsg::SetClientSettings` and
+/// `ServerMsg::ClientSettings` whole, so the appended field moves its layout.
+/// `#[serde(default)]`, so a profile written before this loads unchanged and
+/// names no language. `PROTO_VERSION` 281 → 282, `VERSION_BYTE` 0x65 → 0x66.
+///
+/// v283: the public-SDR map's receiver check.
 /// [`sdroxide_types::DeviceProbe`] gains `PublicSdrCheck { network, address }`
 /// and [`sdroxide_types::ProbeAnswer`] gains `PublicSdrCheck`, which carries
 /// the address back so several checks in flight each find their row. Both
-/// appended last; a v281 peer has no name for either.
-/// `PROTO_VERSION` 281 → 282, `VERSION_BYTE` 0x65 → 0x66.
-pub const PROTO_VERSION: u16 = 282;
-const VERSION_BYTE: u8 = 0x66;
+/// appended last; a v282 peer has no name for either.
+/// `PROTO_VERSION` 282 → 283, `VERSION_BYTE` 0x66 → 0x67.
+pub const PROTO_VERSION: u16 = 283;
+const VERSION_BYTE: u8 = 0x67;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -3606,7 +3616,7 @@ mod tests {
             ServerMsg::TxRefused(w, hz) => assert_eq!((w, hz), (why, 7_074_000.0)),
             _ => panic!("TxRefused did not round-trip"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (282, 0x66));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (283, 0x67));
         // v280: the CB refusal is a new tail variant of `TxBlock`; the ones
         // before it keep their positions.
         let cb = ServerMsg::TxRefused(sdroxide_types::TxBlock::CbOff, 27_185_000.0);
@@ -3662,7 +3672,7 @@ mod tests {
             }
             other => panic!("the answer did not round-trip: {other:?}"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (282, 0x66));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (283, 0x67));
     }
 
     /// The VOR read-out rides the wire whole, locked or not, and the message is

@@ -152,7 +152,9 @@ an option: a PR with English only is not finished, and it is not mergeable.
 - Full rules and the Fluent syntax: `CLAUDE.md` and
   `crates/sdroxide-ui/i18n/README.md`.
 
-**This list must match `CLAUDE.md`.** When a language is added or removed, both
+**This list must match `CLAUDE.md`.** When a language is added or removed, `LANGUAGES` in
+`crates/sdroxide-ui/src/i18n.rs` changes too (the web client embeds English only and
+fetches the rest; a test checks the table against `i18n/`), and both
 files are updated in the same change (see "Adding a language" in `CLAUDE.md`).
 
 ## Working autonomously

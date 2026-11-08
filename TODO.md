@@ -2,7 +2,7 @@
 
 Working queue. Rules in AGENTS.md. Last updated 2026-11-08.
 
-State: `main` at crate 2.3.0, PROTO_VERSION 282 (0x66). Latest release v2.2.3.6.5_brown (pre-release); full release 2.3.0_brown due 2026-11-06 18:00 UTC. Open PRs: 0. Open issues: 10 (re-measured 2026-11-07).
+State: `main` at crate 2.3.0, PROTO_VERSION 279 (0x63). Latest release v2.2.3.6.5_brown (pre-release); full release 2.3.0_brown due 2026-11-06 18:00 UTC. Open PRs: 0. Open issues: 10 (re-measured 2026-11-07).
 
 ## Task tracking rules
 
@@ -18,8 +18,7 @@ State: `main` at crate 2.3.0, PROTO_VERSION 282 (0x66). Latest release v2.2.3.6.
   kept current in the state line.
 
 ## Now
-- **Public SDRs 1/2: ADD AS RADIO, map view, ONLINE/SILENT check, docked or detached** (added by madmedicnl, owned by Claude) — port of upstream dividebysandwich/sdroxide#799 commit 1 (#772): ADD AS RADIO replaces USE and + TAB (the radio in use is never touched, so the USE confirmation goes), LIST | MAP on the world map, `DeviceProbe::PublicSdrCheck` (wire 276 → **277**, `0x61`). Our stars and MINE are kept. Cherry-picked from LF to our CRLF; `MapView::sanitize` (upstream #656) added. Also docks under the waterfall like Radio Classic (`public_sdr_docked`, ⤓ chip, Settings → UI row), window where the slot is taken.
-- **Public SDRs 2/2: a radio's tab name links to its place on the map** (added by madmedicnl, owned by Claude) — port of upstream dividebysandwich/sdroxide#799 commit 2 (#777), stacked on 1/2.
+- **Web client carries English only; the other languages are fetched** (added by F4NRM, owned by Claude) — the wasm embedded all eleven `.ftl` files (about 6 MB of text nobody reads twice). It now embeds `en-US` only; the page asks the station for `i18n/<tag>/sdroxide.ftl` (copied into `dist` by trunk, served `no-cache` so an update never meets an old file) when the language is picked, stored in the profile, or read from the browser's own list. English stays as the fallback. `ClientScreen` gains `language` at its tail so the profile keeps it: wire 281 -> 282 (`0x66`), postcard round trip, an old profile does not override the client's pick. The picker lists `LANGUAGES` (`src/i18n.rs`), checked against `i18n/` by a test. Native keeps all eleven embedded. Not tried in a real browser yet.
 - **#427 SSTV stays in RX on voice** (added by F4NRM, owned by Claude) — a free-run lock that the next lines do not bear out used to draw the whole mode (PD290 is nearly five minutes). It now goes back to hunting and the panel wipes the strip.
 - **#444 WEFAX stops at the thick black line** (added by DK8JV, owned by Claude) — a chart's thick black bar could pass phasing_skew_strict when its bright patch was narrow enough. The pulse width is now capped at twice the standard width in strict mode.
 - S-meter during TX on CAT radios (added by Roy, owned by Roy) - #513 was reverted (#522, it did not work); redone below as the power view and the meter arrows (F4NRM, owned by Claude).

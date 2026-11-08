@@ -2323,6 +2323,16 @@ pub struct ClientScreen {
     /// What the meter measures — [`UiSettings::smeter_view`]. Appended last:
     /// this struct rides the wire positionally.
     pub smeter_view: MeterView,
+    /// The language the interface is drawn in — [`UiSettings::language`].
+    /// Kept with the profile so a browser whose own storage was cleared (or a
+    /// second device) comes back in the operator's language, and so the web
+    /// client knows which translation to fetch from the station. Appended
+    /// last: this struct rides the wire positionally.
+    ///
+    /// A profile that names none ([`UiLanguage::SYSTEM`]: one saved before the
+    /// field, or by an operator who follows the system) does not override the
+    /// client's own choice — see [`ClientScreen::apply_to`].
+    pub language: UiLanguage,
 }
 
 impl Default for ClientScreen {
@@ -2370,6 +2380,7 @@ impl ClientScreen {
             spectrum_fill_style: s.spectrum_fill_style,
             broadcast_scope: s.broadcast_scope,
             smeter_view: s.smeter_view,
+            language: s.language,
         }
     }
 
@@ -2408,6 +2419,12 @@ impl ClientScreen {
         s.spectrum_fill_style = self.spectrum_fill_style;
         s.broadcast_scope = self.broadcast_scope;
         s.smeter_view = self.smeter_view;
+        // Only a language the profile actually names. An empty one is "not
+        // said", not "follow the system": a profile stored before the field
+        // would otherwise reset every client's own pick on each connect.
+        if !self.language.is_system() {
+            s.language = self.language;
+        }
     }
 }
 
@@ -2540,6 +2557,29 @@ mod client_screen_tests {
         assert!(other.spectrum_fill, "the fill stayed behind");
         assert_eq!(other.spectrum_fill_color, [40, 220, 60], "the colour stayed behind");
         assert_eq!(other.spectrum_fill_style, SpectrumFillStyle::Mixed, "the style stayed behind");
+    }
+
+    /// The language is part of the screen a profile keeps on the server, so a
+    /// browser with nothing stored comes back in it — and a profile that names
+    /// none (stored before the field) leaves the client's own pick alone.
+    #[test]
+    fn the_language_travels_with_the_profile() {
+        let mut mine = UiSettings::default();
+        mine.language = UiLanguage::from_tag("fr").unwrap();
+        let carried = ClientScreen::from_settings(&mine);
+        let back: ClientScreen =
+            postcard::from_bytes(&postcard::to_allocvec(&carried).unwrap()).unwrap();
+        let mut other = UiSettings::default();
+        assert!(other.language.is_system(), "a fresh client follows the system");
+        back.apply_to(&mut other);
+        assert_eq!(other.language.tag(), Some("fr"), "the language stayed behind");
+
+        let old: ClientScreen = serde_json::from_str(r#"{"simple_ui":true}"#).expect("old profile");
+        assert!(old.language.is_system(), "a profile from before the field names none");
+        let mut picked = UiSettings::default();
+        picked.language = UiLanguage::from_tag("de").unwrap();
+        old.apply_to(&mut picked);
+        assert_eq!(picked.language.tag(), Some("de"), "and does not override the client's pick");
     }
 
     /// The FFT size travels with the profile, including for a profile stored
