@@ -9136,11 +9136,11 @@ sonde-export-csv-hover = このゾンデの飛行を表計算用の CSV とし�
 
 sonde-export-none = このゾンデの位置はまだ保存されていません。
 
-sonde-col-temp = æ°—æ¸©
+sonde-col-temp = 気温
 
-sonde-col-humidity = æ¹¿åº¦
+sonde-col-humidity = 湿度
 
-sonde-col-pressure = æ°—åœ§
+sonde-col-pressure = 気圧
 
 settings-net-broadcast-import-needs-station = インポートするには局に接続してください。
 
@@ -9341,6 +9341,15 @@ smeter-arrow-next-hover = 次の表示: { $view }{ $when }
 
 smeter-arrow-on-receive = (送信中に使われます)
 
+sonde-card-source-both = 無線 + SondeHub（両方で受信）
+
+sonde-card-stale = 状態
+
+sonde-card-stale-value = 一覧から消えました：最後に分かっている位置
+
+sonde-card-detach = 切り離す
+
+sonde-card-attach = 戻す
 tx-bands-outside-note = ここに載っているバンド以外では送信できません。バンド外の受信（ADS-B、DAB、AIS など）に行は不要です。
 
 tx-off-cb = 11 m (CB) では送信禁止 — このバンドは送信リストにありますが、「11 m (CB) での送信を許可」がオフです。設定 → 一般 でオンにしてください。

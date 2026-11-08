@@ -9199,7 +9199,7 @@ sonde-export-none = Nessuna posizione ancora conservata per questa sonda.
 
 sonde-col-temp = Temp.
 
-sonde-col-humidity = UmiditÃ 
+sonde-col-humidity = Umidità
 
 sonde-col-pressure = Pressione
 
@@ -9402,6 +9402,15 @@ smeter-arrow-next-hover = Misura successiva: { $view }{ $when }
 
 smeter-arrow-on-receive = (usata in trasmissione)
 
+sonde-card-source-both = Radio + SondeHub (la ricevono entrambe)
+
+sonde-card-stale = Stato
+
+sonde-card-stale-value = Non più nell'elenco: ultima posizione nota
+
+sonde-card-detach = Stacca
+
+sonde-card-attach = Riaggancia
 tx-bands-outside-note = Fuori dalle bande elencate qui non si può trasmettere nulla. La ricezione fuori banda (ADS-B, DAB, AIS...) non richiede una riga.
 
 tx-off-cb = TRASMISSIONE VIETATA su 11 m (CB) — la banda è nella lista di trasmissione, ma «Consenti trasmissione su 11 m (CB)» è disattivato. Attivalo in Impostazioni → Generale.

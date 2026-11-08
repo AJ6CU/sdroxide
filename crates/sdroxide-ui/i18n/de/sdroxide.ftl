@@ -9391,6 +9391,15 @@ smeter-arrow-next-hover = Nächster Messwert: { $view }{ $when }
 
 smeter-arrow-on-receive = (gilt beim Senden)
 
+sonde-card-source-both = Funk + SondeHub (beide empfangen sie)
+
+sonde-card-stale = Status
+
+sonde-card-stale-value = Nicht mehr in der Liste: letzte bekannte Position
+
+sonde-card-detach = Lösen
+
+sonde-card-attach = Anheften
 tx-bands-outside-note = Außerhalb der hier aufgeführten Bänder kann nicht gesendet werden. Empfang außerhalb der Bänder (ADS-B, DAB, AIS...) braucht keine Zeile.
 
 tx-off-cb = SENDEN GESPERRT auf 11 m (CB) — das Band steht in Ihrer Sendeliste, aber „Senden auf 11 m (CB) erlauben“ ist aus. Aktivieren Sie es unter Einstellungen → Allgemein.

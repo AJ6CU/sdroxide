@@ -9201,7 +9201,7 @@ sonde-export-none = Aucune position conservée pour cette sonde.
 
 sonde-col-temp = Temp.
 
-sonde-col-humidity = HumiditÃ©
+sonde-col-humidity = Humidité
 
 sonde-col-pressure = Pression
 
@@ -9404,6 +9404,15 @@ smeter-arrow-next-hover = Mesure suivante : { $view }{ $when }
 
 smeter-arrow-on-receive = (utilisée à l'émission)
 
+sonde-card-source-both = Radio + SondeHub (reçue par les deux)
+
+sonde-card-stale = État
+
+sonde-card-stale-value = Plus dans la liste : dernière position connue
+
+sonde-card-detach = Détacher
+
+sonde-card-attach = Rattacher
 tx-bands-outside-note = Hors des bandes listées ici, aucune émission n'est possible. La réception hors bandes (ADS-B, DAB, AIS...) n'a pas besoin de ligne.
 
 tx-off-cb = ÉMISSION INTERDITE en 11 m (CB) — la bande est dans votre liste d'émission, mais « Autoriser l'émission en 11 m (CB) » est décoché. Cochez-le dans Réglages → Général.

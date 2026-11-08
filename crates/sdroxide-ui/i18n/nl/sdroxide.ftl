@@ -9401,6 +9401,15 @@ smeter-arrow-next-hover = Volgende meting: { $view }{ $when }
 
 smeter-arrow-on-receive = (geldt tijdens zenden)
 
+sonde-card-source-both = Radio + SondeHub (beide horen haar)
+
+sonde-card-stale = Status
+
+sonde-card-stale-value = Niet meer in de lijst: laatst bekende positie
+
+sonde-card-detach = Losmaken
+
+sonde-card-attach = Vastmaken
 tx-bands-outside-note = Buiten de hier genoemde banden kan niet worden gezonden. Ontvangst buiten de banden (ADS-B, DAB, AIS...) heeft geen rij nodig.
 
 tx-off-cb = ZENDEN VERBODEN op 11 m (CB) — de band staat in uw zendlijst, maar "Zenden op 11 m (CB) toestaan" staat uit. Zet het aan bij Instellingen → Algemeen.

@@ -9192,7 +9192,7 @@ sonde-col-temp = Temp.
 
 sonde-col-humidity = Umidade
 
-sonde-col-pressure = PressÃ£o
+sonde-col-pressure = Pressão
 
 settings-net-broadcast-import-needs-station = Conecte-se a uma estação para importar.
 
@@ -9393,6 +9393,15 @@ smeter-arrow-next-hover = Próxima medição: { $view }{ $when }
 
 smeter-arrow-on-receive = (usada ao transmitir)
 
+sonde-card-source-both = Rádio + SondeHub (ambos a recebem)
+
+sonde-card-stale = Estado
+
+sonde-card-stale-value = Fora da lista: última posição conhecida
+
+sonde-card-detach = Destacar
+
+sonde-card-attach = Fixar
 tx-bands-outside-note = Fora das bandas listadas aqui nada pode ser transmitido. A recepção fora das bandas (ADS-B, DAB, AIS...) não precisa de linha.
 
 tx-off-cb = TRANSMISSÃO PROIBIDA em 11 m (CB) — a banda está na sua lista de transmissão, mas "Permitir transmitir em 11 m (CB)" está desligado. Marque-o em Configurações → Geral.

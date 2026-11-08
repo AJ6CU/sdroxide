@@ -9203,11 +9203,11 @@ sonde-export-csv-hover = Сохранить полёт этого зонда к�
 
 sonde-export-none = Для этого зонда пока нет сохранённых позиций.
 
-sonde-col-temp = Ð¢ÐµÐ¼Ð¿.
+sonde-col-temp = Темп.
 
-sonde-col-humidity = Ð’Ð»Ð°Ð¶Ð½.
+sonde-col-humidity = Влажн.
 
-sonde-col-pressure = Ð”Ð°Ð²Ð».
+sonde-col-pressure = Давл.
 
 settings-net-broadcast-import-needs-station = Подключитесь к станции для импорта.
 
@@ -9408,6 +9408,15 @@ smeter-arrow-next-hover = Следующее показание: { $view }{ $whe
 
 smeter-arrow-on-receive = (используется при передаче)
 
+sonde-card-source-both = Радио + SondeHub (слышат оба)
+
+sonde-card-stale = Состояние
+
+sonde-card-stale-value = Нет в списке: последняя известная позиция
+
+sonde-card-detach = Открепить
+
+sonde-card-attach = Прикрепить
 tx-bands-outside-note = Вне перечисленных здесь диапазонов передача невозможна. Приём вне диапазонов (ADS-B, DAB, AIS...) отдельной строки не требует.
 
 tx-off-cb = ПЕРЕДАЧА ЗАПРЕЩЕНА на 11 м (CB) — диапазон есть в списке передачи, но «Разрешить передачу на 11 м (CB)» выключено. Включите это в Настройки → Общие.

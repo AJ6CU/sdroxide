@@ -9417,6 +9417,15 @@ smeter-arrow-next-hover = Next reading: { $view }{ $when }
 
 smeter-arrow-on-receive = (used when transmitting)
 
+sonde-card-source-both = Radio + SondeHub (both hear it)
+
+sonde-card-stale = Status
+
+sonde-card-stale-value = Gone from the list: last known position
+
+sonde-card-detach = Detach
+
+sonde-card-attach = Attach
 tx-bands-outside-note = Outside the bands listed here nothing can be transmitted. Reception outside the bands (ADS-B, DAB, AIS...) needs no row.
 
 tx-off-cb = TRANSMIT FORBIDDEN on 11 m (CB) — the band is in your transmit list, but "Allow transmit on 11 m (CB)" is off. Tick it in Settings → General.

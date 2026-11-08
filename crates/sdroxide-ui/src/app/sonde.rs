@@ -62,6 +62,60 @@ fn age(secs: i64) -> String {
     }
 }
 
+/// The widest the card is drawn, points.
+const CARD_W: f32 = 520.0;
+
+/// What was pressed in the card.
+enum CardAct {
+    None,
+    Close,
+    Detach,
+    Attach,
+}
+
+/// Draw a card: its title, the buttons, then the rows in two blocks side by
+/// side (half the height of one long column).
+fn draw_card(ui: &mut egui::Ui, card: &sonde_card::Card, detached: bool) -> CardAct {
+    let mut act = CardAct::None;
+    ui.horizontal_wrapped(|ui| {
+        ui.label(RichText::new(&card.title).size(12.0).strong());
+        if ui.small_button(tr!("sonde-card-close")).clicked() {
+            act = CardAct::Close;
+        }
+        let (label, next) = if detached {
+            (tr!("sonde-card-attach"), CardAct::Attach)
+        } else {
+            (tr!("sonde-card-detach"), CardAct::Detach)
+        };
+        if ui.small_button(label).clicked() {
+            act = next;
+        }
+        for (site, url) in sonde_card::links(&card.serial) {
+            if ui.small_button(sonde_card::open_label(site)).on_hover_text(&url).clicked()
+                && !crate::download::open_external(&url)
+            {
+                tracing::warn!(%url, "no handler for the sonde page");
+            }
+        }
+    });
+    let (left, right) = card_halves(&card.rows);
+    ui.columns(2, |cols| {
+        for (i, rows) in [left, right].into_iter().enumerate() {
+            egui::Grid::new(("sonde_card", i)).num_columns(2).spacing([14.0, 2.0]).show(
+                &mut cols[i],
+                |ui| {
+                    for (label, value) in rows {
+                        ui.label(RichText::new(label).size(10.5).weak());
+                        ui.label(RichText::new(value).size(10.5));
+                        ui.end_row();
+                    }
+                },
+            );
+        }
+    });
+    act
+}
+
 impl SdroxideApp {
     pub(in crate::app) fn aircraft_sonde_pane(
         &mut self,
@@ -109,9 +163,7 @@ impl SdroxideApp {
                 .on_hover_text(tr!("sonde-scan-hover"));
         });
         if !cfg.enabled {
-            ui.label(
-                RichText::new(tr!("sonde-off-note")).size(11.0).color(crate::theme::YELLOW()),
-            );
+            ui.label(RichText::new(tr!("sonde-off-note")).size(11.0).color(crate::theme::YELLOW()));
         }
         if cfg != self.state.sonde {
             cmds.push(Command::SetSondeConfig(cfg));
@@ -126,11 +178,8 @@ impl SdroxideApp {
         let peer = self.ctrl.peer_url();
         self.sonde_online.tick(ui.ctx(), home, now, peer.as_deref());
         ui.horizontal_wrapped(|ui| {
-            ui.checkbox(
-                &mut self.sonde_online.on,
-                RichText::new(tr!("sonde-online")).size(11.0),
-            )
-            .on_hover_text(tr!("sonde-online-hover"));
+            ui.checkbox(&mut self.sonde_online.on, RichText::new(tr!("sonde-online")).size(11.0))
+                .on_hover_text(tr!("sonde-online-hover"));
             if self.sonde_online.on {
                 let note = if home.is_none() {
                     Some(tr!("sonde-online-no-grid"))
@@ -155,12 +204,16 @@ impl SdroxideApp {
         let table_h = if sondes.is_empty() { 0.0 } else { 22.0 + rows * 18.0 };
         let map_h = (h - 60.0 - table_h).max(MAP_MIN_H);
         let night = self.night_texture(ui.ctx());
-        egui::ScrollArea::vertical()
-            .id_salt("sonde_scroll")
-            .auto_shrink([false, false])
-            .show(ui, |ui| {
+        egui::ScrollArea::vertical().id_salt("sonde_scroll").auto_shrink([false, false]).show(
+            ui,
+            |ui| {
                 self.sonde_scroll_body(ui, &sondes, home, night, map_h, now);
-            });
+            },
+        );
+        // The card is not part of the scrolling page: it is pinned beside its
+        // sonde on the map, or a window of its own.
+        let ctx = ui.ctx().clone();
+        self.sonde_card_view(&ctx, &sondes, home, now);
     }
 
     fn sonde_scroll_body(
@@ -172,7 +225,7 @@ impl SdroxideApp {
         map_h: f32,
         now: i64,
     ) {
-        crate::sonde_map::show(
+        let clicked = crate::sonde_map::show(
             ui,
             &mut self.sonde_map,
             sondes,
@@ -182,6 +235,10 @@ impl SdroxideApp {
             night,
             map_h,
         );
+        if clicked.is_some() {
+            // A picked sonde should not wait for the minute to be up.
+            self.sonde_online.hurry(now);
+        }
 
         if !sondes.is_empty() {
             egui::Grid::new("sonde_table").striped(true).num_columns(10).show(ui, |ui| {
@@ -211,7 +268,7 @@ impl SdroxideApp {
                         .strong()
                         .color(ink);
                     if ui.selectable_label(selected, name).clicked() {
-                        self.sonde_map.selected = Some(s.serial.clone());
+                        self.sonde_map.select(s.serial.clone());
                     }
                     let cell = |ui: &mut egui::Ui, t: String| {
                         ui.label(RichText::new(t).size(10.5).color(ink));
@@ -230,60 +287,91 @@ impl SdroxideApp {
             });
             self.sonde_export_row(ui, sondes, now);
         }
-        self.sonde_card_view(ui, sondes, home, now);
     }
 
-    /// The card of the selected sonde, from this radio's or from SondeHub's list.
+    /// The card of the selected sonde: this radio's frames and SondeHub's line
+    /// together when both know it, a kept copy when neither does any more.
+    ///
+    /// Pinned beside the sonde on the map like an aircraft's card, or, once the
+    /// operator detaches it, a window of its own. It never sits under the map
+    /// where the page has to be scrolled to find it.
     fn sonde_card_view(
         &mut self,
-        ui: &mut egui::Ui,
+        ctx: &egui::Context,
         sondes: &[SondeTrack],
         home: Option<(f64, f64)>,
         now: i64,
     ) {
         let Some(sel) = self.sonde_map.selected.clone() else { return };
-        let card = match sondes.iter().find(|s| s.serial == sel) {
-            Some(s) => sonde_card::own(s, home, now),
-            None => match self.sonde_online.sondes.iter().find(|o| o.serial == sel) {
-                Some(o) => sonde_card::online(o, home, now),
-                None => return,
-            },
-        };
-        let mut close = false;
-        egui::Frame::group(ui.style()).show(ui, |ui| {
-            ui.horizontal(|ui| {
-                ui.label(RichText::new(&card.title).size(12.0).strong());
-                if ui.small_button(tr!("sonde-card-close")).clicked() {
-                    close = true;
-                }
-                for (site, url) in sonde_card::links(&card.serial) {
-                    if ui.small_button(sonde_card::open_label(site)).on_hover_text(&url).clicked()
-                        && !crate::download::open_external(&url)
-                    {
-                        tracing::warn!(%url, "no handler for the sonde page");
-                    }
-                }
-            });
-            // Two blocks side by side: half the height of one long column.
-            let (left, right) = card_halves(&card.rows);
-            ui.columns(2, |cols| {
-                for (i, rows) in [left, right].into_iter().enumerate() {
-                    egui::Grid::new(("sonde_card", i))
-                        .num_columns(2)
-                        .spacing([14.0, 2.0])
-                        .show(&mut cols[i], |ui| {
-                            for (label, value) in rows {
-                                ui.label(RichText::new(label).size(10.5).weak());
-                                ui.label(RichText::new(value).size(10.5));
-                                ui.end_row();
-                            }
-                        });
-                }
-            });
-        });
-        if close {
-            self.sonde_map.selected = None;
+        // Esc closes it, unless a text field has the keyboard.
+        if !ctx.egui_wants_keyboard_input()
+            && ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Escape))
+        {
+            self.sonde_map.deselect();
+            return;
         }
+        let live_radio = sondes.iter().find(|s| s.serial == sel);
+        let live_hub = self.sonde_online.sondes.iter().find(|o| o.serial == sel);
+        let live = self.sonde_map.kept.update(live_radio, live_hub);
+        let radio = live_radio.or(self.sonde_map.kept.radio.as_ref());
+        let hub = live_hub.or(self.sonde_map.kept.hub.as_ref());
+        let Some(mut card) = sonde_card::compose(radio, hub, home, now) else { return };
+        if !live {
+            sonde_card::mark_stale(&mut card);
+        }
+        let act = if self.sonde_map.detached {
+            self.sonde_card_window(ctx, &card)
+        } else {
+            self.sonde_card_pinned(ctx, &card)
+        };
+        match act {
+            CardAct::None => {}
+            CardAct::Close => self.sonde_map.deselect(),
+            CardAct::Detach => self.sonde_map.detached = true,
+            CardAct::Attach => self.sonde_map.detached = false,
+        }
+    }
+
+    /// The card over the map, beside its sonde, kept inside the map.
+    fn sonde_card_pinned(&mut self, ctx: &egui::Context, card: &sonde_card::Card) -> CardAct {
+        let Some(bounds) = self.sonde_map.bounds else { return CardAct::None };
+        let anchor = self.sonde_map.anchor.unwrap_or(bounds.center());
+        let size = self.sonde_map.card_size.unwrap_or(egui::vec2(CARD_W, 230.0));
+        let at = crate::adsb_map::pin_placement(anchor, size, bounds);
+        let shown = egui::Area::new(egui::Id::new("sonde-pinned-card"))
+            .order(egui::Order::Middle)
+            .fixed_pos(at)
+            .constrain_to(bounds)
+            .show(ctx, |ui| {
+                egui::Frame::popup(ui.style())
+                    .show(ui, |ui| {
+                        ui.set_max_width(CARD_W);
+                        draw_card(ui, card, false)
+                    })
+                    .inner
+            });
+        self.sonde_map.card_size = Some(shown.response.rect.size());
+        shown.inner
+    }
+
+    /// The card as a window the operator can move off the map and resize.
+    fn sonde_card_window(&mut self, ctx: &egui::Context, card: &sonde_card::Card) -> CardAct {
+        let mut open = true;
+        let mut window = egui::Window::new(card.title.clone())
+            .id(egui::Id::new("sonde-card-window"))
+            .open(&mut open)
+            .resizable(true)
+            .default_width(CARD_W);
+        if let Some(b) = self.sonde_map.bounds {
+            window = window.default_pos(b.min + egui::vec2(24.0, 24.0));
+        }
+        let act = window
+            .show(ctx, |ui| {
+                egui::ScrollArea::vertical().show(ui, |ui| draw_card(ui, card, true)).inner
+            })
+            .and_then(|r| r.inner)
+            .unwrap_or(CardAct::None);
+        if open { act } else { CardAct::Close }
     }
 
     /// Save the selected sonde's flight (the newest if none is selected) as a

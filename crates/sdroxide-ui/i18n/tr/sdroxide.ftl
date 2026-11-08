@@ -9192,7 +9192,7 @@ sonde-col-temp = SÄ±c.
 
 sonde-col-humidity = Nem
 
-sonde-col-pressure = BasÄ±nÃ§
+sonde-col-pressure = Basınç
 
 settings-net-broadcast-import-needs-station = İçe aktarmak için bir istasyona bağlanın.
 
@@ -9393,6 +9393,15 @@ smeter-arrow-next-hover = Sonraki ölçüm: { $view }{ $when }
 
 smeter-arrow-on-receive = (vericiyle yayın yaparken kullanılır)
 
+sonde-card-source-both = Telsiz + SondeHub (ikisi de alıyor)
+
+sonde-card-stale = Durum
+
+sonde-card-stale-value = Listede yok: bilinen son konum
+
+sonde-card-detach = Ayır
+
+sonde-card-attach = Yapıştır
 tx-bands-outside-note = Burada listelenen bantların dışında hiçbir şey yayınlanamaz. Bant dışı alım (ADS-B, DAB, AIS...) için satır gerekmez.
 
 tx-off-cb = 11 m (CB) üzerinde YAYIN YASAK — bant yayın listenizde, ancak "11 m (CB) üzerinde yayına izin ver" kapalı. Ayarlar → Genel bölümünden işaretleyin.
