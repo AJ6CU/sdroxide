@@ -9571,3 +9571,43 @@ extras-meshtastic-hint = Meshtastic: the LoRa mesh traffic of one channel, the n
 settings-ui-meshtastic-on = Show the panel
 
 settings-ui-meshtastic-hint = Adds the Meshtastic chips to the Extras window and to the experimental bench of the mode menu, and lets the window open. The window docks in the main one or goes to its own with the title-bar button. Switching it off closes the window; the receiver stops from the window's own switch.
+
+meshtastic-message = Message
+
+meshtastic-message-hint = Text for everyone on the channel (200 bytes at most)
+
+meshtastic-send = Send…
+
+meshtastic-send-hint = Transmit this text on the channel, after you confirm. The transmit band list in Settings, Radio decides whether the radio may transmit here; the radio must be on the channel (Listen here).
+
+meshtastic-confirm = Transmit on { $freq } MHz now ({ $air } s of air time)? Everyone in range will hear it, and you answer for it under your licence and the rules of this band.
+
+meshtastic-confirm-yes = Transmit
+
+meshtastic-confirm-no = Cancel
+
+meshtastic-transmitting = TRANSMITTING…
+
+meshtastic-tx-airtime = Air time this hour: { $used } s of { $budget } s
+
+meshtastic-tx-airtime-free = Air time this hour: { $used } s (no limit set for this region)
+
+meshtastic-tx-sent = { $n } sent
+
+meshtastic-tx-band-off = TRANSMIT FORBIDDEN — { $freq } MHz ({ $band }) is not a validated transmit band. Tick and validate it in Settings → Radio → Transmit bands.
+
+meshtastic-tx-unconfirmed = TRANSMIT FORBIDDEN — the transmit bands of this radio are not validated yet. Check them and confirm in Settings → Radio → Transmit bands.
+
+meshtastic-tx-duty = Duty cycle reached for this region: wait { $s } s before the next message.
+
+meshtastic-tx-too-long = This message alone is longer than the whole hour's air-time budget for this region.
+
+meshtastic-tx-off-channel = The radio is not on the channel: press Listen here first, so the dial sits on it.
+
+meshtastic-tx-no-transmitter = This radio cannot send raw I/Q (a rig that takes audio, or a receive-only device).
+
+meshtastic-tx-bad-text = The text is empty or too long (200 bytes at most).
+
+meshtastic-tx-busy = A transmission is already in progress.
+
+meshtastic-tx-rails = The transmitter refused to key up: see the transmit message for the reason.

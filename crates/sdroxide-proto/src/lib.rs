@@ -2347,8 +2347,17 @@ use sdroxide_types::{
 /// `MeshtasticStatus(Box<..>)` last (level, counters, nodes, packet log).
 /// `RadioState` crosses the link whole, so the appended field moves its layout.
 /// `PROTO_VERSION` 286 → 287, `VERSION_BYTE` 0x6A → 0x6B.
-pub const PROTO_VERSION: u16 = 287;
-const VERSION_BYTE: u8 = 0x6B;
+///
+/// v288: **Meshtastic transmit, and the 868 MHz band.** `Band` gains `Ism868`
+/// last (865.00–898.99 MHz, on the transmit list like the other bands; `Band`
+/// is postcard-encoded by declaration index and rides `RadioConfig`, the band
+/// stacks and the memories). [`sdroxide_types::MeshtasticSettings`] gains
+/// `node_id` at its tail, `Command` gains `SendMeshtastic` last, and
+/// [`sdroxide_types::MeshtasticStatus`] gains `tx_refused`, `tx_busy`,
+/// `tx_sent`, `tx_used_ms` and `tx_budget_ms` at its tail.
+/// `PROTO_VERSION` 287 → 288, `VERSION_BYTE` 0x6B → 0x6C.
+pub const PROTO_VERSION: u16 = 288;
+const VERSION_BYTE: u8 = 0x6C;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -4366,7 +4375,18 @@ mod tests {
                 dial_hz: 14_074_000.0,
                 mode: sdroxide_types::Mode::Usb,
             }),
+            node_id: 0x1234_ABCD,
         };
+        // The transmit side: the command, the new band, the status tail.
+        let send = ClientMsg::Command(Command::SendMeshtastic(sdroxide_types::MeshtasticSend {
+            text: "73 de F4NRM".into(),
+            to: 0xFFFF_FFFF,
+        }));
+        let back: ClientMsg = decode(&encode(&send).unwrap()).unwrap();
+        assert_eq!(back, send);
+        let band = ClientMsg::Command(Command::SetBand(sdroxide_types::Band::Ism868));
+        let back: ClientMsg = decode(&encode(&band).unwrap()).unwrap();
+        assert_eq!(back, band);
         let m = ClientMsg::Command(Command::SetMeshtasticConfig(cfg.clone()));
         let back: ClientMsg = decode(&encode(&m).unwrap()).unwrap();
         assert_eq!(back, m);
@@ -4405,9 +4425,33 @@ mod tests {
                 text: Some("73 de F4NRM".into()),
                 ..Default::default()
             }],
+            tx_refused: Some(sdroxide_types::MeshTxRefusal::DutyCycle(1234)),
+            tx_busy: true,
+            tx_sent: 3,
+            tx_used_ms: 21_500,
+            tx_budget_ms: Some(36_000),
         }));
         let back: ServerMsg = decode(&encode(&st).unwrap()).unwrap();
         assert_eq!(back, st);
+        // Every refusal crosses the link.
+        for why in [
+            sdroxide_types::MeshTxRefusal::Band(sdroxide_types::TxBlock::BandOff(
+                sdroxide_types::Band::Ism868,
+            )),
+            sdroxide_types::MeshTxRefusal::TooLong,
+            sdroxide_types::MeshTxRefusal::OffChannel,
+            sdroxide_types::MeshTxRefusal::NoTransmitter,
+            sdroxide_types::MeshTxRefusal::BadText,
+            sdroxide_types::MeshTxRefusal::Busy,
+            sdroxide_types::MeshTxRefusal::Rails,
+        ] {
+            let m = ServerMsg::MeshtasticStatus(Box::new(sdroxide_types::MeshtasticStatus {
+                tx_refused: Some(why),
+                ..Default::default()
+            }));
+            let back: ServerMsg = decode(&encode(&m).unwrap()).unwrap();
+            assert_eq!(back, m);
+        }
     }
 
     /// The radiosonde lane's settings cross the wire both ways: the command,

@@ -30,6 +30,7 @@ pub mod modulate;
 pub mod packet;
 pub mod protobuf;
 pub mod protocol;
+pub mod tx;
 
 pub use decoders::{Decoded, decode_payload};
 pub use demod::{DecoderConfig, DecoderStats, LoraDecoder, LoraFrame};

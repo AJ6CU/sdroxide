@@ -86,6 +86,7 @@ fn ham_label(band: Band, region: Region) -> &'static str {
         Band::Fm => "FM BC",
         Band::Air => "AIR AM",
         Band::Mil => "MIL AM",
+        Band::Ism868 => "868 SRD",
         Band::Gen => "ALL",
     }
 }

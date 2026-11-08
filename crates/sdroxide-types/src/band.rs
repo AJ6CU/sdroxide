@@ -165,10 +165,28 @@ pub enum Band {
     /// Appended for the reason [`Band::M70`] gives; [`Band::ALL`] puts it
     /// between 1.25 m and 70 cm, where the frequencies are.
     Mil,
+    /// The **868 MHz licence-free band** (SRD / ISM), 865.00–898.99 MHz as the
+    /// station defines it: where Meshtastic and LoRaWAN talk in Europe, and
+    /// next to 33 cm (902–928 MHz, Meshtastic's US band).
+    ///
+    /// Not an amateur allocation: [`Band::is_amateur`] says no. It is on the
+    /// transmit list so that an operator can *choose* to key a licence-free
+    /// device here, with the same two steps every transmit band takes (tick it,
+    /// confirm the list). Until then it is as shut as "Other" is: the list is
+    /// the one rule, and a band nobody ticked is refused.
+    ///
+    /// Appended for the reason [`Band::M70`] gives; [`Band::ALL`] puts it
+    /// between 70 cm and 33 cm, where the frequencies are.
+    Ism868,
 }
 
+/// Where [`Band::Ism868`] starts and ends, in Hz. One definition for every
+/// region: the licence-free allocation is the same idea everywhere, and a
+/// region that has none simply never lists the band as ticked.
+pub const ISM868_HZ: (f64, f64) = (865_000_000.0, 898_990_000.0);
+
 impl Band {
-    pub const ALL: [Band; 29] = [
+    pub const ALL: [Band; 30] = [
         Band::Lw,
         Band::Mw,
         Band::M160,
@@ -190,6 +208,7 @@ impl Band {
         Band::M125,
         Band::Mil,
         Band::M70,
+        Band::Ism868,
         Band::Cm33,
         Band::Cm23,
         Band::Cm13,
@@ -220,7 +239,7 @@ impl Band {
     ///
     /// Append-only, forever. A new band goes on the end here and wherever it
     /// belongs in [`Band::ALL`]; the two lists are deliberately different.
-    const DECLARED: [Band; 29] = [
+    const DECLARED: [Band; 30] = [
         Band::M160,
         Band::M80,
         Band::M60,
@@ -250,6 +269,7 @@ impl Band {
         Band::Fm,
         Band::Air,
         Band::Mil,
+        Band::Ism868,
     ];
 
     /// This band's position in the *declaration* order, which is append-only
@@ -318,6 +338,7 @@ impl Band {
             Band::Fm => "FM",
             Band::Air => "AIR",
             Band::Mil => "MIL",
+            Band::Ism868 => "ISM868",
             // General coverage — the absence of a band: the dial is wherever
             // the operator puts it. Read as "ALL" on the band bar, because
             // that is what pressing it gives you: no band restriction at all.
@@ -346,6 +367,7 @@ impl Band {
                 | Band::Fm
                 | Band::Air
                 | Band::Mil
+                | Band::Ism868
         )
     }
 
@@ -379,8 +401,9 @@ impl Band {
     /// not what any one country allows on any one frequency.
     pub fn modes_for_band(self) -> Option<&'static [Mode]> {
         match self {
-            // General coverage is whatever the operator points it at.
-            Band::Gen => None,
+            // General coverage is whatever the operator points it at; so is the
+            // licence-free band, where every narrow mode is as good as another.
+            Band::Gen | Band::Ism868 => None,
             // Longwave: broadcast AM, and the NDB beacons. SAM carries ECSS.
             Band::Lw => Some(&[Mode::Am, Mode::Sam, Mode::Cw]),
             // Medium wave: AM and C-QUAM stereo, DRM, and SAM for ECSS — plus
@@ -681,6 +704,7 @@ impl Band {
             // touch 1.25 m in the region that has it; 400.0 is the top of the
             // NATO allocation.
             Band::Mil => Some((225_100_000.0, 400_000_000.0)),
+            Band::Ism868 => Some(ISM868_HZ),
             Band::Gen => None,
         }
     }
@@ -729,6 +753,10 @@ impl Band {
             Band::Air => (121_500_000.0, Mode::Am),
             // 243.000 is the military emergency (GUARD) channel.
             Band::Mil => (243_000_000.0, Mode::Am),
+            // The Meshtastic EU channel: the one frequency nearly everybody
+            // opens this band for. LoRa is not a radio mode, so the mode is
+            // the plain one a receiver would sit in.
+            Band::Ism868 => (869_525_000.0, Mode::Nfm),
             Band::M2 => (145_500_000.0, Mode::Nfm),
             // 223.500 is the 1.25 m national FM simplex calling frequency.
             Band::M125 => (223_500_000.0, Mode::Nfm),
@@ -843,6 +871,7 @@ mod tests {
                         | Band::Fm
                         | Band::Air
                         | Band::Mil
+                        | Band::Ism868
                 ),
                 "{b:?} is on the wrong side of is_amateur"
             );
@@ -852,6 +881,38 @@ mod tests {
         assert!(Band::M11.index() < Band::M10.index());
         // Channel 25, the digital calling channel, and inside the band.
         assert_eq!(Band::M11.default_entry(), (27_245_000.0, crate::Mode::Usb));
+    }
+
+    /// The 868 MHz licence-free band is a transmit-list band like the others:
+    /// refused until ticked and confirmed, allowed after, and never by the band
+    /// selector's "Other".
+    #[test]
+    fn the_868_band_follows_the_transmit_list() {
+        use crate::RadioConfig;
+        assert_eq!(Band::Ism868.label(), "ISM868");
+        assert_eq!(Band::Ism868.edges(), Some((865_000_000.0, 898_990_000.0)));
+        assert!(!Band::Ism868.is_amateur());
+        for r in [Region::R1, Region::R2, Region::R3] {
+            assert_eq!(Band::containing_in(869_525_000.0, r), Band::Ism868, "{r:?}");
+            assert_eq!(Band::containing_in(864_999_000.0, r), Band::Gen, "{r:?}");
+            assert_eq!(Band::containing_in(899_000_000.0, r), Band::Gen, "{r:?}");
+        }
+        // Between 70 cm and 33 cm on the bar.
+        assert!(Band::Ism868.index() > Band::M70.index());
+        assert!(Band::Ism868.index() < Band::Cm33.index());
+        // The transmit list is the one rule.
+        let mut cfg = RadioConfig::default();
+        cfg.tx_bands_confirmed = true;
+        assert_eq!(
+            cfg.tx_block_reason_with(869_525_000.0, false),
+            Some(crate::TxBlock::BandOff(Band::Ism868))
+        );
+        cfg.set_tx_band(Band::Ism868, true);
+        assert_eq!(cfg.tx_block_reason_with(869_525_000.0, false), Some(crate::TxBlock::Unconfirmed));
+        cfg.tx_bands_confirmed = true;
+        assert_eq!(cfg.tx_block_reason_with(869_525_000.0, false), None);
+        // Outside the band it is still "Other", still refused.
+        assert!(cfg.tx_block_reason_with(900_000_000.0, false).is_some());
     }
 
     /// The stored index is the declaration order, which is append-only: the

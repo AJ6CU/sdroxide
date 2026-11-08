@@ -9545,3 +9545,43 @@ extras-meshtastic-hint = Meshtastic: der LoRa-Mesh-Verkehr eines Kanals, die geh
 settings-ui-meshtastic-on = Panel anzeigen
 
 settings-ui-meshtastic-hint = Fügt die Meshtastic-Schaltflächen dem Extras-Fenster und der experimentellen Bank des Modusmenüs hinzu und erlaubt das Öffnen des Fensters. Das Fenster dockt im Hauptfenster an oder wechselt mit der Schaltfläche der Titelleiste in ein eigenes. Ausschalten schließt das Fenster; der Empfänger stoppt über den Schalter des Fensters.
+
+meshtastic-message = Nachricht
+
+meshtastic-message-hint = Text für alle im Kanal (höchstens 200 Byte)
+
+meshtastic-send = Senden…
+
+meshtastic-send-hint = Sendet diesen Text auf dem Kanal, nach Ihrer Bestätigung. Die Sendebandliste in Einstellungen, Radio entscheidet, ob hier gesendet werden darf; das Funkgerät muss auf dem Kanal sein (Hier hören).
+
+meshtastic-confirm = Jetzt auf { $freq } MHz senden ({ $air } s Sendezeit)? Alle in Reichweite hören es, und Sie verantworten es nach Ihrer Lizenz und den Regeln dieses Bandes.
+
+meshtastic-confirm-yes = Senden
+
+meshtastic-confirm-no = Abbrechen
+
+meshtastic-transmitting = SENDET…
+
+meshtastic-tx-airtime = Sendezeit in dieser Stunde: { $used } s von { $budget } s
+
+meshtastic-tx-airtime-free = Sendezeit in dieser Stunde: { $used } s (für diese Region ist keine Grenze gesetzt)
+
+meshtastic-tx-sent = { $n } gesendet
+
+meshtastic-tx-band-off = SENDEN GESPERRT — { $freq } MHz ({ $band }) ist kein bestätigtes Sendeband. Haken setzen und bestätigen unter Einstellungen → Radio → Sendebänder.
+
+meshtastic-tx-unconfirmed = SENDEN GESPERRT — die Sendebänder dieses Funkgeräts sind noch nicht bestätigt. Prüfen und bestätigen unter Einstellungen → Radio → Sendebänder.
+
+meshtastic-tx-duty = Tastverhältnis für diese Region erreicht: { $s } s bis zur nächsten Nachricht warten.
+
+meshtastic-tx-too-long = Diese Nachricht allein ist länger als das gesamte Sendezeit-Budget einer Stunde für diese Region.
+
+meshtastic-tx-off-channel = Das Funkgerät ist nicht auf dem Kanal: zuerst Hier hören drücken, damit die Frequenz darauf steht.
+
+meshtastic-tx-no-transmitter = Dieses Funkgerät kann kein rohes I/Q senden (ein Transceiver, der Audio annimmt, oder ein reines Empfangsgerät).
+
+meshtastic-tx-bad-text = Der Text ist leer oder zu lang (höchstens 200 Byte).
+
+meshtastic-tx-busy = Eine Aussendung läuft bereits.
+
+meshtastic-tx-rails = Der Sender hat das Tasten verweigert: den Grund nennt die Sendemeldung.

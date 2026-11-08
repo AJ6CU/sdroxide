@@ -1529,6 +1529,14 @@ pub enum Command {
     /// panel tunes with the ordinary tune command and the lane reports the
     /// refusal. Appended for the usual reason.
     SetMeshtasticConfig(crate::MeshtasticSettings),
+
+    /// Send a text message on the Meshtastic channel: raw I/Q through the
+    /// ordinary transmit path, so every lock that applies to a key-down applies
+    /// here (the transmit band list first). The engine adds the region's duty
+    /// cycle, and answers in [`crate::MeshtasticStatus::tx_refused`]. The panel
+    /// asks the operator to confirm before it sends this. Appended for the
+    /// usual reason.
+    SendMeshtastic(crate::MeshtasticSend),
 }
 
 /// What a [`Command::GetKnownCalls`] was answered with.
