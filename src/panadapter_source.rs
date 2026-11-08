@@ -401,6 +401,14 @@ impl IqSource for PanadapterSource {
         self.rx.lo_offset_hz()
     }
 
+    /// The receiver's own usable part of its rate. The span the engine shows
+    /// is the receiver's stream, so the share of it the receiver's filter
+    /// really passes has to come through the pairing too, or a paired
+    /// receiver is drawn across a band it does not deliver.
+    fn usable_frac(&self) -> f64 {
+        self.rx.usable_frac()
+    }
+
     fn read(&mut self, buf: &mut [Complex32]) -> Result<usize> {
         self.pump_ctrl();
         let n = self.rx.read(buf)?;
@@ -840,13 +848,23 @@ mod tests {
         /// Samples handed over by `read`, real part only.
         audio: Vec<f32>,
         signal_dbm: Option<f32>,
+        /// What `usable_frac` answers: 1.0 for a receiver with no opinion.
+        usable: f64,
     }
 
     impl Fake {
         fn new(name: &'static str, rate: f64, center: f64) -> (Self, Arc<Mutex<Log>>) {
             let log = Arc::new(Mutex::new(Log::default()));
             (
-                Fake { name, rate, center, log: log.clone(), audio: Vec::new(), signal_dbm: None },
+                Fake {
+                    name,
+                    rate,
+                    center,
+                    log: log.clone(),
+                    audio: Vec::new(),
+                    signal_dbm: None,
+                    usable: 1.0,
+                },
                 log,
             )
         }
@@ -891,6 +909,9 @@ mod tests {
         fn rx_signal_dbm(&mut self) -> Option<f32> {
             self.signal_dbm
         }
+        fn usable_frac(&self) -> f64 {
+            self.usable
+        }
     }
 
     fn cfg() -> PanadapterConfig {
@@ -918,6 +939,18 @@ mod tests {
         assert_eq!(rx_log.lock().unwrap().centers, vec![14_200_000.0]);
         assert_eq!(src.center_hz(), 14_200_000.0);
         assert!(ctrl_log.lock().unwrap().centers.is_empty(), "a span move is not a dial move");
+    }
+
+    /// The receiver's usable share of its rate is the pairing's: the engine
+    /// draws the span from it, and a receiver whose filter passes 61 % of its
+    /// rate must not be drawn as if it passed all of it.
+    #[test]
+    fn the_receivers_usable_span_is_the_pairings() {
+        let (mut rx, _) = Fake::new("rx", 2_500_000.0, 14_100_000.0);
+        rx.usable = 0.6144;
+        let (ctrl, _) = Fake::new("rig", 48_000.0, 14_100_000.0);
+        let src = PanadapterSource::new(Box::new(rx), Box::new(ctrl), cfg(), Some(Mode::Usb));
+        assert_eq!(src.usable_frac(), 0.6144);
     }
 
     /// An I.F. tap: the receiver sits on the intermediate frequency and the
