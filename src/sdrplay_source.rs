@@ -113,8 +113,11 @@ impl SdrPlaySource {
         // spike in the middle of the span to dodge, so it wants none: the
         // offset would only push the wanted signal towards the skirt of an
         // analog filter that is already the narrowest part of this mode.
-        let lo_offset =
-            if handle.low_if_khz() != 0 { 0.0 } else { lo_offset_for(rate, handle.analog_bw_hz()) };
+        let lo_offset = if handle.low_if_khz() != 0 {
+            0.0
+        } else {
+            window_lo_offset(rate, handle.analog_bw_hz())
+        };
         let antennas: Vec<String> =
             handle.model().antennas(cfg.duo_tuner).iter().map(|s| s.to_string()).collect();
         let antenna = if cfg.antenna.is_empty() {
@@ -294,6 +297,42 @@ fn div_mode(mode: DiversityMode) -> sdroxide_dsp::DiversityMode {
     }
 }
 
+/// How much of the stream the tuner's analog filter really passes, as a
+/// fraction of the rate.
+///
+/// The stream is `rate` wide but the filter in front of it is not: an RSP1 at
+/// 2.5 Msps has the 1.536 MHz filter (the widest that does not alias, see
+/// `device::bw_for_rate`), centred on the LO. Drawn across the whole rate, the
+/// panadapter shows a 480 kHz empty band at one edge, which is the filter's
+/// skirt and not a quiet part of the band. A filter as wide as the rate (the
+/// 8 MHz one at 8 Msps) passes all of it.
+fn usable_frac_for(rate: f64, analog_bw: f64) -> f64 {
+    if rate > 0.0 && analog_bw > 0.0 && analog_bw < rate { analog_bw / rate } else { 1.0 }
+}
+
+/// The share of the analog filter the LO may be parked off the VFO by.
+///
+/// CTR keeps the LO a guard — half this offset — from the dial, and the view it
+/// can then hold centred on the dial is the filter minus two guards. A quarter
+/// of the *rate* (625 kHz at 2.5 Msps) made that 1.536 - 0.625 = 0.91 MHz; an
+/// eighth of the *filter* leaves 1.35 MHz and still keeps the DC spike and the
+/// image of the passband well outside the channel.
+const LO_OFFSET_OF_FILTER: f64 = 0.12;
+
+/// [`lo_offset_for`], held inside what the analog filter can carry.
+///
+/// Only where the filter is narrower than the rate: there the quarter-of-rate
+/// offset parks the LO so far off the dial that the filter's band cannot be
+/// centred on it. Otherwise the offset is the one every zero-IF front end has.
+fn window_lo_offset(rate: f64, analog_bw: f64) -> f64 {
+    let offset = lo_offset_for(rate, analog_bw);
+    if usable_frac_for(rate, analog_bw) < 1.0 {
+        offset.min(analog_bw * LO_OFFSET_OF_FILTER)
+    } else {
+        offset
+    }
+}
+
 impl IqSource for SdrPlaySource {
     /// The engine is transmitting and has stopped reading, or has started
     /// again. Passed straight through to the stream thread, which keeps
@@ -332,6 +371,16 @@ impl IqSource for SdrPlaySource {
     /// the offset is not ours to add.
     fn lo_offset_hz(&self) -> f64 {
         if self.hdr && self.model().has_hdr() { 0.0 } else { self.lo_offset }
+    }
+
+    /// The part of the rate the tuner's analog filter passes — see
+    /// [`usable_frac_for`]. Left whole on the HDR path, whose filter is not the
+    /// one programmed here.
+    fn usable_frac(&self) -> f64 {
+        if self.hdr && self.model().has_hdr() {
+            return 1.0;
+        }
+        usable_frac_for(self.handle.out_rate_hz(), self.handle.analog_bw_hz())
     }
 
     /// One block from the receiver — and, with both tuners running, the second
@@ -677,5 +726,58 @@ impl IqSource for SdrPlaySource {
             (false, DuoMode::Single) => {}
         }
         if notes.is_empty() { None } else { Some(notes.join("\n")) }
+    }
+}
+
+#[cfg(test)]
+mod window_tests {
+    use super::*;
+
+    /// What the engine's `lo_guard_hz` makes of an offset for a 48 kHz channel:
+    /// at least 0.6 of the channel and half the offset, never above 0.8 of it.
+    fn guard(offset: f64) -> f64 {
+        (48_000.0_f64 * 0.6).max(offset * 0.5).min(offset * 0.8)
+    }
+
+    /// The view CTR can hold centred on the dial: the usable band, less a guard
+    /// on the side the LO sits (the other side has the whole filter).
+    fn centred_span(rate: f64, bw: f64, offset: f64) -> f64 {
+        usable_frac_for(rate, bw) * rate - 2.0 * guard(offset)
+    }
+
+    /// An RSP1 at 2.5 Msps (the report): the 1.536 MHz filter, so 61 % of the
+    /// rate is band and the rest is skirt.
+    #[test]
+    fn the_filter_not_the_rate_is_the_usable_band() {
+        let frac = usable_frac_for(2_500_000.0, 1_536_000.0);
+        assert!((frac - 0.6144).abs() < 1e-9, "{frac}");
+        // A filter as wide as the rate passes all of it, and no answer is whole.
+        assert_eq!(usable_frac_for(8_000_000.0, 8_000_000.0), 1.0);
+        assert_eq!(usable_frac_for(2_000_000.0, 0.0), 1.0);
+        assert_eq!(usable_frac_for(0.0, 1_536_000.0), 1.0);
+    }
+
+    /// The report: at 2.5 Msps the dial centred on a 1.536 MHz filter left a
+    /// 0.91 MHz view, and drawn at 1.875 it had 480 kHz of skirt on one side.
+    /// The view CTR can hold centred must be most of the filter.
+    #[test]
+    fn the_dial_can_be_centred_on_most_of_the_filter() {
+        let offset = window_lo_offset(2_500_000.0, 1_536_000.0);
+        let span = centred_span(2_500_000.0, 1_536_000.0, offset);
+        assert!(span >= 1_300_000.0, "only {span} Hz can be held centred (offset {offset})");
+        assert!(span <= 1_536_000.0, "wider than the filter: {span}");
+    }
+
+    /// The offset is the old one wherever the filter is as wide as the rate,
+    /// and it never grows.
+    #[test]
+    fn the_offset_is_only_held_where_the_filter_is_narrower_than_the_rate() {
+        for (rate, bw) in [(8_000_000.0, 8_000_000.0), (6_000_000.0, 6_000_000.0)] {
+            assert_eq!(window_lo_offset(rate, bw), lo_offset_for(rate, bw), "{rate}/{bw}");
+        }
+        for (rate, bw) in [(2_500_000.0, 1_536_000.0), (2_000_000.0, 1_536_000.0)] {
+            assert!(window_lo_offset(rate, bw) <= lo_offset_for(rate, bw), "{rate}/{bw}");
+            assert!(window_lo_offset(rate, bw) > 0.0, "{rate}/{bw}: no offset at all");
+        }
     }
 }
