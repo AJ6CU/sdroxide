@@ -9465,3 +9465,21 @@ wxsat-frames = { $n } iyi çerçeve
 wxsat-waiting-lrpt = Henüz görüntü yok. Meteor LRPT dijitaldir: görüntü uydu duyulduktan birkaç saniye sonra sıra sıra başlar ve her kanal ayrı bir görüntüdür.
 
 wxsat-searching-frame = Çerçeve senkronu aranıyor
+
+qrzcard-loading = QRZ sorgulanıyor…
+
+qrzcard-not-found = QRZ'de bulunamadı.
+
+qrzcard-years = { $n } yaşında
+
+qrzcard-class = Sınıf: { $class }
+
+qrzcard-qsl-paper = kâğıt
+
+qrzcard-qsl-via = { $mgr } aracılığıyla
+
+qrzcard-switch = İmleç bir çağrı işaretinin üzerinde durunca QRZ kartını göster
+
+qrzcard-switch-hint = QRZ.com'dan fotoğraf, ad, yaş, adres, lokatör ve QSL; şelalede, çözücülerde ve spot listelerinde. Fotoğraf, e-posta ve doğum tarihi için QRZ XML aboneliği gerekir.
+
+qrzcard-needs-login = Kartı etkinleştirmek için sağlayıcı olarak QRZ'yi seçin ve QRZ kullanıcı adı ile parolanızı girin.

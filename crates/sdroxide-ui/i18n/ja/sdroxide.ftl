@@ -9413,3 +9413,21 @@ wxsat-frames = 良好なフレーム { $n }
 wxsat-waiting-lrpt = まだ画像がありません。Meteor の LRPT はデジタルです。衛星を受信して数秒後から1行ずつ画像が現れ、各チャンネルは別々の画像です。
 
 wxsat-searching-frame = フレーム同期を探しています
+
+qrzcard-loading = QRZ を検索中…
+
+qrzcard-not-found = QRZ に見つかりません。
+
+qrzcard-years = { $n } 歳
+
+qrzcard-class = クラス: { $class }
+
+qrzcard-qsl-paper = 紙
+
+qrzcard-qsl-via = { $mgr } 経由
+
+qrzcard-switch = コールサインにカーソルを置くと QRZ カードを表示
+
+qrzcard-switch-hint = QRZ.com の写真・氏名・年齢・住所・ロケーター・QSL を、ウォーターフォール、デコーダー、スポット一覧に表示します。写真、メール、生年月日には QRZ XML の購読が必要です。
+
+qrzcard-needs-login = カードを有効にするには、プロバイダーに QRZ を選び、QRZ のユーザー名とパスワードを入力してください。

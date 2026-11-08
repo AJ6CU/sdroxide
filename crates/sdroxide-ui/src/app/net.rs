@@ -152,18 +152,23 @@ impl SdroxideApp {
     /// Merge a callsign-lookup result into the open log entry and, if none
     /// matches, into the most recent logged QSO for that call — filling only
     /// blank fields.
-    pub(in crate::app) fn apply_callsign(&mut self, info: CallsignInfo) {
-        let mut summary = info.call.clone();
-        if let Some(n) = &info.name {
-            summary.push_str(&format!(" — {n}"));
+    ///
+    /// `log` is false for a result the QRZ card asked for by itself: a pointer
+    /// passing over a list of callsigns would otherwise fill the net log.
+    pub(in crate::app) fn apply_callsign(&mut self, info: CallsignInfo, log: bool) {
+        if log {
+            let mut summary = info.call.clone();
+            if let Some(n) = &info.name {
+                summary.push_str(&format!(" — {n}"));
+            }
+            if let Some(q) = &info.qth {
+                summary.push_str(&format!(", {q}"));
+            }
+            if let Some(c) = &info.country {
+                summary.push_str(&format!(" ({c})"));
+            }
+            self.push_net_log(summary);
         }
-        if let Some(q) = &info.qth {
-            summary.push_str(&format!(", {q}"));
-        }
-        if let Some(c) = &info.country {
-            summary.push_str(&format!(" ({c})"));
-        }
-        self.push_net_log(summary);
         // Keep the whole record: the JS8 map places stations by the grid in it,
         // and that station may never have a log entry to merge into.
         self.callsign_cache.insert(info.call.to_ascii_uppercase(), info.clone());

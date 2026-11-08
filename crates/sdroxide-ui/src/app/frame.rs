@@ -2267,6 +2267,14 @@ impl eframe::App for SdroxideApp {
         // page is drawn through `&self`.
         self.wavelog_tick(&mut cmds);
 
+        // The QRZ card: whether it is on for the next frame, and the callsigns
+        // this frame's hovers asked it for. These go out whatever `auto_lookup`
+        // says — that switch is about filling the log form, this one is the
+        // card's own.
+        crate::callsign_card::set_active(&ctx, self.net_cfg_edit.qrz_card_active());
+        for call in crate::callsign_card::take_requests(&ctx) {
+            self.pending_lookups.push(call);
+        }
         // Flush queued lookups / uploads accumulated during window rendering.
         for call in std::mem::take(&mut self.pending_lookups) {
             cmds.push(Command::LookupCallsign { call });
@@ -4693,7 +4701,12 @@ impl SdroxideApp {
                 RadioEvent::MailMessage(m) => self.mail.on_message(m),
                 RadioEvent::MailSaved(mid) => self.mail.on_saved(mid),
                 RadioEvent::MailDeleted { folder, mid } => self.mail.on_deleted(folder, &mid),
-                RadioEvent::CallsignResult(info) => self.apply_callsign(info),
+                RadioEvent::CallsignResult(info) => {
+                    // The QRZ card keeps its own copy (photo included) and a
+                    // result it asked for is not news for the net log.
+                    let asked = crate::callsign_card::store(ctx, &info);
+                    self.apply_callsign(info, !asked);
+                }
                 RadioEvent::Upload(r) => self.on_upload_result(r),
                 RadioEvent::Confirmations(recs) => self.apply_confirmations(recs),
                 // Folded here rather than queued for the map's own pass: these
