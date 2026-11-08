@@ -61,6 +61,12 @@ pub struct MeshtasticSettings {
     /// Where the radio was before the lane tuned it; `None` while the lane has
     /// not moved it.
     pub restore: Option<MeshtasticRestore>,
+    /// This station's node number, the sender of what it transmits. `0` until
+    /// the first transmission, when the engine draws one and keeps it here
+    /// (a client's value is replaced by the station's). Appended last, with a
+    /// default, so a `meshtastic.json` written before it still loads.
+    #[serde(default)]
+    pub node_id: u32,
 }
 
 impl Default for MeshtasticSettings {
@@ -72,8 +78,49 @@ impl Default for MeshtasticSettings {
             frequency_hz: MESH_DEFAULT_HZ,
             keys: String::new(),
             restore: None,
+            node_id: 0,
         }
     }
+}
+
+/// A text message the operator asks the station to send on the channel.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MeshtasticSend {
+    /// The words. Empty, or longer than [`MESH_TX_TEXT_MAX`] bytes, is refused.
+    pub text: String,
+    /// The destination node, or `0xFFFFFFFF` for everyone.
+    pub to: u32,
+}
+
+/// The longest text one frame carries, in bytes.
+pub const MESH_TX_TEXT_MAX: usize = 200;
+
+/// Why the station did not transmit a message, for the panel to say in the
+/// operator's language.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub enum MeshTxRefusal {
+    /// The transmit band list refuses the channel's frequency (not ticked, not
+    /// confirmed, or "Other"): the same lock every transmission meets.
+    Band(crate::TxBlock),
+    /// The duty cycle of the region leaves no room yet; try again in this many
+    /// seconds.
+    DutyCycle(u32),
+    /// One frame is longer than the whole duty-cycle budget.
+    TooLong,
+    /// The radio is not on the channel: switch the receiver on with "Listen
+    /// here" first, so the dial is on it.
+    OffChannel,
+    /// This radio cannot send raw I/Q (a rig that takes audio, or a receive-only
+    /// device).
+    NoTransmitter,
+    /// The text is empty or too long, or the key cannot encrypt it.
+    BadText,
+    /// A transmission is already in progress.
+    Busy,
+    /// The key-down itself was refused by the transmit rails (a receive-only
+    /// mode, the SWR latch, the station interlock...); the transmit message
+    /// that came with it says which.
+    Rails,
 }
 
 fn clip(s: &mut String, max: usize) {
@@ -185,6 +232,18 @@ pub struct MeshtasticStatus {
     pub nodes: Vec<MeshNode>,
     /// Newest first.
     pub log: Vec<MeshEntry>,
+    /// Why the last attempt to transmit was refused; `None` after one went out
+    /// or before any was tried. Appended with the transmit side.
+    pub tx_refused: Option<MeshTxRefusal>,
+    /// A transmission is in progress.
+    pub tx_busy: bool,
+    /// Messages sent since the receiver was switched on.
+    pub tx_sent: u32,
+    /// Air time used in the last hour, in milliseconds.
+    pub tx_used_ms: u32,
+    /// The hour's air-time budget in milliseconds; `None` where the region has
+    /// no limit here.
+    pub tx_budget_ms: Option<u32>,
 }
 
 #[cfg(test)]

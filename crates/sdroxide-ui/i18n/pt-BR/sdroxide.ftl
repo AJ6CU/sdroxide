@@ -9545,3 +9545,43 @@ extras-meshtastic-hint = Meshtastic: o tráfego da malha LoRa de um canal, os n�
 settings-ui-meshtastic-on = Mostrar o painel
 
 settings-ui-meshtastic-hint = Adiciona os botões do Meshtastic à janela Extras e à bancada experimental do menu de modos e permite abrir a janela. A janela se acopla à principal ou vai para a sua com o botão da barra de título. Desligar fecha a janela; o receptor para pelo interruptor da própria janela.
+
+meshtastic-message = Mensagem
+
+meshtastic-message-hint = Texto para todos no canal (no máximo 200 bytes)
+
+meshtastic-send = Enviar…
+
+meshtastic-send-hint = Transmite este texto no canal, após a sua confirmação. A lista de bandas de transmissão em Configurações, Rádio decide se o rádio pode transmitir aqui; o rádio precisa estar no canal (Ouvir aqui).
+
+meshtastic-confirm = Transmitir agora em { $freq } MHz ({ $air } s no ar)? Todos ao alcance vão ouvir, e você responde por isso conforme a sua licença e as regras desta banda.
+
+meshtastic-confirm-yes = Transmitir
+
+meshtastic-confirm-no = Cancelar
+
+meshtastic-transmitting = TRANSMITINDO…
+
+meshtastic-tx-airtime = Tempo no ar nesta hora: { $used } s de { $budget } s
+
+meshtastic-tx-airtime-free = Tempo no ar nesta hora: { $used } s (nenhum limite definido para esta região)
+
+meshtastic-tx-sent = { $n } enviado(s)
+
+meshtastic-tx-band-off = TRANSMISSÃO PROIBIDA — { $freq } MHz ({ $band }) não é uma banda de transmissão validada. Marque e valide em Configurações → Rádio → Bandas de transmissão.
+
+meshtastic-tx-unconfirmed = TRANSMISSÃO PROIBIDA — as bandas de transmissão deste rádio ainda não foram validadas. Verifique e confirme em Configurações → Rádio → Bandas de transmissão.
+
+meshtastic-tx-duty = Ciclo de trabalho atingido para esta região: aguarde { $s } s antes da próxima mensagem.
+
+meshtastic-tx-too-long = Esta mensagem sozinha é mais longa que todo o orçamento de tempo no ar de uma hora para esta região.
+
+meshtastic-tx-off-channel = O rádio não está no canal: pressione primeiro Ouvir aqui, para que o dial fique nele.
+
+meshtastic-tx-no-transmitter = Este rádio não pode enviar I/Q bruto (um rádio que recebe áudio, ou um dispositivo só de recepção).
+
+meshtastic-tx-bad-text = O texto está vazio ou é longo demais (no máximo 200 bytes).
+
+meshtastic-tx-busy = Já há uma transmissão em andamento.
+
+meshtastic-tx-rails = O transmissor se recusou a transmitir: veja a mensagem de transmissão para o motivo.

@@ -9553,3 +9553,43 @@ extras-meshtastic-hint = Meshtastic: het LoRa-meshverkeer van één kanaal, de g
 settings-ui-meshtastic-on = Paneel tonen
 
 settings-ui-meshtastic-hint = Voegt de Meshtastic-knoppen toe aan het Extras-venster en aan de experimentele bank van het modusmenu en laat het venster openen. Het venster dockt in het hoofdvenster of gaat met de knop in de titelbalk naar een eigen venster. Uitzetten sluit het venster; de ontvanger stopt met de schakelaar van het venster zelf.
+
+meshtastic-message = Bericht
+
+meshtastic-message-hint = Tekst voor iedereen op het kanaal (maximaal 200 bytes)
+
+meshtastic-send = Verzenden…
+
+meshtastic-send-hint = Zendt deze tekst uit op het kanaal, na uw bevestiging. De lijst met zendbanden in Instellingen, Radio bepaalt of de radio hier mag zenden; de radio moet op het kanaal staan (Hier luisteren).
+
+meshtastic-confirm = Nu uitzenden op { $freq } MHz ({ $air } s zendtijd)? Iedereen binnen bereik hoort het, en u staat ervoor in volgens uw vergunning en de regels van deze band.
+
+meshtastic-confirm-yes = Zenden
+
+meshtastic-confirm-no = Annuleren
+
+meshtastic-transmitting = ZENDT…
+
+meshtastic-tx-airtime = Zendtijd dit uur: { $used } s van { $budget } s
+
+meshtastic-tx-airtime-free = Zendtijd dit uur: { $used } s (geen limiet ingesteld voor deze regio)
+
+meshtastic-tx-sent = { $n } verzonden
+
+meshtastic-tx-band-off = ZENDEN VERBODEN — { $freq } MHz ({ $band }) is geen gevalideerde zendband. Vink aan en valideer in Instellingen → Radio → Zendbanden.
+
+meshtastic-tx-unconfirmed = ZENDEN VERBODEN — de zendbanden van deze radio zijn nog niet gevalideerd. Controleer en bevestig ze in Instellingen → Radio → Zendbanden.
+
+meshtastic-tx-duty = Dutycycle voor deze regio bereikt: wacht { $s } s voor het volgende bericht.
+
+meshtastic-tx-too-long = Dit bericht alleen al is langer dan het hele zendtijdbudget van een uur voor deze regio.
+
+meshtastic-tx-off-channel = De radio staat niet op het kanaal: druk eerst op Hier luisteren, zodat de afstemming erop staat.
+
+meshtastic-tx-no-transmitter = Deze radio kan geen ruwe I/Q zenden (een rig die audio neemt, of een ontvanger zonder zender).
+
+meshtastic-tx-bad-text = De tekst is leeg of te lang (maximaal 200 bytes).
+
+meshtastic-tx-busy = Er is al een uitzending bezig.
+
+meshtastic-tx-rails = De zender weigerde te zenden: zie de zendmelding voor de reden.

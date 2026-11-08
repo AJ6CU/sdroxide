@@ -304,6 +304,8 @@ fn run(
                             crc_bad,
                             nodes,
                             log,
+                            // The transmit half is the engine's: it fills it in.
+                            ..MeshtasticStatus::default()
                         });
                     }
                 }

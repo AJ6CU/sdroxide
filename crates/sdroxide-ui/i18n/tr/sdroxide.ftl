@@ -9545,3 +9545,43 @@ extras-meshtastic-hint = Meshtastic: tek bir kanalın LoRa ağ trafiği, duyulan
 settings-ui-meshtastic-on = Paneli göster
 
 settings-ui-meshtastic-hint = Meshtastic düğmelerini Ekstralar penceresine ve mod menüsünün deneysel bölümüne ekler ve pencerenin açılmasına izin verir. Pencere ana pencereye yerleşir veya başlık çubuğu düğmesiyle kendi penceresine geçer. Kapatmak pencereyi kapatır; alıcı pencerenin kendi anahtarıyla durur.
+
+meshtastic-message = Mesaj
+
+meshtastic-message-hint = Kanaldaki herkes için metin (en fazla 200 bayt)
+
+meshtastic-send = Gönder…
+
+meshtastic-send-hint = Onayınızdan sonra bu metni kanalda yayınlar. Ayarlar, Radyo bölümündeki yayın bandı listesi burada yayın yapılıp yapılamayacağına karar verir; radyo kanalda olmalıdır (Burayı dinle).
+
+meshtastic-confirm = Şimdi { $freq } MHz üzerinde yayın yapılsın mı ({ $air } sn yayın süresi)? Menzildeki herkes duyacak ve bundan lisansınız ile bu bandın kuralları uyarınca siz sorumlusunuz.
+
+meshtastic-confirm-yes = Yayınla
+
+meshtastic-confirm-no = İptal
+
+meshtastic-transmitting = YAYINDA…
+
+meshtastic-tx-airtime = Bu saatte yayın süresi: { $used } sn / { $budget } sn
+
+meshtastic-tx-airtime-free = Bu saatte yayın süresi: { $used } sn (bu bölge için sınır tanımlı değil)
+
+meshtastic-tx-sent = { $n } gönderildi
+
+meshtastic-tx-band-off = YAYIN YASAK — { $freq } MHz ({ $band }) onaylanmış bir yayın bandı değil. Ayarlar → Radyo → Yayın bantları bölümünde işaretleyip onaylayın.
+
+meshtastic-tx-unconfirmed = YAYIN YASAK — bu radyonun yayın bantları henüz onaylanmadı. Ayarlar → Radyo → Yayın bantları bölümünde kontrol edip onaylayın.
+
+meshtastic-tx-duty = Bu bölge için görev döngüsü sınırına ulaşıldı: sonraki mesajdan önce { $s } sn bekleyin.
+
+meshtastic-tx-too-long = Bu mesaj tek başına bu bölge için bir saatlik yayın süresi bütçesinin tamamından uzun.
+
+meshtastic-tx-off-channel = Radyo kanalda değil: önce Burayı dinle düğmesine basın, böylece kadran kanala gelir.
+
+meshtastic-tx-no-transmitter = Bu radyo ham I/Q gönderemez (ses alan bir telsiz veya yalnızca alıcı bir cihaz).
+
+meshtastic-tx-bad-text = Metin boş ya da çok uzun (en fazla 200 bayt).
+
+meshtastic-tx-busy = Zaten bir yayın sürüyor.
+
+meshtastic-tx-rails = Verici yayına geçmeyi reddetti: nedeni yayın mesajında görün.

@@ -9493,3 +9493,43 @@ extras-meshtastic-hint = Meshtastic：1つのチャンネルのLoRaメッシュ�
 settings-ui-meshtastic-on = パネルを表示
 
 settings-ui-meshtastic-hint = ExtrasウィンドウとモードメニューのExperimental欄にMeshtasticのチップを追加し、ウィンドウを開けるようにします。ウィンドウはメインに結合するか、タイトルバーのボタンで別ウィンドウにできます。オフにするとウィンドウが閉じます。受信機の停止はウィンドウ内のスイッチで行います。
+
+meshtastic-message = メッセージ
+
+meshtastic-message-hint = チャンネルの全員へ送る文章（最大200バイト）
+
+meshtastic-send = 送信…
+
+meshtastic-send-hint = 確認後、この文章をチャンネルで送信します。ここで送信できるかどうかは、設定の無線にある送信バンド一覧が決めます。無線機はチャンネルに合わせておく必要があります（ここで受信）。
+
+meshtastic-confirm = 今すぐ { $freq } MHz で送信しますか（送信時間 { $air } 秒）？範囲内の全員に聞こえます。免許とこのバンドの規則に基づき、責任は操作者にあります。
+
+meshtastic-confirm-yes = 送信する
+
+meshtastic-confirm-no = キャンセル
+
+meshtastic-transmitting = 送信中…
+
+meshtastic-tx-airtime = この1時間の送信時間：{ $used } 秒 / { $budget } 秒
+
+meshtastic-tx-airtime-free = この1時間の送信時間：{ $used } 秒（この地域には上限の設定なし）
+
+meshtastic-tx-sent = 送信済み { $n }
+
+meshtastic-tx-band-off = 送信禁止 — { $freq } MHz（{ $band }）は確認済みの送信バンドではありません。設定 → 無線 → 送信バンドでチェックして確認してください。
+
+meshtastic-tx-unconfirmed = 送信禁止 — この無線機の送信バンドはまだ確認されていません。設定 → 無線 → 送信バンドで確認してください。
+
+meshtastic-tx-duty = この地域のデューティサイクル上限に達しました。次のメッセージまで { $s } 秒お待ちください。
+
+meshtastic-tx-too-long = このメッセージだけで、この地域の1時間分の送信時間の上限を超えています。
+
+meshtastic-tx-off-channel = 無線機がチャンネルに合っていません。先に「ここで受信」を押して、ダイヤルを合わせてください。
+
+meshtastic-tx-no-transmitter = この無線機は生のI/Qを送信できません（音声を受け取る無線機、または受信専用の機器）。
+
+meshtastic-tx-bad-text = 文章が空か長すぎます（最大200バイト）。
+
+meshtastic-tx-busy = すでに送信中です。
+
+meshtastic-tx-rails = 送信機が送信状態になりませんでした。理由は送信メッセージをご覧ください。

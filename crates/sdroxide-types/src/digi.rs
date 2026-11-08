@@ -3771,6 +3771,10 @@ pub fn adif_band(freq_hz: f64) -> &'static str {
         // exactly as 11 m and the broadcast services do.
         m if (446.0..446.2).contains(&m) => "",
         m if m < 450.1 => "70cm",
+        // Between 70 cm and 33 cm (902-928) there is no amateur band, and the
+        // 868 MHz licence-free band sits in that gap: not an amateur contact,
+        // so no ADIF band, like PMR446 above.
+        m if m < 902.0 => "",
         m if m < 928.1 => "33cm",
         m if m < 1300.1 => "23cm",
         m if m < 2450.1 => "13cm",

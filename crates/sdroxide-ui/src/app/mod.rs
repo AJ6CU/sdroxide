@@ -787,6 +787,10 @@ pub struct SdroxideApp {
     /// The key list being typed in the MESHTASTIC window, `None` until the
     /// field is first drawn; sent to the station when the field is left.
     meshtastic_keys: Option<String>,
+    /// The message being typed in the MESHTASTIC window, and whether the
+    /// operator has pressed Send and is being asked to confirm it.
+    meshtastic_draft: String,
+    meshtastic_confirming: bool,
     /// HFDL: the aircraft plot table and the map's pan/zoom and selection. Its
     /// own table rather than the decode log's, so an aircraft stays on the map
     /// after its earliest decodes have scrolled out of the log.
@@ -2404,6 +2408,8 @@ impl SdroxideApp {
             meshtastic_status: None,
             show_meshtastic: false,
             meshtastic_keys: None,
+            meshtastic_draft: String::new(),
+            meshtastic_confirming: false,
             hfdl_map: crate::hfdl_map::HfdlMapState::default(),
             sonde_map: crate::sonde_map::SondeMapState::default(),
             sonde_online: crate::sonde_online::Online::default(),

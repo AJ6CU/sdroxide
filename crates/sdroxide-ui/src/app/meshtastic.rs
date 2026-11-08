@@ -17,7 +17,7 @@ use eframe::egui::{self, RichText};
 use sdroxide_meshtastic::protocol::{
     PRESETS, Preset, REGIONS, Region, lookup_preset, lookup_region, port_name,
 };
-use sdroxide_types::{Command, MeshtasticSettings, MeshtasticStatus, RxBlock};
+use sdroxide_types::{Command, MeshTxRefusal, MeshtasticSettings, MeshtasticStatus, RxBlock};
 
 const WINDOW_SIZE: [f32; 2] = [780.0, 600.0];
 
@@ -110,6 +110,53 @@ fn rx_block_text(why: RxBlock, hz: f64) -> String {
             band = crate::app::tx_bands::tx_band_label(b)
         ),
         RxBlock::Unconfirmed => tr!("meshtastic-refused-unconfirmed"),
+    }
+}
+
+/// How long `text` would last on the air with these settings, in seconds, for
+/// the confirmation. The sender's number does not change the length, so a
+/// stand-in is used.
+pub(in crate::app) fn estimated_airtime_s(cfg: &MeshtasticSettings, text: &str) -> f64 {
+    let (preset, region) = (preset_of(cfg), region_of(cfg));
+    sdroxide_meshtastic::tx::build_text_frame(
+        0x100,
+        sdroxide_meshtastic::protocol::BROADCAST_NODE,
+        1,
+        text,
+        preset,
+        &sdroxide_meshtastic::protocol::DEFAULT_PSK,
+    )
+    .map_or(0.0, |f| {
+        sdroxide_meshtastic::tx::airtime_s(f.len(), &sdroxide_meshtastic::tx::tx_params(preset, region))
+    })
+}
+
+/// The name of the band a refusal speaks of.
+fn tx_band_name(b: sdroxide_types::Band) -> String {
+    match b {
+        sdroxide_types::Band::Gen => tr!("settings-other"),
+        b => crate::app::tx_bands::tx_band_label(b),
+    }
+}
+
+/// Why the station did not transmit, in the operator's language.
+pub(in crate::app) fn tx_refusal_text(why: MeshTxRefusal, hz: f64) -> String {
+    use sdroxide_types::TxBlock;
+    match why {
+        MeshTxRefusal::Band(TxBlock::BandOff(b)) => tr!(
+            "meshtastic-tx-band-off",
+            freq = format!("{:.3}", hz / 1e6),
+            band = tx_band_name(b)
+        ),
+        MeshTxRefusal::Band(TxBlock::CbOff) => tr!("tx-off-cb"),
+        MeshTxRefusal::Band(TxBlock::Unconfirmed) => tr!("meshtastic-tx-unconfirmed"),
+        MeshTxRefusal::DutyCycle(s) => tr!("meshtastic-tx-duty", s = s),
+        MeshTxRefusal::TooLong => tr!("meshtastic-tx-too-long"),
+        MeshTxRefusal::OffChannel => tr!("meshtastic-tx-off-channel"),
+        MeshTxRefusal::NoTransmitter => tr!("meshtastic-tx-no-transmitter"),
+        MeshTxRefusal::BadText => tr!("meshtastic-tx-bad-text"),
+        MeshTxRefusal::Busy => tr!("meshtastic-tx-busy"),
+        MeshTxRefusal::Rails => tr!("meshtastic-tx-rails"),
     }
 }
 
@@ -265,7 +312,99 @@ impl super::SdroxideApp {
 
         self.meshtastic_status_line(ui, &cfg);
         ui.separator();
+        self.meshtastic_send_row(ui, &cfg, cmds);
+        ui.separator();
         self.meshtastic_tables(ui);
+    }
+
+    /// The transmit half: the message field, the confirmation, and what the
+    /// station answered. The panel decides nothing here: the transmit band list
+    /// and the duty cycle are the engine's, and a refusal comes back in the
+    /// status to be worded.
+    fn meshtastic_send_row(
+        &mut self,
+        ui: &mut egui::Ui,
+        cfg: &MeshtasticSettings,
+        cmds: &mut Vec<Command>,
+    ) {
+        let st: Option<&MeshtasticStatus> = self.meshtastic_status.as_deref();
+        let busy = st.is_some_and(|s| s.tx_busy);
+        let text_ok = !self.meshtastic_draft.is_empty()
+            && self.meshtastic_draft.len() <= sdroxide_types::MESH_TX_TEXT_MAX;
+
+        ui.horizontal(|ui| {
+            ui.label(tr!("meshtastic-message"));
+            let r = crate::chrome::field_sized(
+                ui,
+                egui::vec2((ui.available_width() - 90.0).max(160.0), 0.0),
+                egui::TextEdit::singleline(&mut self.meshtastic_draft)
+                    .hint_text(tr!("meshtastic-message-hint")),
+            );
+            // Typing again withdraws a confirmation that was about other words.
+            if r.changed() {
+                self.meshtastic_confirming = false;
+            }
+            if crate::chrome::chip_enabled(ui, text_ok && !busy, false, &tr!("meshtastic-send"))
+                .on_hover_text(tr!("meshtastic-send-hint"))
+                .clicked()
+            {
+                self.meshtastic_confirming = true;
+            }
+        });
+
+        // Always asked: a transmission cannot be taken back, and it is the
+        // operator's own responsibility on air.
+        if self.meshtastic_confirming && text_ok {
+            let air = estimated_airtime_s(cfg, &self.meshtastic_draft);
+            ui.horizontal_wrapped(|ui| {
+                ui.label(
+                    RichText::new(tr!(
+                        "meshtastic-confirm",
+                        freq = format!("{:.4}", cfg.frequency_hz / 1e6),
+                        air = format!("{air:.1}")
+                    ))
+                    .color(egui::Color32::from_rgb(230, 170, 60)),
+                );
+                if crate::chrome::chip(ui, false, tr!("meshtastic-confirm-yes")).clicked() {
+                    cmds.push(Command::SendMeshtastic(sdroxide_types::MeshtasticSend {
+                        text: std::mem::take(&mut self.meshtastic_draft),
+                        to: sdroxide_meshtastic::protocol::BROADCAST_NODE,
+                    }));
+                    self.meshtastic_confirming = false;
+                }
+                if crate::chrome::chip(ui, false, tr!("meshtastic-confirm-no")).clicked() {
+                    self.meshtastic_confirming = false;
+                }
+            });
+        }
+
+        let dim = |s: String| RichText::new(s).size(11.0).color(crate::theme::gray(160));
+        if let Some(st) = st {
+            if st.tx_busy {
+                ui.label(
+                    RichText::new(tr!("meshtastic-transmitting"))
+                        .strong()
+                        .color(egui::Color32::from_rgb(230, 90, 80)),
+                );
+            } else if let Some(why) = st.tx_refused {
+                ui.label(
+                    RichText::new(tx_refusal_text(why, cfg.frequency_hz))
+                        .color(egui::Color32::from_rgb(230, 90, 80)),
+                );
+            }
+            ui.horizontal_wrapped(|ui| {
+                let used = format!("{:.1}", f64::from(st.tx_used_ms) / 1000.0);
+                ui.label(dim(match st.tx_budget_ms {
+                    Some(b) => tr!(
+                        "meshtastic-tx-airtime",
+                        used = used,
+                        budget = format!("{:.0}", f64::from(b) / 1000.0)
+                    ),
+                    None => tr!("meshtastic-tx-airtime-free", used = used),
+                }));
+                ui.label(dim(tr!("meshtastic-tx-sent", n = st.tx_sent)));
+            });
+        }
     }
 
     fn meshtastic_status_line(&self, ui: &mut egui::Ui, cfg: &MeshtasticSettings) {
@@ -424,6 +563,38 @@ mod tests {
         assert_eq!(cmds.len(), 2);
         assert!(matches!(&cmds[0], Command::SetMeshtasticConfig(c) if c.enabled));
         assert!(matches!(cmds[1], Command::TuneWidebandTo(f) if f == 869_525_000.0));
+    }
+
+    #[test]
+    fn every_refusal_has_words_and_the_band_one_names_the_band() {
+        use sdroxide_types::{Band, TxBlock};
+        for why in [
+            MeshTxRefusal::Band(TxBlock::BandOff(Band::Gen)),
+            MeshTxRefusal::Band(TxBlock::Unconfirmed),
+            MeshTxRefusal::Band(TxBlock::CbOff),
+            MeshTxRefusal::DutyCycle(42),
+            MeshTxRefusal::TooLong,
+            MeshTxRefusal::OffChannel,
+            MeshTxRefusal::NoTransmitter,
+            MeshTxRefusal::BadText,
+            MeshTxRefusal::Busy,
+            MeshTxRefusal::Rails,
+        ] {
+            assert!(!tx_refusal_text(why, 869_525_000.0).is_empty(), "{why:?}");
+        }
+        let t = tx_refusal_text(MeshTxRefusal::Band(TxBlock::BandOff(Band::Ism868)), 869_525_000.0);
+        assert!(t.contains("869.525") && t.contains("ISM868"), "{t}");
+        assert!(tx_refusal_text(MeshTxRefusal::DutyCycle(42), 0.0).contains("42"));
+    }
+
+    #[test]
+    fn the_confirmation_quotes_a_plausible_air_time() {
+        let cfg = MeshtasticSettings::default();
+        let short = estimated_airtime_s(&cfg, "hi");
+        let long = estimated_airtime_s(&cfg, &"x".repeat(150));
+        assert!((0.2..1.5).contains(&short), "{short}");
+        assert!(long > short, "{long} vs {short}");
+        assert_eq!(estimated_airtime_s(&cfg, ""), 0.0);
     }
 
     #[test]

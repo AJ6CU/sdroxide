@@ -510,6 +510,7 @@ const BANDS_ADDED_SINCE_THE_FILE: &[Band] = &[
     Band::Fm,
     Band::Air,
     Band::Mil,
+    Band::Ism868,
 ];
 
 impl TryFrom<PlanFile> for BandPlan {
