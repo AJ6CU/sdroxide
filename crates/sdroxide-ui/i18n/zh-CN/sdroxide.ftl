@@ -9314,3 +9314,19 @@ settings-general-band-plan-radio-hint = 仅在此电台上使用方案。电台�
 settings-general-band-plan-run-radio = 仅此电台
 
 settings-general-band-plan-radio-tag = 此电台
+
+meter-view-auto = 自动
+
+meter-view-rx = 信号 (RX)
+
+meter-view-power = 功率
+
+meter-view-swr = 驻波比
+
+meter-view-alc = ALC
+
+smeter-arrow-prev-hover = 上一个读数：{ $view }{ $when }
+
+smeter-arrow-next-hover = 下一个读数：{ $view }{ $when }
+
+smeter-arrow-on-receive = (发射时使用)

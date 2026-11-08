@@ -1162,11 +1162,15 @@ impl SdroxideApp {
                                 reading = smeter::hover_text(self.meters.as_ref(), self.meter_is_audio()),
                                 faces = tr!("topbar-bar-trace")
                             );
-                            let resp =
-                                smeter::show(ui, self.meters.as_ref(), style.compact(), true)
-                                    .on_hover_text(hover);
+                            let view = self.ui_settings.smeter_view;
+                            let (resp, turned) =
+                                smeter::show(ui, self.meters.as_ref(), style.compact(), view, true);
+                            let resp = resp.on_hover_text(hover);
                             if resp.clicked() {
                                 self.set_smeter_style(style.next_compact());
+                            }
+                            if let Some(v) = turned {
+                                self.set_smeter_view(v);
                             }
                         },
                     );
@@ -2421,6 +2425,15 @@ impl SdroxideApp {
         }
     }
 
+    /// Take the view an arrow on the meter turned to and write it out, for the
+    /// same reasons as [`Self::set_smeter_style`].
+    fn set_smeter_view(&mut self, view: sdroxide_types::MeterView) {
+        if self.ui_settings.smeter_view != view {
+            self.ui_settings.smeter_view = view;
+            crate::app::persist::persist_ui_settings(&self.ui_settings);
+        }
+    }
+
     /// The S-meter in a label-less box, always pinned top-right. Clicking it
     /// cycles the needle / bar / trace faces.
     ///
@@ -2443,20 +2456,27 @@ impl SdroxideApp {
     fn smeter_box(&mut self, ui: &mut egui::Ui, w: f32, h: f32, compact: bool, outline: bool) {
         let style = self.ui_settings.smeter_style;
         let shown = if compact { style.compact() } else { style };
+        let view = self.ui_settings.smeter_view;
         let mut picked = None;
+        let mut turned = None;
         crate::chrome::module_bare_flush_h(ui, w, h, |ui| {
             let hover = tr!(
                 "topbar-smeter-hover",
                 reading = smeter::hover_text(self.meters.as_ref(), self.meter_is_audio()),
                 faces = if compact { tr!("topbar-bar-trace") } else { tr!("topbar-needle-bar-trace") }
             );
-            let resp = smeter::show(ui, self.meters.as_ref(), shown, outline).on_hover_text(hover);
+            let (resp, turn) = smeter::show(ui, self.meters.as_ref(), shown, view, outline);
+            turned = turn;
+            let resp = resp.on_hover_text(hover);
             if resp.clicked() {
                 picked = Some(if compact { style.next_compact() } else { style.next() });
             }
         });
         if let Some(style) = picked {
             self.set_smeter_style(style);
+        }
+        if let Some(view) = turned {
+            self.set_smeter_view(view);
         }
     }
 

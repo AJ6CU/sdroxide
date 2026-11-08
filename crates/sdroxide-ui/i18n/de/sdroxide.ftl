@@ -9374,3 +9374,19 @@ settings-general-band-plan-radio-hint = Einen Plan nur auf diesem Funkgerät ver
 settings-general-band-plan-run-radio = NUR DIESES FUNKGERÄT
 
 settings-general-band-plan-radio-tag = dieses Funkgerät
+
+meter-view-auto = Auto
+
+meter-view-rx = Signal (RX)
+
+meter-view-power = Leistung
+
+meter-view-swr = SWR
+
+meter-view-alc = ALC
+
+smeter-arrow-prev-hover = Vorheriger Messwert: { $view }{ $when }
+
+smeter-arrow-next-hover = Nächster Messwert: { $view }{ $when }
+
+smeter-arrow-on-receive = (gilt beim Senden)

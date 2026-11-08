@@ -9391,3 +9391,19 @@ settings-general-band-plan-radio-hint = Использовать план тол
 settings-general-band-plan-run-radio = ТОЛЬКО ЭТО РАДИО
 
 settings-general-band-plan-radio-tag = это радио
+
+meter-view-auto = Авто
+
+meter-view-rx = Сигнал (RX)
+
+meter-view-power = Мощность
+
+meter-view-swr = КСВ
+
+meter-view-alc = АРУ передачи (ALC)
+
+smeter-arrow-prev-hover = Предыдущее показание: { $view }{ $when }
+
+smeter-arrow-next-hover = Следующее показание: { $view }{ $when }
+
+smeter-arrow-on-receive = (используется при передаче)

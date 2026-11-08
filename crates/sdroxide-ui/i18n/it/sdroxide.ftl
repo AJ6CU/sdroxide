@@ -9385,3 +9385,19 @@ settings-general-band-plan-radio-hint = Usa un piano solo su questa radio. Il pi
 settings-general-band-plan-run-radio = SOLO QUESTA RADIO
 
 settings-general-band-plan-radio-tag = questa radio
+
+meter-view-auto = Auto
+
+meter-view-rx = Segnale (RX)
+
+meter-view-power = Potenza
+
+meter-view-swr = ROS
+
+meter-view-alc = ALC
+
+smeter-arrow-prev-hover = Misura precedente: { $view }{ $when }
+
+smeter-arrow-next-hover = Misura successiva: { $view }{ $when }
+
+smeter-arrow-on-receive = (usata in trasmissione)

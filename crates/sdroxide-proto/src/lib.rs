@@ -2276,8 +2276,16 @@ use sdroxide_types::{
 /// `ServerMsg::RadioConfig` and `Command::SetRadioConfig` whole, so the appended
 /// field moves its layout. `#[serde(default)]`, so a `radio.json` written before
 /// this loads unchanged. `PROTO_VERSION` 277 → 278, `VERSION_BYTE` 0x61 → 0x62.
-pub const PROTO_VERSION: u16 = 278;
-const VERSION_BYTE: u8 = 0x62;
+///
+/// v279: **what the S-meter measures.** [`sdroxide_types::ClientScreen`] gains
+/// `smeter_view` (`MeterView`: auto, signal, power, SWR, ALC) at its tail, the
+/// choice the arrows on the meter make, kept with the profile like the face
+/// (`smeter_style`). `ClientScreen` rides `ClientMsg::SetClientSettings` and
+/// `ServerMsg::ClientSettings` whole, so the appended field moves its layout.
+/// `#[serde(default)]`, so a `config.toml` written before this loads unchanged.
+/// `PROTO_VERSION` 278 → 279, `VERSION_BYTE` 0x62 → 0x63.
+pub const PROTO_VERSION: u16 = 279;
+const VERSION_BYTE: u8 = 0x63;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -3575,7 +3583,7 @@ mod tests {
             ServerMsg::TxRefused(w, hz) => assert_eq!((w, hz), (why, 7_074_000.0)),
             _ => panic!("TxRefused did not round-trip"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (278, 0x62));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (279, 0x63));
     }
 
     /// The dynamic-DNS answer rides last on [`ServerMsg`], and it has to: the
@@ -3606,7 +3614,7 @@ mod tests {
             }
             other => panic!("the answer did not round-trip: {other:?}"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (278, 0x62));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (279, 0x63));
     }
 
     /// The VOR read-out rides the wire whole, locked or not, and the message is

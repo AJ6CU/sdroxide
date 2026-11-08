@@ -4877,6 +4877,31 @@ mod tests {
         assert_eq!(typo.ui.smeter_style, sdroxide_types::SmeterStyle::Needle);
     }
 
+    /// What the S-meter measures (signal, power, SWR, ALC) is turned with the
+    /// arrows on the meter and written at once, like the face, so it has to come
+    /// back too; power is the stock view, and a value that is not a view must
+    /// cost the operator the view, not the table.
+    #[test]
+    fn the_smeter_view_survives_a_toml_round_trip() {
+        let mut s = Settings::default();
+        assert_eq!(s.ui.smeter_view, sdroxide_types::MeterView::Auto, "stock view");
+        s.ui.smeter_view = sdroxide_types::MeterView::Swr;
+        let text = toml::to_string_pretty(&s).unwrap();
+        let back: Settings = toml::from_str(&text).unwrap();
+        assert_eq!(back.ui.smeter_view, sdroxide_types::MeterView::Swr);
+
+        let older: Settings = toml::from_str("[ui]\ntheme = \"AmberPhosphor\"\n").unwrap();
+        assert_eq!(older.ui.smeter_view, sdroxide_types::MeterView::Auto, "a config before it");
+        let typo: Settings = toml::from_str(
+            "[ui]\n\
+             theme = \"AmberPhosphor\"\n\
+             smeter_view = \"Watts\"\n",
+        )
+        .expect("an unknown view must still parse");
+        assert_eq!(typo.ui.theme, sdroxide_types::UiTheme::AmberPhosphor, "the table survived");
+        assert_eq!(typo.ui.smeter_view, sdroxide_types::MeterView::Auto);
+    }
+
     /// The FT8/FT4 decode list's own view preferences — the sort, its
     /// direction, the grouping and the two filters — ride in `[ui]` beside the
     /// theme, so they have to survive the same trip: a chip clicked in the

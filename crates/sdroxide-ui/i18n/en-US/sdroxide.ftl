@@ -9399,3 +9399,20 @@ settings-general-band-plan-radio-hint = Run a plan on this radio only. The stati
 settings-general-band-plan-run-radio = THIS RADIO ONLY
 
 settings-general-band-plan-radio-tag = this radio
+
+meter-view-auto = Auto
+
+meter-view-rx = Signal (RX)
+
+meter-view-power = Power
+
+meter-view-swr = SWR
+
+meter-view-alc = ALC
+
+# $view is the name of the reading (meter-view-*); $when is smeter-arrow-on-receive or empty.
+smeter-arrow-prev-hover = Previous reading: { $view }{ $when }
+
+smeter-arrow-next-hover = Next reading: { $view }{ $when }
+
+smeter-arrow-on-receive = (used when transmitting)

@@ -22,7 +22,7 @@ use eframe::egui::{
     epaint::{Mesh, Vertex, WHITE_UV},
     pos2, vec2,
 };
-use sdroxide_types::Meters;
+use sdroxide_types::{MeterView, Meters, TxMeters};
 
 /// Scale endpoints: S0 = -127 dBm … S9+60 = -13 dBm.
 const DBM_LO: f32 = -127.0;
@@ -263,14 +263,102 @@ pub fn hover_text(meters: Option<&Meters>, audio_level: bool) -> String {
 /// `outline` draws the box outline the meter wears inside a strip module. A host
 /// with no box — the Classic UI bar, where the readout beside it has none either
 /// — asks for the face alone.
-pub fn show(ui: &mut Ui, meters: Option<&Meters>, style: SmeterStyle, outline: bool) -> Response {
+///
+/// `view` is what the operator asked it to measure. The second value is the view
+/// an arrow on the instrument turned to this frame, for the caller to keep; the
+/// response is the instrument's own, whose click cycles the face. A click on an
+/// arrow belongs to the arrow and is not also a click on the face.
+pub fn show(
+    ui: &mut Ui,
+    meters: Option<&Meters>,
+    style: SmeterStyle,
+    view: MeterView,
+    outline: bool,
+) -> (Response, Option<MeterView>) {
     // Fill whatever the (zero-padding) box hands us.
     let size = ui.available_size();
-    match style {
-        SmeterStyle::Needle => show_needle(ui, meters, size, outline),
-        SmeterStyle::Bar => show_bar(ui, meters, size, outline),
-        SmeterStyle::Trace => show_trace(ui, meters, size, outline),
+    // The receiver is stood down while transmitting, so the Rx view has nothing
+    // live to show then. Remember the last reading from before the over.
+    let held_id = ui.id().with("smeter-last-rx");
+    let held = ui.data_mut(|d| {
+        if let Some(m) = meters.filter(|m| m.tx.is_none()) {
+            d.insert_temp(held_id, m.s_dbm);
+        }
+        d.get_temp::<f32>(held_id)
+    });
+    let resp = match style {
+        SmeterStyle::Needle => show_needle(ui, meters, size, outline, view, held),
+        SmeterStyle::Bar => show_bar(ui, meters, size, outline, view, held),
+        SmeterStyle::Trace => show_trace(ui, meters, size, outline, view, held),
+    };
+    let turned = arrows(ui, &resp, meters, view);
+    (resp, turned)
+}
+
+/// Room kept free at each side of the bar and trace faces for an arrow, in
+/// units of the face's own scale `k`.
+const ARROW_GUTTER: f32 = 16.0;
+
+/// Narrowest face that has the room to carry arrows.
+const ARROWS_MIN_W: f32 = 180.0;
+
+/// The two arrows at the sides of the face. Each turns the instrument to the
+/// previous or the next view; the one the click chose is returned.
+///
+/// Drawn after the face, over its edges, and given their own hit areas: the
+/// face is one big click target, and without these a click on an arrow would
+/// also cycle the face. On receive they are dimmed — the choice they make is
+/// kept for the next over, which the hover says.
+fn arrows(
+    ui: &mut Ui,
+    resp: &Response,
+    meters: Option<&Meters>,
+    view: MeterView,
+) -> Option<MeterView> {
+    let rect = resp.rect;
+    if rect.width() < ARROWS_MIN_W {
+        return None;
     }
+    let k = (rect.height() / 72.0).clamp(0.55, 2.0);
+    let (w, h) = (ARROW_GUTTER * k, rect.height() * 0.5);
+    let keyed = meters.is_some_and(|m| m.tx.is_some());
+    let mut picked = None;
+    for forward in [false, true] {
+        let cx = if forward { rect.right() - w * 0.5 - 1.0 } else { rect.left() + w * 0.5 + 1.0 };
+        let zone = Rect::from_center_size(pos2(cx, rect.center().y), vec2(w, h));
+        let target = turn(meters, view, forward);
+        let name = crate::i18n::Tr::tr(target);
+        let when =
+            if keyed { String::new() } else { format!(" {}", tr!("smeter-arrow-on-receive")) };
+        let hover = if forward {
+            tr!("smeter-arrow-next-hover", view = name, when = when)
+        } else {
+            tr!("smeter-arrow-prev-hover", view = name, when = when)
+        };
+        let r = ui
+            .interact(zone, resp.id.with(("smeter-arrow", forward)), Sense::click())
+            .on_hover_cursor(eframe::egui::CursorIcon::PointingHand)
+            .on_hover_text(hover);
+        let ink = if r.hovered() {
+            READOUT()
+        } else if keyed {
+            READOUT().linear_multiply(0.8)
+        } else {
+            SUBDUED().linear_multiply(0.7)
+        };
+        let s = 4.5 * k.max(0.85);
+        let (tip, base) = if forward { (s * 0.8, -s * 0.6) } else { (-s * 0.8, s * 0.6) };
+        let c = zone.center();
+        ui.painter_at(rect).add(Shape::convex_polygon(
+            vec![pos2(c.x + base, c.y - s), pos2(c.x + base, c.y + s), pos2(c.x + tip, c.y)],
+            ink,
+            Stroke::NONE,
+        ));
+        if r.clicked() {
+            picked = Some(target);
+        }
+    }
+    picked
 }
 
 // ---------------------------------------------------------------------------
@@ -548,6 +636,8 @@ enum ScaleKind {
     Swr,
     Alc,
     Po,
+    /// Watts, over a full scale of this many.
+    Watts(u32),
 }
 
 /// A meter scale: its graduations, its gridlines, and the ramp along its rail.
@@ -679,8 +769,97 @@ struct Reading {
     right_alert: bool,
 }
 
-fn reading(meters: Option<&Meters>) -> Reading {
-    if let Some(tx) = meters.and_then(|m| m.tx.as_ref()) {
+/// What the instrument is measuring right now, once the operator's choice has
+/// been squared with what the radio actually reports.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum Shown {
+    /// The received signal (on transmit: the last one heard).
+    Rx,
+    /// Output power: the rig's PO needle, or measured watts.
+    Power,
+    Swr,
+    Alc,
+    /// Transmitting and the radio reports nothing but the engine's own drive.
+    Tx,
+}
+
+/// Whether the radio gives a figure for output power.
+fn power_known(tx: &TxMeters) -> bool {
+    tx.po.is_some() || tx.fwd_w.is_some()
+}
+
+/// Whether `view` has something to show right now. On receive nothing is
+/// pinned out — the choice is kept for the next over — so every view counts;
+/// while transmitting, a view the radio has no figure for does not.
+pub fn view_available(meters: Option<&Meters>, view: MeterView) -> bool {
+    match (meters.and_then(|m| m.tx.as_ref()), view) {
+        (_, MeterView::Auto | MeterView::Rx) | (None, _) => true,
+        (Some(tx), MeterView::Power) => power_known(tx),
+        (Some(tx), MeterView::Swr) => tx.swr.is_some(),
+        (Some(tx), MeterView::Alc) => tx.alc.is_some(),
+    }
+}
+
+/// The view an arrow turns to: the next (or previous) one with something to
+/// show, so the needle is never parked on a quantity nobody measures.
+pub fn turn(meters: Option<&Meters>, view: MeterView, forward: bool) -> MeterView {
+    let mut v = view;
+    for _ in 0..MeterView::ALL.len() {
+        v = if forward { v.next() } else { v.prev() };
+        if view_available(meters, v) {
+            return v;
+        }
+    }
+    view
+}
+
+/// What is drawn for the operator's `view`.
+///
+/// `Auto` — the stock choice — shows the signal on receive and **the output
+/// power on transmit**: the reading an operator keys up to see. A radio with no
+/// power figure falls back to SWR, then to the drive level, as it always did.
+/// A pinned view the radio cannot supply gives way to `Auto`.
+fn shown_view(meters: Option<&Meters>, view: MeterView) -> Shown {
+    let Some(tx) = meters.and_then(|m| m.tx.as_ref()) else { return Shown::Rx };
+    match view {
+        MeterView::Rx => Shown::Rx,
+        MeterView::Power if power_known(tx) => Shown::Power,
+        MeterView::Swr if tx.swr.is_some() => Shown::Swr,
+        MeterView::Alc if tx.alc.is_some() => Shown::Alc,
+        _ if power_known(tx) => Shown::Power,
+        _ if tx.swr.is_some() => Shown::Swr,
+        _ => Shown::Tx,
+    }
+}
+
+/// Full scale, in watts, of the smallest standard range that holds `w`.
+fn watts_range(w: f32) -> u32 {
+    const STEPS: [u32; 10] = [1, 5, 10, 25, 50, 100, 200, 500, 1000, 1500];
+    STEPS.into_iter().find(|s| w <= *s as f32).unwrap_or(1500)
+}
+
+/// 0…`max` W in ten divisions, for a rig that measures watts and has no PO
+/// needle. The range follows the reading (see [`watts_range`]) so a 5 W rig is
+/// not squeezed into the first tenth of a 100 W scale.
+fn watts_scale(max: u32) -> Scale {
+    let label = |f: f32| {
+        let w = max as f32 * f;
+        if max < 10 { format!("{w:.1}") } else { format!("{w:.0}") }
+    };
+    let ticks = (0..=10)
+        .map(|i| {
+            let f = i as f32 / 10.0;
+            let major = i % 5 == 0;
+            Tick { f, major, label: major.then(|| label(f)), hot: false }
+        })
+        .collect();
+    let grid = [0.25, 0.5, 0.75].into_iter().map(|f| grid_at(f, &label(f), false)).collect();
+    Scale { kind: ScaleKind::Watts(max), ticks, grid, stops: po_stops() }
+}
+
+fn reading(meters: Option<&Meters>, view: MeterView, held_rx: Option<f32>) -> Reading {
+    let shown = shown_view(meters, view);
+    if let (Some(tx), false) = (meters.and_then(|m| m.tx.as_ref()), shown == Shown::Rx) {
         // The rig's ALC, or a dash when it has not reported one. A false "0%"
         // for a rig that simply never answered is the bug in issue #600: the
         // operator cannot tell a barely-moving transmitter from one sdroxide
@@ -689,36 +868,62 @@ fn reading(meters: Option<&Meters>) -> Reading {
             Some(a) => format!("ALC {:.0}%", a.clamp(0.0, 1.0) * 100.0),
             None => "ALC —".to_string(),
         };
-        let power = match tx.fwd_w {
-            Some(w) => format!("{w:.1} W"),
-            None => alc_text,
+        let watts = tx.fwd_w.map(|w| format!("{w:.1} W"));
+        let po_text = tx.po.map(|p| format!("PO {:.0}%", p.clamp(0.0, 1.0) * 100.0));
+        let swr_text = tx.swr.map(|s| format!("SWR {s:.1}"));
+        let strong = |scale, frac, chip: String, right: String| Reading {
+            scale,
+            frac,
+            chip,
+            accent: RED(),
+            right,
+            right_strong: true,
+            right_alert: false,
         };
-        return match tx.swr {
-            Some(swr) => Reading {
-                scale: swr_scale(),
-                frac: swr_frac(swr),
-                chip: format!("SWR {swr:.1}"),
-                accent: RED(),
-                right: power,
-                right_strong: true,
-                right_alert: false,
+        return match shown {
+            Shown::Power => match (tx.po, tx.fwd_w) {
+                (Some(po), _) => {
+                    let right = watts.or(swr_text).unwrap_or(alc_text);
+                    strong(po_scale(), po.clamp(0.0, 1.0), po_text.unwrap_or_default(), right)
+                }
+                (None, w) => {
+                    let w = w.unwrap_or(0.0).max(0.0);
+                    let max = watts_range(w);
+                    let right = swr_text.unwrap_or(alc_text);
+                    strong(watts_scale(max), w / max as f32, format!("{w:.1} W"), right)
+                }
             },
-            // No SWR bridge: the needle falls back to the engine's own drive
-            // level, which is the only TX quantity every backend reports.
-            None => Reading {
-                scale: alc_scale(),
-                frac: tx.alc.unwrap_or(0.0).clamp(0.0, 1.0),
-                chip: "TX".to_string(),
-                accent: RED(),
-                right: power,
-                right_strong: true,
-                right_alert: false,
-            },
+            Shown::Swr => {
+                let right = watts.or(po_text).unwrap_or(alc_text);
+                let swr = tx.swr.unwrap_or(1.0);
+                strong(swr_scale(), swr_frac(swr), swr_text.unwrap_or_default(), right)
+            }
+            Shown::Alc => {
+                let right = watts.or(po_text).or(swr_text).unwrap_or_default();
+                strong(alc_scale(), tx.alc.unwrap_or(0.0).clamp(0.0, 1.0), alc_text, right)
+            }
+            // The radio reports nothing: the needle falls back to the engine's
+            // own drive level, which is the only TX quantity every backend
+            // reports.
+            _ => strong(
+                alc_scale(),
+                tx.alc.unwrap_or(0.0).clamp(0.0, 1.0),
+                "TX".to_string(),
+                watts.or(po_text).unwrap_or(alc_text),
+            ),
         };
     }
 
-    let dbm = meters.map(|m| m.s_dbm).unwrap_or(DBM_LO);
-    let (primary, secondary) = match meters {
+    // The signal. On transmit the receiver is stood down, so the Rx view shows
+    // the last reading from before the over, drawn dim; with none, a dash.
+    let keyed = meters.is_some_and(|m| m.tx.is_some());
+    let sig = match meters {
+        None => None,
+        Some(m) if keyed => held_rx.map(|dbm| Meters { s_dbm: dbm, ..*m }),
+        Some(m) => Some(*m),
+    };
+    let dbm = sig.map(|m| m.s_dbm).unwrap_or(DBM_LO);
+    let (primary, secondary) = match sig {
         None => ("—".to_string(), String::new()),
         Some(_) if dbm > S9_DBM => {
             (format!("S9+{:.0}", dbm - S9_DBM), format!("{dbm:.0} dBm", dbm = dbm))
@@ -729,12 +934,18 @@ fn reading(meters: Option<&Meters>) -> Reading {
     // sitting beside it, because the dBm is no longer a measurement: a clipped
     // carrier reads *lower* than it is, so leaving the number up would have the
     // instrument quietly disagreeing with the warning printed next to it.
-    let overload = meters.is_some_and(Meters::adc_overloaded);
+    let overload = !keyed && meters.is_some_and(Meters::adc_overloaded);
     Reading {
         scale: s_scale(),
         frac: frac_of(dbm),
         chip: primary,
-        accent: if overload { RED() } else { crate::theme::CYAN() },
+        accent: if overload {
+            RED()
+        } else if keyed {
+            SUBDUED()
+        } else {
+            crate::theme::CYAN()
+        },
         right: if overload { "OVL".to_string() } else { secondary },
         right_strong: overload,
         right_alert: overload,
@@ -1062,16 +1273,27 @@ fn bar_ticks(p: &Painter, bar: Rect, bounds: Rect, scale: &Scale, k: f32, num_to
     }
 }
 
-fn show_bar(ui: &mut Ui, meters: Option<&Meters>, size: Vec2, outline: bool) -> Response {
-    let tx = meters.and_then(|m| m.tx);
-    let (rect, resp) = face(ui, size, tx.is_some());
+fn show_bar(
+    ui: &mut Ui,
+    meters: Option<&Meters>,
+    size: Vec2,
+    outline: bool,
+    view: MeterView,
+    held: Option<f32>,
+) -> Response {
+    let keyed = meters.and_then(|m| m.tx);
+    let (rect, resp) = face(ui, size, keyed.is_some());
     let p = ui.painter_at(rect);
     let k = (rect.height() / 72.0).clamp(0.55, 2.0);
-    let r = reading(meters);
+    let r = reading(meters, view, held);
     let peak = peak_hold(ui, resp.id, r.frac);
+    // The two transmit rows are for the transmit views; the Rx view is one
+    // plain bar of the last signal heard.
+    let tx = keyed.filter(|_| shown_view(meters, view) != Shown::Rx);
 
-    let left = rect.left() + 6.0 * k;
-    let right = rect.right() - 6.0 * k;
+    let gutter = if rect.width() >= ARROWS_MIN_W { ARROW_GUTTER * k } else { 0.0 };
+    let left = rect.left() + 6.0 * k + gutter;
+    let right = rect.right() - 6.0 * k - gutter;
     header(&p, rect, &r, k);
     temperature(&p, rect, meters, k);
     puresignal(&p, rect, meters, k);
@@ -1204,12 +1426,19 @@ fn draw_needle(p: &Painter, pivot: Pos2, a: f32, r_tip: f32, k: f32) {
     blade(3.2 * k, Vec2::ZERO, false, &ink);
 }
 
-fn show_needle(ui: &mut Ui, meters: Option<&Meters>, size: Vec2, outline: bool) -> Response {
+fn show_needle(
+    ui: &mut Ui,
+    meters: Option<&Meters>,
+    size: Vec2,
+    outline: bool,
+    view: MeterView,
+    held: Option<f32>,
+) -> Response {
     let tx = meters.is_some_and(|m| m.tx.is_some());
     let (rect, resp) = face(ui, size, tx);
     let p = ui.painter_at(rect);
     let k = (rect.height() / 72.0).clamp(0.55, 2.0);
-    let r = reading(meters);
+    let r = reading(meters, view, held);
     let peak = peak_hold(ui, resp.id, r.frac);
     // The rail's lit length follows the needle rather than the raw reading, so
     // the two never disagree mid-swing.
@@ -1328,20 +1557,28 @@ fn trace_history(ui: &Ui, id: Id, frac: f32, kind: ScaleKind) -> Vec<f32> {
     })
 }
 
-fn show_trace(ui: &mut Ui, meters: Option<&Meters>, size: Vec2, outline: bool) -> Response {
+fn show_trace(
+    ui: &mut Ui,
+    meters: Option<&Meters>,
+    size: Vec2,
+    outline: bool,
+    view: MeterView,
+    held: Option<f32>,
+) -> Response {
     let tx = meters.is_some_and(|m| m.tx.is_some());
     let (rect, resp) = face(ui, size, tx);
     let p = ui.painter_at(rect);
     let k = (rect.height() / 72.0).clamp(0.55, 2.0);
-    let r = reading(meters);
+    let r = reading(meters, view, held);
     let hist = trace_history(ui, resp.id, r.frac, r.scale.kind);
     let col = |f: f32| ramp(&r.scale.stops, f);
 
     // A gutter on the right carries the level axis, so the newest sample sits
     // right up against the scale it is read on.
+    let gutter = if rect.width() >= ARROWS_MIN_W { ARROW_GUTTER * k } else { 0.0 };
     let plot = Rect::from_min_max(
-        pos2(rect.left() + 1.0, rect.top() + 1.0),
-        pos2(rect.right() - 24.0 * k, rect.bottom() - 1.0),
+        pos2(rect.left() + 1.0 + gutter, rect.top() + 1.0),
+        pos2(rect.right() - 24.0 * k - gutter, rect.bottom() - 1.0),
     );
     let y_of = |f: f32| plot.bottom() - plot.height() * f.clamp(0.0, 1.0);
     // Where the header ends; nothing that would be drawn behind it is drawn.
@@ -1440,8 +1677,116 @@ fn show_trace(ui: &mut Ui, meters: Option<&Meters>, size: Vec2, outline: bool) -
 
 #[cfg(test)]
 mod tests {
-    use super::{SmeterStyle, reading};
-    use sdroxide_types::{Meters, TxMeters};
+    use super::{Shown, SmeterStyle, reading, shown_view, turn, view_available};
+    use sdroxide_types::{MeterView, Meters, TxMeters};
+
+    /// A keyed radio reporting only what is given.
+    fn keyed(fwd_w: Option<f32>, swr: Option<f32>, alc: Option<f32>, po: Option<f32>) -> Meters {
+        Meters {
+            s_dbm: -127.0,
+            pa_temp_c: None,
+            adc_overload: None,
+            adc_peak_dbfs: -30.0,
+            adc_clip: 0.0,
+            tx: Some(TxMeters { fwd_w, swr, alc, po, rfl_w: None }),
+            stereo: false,
+            tone: None,
+            passband_dbfs: f32::NEG_INFINITY,
+            puresignal: None,
+        }
+    }
+
+    /// The report that started this: transmitting on a CAT rig the meter sat on
+    /// the SWR scale, which lives between 1 and 2 on a good antenna, and the
+    /// power the operator keyed up to see was nowhere. The stock view now leads
+    /// with power whenever the radio gives any figure for it.
+    #[test]
+    fn transmitting_the_stock_view_shows_power_first() {
+        let rig_po = keyed(None, Some(1.5), Some(0.2), Some(0.62));
+        let r = reading(Some(&rig_po), MeterView::Auto, None);
+        assert_eq!(r.chip, "PO 62%");
+        assert!((r.frac - 0.62).abs() < 1e-6, "the needle follows the power, not the SWR");
+        assert_eq!(r.right, "SWR 1.5", "the SWR stays on the face, beside the power");
+
+        let rig_w = keyed(Some(12.5), Some(1.2), None, None);
+        let r = reading(Some(&rig_w), MeterView::Auto, None);
+        assert_eq!(r.chip, "12.5 W");
+        assert!(
+            (r.frac - 12.5 / 25.0).abs() < 1e-6,
+            "watts ride the smallest range that holds them"
+        );
+        assert_eq!(r.right, "SWR 1.2");
+
+        // Both reported: the rig's needle is the headline, the watts sit beside it.
+        let both = keyed(Some(40.0), Some(1.1), Some(0.1), Some(0.4));
+        let r = reading(Some(&both), MeterView::Auto, None);
+        assert_eq!((r.chip.as_str(), r.right.as_str()), ("PO 40%", "40.0 W"));
+    }
+
+    /// A radio with no power figure keeps what it had: SWR, then the drive.
+    #[test]
+    fn without_a_power_figure_the_stock_view_falls_back_as_before() {
+        let swr_only = keyed(None, Some(2.0), Some(0.3), None);
+        assert_eq!(reading(Some(&swr_only), MeterView::Auto, None).chip, "SWR 2.0");
+        let nothing = keyed(None, None, Some(0.3), None);
+        let r = reading(Some(&nothing), MeterView::Auto, None);
+        assert_eq!((r.chip.as_str(), r.right.as_str()), ("TX", "ALC 30%"));
+    }
+
+    #[test]
+    fn a_pinned_view_shows_its_own_quantity_and_gives_way_when_unmeasured() {
+        let m = keyed(Some(5.0), Some(1.4), Some(0.5), Some(0.1));
+        assert_eq!(reading(Some(&m), MeterView::Swr, None).chip, "SWR 1.4");
+        assert_eq!(reading(Some(&m), MeterView::Alc, None).chip, "ALC 50%");
+        assert_eq!(reading(Some(&m), MeterView::Power, None).chip, "PO 10%");
+        // SWR pinned on a rig with no bridge: power, not a needle on nothing.
+        let no_bridge = keyed(None, None, Some(0.5), Some(0.3));
+        assert_eq!(shown_view(Some(&no_bridge), MeterView::Swr), Shown::Power);
+    }
+
+    /// The Rx view while keyed shows the last signal heard, dim, and a dash
+    /// before any — the receiver itself is stood down and reads −127.
+    #[test]
+    fn the_rx_view_while_keyed_holds_the_last_signal() {
+        let m = keyed(Some(5.0), Some(1.4), Some(0.5), None);
+        let held = reading(Some(&m), MeterView::Rx, Some(-73.0));
+        assert_eq!((held.chip.as_str(), held.right.as_str()), ("S9", "-73 dBm"));
+        assert_eq!(reading(Some(&m), MeterView::Rx, None).chip, "—");
+        // On receive the view is irrelevant: the signal, whatever was pinned.
+        let mut rx = keyed(None, None, None, None);
+        rx.tx = None;
+        rx.s_dbm = -91.0;
+        assert_eq!(reading(Some(&rx), MeterView::Power, None).chip, "S6");
+    }
+
+    /// The arrows go round the five views and, while keyed, step over the ones
+    /// the radio cannot answer; on receive nothing is skipped.
+    #[test]
+    fn the_arrows_turn_through_the_views_and_skip_the_unmeasured() {
+        let full = keyed(Some(5.0), Some(1.4), Some(0.5), Some(0.1));
+        let mut v = MeterView::Auto;
+        let mut seen = vec![v];
+        for _ in 0..4 {
+            v = turn(Some(&full), v, true);
+            seen.push(v);
+        }
+        assert_eq!(
+            seen,
+            [MeterView::Auto, MeterView::Power, MeterView::Swr, MeterView::Alc, MeterView::Rx]
+        );
+        assert_eq!(turn(Some(&full), MeterView::Rx, true), MeterView::Auto, "it wraps round");
+        assert_eq!(turn(Some(&full), MeterView::Auto, false), MeterView::Rx, "and back");
+
+        let no_bridge = keyed(None, None, Some(0.5), Some(0.3));
+        assert!(!view_available(Some(&no_bridge), MeterView::Swr));
+        assert_eq!(turn(Some(&no_bridge), MeterView::Power, true), MeterView::Alc);
+        assert_eq!(turn(Some(&no_bridge), MeterView::Alc, false), MeterView::Power);
+
+        let mut rx = full;
+        rx.tx = None;
+        assert!(MeterView::ALL.iter().all(|v| view_available(Some(&rx), *v)));
+        assert_eq!(turn(None, MeterView::Auto, true), MeterView::Power);
+    }
 
     /// A rig that has not answered an ALC read must read as *not reported*, not
     /// as a confident `0%`. The two were the same string before issue #600, and
@@ -1449,21 +1794,11 @@ mod tests {
     /// program was not reading at all.
     #[test]
     fn an_unreported_alc_says_so_rather_than_reading_zero() {
-        let keyed = |alc: Option<f32>| Meters {
-            s_dbm: -100.0,
-            pa_temp_c: None,
-            adc_overload: None,
-            adc_peak_dbfs: -30.0,
-            adc_clip: 0.0,
-            tx: Some(TxMeters { fwd_w: None, swr: None, alc, po: None, rfl_w: None }),
-            stereo: false,
-            tone: None,
-            passband_dbfs: f32::NEG_INFINITY,
-            puresignal: None,
-        };
-        assert_eq!(reading(Some(&keyed(None))).right, "ALC —", "a missing reading must say so");
-        assert_eq!(reading(Some(&keyed(Some(0.0)))).right, "ALC 0%", "a real zero is a zero");
-        assert_eq!(reading(Some(&keyed(Some(0.5)))).right, "ALC 50%");
+        let keyed = |alc: Option<f32>| keyed(None, None, alc, None);
+        let r = |alc| reading(Some(&keyed(alc)), MeterView::Auto, None).right;
+        assert_eq!(r(None), "ALC —", "a missing reading must say so");
+        assert_eq!(r(Some(0.0)), "ALC 0%", "a real zero is a zero");
+        assert_eq!(r(Some(0.5)), "ALC 50%");
     }
 
     /// **A demod-audio radio's "S-meter" is its audio level**, and the hover has

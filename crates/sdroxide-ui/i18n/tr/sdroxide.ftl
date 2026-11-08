@@ -9376,3 +9376,19 @@ settings-general-band-plan-radio-hint = Bir planı yalnızca bu telsizde kullan.
 settings-general-band-plan-run-radio = YALNIZ BU TELSİZ
 
 settings-general-band-plan-radio-tag = bu telsiz
+
+meter-view-auto = Otomatik
+
+meter-view-rx = Sinyal (RX)
+
+meter-view-power = Güç
+
+meter-view-swr = SWR
+
+meter-view-alc = ALC
+
+smeter-arrow-prev-hover = Önceki ölçüm: { $view }{ $when }
+
+smeter-arrow-next-hover = Sonraki ölçüm: { $view }{ $when }
+
+smeter-arrow-on-receive = (vericiyle yayın yaparken kullanılır)
