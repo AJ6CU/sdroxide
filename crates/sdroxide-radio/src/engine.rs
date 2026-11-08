@@ -10223,11 +10223,8 @@ impl Engine {
                 // service bands.
                 let band = self.state.band;
                 if !band.accepts_mode(mode) {
-                    self.notice(&format!(
-                        "{} is not used on {} — pick a band it belongs to",
-                        mode.label(),
-                        band.label()
-                    ));
+                    warn!("mode change refused: {} is not used on {}", mode.label(), band.label());
+                    let _ = self.event_tx.send(RadioEvent::ModeRefused(mode, band));
                     return;
                 }
                 // Decided before the mode is applied, because knowing whether

@@ -492,7 +492,11 @@ impl Band {
 
     /// Whether `mode` applies on this band — see [`Band::modes_for_band`].
     pub fn accepts_mode(self, mode: Mode) -> bool {
-        self.modes_for_band().is_none_or(|modes| modes.contains(&mode))
+        // DAB is on no band of the list: it lives on its own channels, and
+        // choosing the mode brings the dial to the channel in force (the
+        // engine's `dab_dial_to_channel`). From FM or from the classic radio
+        // it must not be refused as "not used on FM".
+        mode == Mode::Dab || self.modes_for_band().is_none_or(|modes| modes.contains(&mode))
     }
 
     /// Band edges in Hz for the station's configured region (see

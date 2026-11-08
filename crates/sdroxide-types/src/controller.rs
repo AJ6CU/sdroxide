@@ -496,6 +496,11 @@ pub enum RadioEvent {
     /// than a [`RadioEvent::Notice`] so the screen can word it in the operator's
     /// language. Rides `ServerMsg::TxRefused`. Appended last.
     TxRefused(crate::TxBlock, f64),
+    /// The engine refused a mode that does not apply on the band the receiver
+    /// is on (WFM on 11 m, AM on an FM broadcast…). Typed rather than a
+    /// [`RadioEvent::Notice`] so the screen words it in the operator's language,
+    /// and so a remote screen gets it at all. Rides `ServerMsg::ModeRefused`.
+    ModeRefused(crate::Mode, crate::Band),
 
     /// The dynamic-DNS worker's last answer.
     ///
