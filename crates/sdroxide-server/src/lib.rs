@@ -1566,6 +1566,11 @@ fn cache_policy_for(path: &str) -> &'static str {
     let name = path.rsplit('/').next().unwrap_or(path);
     if name.ends_with(".wasm") || (name.starts_with("sdroxide-web-") && name.ends_with(".js")) {
         "max-age=31536000, immutable"
+    } else if name.ends_with(".ftl") {
+        // A translation the browser fetches for itself. Fixed name, so never
+        // trusted without asking; but the answer is a 304 when it has not
+        // changed, so a language of ~700 KB is not sent again every session.
+        "no-cache"
     } else {
         "no-store"
     }
@@ -1784,6 +1789,10 @@ mod cache_policy_tests {
         assert_eq!(cache_policy_for("/ws_arraybuffer.js"), "no-store");
         assert_eq!(cache_policy_for("/manifest.json"), "no-store");
         assert_eq!(cache_policy_for("/sdroxide-brown-192.png"), "no-store");
+        // The translations the browser fetches: revalidated, not stored blind,
+        // not kept forever (an update changes the ids the new client asks for).
+        assert_eq!(cache_policy_for("/i18n/fr/sdroxide.ftl"), "no-cache");
+        assert_eq!(cache_policy_for("/sdroxide/i18n/pt-BR/sdroxide.ftl"), "no-cache");
         assert_eq!(
             cache_policy_for("/sdroxide-web-9a78ba26f0438e5a_bg.wasm"),
             "max-age=31536000, immutable"

@@ -1205,7 +1205,7 @@ mod preview {
         for tag in langs.split(',').map(str::trim).filter(|t| !t.is_empty()) {
             let ctx = egui::Context::default();
             let mut app = SdroxideApp::new_tab(&ctx, None, None, Box::new(Quiet), 0, true);
-            crate::i18n::set_language(sdroxide_types::UiLanguage::from_tag(tag).unwrap());
+            crate::i18n::set_language(sdroxide_types::UiLanguage::from_tag(tag).unwrap(), &ctx);
             app.schedule.show = true;
             app.schedule.local_time = local;
             app.ui_settings.schedule_window =

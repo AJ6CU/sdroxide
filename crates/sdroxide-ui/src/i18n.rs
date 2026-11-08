@@ -6,6 +6,16 @@
 //! against it at compile time, and any message a translation lacks is drawn
 //! from it.
 //!
+//! **The browser build embeds English only.** The other ten files are about
+//! 6 MB of text that an operator who reads one language never uses, so the
+//! page asks the station for the one it needs (`i18n/<tag>/sdroxide.ftl`, put
+//! beside the page by `trunk`) when the language is picked, stored in the
+//! profile, or — with none picked — read from the browser's own list. English
+//! stays loaded as the fallback, so a translation that is slow, missing or
+//! unreadable costs the operator English, never an id on screen. The picker
+//! lists [`LANGUAGES`], which is carried in every build because the files it
+//! names are not.
+//!
 //! What is *not* translated here, on purpose:
 //!
 //! - anything that is written to disk or sent to the engine — a setting's
@@ -30,17 +40,179 @@ use std::borrow::Cow;
 use std::sync::LazyLock;
 
 use fluent::FluentValue;
-use i18n_embed::LanguageLoader;
 use i18n_embed::fluent::{FluentLanguageLoader, fluent_language_loader};
 use i18n_embed::unic_langid::LanguageIdentifier;
+use i18n_embed::{I18nAssets, LanguageLoader};
 use sdroxide_types::UiLanguage;
 
 mod labels;
 pub(crate) use labels::Tr;
 
+/// What is embedded in the binary. In the browser that is English alone: the
+/// other languages are fetched (see [`fetched`]).
 #[derive(rust_embed::RustEmbed)]
 #[folder = "i18n/"]
+#[cfg_attr(target_arch = "wasm32", include = "en-US/*")]
 struct Localizations;
+
+/// Every language a translation is carried for: its tag, and its name for
+/// itself (`language-name` in its file), English first and the rest by tag.
+///
+/// Listed here rather than found in the embedded files, because the browser
+/// build does not embed them. A test compares this with `i18n/`, so a language
+/// added there and not here — or the other way round — fails the build.
+pub(crate) const LANGUAGES: &[(&str, &str)] = &[
+    ("en-US", "English"),
+    ("de", "Deutsch"),
+    ("es", "Español"),
+    ("fr", "Français"),
+    ("it", "Italiano"),
+    ("ja", "日本語"),
+    ("nl", "Nederlands"),
+    ("pt-BR", "Português (Brasil)"),
+    ("ru", "Русский"),
+    ("tr", "Türkçe"),
+    ("zh-CN", "简体中文"),
+];
+
+/// Where the messages are read from: the files embedded in the binary, and any
+/// translation the browser has fetched from the station.
+struct Assets;
+
+impl I18nAssets for Assets {
+    fn get_files(&self, file_path: &str) -> Vec<Cow<'_, [u8]>> {
+        match fetched::get(file_path) {
+            Some(bytes) => vec![Cow::Owned(bytes)],
+            None => Localizations.get_files(file_path),
+        }
+    }
+
+    fn filenames_iter(&self) -> Box<dyn Iterator<Item = String> + '_> {
+        Box::new(Localizations.filenames_iter().chain(fetched::names()))
+    }
+}
+
+/// Translations fetched from the station. Only the browser has any; elsewhere
+/// every language is embedded and this holds nothing.
+#[cfg(not(target_arch = "wasm32"))]
+mod fetched {
+    pub(super) fn get(_path: &str) -> Option<Vec<u8>> {
+        None
+    }
+    pub(super) fn names() -> std::vec::IntoIter<String> {
+        Vec::new().into_iter()
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+mod fetched {
+    use std::collections::{BTreeMap, BTreeSet};
+    use std::sync::Mutex;
+
+    use i18n_embed::unic_langid::LanguageIdentifier;
+    use sdroxide_types::UiLanguage;
+
+    /// `<tag>/sdroxide.ftl` → the file's bytes.
+    static FILES: Mutex<BTreeMap<String, Vec<u8>>> = Mutex::new(BTreeMap::new());
+    /// Tags being fetched now, so asking again while one is on its way does
+    /// not send a second request.
+    static IN_FLIGHT: Mutex<BTreeSet<String>> = Mutex::new(BTreeSet::new());
+
+    fn lock<T>(m: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
+        m.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
+    pub(super) fn get(path: &str) -> Option<Vec<u8>> {
+        lock(&FILES).get(path).cloned()
+    }
+
+    pub(super) fn names() -> std::vec::IntoIter<String> {
+        lock(&FILES).keys().cloned().collect::<Vec<_>>().into_iter()
+    }
+
+    /// The carried language `requested` comes to, matched exactly and then on
+    /// the language alone (a Mexican browser gets `es`) — or `None` when it is
+    /// English, which is already here.
+    fn negotiate(requested: &[LanguageIdentifier]) -> Option<&'static str> {
+        let tags = || {
+            super::LANGUAGES.iter().filter_map(|(tag, _)| Some((*tag, tag.parse::<LanguageIdentifier>().ok()?)))
+        };
+        for want in requested {
+            let hit = tags()
+                .find(|(_, id)| id == want)
+                .or_else(|| tags().find(|(_, id)| id.language == want.language));
+            if let Some((tag, _)) = hit {
+                return (tag != "en-US").then_some(tag);
+            }
+        }
+        None
+    }
+
+    /// Start the fetch of the translation `requested` comes to, when it is not
+    /// here yet. `true` means the language is on its way and the caller should
+    /// leave the screen as it is until it arrives.
+    pub(super) fn wanted(
+        requested: &[LanguageIdentifier],
+        language: UiLanguage,
+        ctx: &eframe::egui::Context,
+    ) -> bool {
+        let Some(tag) = negotiate(requested) else { return false };
+        if lock(&FILES).contains_key(&format!("{tag}/sdroxide.ftl")) {
+            return false;
+        }
+        if lock(&IN_FLIGHT).insert(tag.to_string()) {
+            let ctx = ctx.clone();
+            wasm_bindgen_futures::spawn_local(async move {
+                match fetch(tag).await {
+                    Ok(text) => {
+                        lock(&FILES).insert(format!("{tag}/sdroxide.ftl"), text.into_bytes());
+                        lock(&IN_FLIGHT).remove(tag);
+                        // Only if it is still the language asked for: the
+                        // operator may have picked another while this came.
+                        super::apply_if_current(language, &ctx);
+                    }
+                    Err(why) => {
+                        lock(&IN_FLIGHT).remove(tag);
+                        tracing::warn!("could not fetch the {tag} translation: {why}");
+                    }
+                }
+            });
+        }
+        true
+    }
+
+    /// One translation file, from beside the page. Revalidated by the browser
+    /// on every load (the station marks it `no-cache`), so an update of the
+    /// station is never read against an older file.
+    async fn fetch(tag: &str) -> Result<String, String> {
+        use wasm_bindgen::JsCast;
+        let window = web_sys::window().ok_or("no window")?;
+        let init = web_sys::RequestInit::new();
+        init.set_method("GET");
+        init.set_mode(web_sys::RequestMode::SameOrigin);
+        let request = web_sys::Request::new_with_str_and_init(&format!("i18n/{tag}/sdroxide.ftl"), &init)
+            .map_err(|_| "bad address")?;
+        let response = wasm_bindgen_futures::JsFuture::from(window.fetch_with_request(&request))
+            .await
+            .map_err(|_| "no answer")?
+            .dyn_into::<web_sys::Response>()
+            .map_err(|_| "not a response")?;
+        if response.status() != 200 {
+            return Err(format!("status {}", response.status()));
+        }
+        let text = wasm_bindgen_futures::JsFuture::from(response.text().map_err(|_| "unreadable")?)
+            .await
+            .ok()
+            .and_then(|t| t.as_string())
+            .ok_or("unreadable")?;
+        // A page that answers every address with itself would be taken for a
+        // translation: it has to name its language.
+        if !text.contains("language-name") {
+            return Err("not a translation file".into());
+        }
+        Ok(text)
+    }
+}
 
 /// The one loader every message is drawn from. Starts in English; the
 /// language is chosen by [`set_language`] before the first frame.
@@ -48,7 +220,7 @@ pub(crate) static LOADER: LazyLock<FluentLanguageLoader> = LazyLock::new(|| {
     let loader: FluentLanguageLoader = fluent_language_loader!();
     // The English file is checked at compile time by every `tr!`, so failing
     // to load it means the embedding itself is broken.
-    loader.load_fallback_language(&Localizations).expect("the English messages are embedded");
+    loader.load_fallback_language(&Assets).expect("the English messages are embedded");
     loader.set_use_isolating(false);
     loader
 });
@@ -140,25 +312,53 @@ pub(crate) const PSEUDO_TAG: &str = "en-XA";
 
 /// Draw the interface in `language` from the next frame on. Cheap to call
 /// with the language already showing — it does nothing.
-pub(crate) fn set_language(language: UiLanguage) {
-    use std::sync::Mutex;
-    static APPLIED: Mutex<Option<UiLanguage>> = Mutex::new(None);
-    let mut applied = APPLIED.lock().unwrap_or_else(|e| e.into_inner());
-    if *applied == Some(language) {
-        return;
+///
+/// In the browser the translation may have to be fetched first: the screen
+/// stays as it is until it arrives, and `ctx` is asked to repaint then.
+pub(crate) fn set_language(language: UiLanguage, ctx: &eframe::egui::Context) {
+    {
+        let mut applied = APPLIED.lock().unwrap_or_else(|e| e.into_inner());
+        if *applied == Some(language) {
+            return;
+        }
+        *applied = Some(language);
     }
-    *applied = Some(language);
+    apply(language, ctx);
+}
 
+/// The language last asked for, so a fetch that comes back late can tell
+/// whether it is still wanted.
+static APPLIED: std::sync::Mutex<Option<UiLanguage>> = std::sync::Mutex::new(None);
+
+/// A translation has just arrived: draw in it, unless the operator has asked
+/// for another language since.
+#[cfg(target_arch = "wasm32")]
+fn apply_if_current(language: UiLanguage, ctx: &eframe::egui::Context) {
+    let current = *APPLIED.lock().unwrap_or_else(|e| e.into_inner()) == Some(language);
+    if current {
+        apply(language, ctx);
+        ctx.request_repaint();
+    }
+}
+
+fn apply(language: UiLanguage, ctx: &eframe::egui::Context) {
+    let _ = ctx; // only the browser build has to wait for a fetch
     let pseudo = language.tag() == Some(PSEUDO_TAG);
     let requested: Vec<LanguageIdentifier> = match language.tag() {
         Some(PSEUDO_TAG) => Vec::new(),
         Some(tag) => tag.parse().into_iter().collect(),
         None => system_languages(),
     };
+    // In the browser the language may not be here yet: ask the station for it
+    // and keep drawing what is showing until it comes.
+    #[cfg(target_arch = "wasm32")]
+    if fetched::wanted(&requested, language, ctx) {
+        return;
+    }
     // The negotiation always ends at English, so there is always something to
     // load; an error here is a broken embedding, and the loader keeps the
     // languages it had.
-    if let Err(e) = i18n_embed::select(&*LOADER, &Localizations, &requested) {
+    if let Err(e) = i18n_embed::select(&*LOADER, &Assets, &requested) {
         tracing::warn!("could not load the interface language {language:?}: {e}");
     }
     // Both are set on the bundles the selection just built, so they have to
@@ -220,21 +420,9 @@ pub(crate) struct Language {
 /// by tag. In a debug build the pseudo-language is at the end.
 pub(crate) fn languages() -> &'static [Language] {
     static LIST: LazyLock<Vec<Language>> = LazyLock::new(|| {
-        let mut ids = LOADER.available_languages(&Localizations).unwrap_or_default();
-        let english = LOADER.fallback_language().clone();
-        ids.sort_by_key(|id| (*id != english, id.to_string()));
-        let mut list: Vec<Language> = ids
-            .into_iter()
-            .map(|id| {
-                // Each file is loaded on its own to read its name: the main
-                // loader only holds the language showing.
-                let one = FluentLanguageLoader::new(LOADER.domain(), id.clone());
-                let name = match one.load_fallback_language(&Localizations) {
-                    Ok(()) if one.has("language-name") => one.get("language-name"),
-                    _ => id.to_string(),
-                };
-                Language { tag: id.to_string(), name }
-            })
+        let mut list: Vec<Language> = LANGUAGES
+            .iter()
+            .map(|(tag, name)| Language { tag: (*tag).into(), name: (*name).into() })
             .collect();
         if cfg!(debug_assertions) {
             list.push(Language {
@@ -407,6 +595,33 @@ mod tests {
             .filter(|id| !src.contains(&format!("\"{id}\"")))
             .collect();
         assert!(unused.is_empty(), "messages nothing asks for: {unused:?}");
+    }
+
+    /// [`LANGUAGES`] is what the picker lists and what the browser may ask the
+    /// station for, and the browser build embeds none of the files it names —
+    /// so it has to be the languages in `i18n/`, each under the name its own
+    /// file gives itself. A language added to one and not the other would be
+    /// missing from the picker, or offered and never found.
+    #[test]
+    fn the_language_index_matches_the_files() {
+        let mut on_disk: Vec<String> =
+            std::fs::read_dir(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("i18n"))
+                .unwrap()
+                .filter_map(|e| e.ok())
+                .filter(|e| e.path().is_dir())
+                .map(|e| e.file_name().to_string_lossy().into_owned())
+                .collect();
+        on_disk.sort();
+        let mut listed: Vec<&str> = LANGUAGES.iter().map(|(tag, _)| *tag).collect();
+        listed.sort();
+        assert_eq!(listed, on_disk, "LANGUAGES and i18n/ name different languages");
+        assert_eq!(LANGUAGES[0].0, "en-US", "English comes first");
+
+        for (tag, name) in LANGUAGES {
+            let one = FluentLanguageLoader::new(LOADER.domain(), tag.parse().unwrap());
+            one.load_fallback_language(&Localizations).unwrap();
+            assert_eq!(one.get("language-name"), *name, "{tag} names itself differently");
+        }
     }
 
     /// Every message formats without the bidirectional isolates egui would

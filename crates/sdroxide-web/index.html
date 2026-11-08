@@ -30,6 +30,10 @@
     <link data-trunk rel="copy-file" href="assets/ws_arraybuffer.js" />
     <link data-trunk rel="copy-file" href="assets/wake_lock.js" />
     <link data-trunk rel="copy-file" href="assets/manifest.json" />
+    <!-- The translations. The wasm carries English only; the page asks the
+         station for the one language the operator uses, from `i18n/<tag>/`
+         beside this file (`sdroxide_ui::i18n`). -->
+    <link data-trunk rel="copy-dir" href="../sdroxide-ui/i18n" data-target-path="i18n" />
     <!-- The icons the manifest names, from the one source every other platform
          renders from (packaging/icons/sdroxide-brown.svg via render.sh). -->
     <link data-trunk rel="copy-file" href="../../packaging/icons/sdroxide-brown-192.png" />
