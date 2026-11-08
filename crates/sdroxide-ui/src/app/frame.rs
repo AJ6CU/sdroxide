@@ -4476,6 +4476,13 @@ impl SdroxideApp {
                     }
                 }
                 RadioEvent::TxRefused(why, hz) => self.on_tx_refused(why, hz),
+                RadioEvent::ModeRefused(mode, band) => {
+                    self.radio_notice = Some(tr!(
+                        "topbar-mode-not-on-band",
+                        mode = mode.label(),
+                        band = super::tx_bands::tx_band_label(band)
+                    ));
+                }
                 RadioEvent::AudioLevel(l) => {
                     self.audio_level = Some((crate::time::now_unix_f64(), *l))
                 }
