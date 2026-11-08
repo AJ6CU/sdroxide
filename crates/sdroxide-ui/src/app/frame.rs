@@ -1756,7 +1756,9 @@ impl eframe::App for SdroxideApp {
                 self.state.rx[0].mode,
                 phone,
             ) == crate::app::panels::radio_classic::RadioClassicPlace::Docked;
-            let panel_mode = cw_mode || rc_docked;
+            // Public SDRs takes it too, when the operator docked it there.
+            let psdr_docked = self.public_sdrs_docked_now(phone);
+            let panel_mode = cw_mode || rc_docked || psdr_docked;
             // As on the digital path above: no layers, no panadapter. In a mode
             // with nothing under it that leaves the pane empty, which is what
             // switching both off asks for.
@@ -1827,6 +1829,8 @@ impl eframe::App for SdroxideApp {
                         self.radio_classic.frame = frame.clone();
                         self.radio_classic_docked(ui, &mut cmds, panel_h);
                         self.radio_classic.frame = None;
+                    } else if psdr_docked {
+                        self.public_sdrs_docked(ui);
                     } else {
                         self.draw_operating_panel(ui, &mut cmds, Mode::Cw, panel_h);
                     }

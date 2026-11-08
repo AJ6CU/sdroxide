@@ -3887,21 +3887,25 @@ fsq-add = Ekle
 
 ## publicsdr (src/app/publicsdr.rs)
 
-publicsdr-tab = + SEKME
-publicsdr-open-receiver-new-radio-own = Bu alıcıyı kendi sekmesinde yeni bir radyo olarak açın
-publicsdr-point-radio-receiver-replacing-whatever = *Bu* radyoyu, şu an hangi arabirimde olursa olsun alıcıya yöneltin — bu bir radyonun tüm kurulumu olduğu için önce yeniden sorulur
 publicsdr-not-stated = belirtilmemiş
-publicsdr-replace = DEĞİŞTİR
-publicsdr-point-radio-you-are-receiver = Bulunduğunuz radyoyu bu alıcıya yöneltin
-publicsdr-tab-instead = + SEKME YERİNE
-publicsdr-open-receiver-another-radio-leave = Alıcıyı başka bir radyo olarak açın ve bunu olduğu gibi bırakın
-publicsdr-cancel = İPTAL
 publicsdr-public-sdrs = GENEL SDR'LER
 publicsdr-available = KULLANILABİLİR
 publicsdr-hide-receivers-are-full-ones = Dolu olan alıcıları ve operatörü tarayıcı dışındaki uygulamalara hiç kanal açmamış olanları gizleyin
 publicsdr-band = BANTTA
 publicsdr-only-receivers-cover-current-dial = Yalnızca geçerli skala frekansını kapsayan alıcılar
 publicsdr-low-bw = DÜŞÜK BW
+publicsdr-map-cities = ŞEHİRLER
+publicsdr-map-cities-tip = Bu haritada şehirler, açık veya kapalı.
+publicsdr-view-list = LİSTE
+publicsdr-view-map = HARİTA
+publicsdr-view-map-tip = Aynı alıcılar bir dünya haritasında. Bir noktaya tıklamak altındaki tüm alıcıları seçer.
+publicsdr-map-pick = Altındaki alıcıları seçmek için bir noktaya tıklayın.
+publicsdr-map-names = ADLAR
+publicsdr-map-names-tip = Alıcıların adlarını haritada göster. Kapalı: yalnızca seçilenlerin adı yazılır.
+publicsdr-check-online = ÇEVRİMİÇİ
+publicsdr-check-silent = SESSİZ
+publicsdr-check-waiting = DENENİYOR…
+publicsdr-check-no-answer = 20 saniye içinde yanıt yok.
 publicsdr-take-spyserver-low-bandwidth-shape = Bir SpyServer'ı düşük bant genişliği biçiminde alın: skalayı izleyen dar bir I/Q penceresi artı sunucunun kendi bant görünümü; megabit genişbant I/Q yerine. Yalnızca bir biçimi olan bir KiwiSDR'ı etkilemez.
 publicsdr-refresh = ⟳ YENİLE
 publicsdr-fetch-both-directories-again = İki dizini yeniden alın
@@ -3911,9 +3915,6 @@ publicsdr-fetching-receiver-lists = Alıcı listeleri alınıyor…
 publicsdr-machine-radio-attached-does-not = Bu radyonun bağlı olduğu makine aygıt sorularını yanıtlamıyor, bu yüzden listeleri de alamaz.
 publicsdr-no-match = eşleşme yok
 publicsdr-nothing-matches-try-turning-filter = Hiçbir şey eşleşmiyor — bir filtre çipini yeniden açmayı deneyin
-publicsdr-radio = bu radyo
-publicsdr-radio-s-configuration-has-not = Bu radyonun yapılandırması, bulunduğu makineden henüz gelmedi; bu yüzden alıcıya yöneltilecek bir şey yok — bunun yerine + SEKME ile alın.
-publicsdr-position-not-published-so-nothing = {" "}Konumu yayımlanmıyor, bu yüzden duyduğu hiçbir şey bildirilmeyecek.
 
 ## hd (src/app/hd.rs)
 
@@ -4720,14 +4721,7 @@ publicsdr-antenna =
 publicsdr-receivers-fetched-ago = { $entries } alıcı · { $per_net } · { $age } önce alındı
 publicsdr-showing-search-narrow = { $n } içinden { $shown } gösteriliyor — daraltmak için arayın
 publicsdr-match = { $n } eşleşme
-publicsdr-replace-taking-receiver-points-same =
-    { $this } yerine { $entry } koyulsun mu?
-
-    { $this2 } is on { $iface }. Taking this receiver points the same tab at { $address } instead, renames it “{ $entry2 }”, and holds the dial to the { $range_label } the receiver publishes — nothing here transmits.
-
-    The { $iface2 } settings stay where they are, and so do the ranges stated for them: switching the interface back in Settings → Radio brings the radio back as it was.
-publicsdr-receptions-will-reported = {" "}Alımlar { $value } konumundan bildirilecek.
-publicsdr-pointing-radio = Bu radyo { $entry } alıcısına yöneltiliyor…{ $site }
+publicsdr-map-status = haritada { $shown } · konumsuz { $unplaced }
 publicsdr-opening-another-radio = { $entry } başka bir radyo olarak açılıyor…
 
 ## qo100: messages with values (src/app/qo100.rs)
@@ -5043,7 +5037,6 @@ cat-family-rs-hfiq = RS-HFIQ
 cat-family-tr-usdx = (tr)uSDX
 cat-family-rigctld = Hamlib rigctld (ağ)
 cat-family-flrig = flrig (ağ)
-publicsdr-its-interface = arayüzü
 
 ## Values from sdroxide-types drawn on chips, menus and lists (src/i18n/labels.rs).
 agc-mode-off = Kapalı
@@ -7651,7 +7644,6 @@ net-wavelog-no-station-location = indirilecek istasyon konumu yok — önce bağ
 
 publicsdr-could-not-connect = bu oturum bağlanamadı
 
-publicsdr-use-chip = KULLAN
 
 weather-title = HAVA RAPORLARI
 
@@ -9057,7 +9049,6 @@ publicsdr-mine = BENİM
 
 publicsdr-mine-hint = Yalnızca yıldızladığınız alıcılar
 
-publicsdr-mine-empty = Henüz yıldız yok — bir satırdaki ☆ o alıcıyı burada tutar.
 
 publicsdr-star-receiver = Bu alıcıyı BENİM içinde tut
 
@@ -9409,3 +9400,13 @@ tx-off-cb = 11 m (CB) üzerinde YAYIN YASAK — bant yayın listenizde, ancak "1
 settings-cb-allow-tx-needs-band = Önce bu telsizin TX bant listesinde 11M-CB'yi EVET yapın (Ayarlar → Radyo), sonra burada izin verin.
 
 settings-cb-allow-tx-order-note = İki kilit, bu sırayla: 1) telsizin TX bant listesinde 11M-CB EVET ve onaylı; 2) bu kutu. 11 m'de yayın için ikisi de gerekir. 11M-CB'yi listeden çıkarmak bu kutunun işaretini de kaldırır.
+
+settings-ui-publicsdr-under-waterfall = Şelalenin altına sabitlenmiş
+
+settings-ui-publicsdr-place-hint = Public SDRs'nin nerede açılacağı: orada hiçbir şeyi olmayan ses modlarında şelalenin altına sabitlenmiş ya da bir pencerede. Sayısal modlar, CW ve telefonlar zaten pencere kullanır.
+
+publicsdr-dock-hint = Bu listeyi şelalenin altına sabitle (orada paneli olmayan ses modları)
+
+publicsdr-undock-hint = Bu listeyi kendi penceresine geri koy
+
+publicsdr-close-hint = Public SDRs'yi kapat

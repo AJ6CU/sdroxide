@@ -3884,21 +3884,25 @@ fsq-add = Ajouter
 
 ## publicsdr (src/app/publicsdr.rs)
 
-publicsdr-tab = + ONGLET
-publicsdr-open-receiver-new-radio-own = Ouvrir ce récepteur comme une nouvelle radio, dans son propre onglet
-publicsdr-point-radio-receiver-replacing-whatever = Diriger *cette* radio vers le récepteur, en remplaçant l'interface sur laquelle elle se trouve actuellement — demandé à nouveau d'abord, car c'est une configuration complète de radio
 publicsdr-not-stated = non indiqué
-publicsdr-replace = REMPLACER
-publicsdr-point-radio-you-are-receiver = Diriger la radio sur laquelle vous êtes vers ce récepteur
-publicsdr-tab-instead = + ONGLET À LA PLACE
-publicsdr-open-receiver-another-radio-leave = Ouvrir le récepteur comme une autre radio et laisser celle-ci tranquille
-publicsdr-cancel = ANNULER
 publicsdr-public-sdrs = SDR PUBLICS
 publicsdr-available = DISPONIBLES
 publicsdr-hide-receivers-are-full-ones = Masquer les récepteurs complets, et ceux dont l'opérateur n'a ouvert aucun canal à des applications autres qu'un navigateur
 publicsdr-band = DANS LA BANDE
 publicsdr-only-receivers-cover-current-dial = Seulement les récepteurs qui couvrent la fréquence actuelle du cadran
 publicsdr-low-bw = FAIBLE DÉBIT
+publicsdr-map-cities = VILLES
+publicsdr-map-cities-tip = Villes sur cette carte, oui ou non.
+publicsdr-view-list = LISTE
+publicsdr-view-map = CARTE
+publicsdr-view-map-tip = Les mêmes récepteurs sur une carte du monde. Cliquez sur un point pour choisir tous les récepteurs dessous.
+publicsdr-map-pick = Cliquez sur un point pour choisir les récepteurs dessous.
+publicsdr-map-names = NOMS
+publicsdr-map-names-tip = Afficher les noms des récepteurs sur la carte. Désactivé : seuls les récepteurs choisis sont nommés.
+publicsdr-check-online = EN LIGNE
+publicsdr-check-silent = MUET
+publicsdr-check-waiting = TEST…
+publicsdr-check-no-answer = Aucune réponse en 20 secondes.
 publicsdr-take-spyserver-low-bandwidth-shape = Prendre un SpyServer dans sa forme à faible débit : une fenêtre I/Q étroite qui suit le cadran, plus la vue de bande propre au serveur, au lieu de mégabits d'I/Q large bande. Sans effet sur un KiwiSDR, qui n'a que cette forme.
 publicsdr-refresh = ⟳ ACTUALISER
 publicsdr-fetch-both-directories-again = Récupérer à nouveau les deux annuaires
@@ -3908,9 +3912,6 @@ publicsdr-fetching-receiver-lists = Récupération des listes de récepteurs…
 publicsdr-machine-radio-attached-does-not = La machine à laquelle cette radio est reliée ne répond pas aux questions sur les périphériques, donc elle ne peut pas récupérer les listes non plus.
 publicsdr-no-match = aucune correspondance
 publicsdr-nothing-matches-try-turning-filter = rien ne correspond — essayez de réactiver une puce de filtre
-publicsdr-radio = cette radio
-publicsdr-radio-s-configuration-has-not = La configuration de cette radio n'est pas encore arrivée depuis la machine où elle se trouve, donc il n'y a rien à diriger vers le récepteur — prenez-le avec + ONGLET à la place.
-publicsdr-position-not-published-so-nothing = {" "}Sa position n'est pas publiée, donc rien de ce qu'elle entend ne sera transmis.
 
 ## hd (src/app/hd.rs)
 
@@ -4717,14 +4718,7 @@ publicsdr-antenna =
 publicsdr-receivers-fetched-ago = { $entries } récepteurs · { $per_net } · récupéré il y a { $age }
 publicsdr-showing-search-narrow = affichage de { $shown } sur { $n } — recherchez pour affiner
 publicsdr-match = { $n } correspondance
-publicsdr-replace-taking-receiver-points-same =
-    Remplacer { $this } par { $entry } ?
-
-    { $this2 } est sur { $iface }. Prendre ce récepteur fait pointer le même onglet sur { $address } à la place, le renomme « { $entry2 } », et maintient le cadran sur la { $range_label } que publie le récepteur — rien ici n'émet.
-
-    Les réglages de { $iface2 } restent en place, ainsi que les plages qui leur sont attribuées : repasser l'interface dans Réglages → Radio rétablit la radio comme elle était.
-publicsdr-receptions-will-reported = {" "}Les réceptions seront transmises depuis { $value }.
-publicsdr-pointing-radio = Diriger cette radio vers { $entry }…{ $site }
+publicsdr-map-status = { $shown } sur la carte · { $unplaced } sans position
 publicsdr-opening-another-radio = Ouverture de { $entry } comme une autre radio…
 
 ## qo100: messages with values (src/app/qo100.rs)
@@ -5040,7 +5034,6 @@ cat-family-rs-hfiq = RS-HFIQ
 cat-family-tr-usdx = (tr)uSDX
 cat-family-rigctld = Hamlib rigctld (réseau)
 cat-family-flrig = flrig (réseau)
-publicsdr-its-interface = son interface
 
 ## Values from sdroxide-types drawn on chips, menus and lists (src/i18n/labels.rs).
 agc-mode-off = Arrêt
@@ -7660,7 +7653,6 @@ net-wavelog-no-station-location = aucun emplacement de station à télécharger 
 
 publicsdr-could-not-connect = connexion impossible pendant cette session
 
-publicsdr-use-chip = UTILISER
 
 weather-title = BULLETINS MÉTÉO
 
@@ -9068,7 +9060,6 @@ publicsdr-mine = LES MIENS
 
 publicsdr-mine-hint = Seulement les récepteurs que vous avez marqués
 
-publicsdr-mine-empty = Rien de marqué — l'☆ d'une ligne garde ce récepteur ici.
 
 publicsdr-star-receiver = Garder ce récepteur dans LES MIENS
 
@@ -9420,3 +9411,13 @@ tx-off-cb = ÉMISSION INTERDITE en 11 m (CB) — la bande est dans votre liste d
 settings-cb-allow-tx-needs-band = Mettez d'abord 11M-CB sur OUI dans la liste TX de cette radio (Réglages → Radio), puis autorisez-le ici.
 
 settings-cb-allow-tx-order-note = Deux verrous, dans cet ordre : 1) 11M-CB sur OUI dans la liste de bandes TX de la radio, confirmée ; 2) cette case. Les deux sont nécessaires pour émettre en 11 m. Retirer 11M-CB de la liste décoche aussi cette case.
+
+settings-ui-publicsdr-under-waterfall = Ancré sous le waterfall
+
+settings-ui-publicsdr-place-hint = Où s'ouvre Public SDRs : ancré sous le waterfall dans les modes voix qui n'y ont rien, ou dans une fenêtre. Les modes numériques, le CW et les téléphones utilisent de toute façon une fenêtre.
+
+publicsdr-dock-hint = Ancrer cette liste sous le waterfall (modes voix qui n'y ont rien)
+
+publicsdr-undock-hint = Remettre cette liste dans une fenêtre à part
+
+publicsdr-close-hint = Fermer Public SDRs

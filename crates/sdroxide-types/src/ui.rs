@@ -1384,6 +1384,10 @@ pub struct UiSettings {
     /// detached it. Off by default.
     #[serde(default)]
     pub radio_classic_on: bool,
+    /// Public SDRs is docked under the waterfall (in the voice modes that have
+    /// nothing there) rather than in a window. Off by default: a window.
+    #[serde(default)]
+    pub public_sdr_docked: bool,
     /// The last frequency Radio Classic was listening on, in Hz, and the mode it
     /// was in — `0.0` and `None` until it has been used once. Switching the
     /// panel on tunes here, or to 100 MHz in WFM the very first time.
@@ -2016,6 +2020,7 @@ impl Default for UiSettings {
             classic_sections: String::new(),
             tool_windows_open: 0,
             radio_classic_on: false,
+            public_sdr_docked: false,
             radio_classic_last_hz: 0.0,
             radio_classic_last_mode: None,
             tool_windows_repaired: 0,

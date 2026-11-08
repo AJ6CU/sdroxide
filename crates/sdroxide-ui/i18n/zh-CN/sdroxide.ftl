@@ -3859,21 +3859,25 @@ fsq-add = 添加
 
 ## publicsdr (src/app/publicsdr.rs)
 
-publicsdr-tab = + 选项卡
-publicsdr-open-receiver-new-radio-own = 将此接收机作为新电台打开，并位于其自己的选项卡中
-publicsdr-point-radio-receiver-replacing-whatever = 将*此*电台指向该接收机，替换其当前所在的任何接口——会再次询问，因为那相当于整台电台的设置
 publicsdr-not-stated = 未说明
-publicsdr-replace = 替换
-publicsdr-point-radio-you-are-receiver = 将你所在的电台指向此接收机
-publicsdr-tab-instead = + 改为选项卡
-publicsdr-open-receiver-another-radio-leave = 将接收机作为另一台电台打开，并保持此电台不变
-publicsdr-cancel = 取消
 publicsdr-public-sdrs = 公共 SDR
 publicsdr-available = 可用
 publicsdr-hide-receivers-are-full-ones = 隐藏已满的接收机，以及其操作员未向浏览器以外的应用开放任何通道的接收机
 publicsdr-band = 在频段内
 publicsdr-only-receivers-cover-current-dial = 仅显示覆盖当前表盘频率的接收机
 publicsdr-low-bw = 低带宽
+publicsdr-map-cities = 城市
+publicsdr-map-cities-tip = 在此地图上显示或隐藏城市。
+publicsdr-view-list = 列表
+publicsdr-view-map = 地图
+publicsdr-view-map-tip = 在世界地图上显示同样的接收机。点击一个点即可选择其下的所有接收机。
+publicsdr-map-pick = 点击一个点以选择其下的接收机。
+publicsdr-map-names = 名称
+publicsdr-map-names-tip = 在地图上显示接收机名称。关闭：只显示所选接收机的名称。
+publicsdr-check-online = 在线
+publicsdr-check-silent = 无响应
+publicsdr-check-waiting = 检查中…
+publicsdr-check-no-answer = 20 秒内无响应。
 publicsdr-take-spyserver-low-bandwidth-shape = 以低带宽形式接入 SpyServer：一个跟随表盘的窄幅 I/Q 窗口，加上服务器自己的频段视图，而不是数兆比特的宽带 I/Q。对 KiwiSDR 无影响，因为它只有这一种形式。
 publicsdr-refresh = ⟳ 刷新
 publicsdr-fetch-both-directories-again = 重新获取两个目录
@@ -3883,9 +3887,6 @@ publicsdr-fetching-receiver-lists = 正在获取接收机列表……
 publicsdr-machine-radio-attached-does-not = 此电台所连接的机器不应答设备查询，因此它也无法获取列表。
 publicsdr-no-match = 无匹配
 publicsdr-nothing-matches-try-turning-filter = 没有任何内容匹配——请尝试重新打开某个过滤标签
-publicsdr-radio = 此电台
-publicsdr-radio-s-configuration-has-not = 此电台的配置尚未从它所在的机器送达，因此没有可指向接收机的目标——请改用“+ 选项卡”添加。
-publicsdr-position-not-published-so-nothing = {" "}其位置未公布，因此它所听到的任何内容都不会被报告。
 
 ## hd (src/app/hd.rs)
 
@@ -4670,14 +4671,7 @@ publicsdr-antenna =
 publicsdr-receivers-fetched-ago = { $entries } 台接收机 · { $per_net } · 获取于 { $age } 前
 publicsdr-showing-search-narrow = 显示 { $n } 个中的 { $shown } 个——搜索以缩小范围
 publicsdr-match = { $n } 个匹配
-publicsdr-replace-taking-receiver-points-same =
-    用 { $entry } 替换 { $this }？
-
-    { $this2 } is on { $iface }. Taking this receiver points the same tab at { $address } instead, renames it “{ $entry2 }”, and holds the dial to the { $range_label } the receiver publishes — nothing here transmits.
-
-    The { $iface2 } settings stay where they are, and so do the ranges stated for them: switching the interface back in Settings → Radio brings the radio back as it was.
-publicsdr-receptions-will-reported = {" "}接收结果将以 { $value } 为位置报告。
-publicsdr-pointing-radio = 正在将此电台指向 { $entry }……{ $site }
+publicsdr-map-status = 地图上 { $shown } 个 · 无位置 { $unplaced } 个
 publicsdr-opening-another-radio = 正在将 { $entry } 作为另一台电台打开……
 
 ## qo100: messages with values (src/app/qo100.rs)
@@ -4981,7 +4975,6 @@ cat-family-rs-hfiq = RS-HFIQ
 cat-family-tr-usdx = (tr)uSDX
 cat-family-rigctld = Hamlib rigctld（网络）
 cat-family-flrig = flrig（网络）
-publicsdr-its-interface = 其接口
 
 ## Values from sdroxide-types drawn on chips, menus and lists (src/i18n/labels.rs).
 agc-mode-off = 关
@@ -7589,7 +7582,6 @@ net-wavelog-no-station-location = 没有可供下载的电台位置，请先测�
 
 publicsdr-could-not-connect = 本次会话无法连接
 
-publicsdr-use-chip = 使用
 
 weather-title = 天气报告
 
@@ -8995,7 +8987,6 @@ publicsdr-mine = 我的
 
 publicsdr-mine-hint = 仅显示你加星的接收机
 
-publicsdr-mine-empty = 还没有加星——点行上的 ☆ 即可把该接收机保存在这里。
 
 publicsdr-star-receiver = 将此接收机保存在“我的”中
 
@@ -9347,3 +9338,13 @@ tx-off-cb = 11 m (CB) 禁止发射 — 该频段已在发射列表中，但“�
 settings-cb-allow-tx-needs-band = 请先在此电台的 TX 频段列表（设置 → 电台）中将 11M-CB 设为“是”，然后在此允许。
 
 settings-cb-allow-tx-order-note = 两道锁，按此顺序：1) 电台 TX 频段列表中 11M-CB 为“是”且已确认；2) 此复选框。在 11 m 发射需要两者。将 11M-CB 从列表移除也会取消勾选此框。
+
+settings-ui-publicsdr-under-waterfall = 停靠在瀑布图下方
+
+settings-ui-publicsdr-place-hint = Public SDRs 的打开位置：在下方没有内容的语音模式中停靠在瀑布图下方，或使用窗口。数字模式、CW 和手机始终使用窗口。
+
+publicsdr-dock-hint = 将此列表停靠在瀑布图下方（下方无内容的语音模式）
+
+publicsdr-undock-hint = 将此列表放回独立窗口
+
+publicsdr-close-hint = 关闭 Public SDRs

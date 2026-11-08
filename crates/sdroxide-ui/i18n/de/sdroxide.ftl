@@ -3878,21 +3878,27 @@ fsq-add = Hinzufügen
 
 ## publicsdr (src/app/publicsdr.rs)
 
-publicsdr-tab = + REITER
-publicsdr-open-receiver-new-radio-own = Diesen Empfänger als neues Funkgerät in einem eigenen Reiter öffnen
-publicsdr-point-radio-receiver-replacing-whatever = *Dieses* Funkgerät auf den Empfänger richten und die Schnittstelle ersetzen, auf der es jetzt liegt — es wird vorher noch einmal nachgefragt, weil das die Einrichtung eines ganzen Funkgeräts ist
 publicsdr-not-stated = nicht angegeben
-publicsdr-replace = ERSETZEN
-publicsdr-point-radio-you-are-receiver = Das Funkgerät, auf dem Sie sind, auf diesen Empfänger richten
-publicsdr-tab-instead = + REITER STATTDESSEN
-publicsdr-open-receiver-another-radio-leave = Den Empfänger als weiteres Funkgerät öffnen und dieses in Ruhe lassen
-publicsdr-cancel = ABBRECHEN
+publicsdr-add-as-radio = ALS RADIO HINZUFÜGEN
+publicsdr-add-as-radio-tip = Als eigenes Funkgerät hinzufügen, Name aus Verzeichnis
 publicsdr-public-sdrs = ÖFFENTLICHE SDRS
 publicsdr-available = VERFÜGBAR
 publicsdr-hide-receivers-are-full-ones = Empfänger ausblenden, die voll sind, und die, deren Betreiber keine Kanäle für Apps außer einem Browser geöffnet hat
 publicsdr-band = IM BAND
 publicsdr-only-receivers-cover-current-dial = Nur Empfänger, die die aktuelle Skalenfrequenz abdecken
 publicsdr-low-bw = NIEDR. BB
+publicsdr-map-cities = STÄDTE
+publicsdr-map-cities-tip = Städte auf dieser Karte ein oder aus.
+publicsdr-view-list = LISTE
+publicsdr-view-map = KARTE
+publicsdr-view-map-tip = Empfänger auf Weltkarte; Klick auf Punkt wählt alle darunter
+publicsdr-map-pick = Klick auf einen Punkt wählt die Empfänger darunter.
+publicsdr-map-names = NAMEN
+publicsdr-map-names-tip = Namen aller Empfänger; aus: nur gewählte
+publicsdr-check-online = ONLINE
+publicsdr-check-silent = STUMM
+publicsdr-check-waiting = PRÜFE…
+publicsdr-check-no-answer = Keine Antwort innerhalb von 20 Sekunden.
 publicsdr-take-spyserver-low-bandwidth-shape = Einen SpyServer in seiner Form mit niedriger Bandbreite nehmen: ein schmales I/Q-Fenster, das der Skala folgt, plus die eigene Bandansicht des Servers, statt Megabit an Breitband-I/Q. Ohne Wirkung auf einen KiwiSDR, der nur die eine Form hat.
 publicsdr-refresh = ⟳ AKTUALISIEREN
 publicsdr-fetch-both-directories-again = Beide Verzeichnisse erneut abrufen
@@ -3902,9 +3908,6 @@ publicsdr-fetching-receiver-lists = Die Empfängerlisten werden abgerufen…
 publicsdr-machine-radio-attached-does-not = Der Rechner, an dem dieses Funkgerät angeschlossen ist, beantwortet keine Gerätefragen, daher kann er die Listen ebenfalls nicht abrufen.
 publicsdr-no-match = kein Treffer
 publicsdr-nothing-matches-try-turning-filter = nichts passt — einen Filterchip wieder einschalten
-publicsdr-radio = dieses Funkgerät
-publicsdr-radio-s-configuration-has-not = Die Konfiguration dieses Funkgeräts ist vom Rechner, auf dem es liegt, noch nicht angekommen, daher gibt es nichts, was man auf den Empfänger richten könnte — stattdessen mit + REITER nehmen.
-publicsdr-position-not-published-so-nothing = {" "}Seine Position wird nicht veröffentlicht, daher wird nichts gemeldet, was es hört.
 
 ## hd (src/app/hd.rs)
 
@@ -4705,14 +4708,7 @@ publicsdr-antenna =
 publicsdr-receivers-fetched-ago = { $entries } Empfänger · { $per_net } · abgerufen vor { $age }
 publicsdr-showing-search-narrow = { $shown } von { $n } angezeigt — suchen, um einzugrenzen
 publicsdr-match = { $n } Treffer
-publicsdr-replace-taking-receiver-points-same =
-    { $this } durch { $entry } ersetzen?
-
-    { $this2 } liegt auf { $iface }. Diesen Empfänger zu nehmen richtet denselben Reiter stattdessen auf { $address }, benennt ihn „{ $entry2 }“ um und hält die Skala im Bereich { $range_label }, den der Empfänger veröffentlicht — hier wird nichts gesendet.
-
-    Die Einstellungen von { $iface2 } bleiben, wo sie sind, und ebenso die dafür angegebenen Bereiche: Schaltet man die Schnittstelle in Einstellungen → Funkgerät zurück, kommt das Funkgerät wieder so, wie es war.
-publicsdr-receptions-will-reported = {" "}Empfänge werden von { $value } gemeldet.
-publicsdr-pointing-radio = Dieses Funkgerät wird auf { $entry } gerichtet…{ $site }
+publicsdr-map-status = { $shown } auf der Karte · { $unplaced } ohne Position
 publicsdr-opening-another-radio = { $entry } wird als weiteres Funkgerät geöffnet…
 
 ## qo100: messages with values (src/app/qo100.rs)
@@ -5027,7 +5023,6 @@ cat-family-rs-hfiq = RS-HFIQ
 cat-family-tr-usdx = (tr)uSDX
 cat-family-rigctld = Hamlib rigctld (Netzwerk)
 cat-family-flrig = flrig (Netzwerk)
-publicsdr-its-interface = seine Schnittstelle
 
 ## Values from sdroxide-types drawn on chips, menus and lists (src/i18n/labels.rs).
 agc-mode-off = Aus
@@ -7647,7 +7642,6 @@ net-wavelog-no-station-location = kein Stationsstandort zum Herunterladen – zu
 
 publicsdr-could-not-connect = in dieser Sitzung nicht verbindbar
 
-publicsdr-use-chip = NUTZEN
 
 weather-title = WETTERMELDUNGEN
 
@@ -9055,7 +9049,6 @@ publicsdr-mine = MEINE
 
 publicsdr-mine-hint = Nur die von dir markierten Empfänger
 
-publicsdr-mine-empty = Noch nichts markiert — der ☆ in einer Zeile hält diesen Empfänger hier.
 
 publicsdr-star-receiver = Diesen Empfänger in MEINE aufnehmen
 
@@ -9407,3 +9400,13 @@ tx-off-cb = SENDEN GESPERRT auf 11 m (CB) — das Band steht in Ihrer Sendeliste
 settings-cb-allow-tx-needs-band = Setzen Sie zuerst 11M-CB in der TX-Bandliste dieses Funkgeräts auf JA (Einstellungen → Radio) und erlauben Sie es dann hier.
 
 settings-cb-allow-tx-order-note = Zwei Sperren, in dieser Reihenfolge: 1) 11M-CB steht in der TX-Bandliste des Funkgeräts auf JA und ist bestätigt; 2) dieses Kästchen. Zum Senden auf 11 m sind beide nötig. Wird 11M-CB aus der Liste genommen, wird auch dieses Kästchen abgewählt.
+
+settings-ui-publicsdr-under-waterfall = Unter dem Wasserfall angedockt
+
+settings-ui-publicsdr-place-hint = Wo Public SDRs sich öffnet: unter dem Wasserfall angedockt in Sprachmodi, die dort nichts haben, oder in einem Fenster. Digitalmodi, CW und Telefone nutzen ohnehin ein Fenster.
+
+publicsdr-dock-hint = Diese Liste unter dem Wasserfall andocken (Sprachmodi ohne Panel dort)
+
+publicsdr-undock-hint = Diese Liste wieder in ein eigenes Fenster setzen
+
+publicsdr-close-hint = Public SDRs schließen

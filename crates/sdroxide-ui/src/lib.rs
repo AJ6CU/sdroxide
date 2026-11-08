@@ -42,6 +42,8 @@ mod login_globe;
 /// browser client drives a single (remote) radio.
 mod multi;
 mod prop_map;
+/// The PUBLIC SDRS window's map view: the receivers where they stand.
+mod publicsdr_map;
 #[cfg(feature = "remote")]
 mod remote;
 /// Asking egui for the next frame at the rate actually asked for.

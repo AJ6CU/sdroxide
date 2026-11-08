@@ -3896,21 +3896,25 @@ fsq-add = Aggiungi
 
 ## publicsdr (src/app/publicsdr.rs)
 
-publicsdr-tab = + SCHEDA
-publicsdr-open-receiver-new-radio-own = Apri questo ricevitore come nuova radio, nella sua scheda
-publicsdr-point-radio-receiver-replacing-whatever = Punta *questa* radio al ricevitore, sostituendo qualunque interfaccia usi ora — chiesto di nuovo prima, perché è la configurazione di un'intera radio
 publicsdr-not-stated = non indicato
-publicsdr-replace = SOSTITUISCI
-publicsdr-point-radio-you-are-receiver = Punta la radio su cui sei a questo ricevitore
-publicsdr-tab-instead = + SCHEDA INVECE
-publicsdr-open-receiver-another-radio-leave = Apri il ricevitore come un'altra radio e lascia questa in pace
-publicsdr-cancel = ANNULLA
 publicsdr-public-sdrs = SDR PUBBLICI
 publicsdr-available = DISPONIBILI
 publicsdr-hide-receivers-are-full-ones = Nascondi i ricevitori che sono pieni, e quelli il cui operatore non ha aperto canali ad app diverse dal browser
 publicsdr-band = IN BANDA
 publicsdr-only-receivers-cover-current-dial = Solo i ricevitori che coprono la frequenza di sintonia attuale
 publicsdr-low-bw = BASSA LARGH.
+publicsdr-map-cities = CITTÀ
+publicsdr-map-cities-tip = Città su questa mappa, sì o no.
+publicsdr-view-list = ELENCO
+publicsdr-view-map = MAPPA
+publicsdr-view-map-tip = Gli stessi ricevitori su una mappa del mondo. Clic su un punto per scegliere tutti i ricevitori sotto di esso.
+publicsdr-map-pick = Clic su un punto per scegliere i ricevitori sotto di esso.
+publicsdr-map-names = NOMI
+publicsdr-map-names-tip = Mostra i nomi dei ricevitori sulla mappa. Disattivato: solo quelli scelti hanno il nome.
+publicsdr-check-online = ONLINE
+publicsdr-check-silent = MUTO
+publicsdr-check-waiting = VERIFICO…
+publicsdr-check-no-answer = Nessuna risposta entro 20 secondi.
 publicsdr-take-spyserver-low-bandwidth-shape = Usa uno SpyServer nella sua forma a bassa larghezza di banda: una finestra I/Q stretta che segue la sintonia più la vista di banda propria del server, invece di megabit di I/Q a banda larga. Nessun effetto su un KiwiSDR, che ha una sola forma.
 publicsdr-refresh = ⟳ AGGIORNA
 publicsdr-fetch-both-directories-again = Scarica di nuovo entrambe le directory
@@ -3920,9 +3924,6 @@ publicsdr-fetching-receiver-lists = Recupero degli elenchi dei ricevitori…
 publicsdr-machine-radio-attached-does-not = La macchina a cui è collegata questa radio non risponde alle domande sui dispositivi, quindi non può nemmeno scaricare gli elenchi.
 publicsdr-no-match = nessuna corrispondenza
 publicsdr-nothing-matches-try-turning-filter = nulla corrisponde — prova a riattivare un filtro
-publicsdr-radio = questa radio
-publicsdr-radio-s-configuration-has-not = La configurazione di questa radio non è ancora arrivata dalla macchina su cui si trova, quindi non c'è nulla a cui puntare il ricevitore — prendilo con + SCHEDA.
-publicsdr-position-not-published-so-nothing = {" "}La sua posizione non è pubblicata, quindi nulla di ciò che sente verrà riportato.
 
 ## hd (src/app/hd.rs)
 
@@ -4729,14 +4730,7 @@ publicsdr-antenna =
 publicsdr-receivers-fetched-ago = { $entries } ricevitori · { $per_net } · scaricati { $age } fa
 publicsdr-showing-search-narrow = mostrati { $shown } di { $n } — cerca per restringere
 publicsdr-match = { $n } corrispondenza
-publicsdr-replace-taking-receiver-points-same =
-    Sostituire { $this } con { $entry }?
-
-    { $this2 } is on { $iface }. Taking this receiver points the same tab at { $address } instead, renames it “{ $entry2 }”, and holds the dial to the { $range_label } the receiver publishes — nothing here transmits.
-
-    The { $iface2 } settings stay where they are, and so do the ranges stated for them: switching the interface back in Settings → Radio brings the radio back as it was.
-publicsdr-receptions-will-reported = {" "}Le ricezioni verranno riportate da { $value }.
-publicsdr-pointing-radio = Puntamento di questa radio su { $entry }…{ $site }
+publicsdr-map-status = { $shown } sulla mappa · { $unplaced } senza posizione
 publicsdr-opening-another-radio = Apertura di { $entry } come un'altra radio…
 
 ## qo100: messages with values (src/app/qo100.rs)
@@ -5052,7 +5046,6 @@ cat-family-rs-hfiq = RS-HFIQ
 cat-family-tr-usdx = (tr)uSDX
 cat-family-rigctld = Hamlib rigctld (rete)
 cat-family-flrig = flrig (rete)
-publicsdr-its-interface = la sua interfaccia
 
 ## Values from sdroxide-types drawn on chips, menus and lists (src/i18n/labels.rs).
 agc-mode-off = Off
@@ -7660,7 +7653,6 @@ net-wavelog-no-station-location = nessuna postazione da cui scaricare: prova pri
 
 publicsdr-could-not-connect = impossibile connettersi in questa sessione
 
-publicsdr-use-chip = USA
 
 weather-title = RAPPORTI METEO
 
@@ -9066,7 +9058,6 @@ publicsdr-mine = MIEI
 
 publicsdr-mine-hint = Solo i ricevitori che hai contrassegnato
 
-publicsdr-mine-empty = Niente di contrassegnato — la ☆ su una riga tiene qui quel ricevitore.
 
 publicsdr-star-receiver = Tieni questo ricevitore nei MIEI
 
@@ -9418,3 +9409,13 @@ tx-off-cb = TRASMISSIONE VIETATA su 11 m (CB) — la banda è nella lista di tra
 settings-cb-allow-tx-needs-band = Imposta prima 11M-CB su SÌ nella lista TX di questa radio (Impostazioni → Radio), poi consentilo qui.
 
 settings-cb-allow-tx-order-note = Due blocchi, in quest'ordine: 1) 11M-CB su SÌ nella lista bande TX della radio, confermata; 2) questa casella. Servono entrambi per trasmettere su 11 m. Togliere 11M-CB dalla lista deseleziona anche questa casella.
+
+settings-ui-publicsdr-under-waterfall = Agganciato sotto la cascata
+
+settings-ui-publicsdr-place-hint = Dove si apre Public SDRs: agganciato sotto la cascata nei modi voce che non hanno nulla lì, oppure in una finestra. I modi digitali, il CW e i telefoni usano comunque una finestra.
+
+publicsdr-dock-hint = Aggancia questo elenco sotto la cascata (modi voce senza nulla lì)
+
+publicsdr-undock-hint = Rimetti questo elenco in una finestra a parte
+
+publicsdr-close-hint = Chiudi Public SDRs
