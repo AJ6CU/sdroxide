@@ -2,4 +2,5 @@
 //! The chain, from the antenna side: [`jpeg`] is the end of it, the image
 //! segments. The demodulator and the framing are added next to it.
 
+pub mod frame;
 pub mod jpeg;
