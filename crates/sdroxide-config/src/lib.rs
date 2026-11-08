@@ -2728,10 +2728,19 @@ fn aoki_schedule_entry(bytes: &[u8], season: &str) -> Result<Vec<u8>, String> {
             return Ok(d.clone());
         }
     }
+    // **A zip can hold the schedule and a user list, and both say "Frequency
+    // List"** in their title (`nzb25.txt` and `userlist1.txt`). The schedule is the
+    // one whose column header reads `FRE   STATION`; the user list has a different
+    // layout. Taking the first title match picked whichever came first in the zip.
+    let head_of = |d: &Vec<u8>| String::from_utf8_lossy(&d[..d.len().min(256)]).into_owned();
     if let Some((n, d)) = entries.iter().find(|(_, d)| {
-        let head: String = String::from_utf8_lossy(&d[..d.len().min(256)]).into_owned();
-        head.contains("Frequency List")
+        let head = head_of(d);
+        head.contains("Frequency List") && head.contains("STATION")
     }) {
+        info!("Aoki's zip: {n} has the schedule's column header, so it is the schedule");
+        return Ok(d.clone());
+    }
+    if let Some((n, d)) = entries.iter().find(|(_, d)| head_of(d).contains("Frequency List")) {
         info!("Aoki's zip: {n} names itself a frequency list, so it is the schedule");
         return Ok(d.clone());
     }
@@ -3094,6 +3103,11 @@ fn sniff_schedule(
     use sdroxide_types::ScheduleSource as S;
 
     if bytes.starts_with(b"PK\x03\x04") {
+        // HFCC's package carries its two reference tables beside the schedule;
+        // Aoki's zip never does. Told apart by the names inside, not the file's.
+        if zip_is_hfcc(bytes) {
+            return Some((S::Hfcc, ours.to_string()));
+        }
         return Some((S::Aoki, aoki_season_from_path(path).unwrap_or_else(|| format!("xt{ours}"))));
     }
     let head = sdroxide_types::broadcast::decode_latin1(&bytes[..bytes.len().min(512)]);
@@ -3181,6 +3195,13 @@ pub fn import_schedule_file(path: &std::path::Path) -> Result<ImportedSchedule, 
         )
     })?;
 
+    // **HFCC is a package, not a file**: schedule plus two tables, parsed together
+    // and cached as the zip, exactly as the download does it (`fetch_hfcc`).
+    if source == S::Hfcc {
+        let stations = fetch_hfcc(&bytes, cache_season_of(&season))?;
+        return Ok(ImportedSchedule { source, season, stations: stations.len() });
+    }
+
     // Read it exactly the way the cache is read, so a file that would not work
     // from the cache does not look fine here and fail after the restart.
     let text = cached_text_from_bytes(source, &season, &bytes)?;
@@ -3255,6 +3276,15 @@ fn aoki_season_from_path(path: &std::path::Path) -> Option<String> {
         && named
         && name.chars().any(|c| c.is_ascii_digit());
     has_season.then_some(name)
+}
+
+/// Is this zip an HFCC package? It holds `broadcas.txt` and `site.txt` — the
+/// tables that give the schedule's codes their names — which no Aoki zip has.
+fn zip_is_hfcc(bytes: &[u8]) -> bool {
+    zip_entries(bytes).is_ok_and(|entries| {
+        let has = |word: &str| entries.iter().any(|(n, _)| n.to_ascii_lowercase().contains(word));
+        has("broadcas") && has("site")
+    })
 }
 
 /// HFCC's cached package, unpacked and parsed.

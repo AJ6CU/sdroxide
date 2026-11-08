@@ -557,6 +557,20 @@ impl SdroxideApp {
         self.broadcast_minute = -1;
     }
 
+    /// Read the schedule again after an import: from the station's file on the
+    /// desktop, from the station's server in a browser (the next frame fetches it).
+    pub(in crate::app) fn reload_broadcast_after_import(&mut self) {
+        #[cfg(target_arch = "wasm32")]
+        {
+            self.broadcast_load = None;
+            self.broadcast_load_done = false;
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.reload_broadcast_stations();
+        }
+    }
+
     /// Live network spots and the on-air broadcast stations, unfiltered.
     pub(in crate::app) fn all_spots(&self) -> impl Iterator<Item = &Spot> {
         self.spots.iter().chain(self.broadcast_spots.iter())

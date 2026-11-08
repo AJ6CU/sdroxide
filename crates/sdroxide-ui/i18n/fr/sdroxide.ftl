@@ -9421,3 +9421,7 @@ publicsdr-dock-hint = Ancrer cette liste sous le waterfall (modes voix qui n'y o
 publicsdr-undock-hint = Remettre cette liste dans une fenêtre à part
 
 publicsdr-close-hint = Fermer Public SDRs
+
+settings-net-hfcc-file-hint = Prendre l'horaire HFCC dans un paquet que vous avez enregistré : le zip publié par HFCC (par exemple b26allx2.zip), avec son horaire et ses deux tables.
+
+schedule-import = Importer…

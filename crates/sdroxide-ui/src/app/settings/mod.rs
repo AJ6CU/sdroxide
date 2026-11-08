@@ -2216,15 +2216,7 @@ impl SdroxideApp {
             // The import already re-read the file; nothing further to do here.
         }
         if bc_reload {
-            #[cfg(target_arch = "wasm32")]
-            {
-                self.broadcast_load = None;
-                self.broadcast_load_done = false;
-            }
-            #[cfg(not(target_arch = "wasm32"))]
-            {
-                self.reload_broadcast_stations();
-            }
+            self.reload_broadcast_after_import();
         }
         if let Some((output, name)) = audio_pick {
             self.ctrl.set_audio_device(output, name);

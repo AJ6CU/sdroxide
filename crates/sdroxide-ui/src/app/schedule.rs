@@ -26,7 +26,7 @@ pub(in crate::app) const SCHEDULE_WINDOW_W: f32 = 1000.0;
 pub(in crate::app) const SCHEDULE_WINDOW_MIN_W: f32 = 860.0;
 
 /// Widths of the three text fields on the first bar row.
-const FIND_W: f32 = 130.0;
+const FIND_W: f32 = 100.0;
 const LANG_W: f32 = 80.0;
 const TARGET_W: f32 = 80.0;
 /// Widths of the two comboboxes on the second bar row.
@@ -104,6 +104,9 @@ pub(in crate::app) struct ScheduleUi {
     /// frame. The window never goes narrower than this, so a long language grows
     /// the window instead of pushing the right-hand chips out of it.
     floor_w: f32,
+    /// What the last import said, shown under the bar until dismissed. A message,
+    /// not a setting: nothing here is stored or sent.
+    import_note: Option<Result<String, String>>,
 }
 
 type CacheKey =
@@ -128,6 +131,7 @@ impl Default for ScheduleUi {
             cache_key: None,
             cache: Vec::new(),
             floor_w: 0.0,
+            import_note: None,
         }
     }
 }
@@ -395,9 +399,14 @@ impl SdroxideApp {
         // **Two rows, no more.** The first is the time and the three text
         // searches; the second the two dropdowns, the chips and the clock. Each is
         // budgeted against `SCHEDULE_WINDOW_MIN_W` (see `bar_budget`), so the chips
-        // do not climb over one another when the window is narrow. `wrapped` is
-        // only the safety net for a screen narrower than the window's floor.
-        ui.horizontal_wrapped(|ui| {
+        // do not climb over one another when the window is narrow. The first row
+        // is not wrapped (its import button sits at the right edge); the second is,
+        // as the safety net for a screen narrower than the window's floor.
+        let peer = self.ctrl.peer_url();
+        let mut imported: Option<Result<String, String>> = None;
+        // Not wrapped: the window never goes narrower than this row needs (the
+        // `bar_budget` test), and a wrapped row cannot push the button to the edge.
+        ui.horizontal(|ui| {
             ui.label(tr!("schedule-at"));
             if crate::chrome::chip(ui, self.schedule.use_now, tr!("schedule-now-chip")).clicked() {
                 self.schedule.use_now = true;
@@ -434,7 +443,33 @@ impl SdroxideApp {
                 ui,
                 egui::TextEdit::singleline(&mut self.schedule.target).desired_width(TARGET_W),
             );
+            // **Import, at the right-hand end of the row**: the schedule is read
+            // here, so this is where an operator looks for it. Same button and same
+            // code as Settings > Spots (any file: EiBi, Aoki, HFCC or an own list).
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                if let Some(result) =
+                    crate::app::settings::net::import_button(ui, peer.as_deref())
+                {
+                    imported = Some(result);
+                }
+            });
         });
+        if let Some(result) = imported {
+            self.schedule.import_note = Some(result);
+            self.reload_broadcast_after_import();
+        }
+        if let Some(note) = self.schedule.import_note.clone() {
+            ui.horizontal(|ui| {
+                let (text, colour) = match &note {
+                    Ok(t) => (t.clone(), crate::theme::GREEN()),
+                    Err(e) => (format!("⚠ {e}"), crate::theme::YELLOW()),
+                };
+                ui.label(RichText::new(text).color(colour).size(11.0));
+                if ui.small_button("✕").clicked() {
+                    self.schedule.import_note = None;
+                }
+            });
+        }
         ui.horizontal_wrapped(|ui| {
             ui.label(tr!("settings-relay-band"));
             egui::ComboBox::from_id_salt("sched-band")
@@ -1055,6 +1090,7 @@ mod bar_budget {
                 LANG_W,
                 label("Target"),
                 TARGET_W,
+                btn("Import…"),
             ];
             let row2 = [
                 label("Band"),
