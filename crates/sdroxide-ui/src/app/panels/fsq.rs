@@ -250,10 +250,16 @@ impl SdroxideApp {
                             }
                             for h in &heard {
                                 let sel = self.fsq_target.eq_ignore_ascii_case(&h.call);
-                                if ui
-                                    .selectable_label(sel, RichText::new(&h.call).monospace())
-                                    .clicked()
-                                {
+                                let mut r =
+                                    ui.selectable_label(sel, RichText::new(&h.call).monospace());
+                                if crate::callsign_card::applies(ui.ctx(), &h.call) {
+                                    r = r.on_hover_ui(|ui| {
+                                        ui.set_max_width(300.0);
+                                        ui.label(RichText::new(&h.call).strong());
+                                        crate::callsign_card::section(ui, &h.call);
+                                    });
+                                }
+                                if r.clicked() {
                                     self.fsq_target = h.call.clone();
                                 }
                             }

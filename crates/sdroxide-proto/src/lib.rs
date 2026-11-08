@@ -2329,8 +2329,18 @@ use sdroxide_types::{
 /// `rows` (finished rows of picture, one per channel) at its tail. Both ride
 /// whole (`RadioState` and `ServerMsg::WxsatStatus`), so the appended fields move
 /// their layouts. `PROTO_VERSION` 284 → 285, `VERSION_BYTE` 0x68 → 0x69.
-pub const PROTO_VERSION: u16 = 285;
-const VERSION_BYTE: u8 = 0x69;
+///
+/// v286: **the QRZ card.** [`sdroxide_types::CallsignInfo`] gains `addr1`,
+/// `email`, `age`, `class`, `qsl_lotw`, `qsl_eqsl`, `qsl_paper` and `photo` (a
+/// small JPEG) at its tail, and [`sdroxide_types::NetworkConfig`] gains
+/// `qrz_card` (bool) at its tail. `CallsignInfo` rides
+/// `ServerMsg::CallsignResult` and `NetworkConfig` rides `SetNetworkConfig`,
+/// both whole, so the appended fields move their layouts. The age is worked out
+/// on the station; the date of birth never crosses the link. `#[serde(default)]`
+/// on every new field, so a stored `net.json` loads unchanged.
+/// `PROTO_VERSION` 285 → 286, `VERSION_BYTE` 0x69 → 0x6A.
+pub const PROTO_VERSION: u16 = 286;
+const VERSION_BYTE: u8 = 0x6A;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -3634,7 +3644,7 @@ mod tests {
             ServerMsg::TxRefused(w, hz) => assert_eq!((w, hz), (why, 7_074_000.0)),
             _ => panic!("TxRefused did not round-trip"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (285, 0x69));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (286, 0x6A));
         // v280: the CB refusal is a new tail variant of `TxBlock`; the ones
         // before it keep their positions.
         let cb = ServerMsg::TxRefused(sdroxide_types::TxBlock::CbOff, 27_185_000.0);
@@ -3690,7 +3700,25 @@ mod tests {
             }
             other => panic!("the answer did not round-trip: {other:?}"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (285, 0x69));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (286, 0x6A));
+    }
+
+    /// v286: the QRZ card rides `CallsignResult` — photo, age and all.
+    #[test]
+    fn a_qrz_card_round_trips_in_a_callsign_result() {
+        let mut info = sdroxide_types::CallsignInfo::for_call("f4abc");
+        info.name = Some("Jean Dupont".into());
+        info.addr1 = Some("12 rue des Lilas".into());
+        info.age = Some(58);
+        info.class = Some("Novice".into());
+        info.qsl_lotw = true;
+        info.photo = Some(vec![0xFF, 0xD8, 0xFF, 0xD9]);
+        let bytes = encode(&ServerMsg::CallsignResult(info.clone())).unwrap();
+        match decode::<ServerMsg>(&bytes).unwrap() {
+            ServerMsg::CallsignResult(back) => assert_eq!(back, info),
+            other => panic!("the card did not round-trip: {other:?}"),
+        }
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (286, 0x6A));
     }
 
     /// The VOR read-out rides the wire whole, locked or not, and the message is

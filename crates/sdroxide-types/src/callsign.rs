@@ -32,6 +32,32 @@ pub struct CallsignInfo {
     pub itu_zone: Option<u8>,
     /// QSL routing hint / manager, if any.
     pub qsl_via: Option<String>,
+    // ── The QRZ card. Appended last, as the wire requires: `CallsignInfo`
+    // rides `ServerMsg::CallsignResult`, and postcard is positional. ──
+    /// Street address (QRZ `addr1`).
+    #[serde(default)]
+    pub addr1: Option<String>,
+    /// Contact e-mail, when QRZ gives one (subscribers only).
+    #[serde(default)]
+    pub email: Option<String>,
+    /// Age in years, worked out **on the station** from the date of birth,
+    /// which itself never leaves it.
+    #[serde(default)]
+    pub age: Option<u8>,
+    /// Licence class, as QRZ writes it.
+    #[serde(default)]
+    pub class: Option<String>,
+    /// The operator answers QSL by LoTW / eQSL / paper.
+    #[serde(default)]
+    pub qsl_lotw: bool,
+    #[serde(default)]
+    pub qsl_eqsl: bool,
+    #[serde(default)]
+    pub qsl_paper: bool,
+    /// The operator's picture, reduced on the station to a small JPEG so that
+    /// it crosses the link cheaply. `None` when QRZ has none or the card is off.
+    #[serde(default)]
+    pub photo: Option<Vec<u8>>,
 }
 
 impl CallsignInfo {
@@ -51,6 +77,14 @@ impl CallsignInfo {
             && self.cq_zone.is_none()
             && self.itu_zone.is_none()
             && self.qsl_via.is_none()
+            && self.addr1.is_none()
+            && self.email.is_none()
+            && self.age.is_none()
+            && self.class.is_none()
+            && !self.qsl_lotw
+            && !self.qsl_eqsl
+            && !self.qsl_paper
+            && self.photo.is_none()
     }
 }
 

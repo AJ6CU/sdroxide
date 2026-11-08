@@ -1005,6 +1005,10 @@ impl SdroxideApp {
                         station_card(
                             ui, flags, d, entity, dist_km, &my_grid, novelty, band, queued, cq,
                         );
+                        // What QRZ says about them, when the card is on.
+                        if let Some(from) = d.from.as_deref() {
+                            crate::callsign_card::section(ui, from);
+                        }
                     });
                     if is_preview {
                         // Amber outline ties this row to its faint map marker.

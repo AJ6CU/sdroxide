@@ -24,6 +24,18 @@ pub fn get(url: &str) -> Result<String, String> {
     body_or_status(agent().get(url).call().map_err(|e| e.to_string())?)
 }
 
+/// GET `url`, returning the body as bytes, at most `max` of them.
+///
+/// For a picture: a body past the cap is an error, not a truncated file that
+/// would decode as garbage.
+pub fn get_bytes(url: &str, max: u64) -> Result<Vec<u8>, String> {
+    let mut resp = agent().get(url).call().map_err(|e| e.to_string())?;
+    if !resp.status().is_success() {
+        return Err(format!("HTTP {}", resp.status().as_u16()));
+    }
+    resp.body_mut().with_config().limit(max).read_to_vec().map_err(|e| e.to_string())
+}
+
 /// POST `fields` as `application/x-www-form-urlencoded`.
 pub fn post_form(url: &str, fields: &[(&str, &str)]) -> Result<String, String> {
     body_or_status(agent().post(url).send_form(fields.iter().copied()).map_err(|e| e.to_string())?)
