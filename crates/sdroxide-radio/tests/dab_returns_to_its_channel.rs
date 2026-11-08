@@ -12,7 +12,7 @@ use std::time::Duration;
 
 use sdroxide_radio::{Complex32, EngineConfig, IqSource, Result, start_engine};
 use sdroxide_types::{
-    Command, DabKnownStation, DabSettings, DeviceCaps, Mode, RadioEvent, RxId, Vfo,
+    Band, Command, DabKnownStation, DabSettings, DeviceCaps, Mode, RadioEvent, RxId, Vfo,
 };
 
 const RATE: f64 = 2_500_000.0;
@@ -20,7 +20,6 @@ const RATE: f64 = 2_500_000.0;
 const CH_8D: f64 = 201_072_000.0;
 const CH_11D: f64 = 222_064_000.0;
 const SIX_METRES: f64 = 50_150_000.0;
-const FM_BROADCAST: f64 = 100_000_000.0;
 
 struct Silence {
     center: f64,
@@ -190,7 +189,7 @@ fn a_radio_already_on_its_channel_is_left_there() {
 fn dab_from_the_fm_band_is_taken_and_goes_to_its_channel() {
     let (at, refused) = dial_after_seen(vec![
         Command::SetDabConfig(dab("8D", &["8D"])),
-        tune(FM_BROADCAST),
+        Command::SetBand(Band::Fm),
         set_mode(Mode::Dab),
     ]);
     assert_eq!(at.2, Mode::Dab, "the mode was taken");
@@ -202,7 +201,7 @@ fn dab_from_the_fm_band_is_taken_and_goes_to_its_channel() {
 /// the screen words in the operator's language, not an English notice.
 #[test]
 fn a_mode_the_band_does_not_carry_is_refused_with_a_typed_event() {
-    let (at, refused) = dial_after_seen(vec![tune(FM_BROADCAST), set_mode(Mode::Usb)]);
+    let (at, refused) = dial_after_seen(vec![Command::SetBand(Band::Fm), set_mode(Mode::Usb)]);
     assert!(refused, "ModeRefused was sent");
     assert_ne!(at.2, Mode::Usb, "the mode did not change");
 }
