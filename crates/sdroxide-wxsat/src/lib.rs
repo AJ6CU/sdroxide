@@ -4,6 +4,7 @@
 
 pub mod apt;
 pub mod lane;
+pub mod lrpt;
 
 pub use apt::{AptDecoder, AptLine, LINE_PIXELS};
 pub use lane::{WxsatController, WxsatLane};
