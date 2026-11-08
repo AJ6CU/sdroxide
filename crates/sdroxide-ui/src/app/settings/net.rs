@@ -551,16 +551,22 @@ pub(in crate::app) fn broadcast_stations_settings(
             // is the part that breaks — and an operator who has the file already
             // should not be stopped by that. The file is read, checked and cached
             // exactly as a download is, so what happens next is the same code.
-            // HFCC has no button: its names live in a package of three files, and
-            // a schedule of codes is worse than none.
+            // HFCC takes the whole package (schedule plus its two tables, one zip):
+            // a schedule of codes without the tables is worse than none, and the
+            // reader refuses it.
             if matches!(
                 source,
-                sdroxide_types::ScheduleSource::Eibi | sdroxide_types::ScheduleSource::Aoki
+                sdroxide_types::ScheduleSource::Eibi
+                    | sdroxide_types::ScheduleSource::Aoki
+                    | sdroxide_types::ScheduleSource::Hfcc
             ) && ui
                 .add_enabled(!fetching, egui::Button::new(tr!("settings-net-from-file")))
                 .on_hover_text(match source {
                     sdroxide_types::ScheduleSource::Aoki => {
                         tr!("settings-net-aoki-file-hint")
+                    }
+                    sdroxide_types::ScheduleSource::Hfcc => {
+                        tr!("settings-net-hfcc-file-hint")
                     }
                     _ => tr!("settings-net-eibi-file-hint"),
                 })

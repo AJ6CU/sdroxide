@@ -9436,3 +9436,5 @@ publicsdr-dock-hint = Dock this list under the waterfall (voice modes with nothi
 publicsdr-undock-hint = Put this list back in a window of its own
 
 publicsdr-close-hint = Close Public SDRs
+
+settings-net-hfcc-file-hint = Take the HFCC schedule from a package you saved yourself: the zip HFCC publishes (for example b26allx2.zip), with its schedule and its two tables.

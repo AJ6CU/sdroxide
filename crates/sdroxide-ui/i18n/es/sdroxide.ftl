@@ -9409,3 +9409,5 @@ publicsdr-dock-hint = Acoplar esta lista bajo la cascada (modos de voz sin nada 
 publicsdr-undock-hint = Volver a poner esta lista en una ventana propia
 
 publicsdr-close-hint = Cerrar Public SDRs
+
+settings-net-hfcc-file-hint = Tomar el horario de HFCC de un paquete que usted guardó: el zip que publica HFCC (por ejemplo b26allx2.zip), con su horario y sus dos tablas.
