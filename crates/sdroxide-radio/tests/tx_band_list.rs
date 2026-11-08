@@ -151,17 +151,17 @@ fn a_jump_from_cb_to_a_band_that_is_off_does_not_key() {
     assert_eq!(keyed_on(cfg, &[27_185_000.0, 3_573_000.0]), [true, false]);
 }
 
-/// The ALL selector tunes anywhere, and anywhere outside the bands is the
-/// "other" row, which is off until the operator switches it on.
+/// The ALL selector tunes anywhere, and anywhere outside the bands is never
+/// keyed: there is no "other" row, and a list that still names it grants nothing.
 #[test]
-fn a_dial_outside_every_band_needs_the_other_row() {
+fn a_dial_outside_every_band_is_never_keyed() {
     // 35 MHz is above 10 m, below 6 m and in no broadcast band.
     const OUTSIDE: f64 = 35_000_000.0;
     assert_eq!(Band::containing(OUTSIDE), Band::Gen);
     let off = list(&[Band::M40, Band::M20], true);
     assert_eq!(keyed_on(off, &[OUTSIDE]), [false]);
     let on = list(&[Band::Gen], true);
-    assert_eq!(keyed_on(on, &[OUTSIDE, 7_074_000.0]), [true, false]);
+    assert_eq!(keyed_on(on, &[OUTSIDE, 7_074_000.0]), [false, false]);
 }
 
 /// One rule: with the list in force, a ticked and validated band keys, even
@@ -170,7 +170,7 @@ fn a_dial_outside_every_band_needs_the_other_row() {
 #[test]
 fn the_list_is_the_single_rule_even_with_the_amateur_only_flag() {
     let cfg = list(&[Band::Gen, Band::M40], true);
-    assert_eq!(keyed_on_with(cfg, &[35_000_000.0, 7_074_000.0], true), [true, true]);
+    assert_eq!(keyed_on_with(cfg, &[35_000_000.0, 7_074_000.0], true), [false, true]);
     let no_other = list(&[Band::M40], true);
     assert_eq!(keyed_on_with(no_other, &[35_000_000.0, 7_074_000.0], true), [false, true]);
 }

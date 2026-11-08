@@ -9407,3 +9407,5 @@ smeter-arrow-prev-hover = Предыдущее показание: { $view }{ $w
 smeter-arrow-next-hover = Следующее показание: { $view }{ $when }
 
 smeter-arrow-on-receive = (используется при передаче)
+
+tx-bands-outside-note = Вне перечисленных здесь диапазонов передача невозможна. Приём вне диапазонов (ADS-B, DAB, AIS...) отдельной строки не требует.

@@ -9400,3 +9400,5 @@ smeter-arrow-prev-hover = Vorige meting: { $view }{ $when }
 smeter-arrow-next-hover = Volgende meting: { $view }{ $when }
 
 smeter-arrow-on-receive = (geldt tijdens zenden)
+
+tx-bands-outside-note = Buiten de hier genoemde banden kan niet worden gezonden. Ontvangst buiten de banden (ADS-B, DAB, AIS...) heeft geen rij nodig.

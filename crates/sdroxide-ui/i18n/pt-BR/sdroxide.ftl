@@ -9392,3 +9392,5 @@ smeter-arrow-prev-hover = Medição anterior: { $view }{ $when }
 smeter-arrow-next-hover = Próxima medição: { $view }{ $when }
 
 smeter-arrow-on-receive = (usada ao transmitir)
+
+tx-bands-outside-note = Fora das bandas listadas aqui nada pode ser transmitido. A recepção fora das bandas (ADS-B, DAB, AIS...) não precisa de linha.

@@ -9390,3 +9390,5 @@ smeter-arrow-prev-hover = Vorheriger Messwert: { $view }{ $when }
 smeter-arrow-next-hover = Nächster Messwert: { $view }{ $when }
 
 smeter-arrow-on-receive = (gilt beim Senden)
+
+tx-bands-outside-note = Außerhalb der hier aufgeführten Bänder kann nicht gesendet werden. Empfang außerhalb der Bänder (ADS-B, DAB, AIS...) braucht keine Zeile.

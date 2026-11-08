@@ -282,14 +282,15 @@ mod tests {
         assert!(!RadioConfig::default().tx_dial_allowed(7_074_000.0), "no list, no band");
     }
 
-    /// ALL is a selector, not a permission: the check is on the real frequency.
+    /// ALL is a selector, not a permission: the check is on the real frequency,
+    /// and outside every band nothing is ever keyed, whatever the list holds.
     #[test]
-    fn a_frequency_outside_every_band_needs_the_other_row() {
+    fn a_frequency_outside_every_band_is_never_keyed() {
         assert_eq!(Band::containing(35_000_000.0), Band::Gen);
         let cfg = confirmed(&[Band::M40, Band::M20]);
         assert!(!cfg.tx_dial_allowed(35_000_000.0));
         let cfg = confirmed(&[Band::Gen]);
-        assert!(cfg.tx_dial_allowed(35_000_000.0));
+        assert!(!cfg.tx_dial_allowed(35_000_000.0), "an old list naming Other grants nothing");
         assert!(!cfg.tx_dial_allowed(7_074_000.0));
     }
 

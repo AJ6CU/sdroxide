@@ -9401,3 +9401,5 @@ smeter-arrow-prev-hover = Misura precedente: { $view }{ $when }
 smeter-arrow-next-hover = Misura successiva: { $view }{ $when }
 
 smeter-arrow-on-receive = (usata in trasmissione)
+
+tx-bands-outside-note = Fuori dalle bande elencate qui non si può trasmettere nulla. La ricezione fuori banda (ADS-B, DAB, AIS...) non richiede una riga.

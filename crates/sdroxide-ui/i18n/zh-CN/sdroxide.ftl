@@ -9330,3 +9330,5 @@ smeter-arrow-prev-hover = 上一个读数：{ $view }{ $when }
 smeter-arrow-next-hover = 下一个读数：{ $view }{ $when }
 
 smeter-arrow-on-receive = (发射时使用)
+
+tx-bands-outside-note = 此处列出的频段之外无法发射。频段外的接收（ADS-B、DAB、AIS 等）不需要单独一行。
