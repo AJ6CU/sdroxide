@@ -2113,7 +2113,7 @@ impl SdroxideApp {
         crate::theme::set_bandplan_colors(&ui_settings.bandplan_colors);
         crate::theme::set_map_cities(ui_settings.map_cities);
         crate::theme::set_ui_zoom(ui_settings.ui_zoom);
-        crate::i18n::set_language(ui_settings.language);
+        crate::i18n::set_language(ui_settings.language, egui_ctx);
         crate::theme::apply(egui_ctx);
         // What this renderer will carry. Gathered here because it is the one
         // place that holds the render state and the controller at once, and
