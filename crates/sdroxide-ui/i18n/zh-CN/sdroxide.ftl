@@ -9350,3 +9350,5 @@ publicsdr-undock-hint = 将此列表放回独立窗口
 publicsdr-close-hint = 关闭 Public SDRs
 
 settings-net-hfcc-file-hint = 从您自己保存的软件包中读取 HFCC 节目表：HFCC 发布的 zip（例如 b26allx2.zip），其中包含节目表和两张对照表。
+
+schedule-import = 导入…

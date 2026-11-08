@@ -9420,3 +9420,5 @@ publicsdr-undock-hint = Zet deze lijst terug in een eigen venster
 publicsdr-close-hint = Public SDRs sluiten
 
 settings-net-hfcc-file-hint = Neem de HFCC-zenderlijst uit een pakket dat u zelf hebt opgeslagen: de zip die HFCC publiceert (bijvoorbeeld b26allx2.zip), met de zenderlijst en de twee tabellen.
+
+schedule-import = Import…

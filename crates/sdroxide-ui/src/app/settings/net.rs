@@ -621,24 +621,8 @@ pub(in crate::app) fn broadcast_stations_settings(
             )
             .clicked()
         {
-            if let Some(path) = rfd::FileDialog::new()
-                .add_filter(tr!("settings-net-filter-station-lists"), &["csv", "txt", "json", "zip"])
-                .pick_file()
-            {
-                // One button for any file: a published schedule (EiBi, Aoki) is
-                // filed like a download, anything else is the operator's own list.
-                *import = Some(match sdroxide_config::import_any_file(&path) {
-                    Ok(sdroxide_config::ImportedFile::Schedule(got)) => Ok(tr!(
-                        "settings-net-schedule-imported",
-                        source = got.source.label(),
-                        season = got.season,
-                        n = got.stations
-                    )),
-                    Ok(sdroxide_config::ImportedFile::List(n)) => {
-                        Ok(tr!("settings-net-stations-imported", n = n))
-                    }
-                    Err(e) => Err(e),
-                });
+            if let Some(result) = import_schedule_dialog() {
+                *import = Some(result);
                 *reload = true;
             }
         }
@@ -650,6 +634,59 @@ pub(in crate::app) fn broadcast_stations_settings(
         };
         ui.label(RichText::new(text).color(colour).size(11.0));
     }
+}
+
+/// Pick a file and import it: a published schedule (EiBi, Aoki, HFCC) is filed like
+/// a download, anything else is the operator's own list. `None` = cancelled.
+/// Shared by the Settings button and the Programmes panel's, so the two cannot
+/// disagree about what a file is.
+#[cfg(not(target_arch = "wasm32"))]
+pub(in crate::app) fn import_schedule_dialog() -> Option<Result<String, String>> {
+    let path = rfd::FileDialog::new()
+        .add_filter(tr!("settings-net-filter-station-lists"), &["csv", "txt", "json", "zip"])
+        .pick_file()?;
+    Some(match sdroxide_config::import_any_file(&path) {
+        Ok(sdroxide_config::ImportedFile::Schedule(got)) => Ok(tr!(
+            "settings-net-schedule-imported",
+            source = got.source.label(),
+            season = got.season,
+            n = got.stations
+        )),
+        Ok(sdroxide_config::ImportedFile::List(n)) => {
+            Ok(tr!("settings-net-stations-imported", n = n))
+        }
+        Err(e) => Err(e),
+    })
+}
+
+/// The import button, for any panel: draws it, runs the pick, and returns the
+/// outcome when there is one. In the browser the file goes to the server (which
+/// files it where every client reads it); `peer` is the station.
+pub(in crate::app) fn import_button(
+    ui: &mut egui::Ui,
+    peer: Option<&str>,
+) -> Option<Result<String, String>> {
+    #[cfg(target_arch = "wasm32")]
+    let mut done = poll_schedule_import(peer);
+    #[cfg(not(target_arch = "wasm32"))]
+    let mut done: Option<Result<String, String>> = {
+        let _ = peer;
+        None
+    };
+    let enabled = cfg!(not(target_arch = "wasm32")) || peer.is_some();
+    if ui
+        .add_enabled(enabled, egui::Button::new(tr!("schedule-import")))
+        .on_hover_text(tr!("settings-net-import-list-hint"))
+        .clicked()
+    {
+        #[cfg(target_arch = "wasm32")]
+        start_schedule_import();
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            done = import_schedule_dialog();
+        }
+    }
+    done
 }
 
 /// The browser client reads the schedule compiled into the wasm bundle, so there
@@ -665,16 +702,58 @@ pub(in crate::app) fn broadcast_stations_settings(
     _status: Option<&Result<String, String>>,
     peer: Option<&str>,
 ) {
-    use std::sync::{Arc, Mutex};
-
-    thread_local! {
-        static BC_IMPORT_INBOX: std::cell::RefCell<Option<crate::download::BytesInbox>> =
-            const { std::cell::RefCell::new(None) };
-        static BC_IMPORT_RESULT: std::cell::RefCell<Option<Result<String, String>>> =
-            const { std::cell::RefCell::new(None) };
+    // Collect a finished file pick and deliver a finished import.
+    if let Some(res) = poll_schedule_import(peer) {
+        *import = Some(res);
+        *reload = true;
     }
 
-    // Collect a finished file pick.
+    super::note(
+        ui,
+        &tr!("settings-net-broadcast-stations-labelled-waterfall-come"),
+    );
+
+    if ui
+        .add_enabled(peer.is_some(), egui::Button::new(tr!("settings-net-import-list")))
+        .clicked()
+    {
+        start_schedule_import();
+    }
+
+    if peer.is_none() {
+        ui.label(tr!("settings-net-broadcast-import-needs-station"));
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+thread_local! {
+    static BC_IMPORT_INBOX: std::cell::RefCell<Option<crate::download::BytesInbox>> =
+        const { std::cell::RefCell::new(None) };
+    static BC_IMPORT_RESULT: std::cell::RefCell<Option<Result<String, String>>> =
+        const { std::cell::RefCell::new(None) };
+}
+
+/// Open the browser's file picker for an import (one at a time).
+#[cfg(target_arch = "wasm32")]
+fn start_schedule_import() {
+    use std::sync::{Arc, Mutex};
+    if let Some(inbox) = BC_IMPORT_INBOX.with(|s| {
+        if s.borrow().is_some() {
+            None
+        } else {
+            let inbox = Arc::new(Mutex::new(None));
+            *s.borrow_mut() = Some(inbox.clone());
+            Some(inbox)
+        }
+    }) {
+        crate::download::load_bytes("broadcast", &["csv", "txt", "zip", "json"], inbox);
+    }
+}
+
+/// Collect a finished file pick (sending it to the station) and hand back a
+/// finished import, once.
+#[cfg(target_arch = "wasm32")]
+fn poll_schedule_import(peer: Option<&str>) -> Option<Result<String, String>> {
     BC_IMPORT_INBOX.with(|slot| {
         let inbox = slot.borrow().clone();
         if let Some(inbox) = inbox {
@@ -696,39 +775,7 @@ pub(in crate::app) fn broadcast_stations_settings(
             }
         }
     });
-
-    // Deliver a finished import.
-    BC_IMPORT_RESULT.with(|slot| {
-        if let Some(res) = slot.borrow_mut().take() {
-            *import = Some(res);
-            *reload = true;
-        }
-    });
-
-    super::note(
-        ui,
-        &tr!("settings-net-broadcast-stations-labelled-waterfall-come"),
-    );
-
-    if ui
-        .add_enabled(peer.is_some(), egui::Button::new(tr!("settings-net-import-list")))
-        .clicked()
-        && let Some(inbox) = BC_IMPORT_INBOX.with(|s| {
-            if s.borrow().is_some() {
-                None
-            } else {
-                let inbox = Arc::new(Mutex::new(None));
-                *s.borrow_mut() = Some(inbox.clone());
-                Some(inbox)
-            }
-        })
-    {
-        crate::download::load_bytes("broadcast", &["csv", "txt", "zip", "json"], inbox);
-    }
-
-    if peer.is_none() {
-        ui.label(tr!("settings-net-broadcast-import-needs-station"));
-    }
+    BC_IMPORT_RESULT.with(|slot| slot.borrow_mut().take())
 }
 
 #[cfg(target_arch = "wasm32")]

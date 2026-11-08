@@ -9412,3 +9412,5 @@ publicsdr-undock-hint = Bu listeyi kendi penceresine geri koy
 publicsdr-close-hint = Public SDRs'yi kapat
 
 settings-net-hfcc-file-hint = HFCC programını kendi kaydettiğiniz bir paketten alın: HFCC'nin yayımladığı zip (örneğin b26allx2.zip), program ve iki tablosuyla birlikte.
+
+schedule-import = İçe aktar…

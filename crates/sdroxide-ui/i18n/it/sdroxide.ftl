@@ -9421,3 +9421,5 @@ publicsdr-undock-hint = Rimetti questo elenco in una finestra a parte
 publicsdr-close-hint = Chiudi Public SDRs
 
 settings-net-hfcc-file-hint = Prendere il palinsesto HFCC da un pacchetto salvato da voi: lo zip pubblicato da HFCC (ad esempio b26allx2.zip), con il palinsesto e le due tabelle.
+
+schedule-import = Importa…

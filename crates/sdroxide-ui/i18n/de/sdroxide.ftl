@@ -9412,3 +9412,5 @@ publicsdr-undock-hint = Diese Liste wieder in ein eigenes Fenster setzen
 publicsdr-close-hint = Public SDRs schließen
 
 settings-net-hfcc-file-hint = Den HFCC-Sendeplan aus einem selbst gespeicherten Paket übernehmen: das von HFCC veröffentlichte ZIP (zum Beispiel b26allx2.zip) mit Sendeplan und den beiden Tabellen.
+
+schedule-import = Import…

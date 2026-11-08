@@ -9360,3 +9360,5 @@ publicsdr-undock-hint = このリストを独立したウィンドウに戻す
 publicsdr-close-hint = Public SDRs を閉じる
 
 settings-net-hfcc-file-hint = ご自身で保存したパッケージから HFCC の番組表を読み込みます。HFCC が公開している zip（例: b26allx2.zip）で、番組表と 2 つの表が入っています。
+
+schedule-import = 取り込み…

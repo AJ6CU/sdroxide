@@ -9427,3 +9427,5 @@ publicsdr-undock-hint = Вернуть этот список в отдельно
 publicsdr-close-hint = Закрыть Public SDRs
 
 settings-net-hfcc-file-hint = Взять расписание HFCC из сохранённого вами пакета: zip, который публикует HFCC (например, b26allx2.zip), с расписанием и двумя таблицами.
+
+schedule-import = Импорт…
