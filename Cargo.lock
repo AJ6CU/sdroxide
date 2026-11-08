@@ -6225,6 +6225,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "sdroxide-wxsat"
+version = "2.3.0"
+dependencies = [
+ "crossbeam-channel",
+ "sdroxide-dsp",
+ "sdroxide-types",
+ "tracing",
+]
+
+[[package]]
 name = "security-framework"
 version = "3.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
