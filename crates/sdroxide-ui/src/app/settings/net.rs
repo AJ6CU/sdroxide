@@ -616,11 +616,21 @@ pub(in crate::app) fn broadcast_stations_settings(
             .clicked()
         {
             if let Some(path) = rfd::FileDialog::new()
-                .add_filter(tr!("settings-net-filter-station-lists"), &["csv", "txt", "json"])
+                .add_filter(tr!("settings-net-filter-station-lists"), &["csv", "txt", "json", "zip"])
                 .pick_file()
             {
-                *import = Some(match sdroxide_config::import_broadcast_stations(&path) {
-                    Ok(n) => Ok(tr!("settings-net-stations-imported", n = n)),
+                // One button for any file: a published schedule (EiBi, Aoki) is
+                // filed like a download, anything else is the operator's own list.
+                *import = Some(match sdroxide_config::import_any_file(&path) {
+                    Ok(sdroxide_config::ImportedFile::Schedule(got)) => Ok(tr!(
+                        "settings-net-schedule-imported",
+                        source = got.source.label(),
+                        season = got.season,
+                        n = got.stations
+                    )),
+                    Ok(sdroxide_config::ImportedFile::List(n)) => {
+                        Ok(tr!("settings-net-stations-imported", n = n))
+                    }
                     Err(e) => Err(e),
                 });
                 *reload = true;
