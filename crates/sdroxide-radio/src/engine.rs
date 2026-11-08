@@ -2766,9 +2766,17 @@ fn wants_recording_tap(recorder: bool, udp_stream: bool, external: bool) -> bool
     (recorder || udp_stream) && !external
 }
 
-/// `src`, or a block of silence of the same length when `off`. The receive band
-/// list ([`Engine::rx_band_refusal`]) cuts what is *heard and recorded* with it:
-/// the decoders read their own clean tap and are not touched. `scratch` holds
+/// Whether the receive band list silences the audio: never. The list still holds
+/// the dial ([`Engine::rx_band_refusal`], with the notice that says why), but a
+/// radio restored on a refused band, or with an unconfirmed list, keeps playing:
+/// a silent speaker looks like broken hardware to the operator.
+fn rx_audio_cut(_refused: bool) -> bool {
+    false
+}
+
+/// `src`, or a block of silence of the same length when `off`. Kept for the
+/// receive stage; [`rx_audio_cut`] decides. The decoders read their own clean
+/// tap and are not touched. `scratch` holds
 /// the silence, and stays empty (no allocation) when `off` is false.
 fn silenced_copy<'a>(off: bool, src: &'a [f32], scratch: &'a mut Vec<f32>) -> &'a [f32] {
     if !off {
@@ -6861,9 +6869,10 @@ impl Engine {
 
         // The receive band list, judged here while nothing is borrowed: the
         // main receiver on the dial, the sub receiver on its own frequency.
-        let main_off =
-            !unscaled_preview && self.rx_band_refusal(self.state.active_freq_hz()).is_some();
-        let sub_off = self.rx_band_refusal(self.state.sub_rx_hz).is_some();
+        let main_off = rx_audio_cut(
+            !unscaled_preview && self.rx_band_refusal(self.state.active_freq_hz()).is_some(),
+        );
+        let sub_off = rx_audio_cut(self.rx_band_refusal(self.state.sub_rx_hz).is_some());
 
         // Both taps come out of one borrow: `run`'s own return would keep the
         // chain mutably borrowed, leaving no way to ask for the recorder tap
@@ -7276,7 +7285,7 @@ impl Engine {
         let (speaker, speaker_right): (&[f32], Option<&[f32]>) =
             if self.replay.on() { (&self.replay_buf, None) } else { (&self.audio_play, right) };
         // The same receive band list as the SDR path.
-        let off = self.rx_band_refusal(self.state.active_freq_hz()).is_some();
+        let off = rx_audio_cut(self.rx_band_refusal(self.state.active_freq_hz()).is_some());
         let (mut z_l, mut z_r, mut z_rec) = (Vec::new(), Vec::new(), Vec::new());
         let speaker = silenced_copy(off, speaker, &mut z_l);
         let speaker_right = speaker_right.map(|r| silenced_copy(off, r, &mut z_r));
@@ -12138,13 +12147,10 @@ impl Engine {
                 // could not read — reaches the operator who asked for the
                 // reload, not just the log.
                 let alerts = sdroxide_config::take_load_alerts();
-                if alerts.is_empty() {
-                    self.notice(if custom {
-                        "Band plan reloaded."
-                    } else {
-                        "Band plan reloaded — it matches the built-in IARU tables."
-                    });
-                } else {
+                // Nothing to say when it went well: a plan that loaded is not an
+                // event, and a "reloaded" warning on every load was noise.
+                let _ = custom;
+                if !alerts.is_empty() {
                     self.notice(&alerts.join("\n"));
                 }
             }

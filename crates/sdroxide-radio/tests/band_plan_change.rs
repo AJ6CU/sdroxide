@@ -244,6 +244,11 @@ fn a_change_of_plan_withdraws_the_confirmations_and_the_same_plan_does_not() {
     assert!(edited.contains("\"lo_mhz\": 14.1"), "the edit applied");
     std::fs::write(&nrw, edited).unwrap();
     rig.send(Command::ReloadBandPlan);
+    assert!(
+        !rig.seen.notices.iter().any(|n| n.contains("reloaded")),
+        "a clean reload says nothing: {:?}",
+        rig.seen.notices
+    );
     assert_eq!(rig.tune(7_074_000.0), 14_074_000.0, "an edited plan that differs is a change: unconfirmed");
     rig.confirm();
     assert_eq!(rig.tune(7_074_000.0), 7_074_000.0);

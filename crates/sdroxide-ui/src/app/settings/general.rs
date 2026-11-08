@@ -397,6 +397,7 @@ impl SdroxideApp {
         .on_hover_text(tr!("settings-general-band-plan-choose-hint"));
         if choice != running {
             cmds.push(sdroxide_types::Command::SelectBandPlan { name: choice });
+            self.follow_station_plan(cmds);
         }
 
         // This radio's own plan, beside the station's: one radio on a national
@@ -506,6 +507,15 @@ impl SdroxideApp {
         self.settings_band_plan_manager(ui, cmds);
     }
 
+    /// After a plan is chosen for the station, put this radio back on it: a radio
+    /// that kept a plan of its own would otherwise ignore the choice. A radio
+    /// that already follows the station needs nothing.
+    fn follow_station_plan(&self, cmds: &mut Vec<sdroxide_types::Command>) {
+        if self.radio_cfg.as_ref().is_some_and(|c| c.band_plan.is_some()) {
+            cmds.push(sdroxide_types::Command::SelectRadioBandPlan { name: None });
+        }
+    }
+
     /// The plans the station holds, one row each, with what can be done to
     /// them: run, download, delete — and, below, keep the plan that runs under a
     /// name and put the shipped plans back.
@@ -581,6 +591,7 @@ impl SdroxideApp {
                                 .on_hover_text(tr!("settings-general-band-plan-run-hint"));
                             if run.clicked() {
                                 cmds.push(Command::SelectBandPlan { name: Some(p.file.clone()) });
+                                self.follow_station_plan(cmds);
                             }
                             // Only on this radio: shown once its configuration is
                             // known, and not for the plan it already runs.
