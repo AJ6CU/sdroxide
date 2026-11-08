@@ -7966,6 +7966,9 @@ pub enum TxBlock {
     Unconfirmed,
     /// The frequency is in this band, which is not ticked.
     BandOff(Band),
+    /// 11 m (CB) is ticked and confirmed, but "Allow transmit on 11 m (CB)" is
+    /// off. The band list comes first; this is the second lock.
+    CbOff,
 }
 
 /// The lowest S-meter calibration offered, in S-units.
@@ -7980,8 +7983,17 @@ impl RadioConfig {
     ///
     /// [`Band::Gen`] ("Other", everywhere outside the bands) is never a
     /// transmit band, whatever the list says.
+    ///
+    /// 11 m (CB) needs a second lock on top of the list: the station's "Allow
+    /// transmit on 11 m (CB)" ([`crate::cb_tx_allowed`]).
     pub fn tx_band_allowed(&self, band: Band) -> bool {
+        self.tx_band_allowed_with(band, crate::cb_tx_allowed())
+    }
+
+    /// [`Self::tx_band_allowed`] with the CB permission given, not read.
+    pub fn tx_band_allowed_with(&self, band: Band, cb_allowed: bool) -> bool {
         band != Band::Gen
+            && (band != Band::M11 || cb_allowed)
             && self.tx_bands_confirmed
             && self.tx_band_enable.as_ref().is_some_and(|bands| bands.contains(&band))
     }
@@ -7989,7 +8001,7 @@ impl RadioConfig {
     /// Whether this radio may transmit at `dial_hz`. The band is the one the
     /// frequency is in, never the selector the operator last clicked.
     pub fn tx_dial_allowed(&self, dial_hz: f64) -> bool {
-        self.tx_band_allowed(Band::containing(dial_hz))
+        self.tx_block_reason(dial_hz).is_none()
     }
 
     /// Why this radio may not transmit at `dial_hz`, or `None` when it may.
@@ -7998,15 +8010,24 @@ impl RadioConfig {
     /// allowed on the bands that are ticked in the list *and* validated, and
     /// refused everywhere else — listening bands, broadcast, "Other" included.
     pub fn tx_block_reason(&self, dial_hz: f64) -> Option<TxBlock> {
+        self.tx_block_reason_with(dial_hz, crate::cb_tx_allowed())
+    }
+
+    /// [`Self::tx_block_reason`] with the CB permission given, not read. The
+    /// locks come in this order: the list confirmed, the band ticked, and for
+    /// 11 m the station's CB permission last.
+    pub fn tx_block_reason_with(&self, dial_hz: f64, cb_allowed: bool) -> Option<TxBlock> {
         if !self.tx_bands_confirmed {
             return Some(TxBlock::Unconfirmed);
         }
         let band = Band::containing(dial_hz);
-        if band != Band::Gen && self.tx_band_enable.as_ref().is_some_and(|b| b.contains(&band)) {
-            None
-        } else {
-            Some(TxBlock::BandOff(band))
+        if band == Band::Gen || !self.tx_band_enable.as_ref().is_some_and(|b| b.contains(&band)) {
+            return Some(TxBlock::BandOff(band));
         }
+        if band == Band::M11 && !cb_allowed {
+            return Some(TxBlock::CbOff);
+        }
+        None
     }
 
     /// Tick or untick one band of the transmit list.
@@ -9730,12 +9751,12 @@ mod tests {
         let sw75 = 3_912_000.0; // broadcast "SW 75m"
         // 11 m alone: CB only.
         let cb = tx_list(&[Band::M11], true);
-        assert_eq!(cb.tx_block_reason(27_185_000.0), None);
+        assert_eq!(cb.tx_block_reason_with(27_185_000.0, true), None);
         assert_eq!(cb.tx_block_reason(7_074_000.0), Some(TxBlock::BandOff(Band::M40)));
         assert!(cb.tx_block_reason(sw41).is_some() && cb.tx_block_reason(sw75).is_some());
         // 11 m + 40 m: those two, nothing else.
         let two = tx_list(&[Band::M11, Band::M40], true);
-        assert_eq!(two.tx_block_reason(27_185_000.0), None);
+        assert_eq!(two.tx_block_reason_with(27_185_000.0, true), None);
         assert_eq!(two.tx_block_reason(7_074_000.0), None);
         assert!(two.tx_block_reason(14_074_000.0).is_some());
         // 11 m unticked: no CB.
@@ -9797,6 +9818,25 @@ mod tests {
     }
 
     /// TX and RX lists are independent: 160 m TX off, RX on.
+    /// Two locks on 11 m, in order: the list (confirmed, ticked), then the
+    /// station's CB permission. Neither opens anything alone.
+    #[test]
+    fn eleven_metres_needs_the_list_first_and_the_cb_permission_second() {
+        let cb = 27_185_000.0;
+        let listed = tx_list(&[Band::M11, Band::M40], true);
+        assert_eq!(listed.tx_block_reason_with(cb, true), None);
+        assert_eq!(listed.tx_block_reason_with(cb, false), Some(TxBlock::CbOff));
+        assert_eq!(listed.tx_block_reason_with(7_074_000.0, false), None, "40 m is not CB");
+        assert!(!listed.tx_band_allowed_with(Band::M11, false));
+        // Permission without the band: the list's own refusal comes first.
+        let unlisted = tx_list(&[Band::M40], true);
+        assert_eq!(unlisted.tx_block_reason_with(cb, true), Some(TxBlock::BandOff(Band::M11)));
+        assert_eq!(unlisted.tx_block_reason_with(cb, false), Some(TxBlock::BandOff(Band::M11)));
+        // An unconfirmed list says so before anything about CB.
+        let unconfirmed = tx_list(&[Band::M11], false);
+        assert_eq!(unconfirmed.tx_block_reason_with(cb, false), Some(TxBlock::Unconfirmed));
+    }
+
     #[test]
     fn other_is_never_a_transmit_band() {
         let hz = 35_000_000.0;

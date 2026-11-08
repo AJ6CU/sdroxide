@@ -92,13 +92,18 @@ fn keyed_on(cfg: RadioConfig, dials: &[f64]) -> Vec<bool> {
 
 /// The same, with the amateur-bands-only rail armed or not.
 fn keyed_on_with(cfg: RadioConfig, dials: &[f64], tx_ham_only: bool) -> Vec<bool> {
+    keyed_run(cfg, dials, tx_ham_only, true)
+}
+
+/// The same, with the station's "Allow transmit on 11 m (CB)" given.
+fn keyed_run(cfg: RadioConfig, dials: &[f64], tx_ham_only: bool, cb_tx_allowed: bool) -> Vec<bool> {
     isolate_config();
     let keyed = Arc::new(Mutex::new(Vec::new()));
     let src = MockRig { center: dials[0], keyed: Arc::clone(&keyed) };
     let mut h = start_engine(
         Box::new(src),
         caps(),
-        EngineConfig { cb_tx_allowed: true, tx_ham_only, ..Default::default() },
+        EngineConfig { cb_tx_allowed, tx_ham_only, ..Default::default() },
     );
     let thread = h.thread.take();
     h.cmd_tx.send(Command::SetRadioConfig { cfg: Box::new(cfg), reopen: false }).unwrap();
@@ -173,4 +178,21 @@ fn the_list_is_the_single_rule_even_with_the_amateur_only_flag() {
     assert_eq!(keyed_on_with(cfg, &[35_000_000.0, 7_074_000.0], true), [false, true]);
     let no_other = list(&[Band::M40], true);
     assert_eq!(keyed_on_with(no_other, &[35_000_000.0, 7_074_000.0], true), [false, true]);
+}
+
+/// 11 m has two locks. The list comes first (11M-CB ticked and confirmed);
+/// "Allow transmit on 11 m (CB)" second. Either one missing keeps the radio
+/// from keying on 11 m, and neither opens any other band.
+#[test]
+fn eleven_metres_needs_the_list_and_the_cb_permission() {
+    const CB: f64 = 27_185_000.0;
+    let ticked = list(&[Band::M11, Band::M40], true);
+    assert_eq!(keyed_run(ticked.clone(), &[CB, 7_074_000.0], false, true), [true, true]);
+    assert_eq!(
+        keyed_run(ticked, &[CB, 7_074_000.0], false, false),
+        [false, true],
+        "permission off: 11 m is refused, 40 m is not touched"
+    );
+    let unticked = list(&[Band::M40], true);
+    assert_eq!(keyed_run(unticked, &[CB], false, true), [false], "permission alone opens nothing");
 }

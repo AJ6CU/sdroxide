@@ -9405,3 +9405,9 @@ smeter-arrow-next-hover = Mesure suivante : { $view }{ $when }
 smeter-arrow-on-receive = (utilisée à l'émission)
 
 tx-bands-outside-note = Hors des bandes listées ici, aucune émission n'est possible. La réception hors bandes (ADS-B, DAB, AIS...) n'a pas besoin de ligne.
+
+tx-off-cb = ÉMISSION INTERDITE en 11 m (CB) — la bande est dans votre liste d'émission, mais « Autoriser l'émission en 11 m (CB) » est décoché. Cochez-le dans Réglages → Général.
+
+settings-cb-allow-tx-needs-band = Mettez d'abord 11M-CB sur OUI dans la liste TX de cette radio (Réglages → Radio), puis autorisez-le ici.
+
+settings-cb-allow-tx-order-note = Deux verrous, dans cet ordre : 1) 11M-CB sur OUI dans la liste de bandes TX de la radio, confirmée ; 2) cette case. Les deux sont nécessaires pour émettre en 11 m. Retirer 11M-CB de la liste décoche aussi cette case.

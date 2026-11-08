@@ -9342,3 +9342,9 @@ smeter-arrow-next-hover = 次の表示: { $view }{ $when }
 smeter-arrow-on-receive = (送信中に使われます)
 
 tx-bands-outside-note = ここに載っているバンド以外では送信できません。バンド外の受信（ADS-B、DAB、AIS など）に行は不要です。
+
+tx-off-cb = 11 m (CB) では送信禁止 — このバンドは送信リストにありますが、「11 m (CB) での送信を許可」がオフです。設定 → 一般 でオンにしてください。
+
+settings-cb-allow-tx-needs-band = まずこの無線機の TX バンドリスト（設定 → 無線機）で 11M-CB を「はい」にし、そのあとここで許可してください。
+
+settings-cb-allow-tx-order-note = ロックは2つ、この順です：1) 無線機の TX バンドリストで 11M-CB が「はい」かつ確認済み、2) このチェックボックス。11 m で送信するには両方が必要です。11M-CB をリストから外すと、このチェックも外れます。

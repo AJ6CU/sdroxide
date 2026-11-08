@@ -9332,3 +9332,9 @@ smeter-arrow-next-hover = 下一个读数：{ $view }{ $when }
 smeter-arrow-on-receive = (发射时使用)
 
 tx-bands-outside-note = 此处列出的频段之外无法发射。频段外的接收（ADS-B、DAB、AIS 等）不需要单独一行。
+
+tx-off-cb = 11 m (CB) 禁止发射 — 该频段已在发射列表中，但“允许在 11 m (CB) 发射”未勾选。请在 设置 → 常规 中勾选。
+
+settings-cb-allow-tx-needs-band = 请先在此电台的 TX 频段列表（设置 → 电台）中将 11M-CB 设为“是”，然后在此允许。
+
+settings-cb-allow-tx-order-note = 两道锁，按此顺序：1) 电台 TX 频段列表中 11M-CB 为“是”且已确认；2) 此复选框。在 11 m 发射需要两者。将 11M-CB 从列表移除也会取消勾选此框。
