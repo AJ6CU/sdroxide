@@ -196,14 +196,15 @@ fn loudest(cfg: RadioConfig) -> f32 {
     best
 }
 
-/// The receive band list cuts what is *heard*, not only the retunes: a radio
-/// restored on a band that is RX NO, or with an unconfirmed list, is silent.
+/// The receive band list holds the dial but never mutes the speaker: a radio
+/// restored on a band that is RX NO, or with an unconfirmed list, keeps playing
+/// (a silent speaker looks like broken hardware).
 #[test]
-fn a_dial_on_a_refused_band_is_not_heard() {
+fn a_dial_on_a_refused_band_is_still_heard() {
     let heard = loudest(list(&[Band::M20], true));
     assert!(heard > 0.01, "20 m is RX YES and confirmed: the tone is heard ({heard})");
     let off = loudest(list(&[Band::M40], true));
-    assert_eq!(off, 0.0, "20 m is RX NO: silence");
+    assert!(off > 0.01, "20 m is RX NO: still heard ({off})");
     let unconfirmed = loudest(list(&[Band::M20], false));
-    assert_eq!(unconfirmed, 0.0, "list not confirmed: silence");
+    assert!(unconfirmed > 0.01, "list not confirmed: still heard ({unconfirmed})");
 }
