@@ -9192,7 +9192,7 @@ sonde-col-temp = SÄ±c.
 
 sonde-col-humidity = Nem
 
-sonde-col-pressure = BasÄ±nÃ§
+sonde-col-pressure = Basınç
 
 settings-net-broadcast-import-needs-station = İçe aktarmak için bir istasyona bağlanın.
 
@@ -9392,3 +9392,13 @@ smeter-arrow-prev-hover = Önceki ölçüm: { $view }{ $when }
 smeter-arrow-next-hover = Sonraki ölçüm: { $view }{ $when }
 
 smeter-arrow-on-receive = (vericiyle yayın yaparken kullanılır)
+
+sonde-card-source-both = Telsiz + SondeHub (ikisi de alıyor)
+
+sonde-card-stale = Durum
+
+sonde-card-stale-value = Listede yok: bilinen son konum
+
+sonde-card-detach = Ayır
+
+sonde-card-attach = Yapıştır

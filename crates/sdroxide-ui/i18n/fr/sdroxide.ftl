@@ -9201,7 +9201,7 @@ sonde-export-none = Aucune position conservée pour cette sonde.
 
 sonde-col-temp = Temp.
 
-sonde-col-humidity = HumiditÃ©
+sonde-col-humidity = Humidité
 
 sonde-col-pressure = Pression
 
@@ -9403,3 +9403,13 @@ smeter-arrow-prev-hover = Mesure précédente : { $view }{ $when }
 smeter-arrow-next-hover = Mesure suivante : { $view }{ $when }
 
 smeter-arrow-on-receive = (utilisée à l'émission)
+
+sonde-card-source-both = Radio + SondeHub (reçue par les deux)
+
+sonde-card-stale = État
+
+sonde-card-stale-value = Plus dans la liste : dernière position connue
+
+sonde-card-detach = Détacher
+
+sonde-card-attach = Rattacher

@@ -9416,3 +9416,13 @@ smeter-arrow-prev-hover = Previous reading: { $view }{ $when }
 smeter-arrow-next-hover = Next reading: { $view }{ $when }
 
 smeter-arrow-on-receive = (used when transmitting)
+
+sonde-card-source-both = Radio + SondeHub (both hear it)
+
+sonde-card-stale = Status
+
+sonde-card-stale-value = Gone from the list: last known position
+
+sonde-card-detach = Detach
+
+sonde-card-attach = Attach

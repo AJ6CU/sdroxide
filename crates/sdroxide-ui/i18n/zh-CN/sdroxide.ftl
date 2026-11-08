@@ -9126,11 +9126,11 @@ sonde-export-csv-hover = 将此探空仪的飞行保存为可用于电子表格�
 
 sonde-export-none = 此探空仪尚无已保存的位置。
 
-sonde-col-temp = æ°”æ¸©
+sonde-col-temp = 气温
 
-sonde-col-humidity = æ¹¿åº¦
+sonde-col-humidity = 湿度
 
-sonde-col-pressure = æ°”åŽ‹
+sonde-col-pressure = 气压
 
 settings-net-broadcast-import-needs-station = 连接到电台以导入。
 
@@ -9330,3 +9330,13 @@ smeter-arrow-prev-hover = 上一个读数：{ $view }{ $when }
 smeter-arrow-next-hover = 下一个读数：{ $view }{ $when }
 
 smeter-arrow-on-receive = (发射时使用)
+
+sonde-card-source-both = 无线电 + SondeHub（两者都收到）
+
+sonde-card-stale = 状态
+
+sonde-card-stale-value = 已不在列表中：最后已知位置
+
+sonde-card-detach = 分离
+
+sonde-card-attach = 固定

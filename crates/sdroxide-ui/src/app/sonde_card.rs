@@ -120,9 +120,121 @@ pub(in crate::app) fn online(o: &OnlineSonde, home: Option<(f64, f64)>, now: i64
     Card { title: format!("{} {}", o.model, o.serial), serial: o.serial.clone(), rows }
 }
 
+/// A sonde both sources know: this radio's rows first (its own frames are the
+/// freshest), then whatever only SondeHub says — maker, variant, SNR, the
+/// station that heard it, its antenna and software — and the fields this radio
+/// did not decode (temperature, pressure…) when SondeHub has them.
+fn merged(s: &SondeTrack, o: &OnlineSonde, home: Option<(f64, f64)>, now: i64) -> Card {
+    let mut c = own(s, home, now);
+    c.rows[0].1 = tr!("sonde-card-source-both");
+    let heard = c.rows.pop();
+    let heard_label = heard.as_ref().map(|(l, _)| l.clone());
+    for (label, value) in online(o, home, now).rows {
+        let known = c.rows.iter().any(|(l, _)| *l == label);
+        if !known && Some(&label) != heard_label.as_ref() {
+            c.rows.push((label, value));
+        }
+    }
+    c.rows.extend(heard);
+    c
+}
+
+/// The card of a sonde from what is known of it: this radio's track, SondeHub's
+/// line, or both. `None` when neither has it.
+pub(in crate::app) fn compose(
+    radio: Option<&SondeTrack>,
+    hub: Option<&OnlineSonde>,
+    home: Option<(f64, f64)>,
+    now: i64,
+) -> Option<Card> {
+    match (radio, hub) {
+        (Some(s), Some(o)) => Some(merged(s, o, home, now)),
+        (Some(s), None) => Some(own(s, home, now)),
+        (None, Some(o)) => Some(online(o, home, now)),
+        (None, None) => None,
+    }
+}
+
+/// Mark a card drawn from a kept copy: the sonde is no longer in any list, and
+/// what is shown is the last thing known of it.
+pub(in crate::app) fn mark_stale(card: &mut Card) {
+    let at = 1.min(card.rows.len());
+    card.rows.insert(at, (tr!("sonde-card-stale"), tr!("sonde-card-stale-value")));
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn radio_sonde() -> SondeTrack {
+        SondeTrack {
+            model: "RS41".into(),
+            serial: "Y1432014".into(),
+            freq_hz: 405_800_000.0,
+            frame: 10,
+            lat: Some(48.0),
+            lon: Some(2.0),
+            alt_m: Some(1000.0),
+            speed_ms: None,
+            course_deg: None,
+            climb_ms: None,
+            num_sv: None,
+            battery_v: None,
+            temp_c: None,
+            humidity_pct: None,
+            pressure_hpa: None,
+            last_unix: 1_000,
+            frames: 7,
+            track: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn a_sonde_both_sources_know_gets_one_complete_card() {
+        let mut hub = hub();
+        hub.temp_c = Some(1.4);
+        hub.subtype = Some("RS41-SGP".into());
+        let c = compose(Some(&radio_sonde()), Some(&hub), None, 1_030).expect("a card");
+        // The radio's own rows stay, and say both sources have it…
+        assert_eq!(
+            value(&c, &tr!("sonde-card-source")),
+            Some(tr!("sonde-card-source-both").as_str())
+        );
+        assert_eq!(value(&c, &tr!("sonde-card-frames")), Some("7"));
+        assert_eq!(value(&c, &tr!("sonde-col-alt")), Some("1000 m"), "the radio's altitude wins");
+        // …and what only SondeHub knows is added, once.
+        assert_eq!(value(&c, &tr!("sonde-card-maker")), Some("Vaisala"));
+        assert_eq!(value(&c, &tr!("sonde-card-variant")), Some("RS41-SGP"));
+        assert_eq!(value(&c, &tr!("sonde-card-station")), Some("M6BIK"));
+        assert_eq!(value(&c, &tr!("sonde-col-temp")), Some("1.4 °C"), "a field the radio lacks");
+        for label in [tr!("sonde-card-position"), tr!("sonde-col-heard"), tr!("sonde-channel")] {
+            assert_eq!(c.rows.iter().filter(|(l, _)| *l == label).count(), 1, "{label} once");
+        }
+        assert_eq!(c.rows.last().map(|(l, _)| l.as_str()), Some(tr!("sonde-col-heard").as_str()));
+    }
+
+    #[test]
+    fn a_card_is_built_from_whichever_source_has_the_sonde() {
+        assert!(compose(None, None, None, 0).is_none());
+        let r = compose(Some(&radio_sonde()), None, None, 1_030).unwrap();
+        assert_eq!(
+            value(&r, &tr!("sonde-card-source")),
+            Some(tr!("sonde-card-source-radio").as_str())
+        );
+        let h = compose(None, Some(&hub()), None, 1_060).unwrap();
+        assert_eq!(
+            value(&h, &tr!("sonde-card-source")),
+            Some(tr!("sonde-card-source-hub").as_str())
+        );
+    }
+
+    #[test]
+    fn a_kept_copy_says_it_is_no_longer_in_any_list() {
+        let mut c = compose(None, Some(&hub()), None, 1_060).unwrap();
+        mark_stale(&mut c);
+        assert_eq!(c.rows[1].0, tr!("sonde-card-stale"));
+        assert_eq!(c.rows[1].1, tr!("sonde-card-stale-value"));
+    }
 
     fn value<'a>(c: &'a Card, label: &str) -> Option<&'a str> {
         c.rows.iter().find(|(l, _)| *l == label).map(|(_, v)| v.as_str())
@@ -189,7 +301,10 @@ mod tests {
             track: Vec::new(),
         };
         let c = own(&s, None, 530);
-        assert_eq!(value(&c, &tr!("sonde-card-source")), Some(tr!("sonde-card-source-radio").as_str()));
+        assert_eq!(
+            value(&c, &tr!("sonde-card-source")),
+            Some(tr!("sonde-card-source-radio").as_str())
+        );
         assert_eq!(value(&c, &tr!("sonde-channel")), Some("404.500 MHz"));
         assert_eq!(value(&c, &tr!("sonde-col-speed")), Some("36 km/h"));
         assert_eq!(value(&c, &tr!("sonde-card-frames")), Some("42"));
@@ -199,7 +314,10 @@ mod tests {
     #[test]
     fn the_links_carry_the_serial_and_nothing_a_serial_could_add() {
         let l = links("Y1432014");
-        assert_eq!(l[0], ("SondeHub", "https://tracker.sondehub.org/#!f=Y1432014&q=Y1432014".into()));
+        assert_eq!(
+            l[0],
+            ("SondeHub", "https://tracker.sondehub.org/#!f=Y1432014&q=Y1432014".into())
+        );
         assert_eq!(l[1].1, "https://radiosondy.info/sonde.php?sondenumber=Y1432014");
         let evil = links("A/../?x=1&y=2#z");
         assert!(evil.iter().all(|(_, u)| !u.contains("..") && !u.contains("x=1")), "{evil:?}");
@@ -208,6 +326,9 @@ mod tests {
 
     #[test]
     fn ages_read_in_a_human_unit() {
-        assert_eq!((ago(5), ago(600), ago(7200), ago(-3)), ("5 s".into(), "10 min".into(), "2 h".into(), "0 s".into()));
+        assert_eq!(
+            (ago(5), ago(600), ago(7200), ago(-3)),
+            ("5 s".into(), "10 min".into(), "2 h".into(), "0 s".into())
+        );
     }
 }

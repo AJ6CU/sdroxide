@@ -9400,3 +9400,13 @@ smeter-arrow-prev-hover = Vorige meting: { $view }{ $when }
 smeter-arrow-next-hover = Volgende meting: { $view }{ $when }
 
 smeter-arrow-on-receive = (geldt tijdens zenden)
+
+sonde-card-source-both = Radio + SondeHub (beide horen haar)
+
+sonde-card-stale = Status
+
+sonde-card-stale-value = Niet meer in de lijst: laatst bekende positie
+
+sonde-card-detach = Losmaken
+
+sonde-card-attach = Vastmaken

@@ -9203,11 +9203,11 @@ sonde-export-csv-hover = Сохранить полёт этого зонда к�
 
 sonde-export-none = Для этого зонда пока нет сохранённых позиций.
 
-sonde-col-temp = Ð¢ÐµÐ¼Ð¿.
+sonde-col-temp = Темп.
 
-sonde-col-humidity = Ð’Ð»Ð°Ð¶Ð½.
+sonde-col-humidity = Влажн.
 
-sonde-col-pressure = Ð”Ð°Ð²Ð».
+sonde-col-pressure = Давл.
 
 settings-net-broadcast-import-needs-station = Подключитесь к станции для импорта.
 
@@ -9407,3 +9407,13 @@ smeter-arrow-prev-hover = Предыдущее показание: { $view }{ $w
 smeter-arrow-next-hover = Следующее показание: { $view }{ $when }
 
 smeter-arrow-on-receive = (используется при передаче)
+
+sonde-card-source-both = Радио + SondeHub (слышат оба)
+
+sonde-card-stale = Состояние
+
+sonde-card-stale-value = Нет в списке: последняя известная позиция
+
+sonde-card-detach = Открепить
+
+sonde-card-attach = Прикрепить

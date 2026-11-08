@@ -9,8 +9,10 @@
 //! this map keeps only the view and the selection.
 
 use crate::i18n::tr;
-use eframe::egui::{Align2, Color32, FontId, Sense, Stroke, Ui, pos2, vec2};
 use crate::sonde_online::OnlineSonde;
+use eframe::egui::{
+    Align2, Color32, CursorIcon, FontId, Pos2, Rect, Sense, Stroke, Tooltip, Ui, Vec2, pos2, vec2,
+};
 use sdroxide_types::SondeTrack;
 
 use crate::hfdl_map::target_view;
@@ -21,8 +23,34 @@ use crate::widgets::worldmap::{MapView, alpha, draw_base, interact, paint_night,
 /// Below this height the map is not worth drawing.
 pub const MIN_HEIGHT: f32 = 90.0;
 
-/// How close a click has to land, in points.
-const HIT_RADIUS: f32 = 14.0;
+/// How close a click has to land, in points. A mark is 8 points across; a
+/// fingertip or a shaky hand is not, so the reach is generous and the nearest
+/// mark wins.
+const HIT_RADIUS: f32 = 18.0;
+
+/// Width of one character of the 9-point monospace label, points.
+const LABEL_CHAR_W: f32 = 5.5;
+
+/// What the pointer can pick on the map.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Pick {
+    /// A sonde this radio decodes (index into the placed ones).
+    Own(usize),
+    /// A sonde only SondeHub has (index into the drawn ones).
+    Hub(usize),
+}
+
+/// The nearest candidate within `radius`; on a tie the first, so a sonde this
+/// radio decodes beats a SondeHub one at the same spot.
+fn nearest<T: Copy>(candidates: &[(T, f32)], radius: f32) -> Option<T> {
+    let mut best: Option<(T, f32)> = None;
+    for &(what, d) in candidates {
+        if d <= radius && best.is_none_or(|(_, b)| d < b) {
+            best = Some((what, d));
+        }
+    }
+    best.map(|(what, _)| what)
+}
 
 /// Per-frame ease toward the auto-fit.
 const EASE: f64 = 0.06;
@@ -40,6 +68,69 @@ pub struct SondeMapState {
     pub selected: Option<String>,
     /// The line shown after a flight was saved to a file.
     pub note: Option<String>,
+    /// What was last seen of the selected sonde, so its card outlives the list
+    /// it came from (SondeHub's is asked again every minute, within a radius).
+    pub kept: Kept,
+    /// Where the selected sonde is on screen and the map's rectangle, this
+    /// frame: the card pins itself beside the sonde, inside the map.
+    pub anchor: Option<Pos2>,
+    pub bounds: Option<Rect>,
+    /// The size the card had last frame, to place it before it is drawn.
+    pub card_size: Option<Vec2>,
+    /// The card is its own window, off the map.
+    pub detached: bool,
+}
+
+impl SondeMapState {
+    /// Select a sonde: the copy kept of the previous one goes.
+    pub fn select(&mut self, serial: String) {
+        if self.selected.as_deref() != Some(serial.as_str()) {
+            self.kept = Kept::default();
+            self.card_size = None;
+        }
+        self.selected = Some(serial);
+    }
+
+    /// Close the card.
+    pub fn deselect(&mut self) {
+        self.selected = None;
+        self.kept = Kept::default();
+        self.card_size = None;
+        self.detached = false;
+    }
+}
+
+/// The last live copy of the selected sonde, from each source. The radio's
+/// track is dropped (a card does not use it), so keeping it costs a few
+/// hundred bytes.
+#[derive(Default, Clone)]
+pub struct Kept {
+    pub radio: Option<SondeTrack>,
+    pub hub: Option<OnlineSonde>,
+}
+
+impl Kept {
+    /// Take what the sources say now. Returns whether either still has the
+    /// sonde: when neither does, the card is drawn from the copy and says so.
+    pub fn update(&mut self, radio: Option<&SondeTrack>, hub: Option<&OnlineSonde>) -> bool {
+        if let Some(s) = radio {
+            let same = self
+                .radio
+                .as_ref()
+                .is_some_and(|k| k.serial == s.serial && k.last_unix == s.last_unix);
+            if !same {
+                let mut c = s.clone();
+                c.track = Vec::new();
+                self.radio = Some(c);
+            }
+        }
+        if let Some(o) = hub {
+            if self.hub.as_ref() != Some(o) {
+                self.hub = Some(o.clone());
+            }
+        }
+        radio.is_some() || hub.is_some()
+    }
 }
 
 /// What a sonde is doing, from its latest frame and how long ago it was heard.
@@ -89,6 +180,8 @@ pub fn show(
     night: Option<eframe::egui::TextureId>,
     max_h: f32,
 ) -> Option<String> {
+    state.anchor = None;
+    state.bounds = None;
     let avail_w = ui.available_width();
     if avail_w < MIN_HEIGHT {
         return None;
@@ -161,19 +254,47 @@ pub fn show(
         )
     };
 
-    // The sonde under the pointer, decided before drawing.
+    state.bounds = Some(rect);
+
+    // The sondes only SondeHub has, where they are drawn and what is written
+    // beside them.
+    let hub_marks: Vec<(&OnlineSonde, Pos2, String)> = online
+        .iter()
+        .filter(|o| !sondes.iter().any(|s| s.serial == o.serial))
+        .map(|o| {
+            let alt = o.alt_m.map(|a| format!(" {a:.0} m")).unwrap_or_default();
+            (o, project(o.lat, o.lon), format!("{}{alt}", o.serial))
+        })
+        .filter(|(_, c, _)| rect.contains(*c))
+        .collect();
+
+    // The mark under the pointer, decided before drawing: the nearest of every
+    // mark (this radio's and SondeHub's) within reach. A SondeHub label is part
+    // of its mark, so a click on the text counts.
     let pointer = resp.hover_pos();
-    let mut hover: Option<usize> = None;
-    let mut best = HIT_RADIUS;
+    let mut picked: Option<Pick> = None;
     if let Some(m) = pointer {
+        let mut cands: Vec<(Pick, f32)> = Vec::new();
         for (i, (_, lat, lon)) in placed.iter().enumerate() {
-            let d = project(*lat, *lon).distance(m);
-            if d <= best {
-                best = d;
-                hover = Some(i);
-            }
+            cands.push((Pick::Own(i), project(*lat, *lon).distance(m)));
         }
+        for (j, (_, c, text)) in hub_marks.iter().enumerate() {
+            let label = Rect::from_min_size(
+                pos2(c.x + 4.0, c.y - 7.0),
+                vec2(text.chars().count() as f32 * LABEL_CHAR_W + 6.0, 14.0),
+            );
+            cands.push((Pick::Hub(j), c.distance(m).min(label.distance_to_pos(m))));
+        }
+        picked = nearest(&cands, HIT_RADIUS);
     }
+    let hover = match picked {
+        Some(Pick::Own(i)) => Some(i),
+        _ => None,
+    };
+    let hub_hover = match picked {
+        Some(Pick::Hub(j)) => Some(j),
+        _ => None,
+    };
 
     let font = FontId::monospace(9.0);
     let selected = state.selected.clone();
@@ -195,44 +316,23 @@ pub fn show(
 
     // ── the sondes other stations hear (SondeHub), hollow diamonds ──
     let online_ink = alpha(Color32::from_rgb(110, 165, 255), 230.0);
-    let mut online_click: Option<String> = None;
-    for o in online.iter().filter(|o| !sondes.iter().any(|s| s.serial == o.serial)) {
-        let c = project(o.lat, o.lon);
-        if !rect.contains(c) {
-            continue;
-        }
-        let r = 4.0;
-        let d = vec![pos2(c.x, c.y - r), pos2(c.x + r, c.y), pos2(c.x, c.y + r), pos2(c.x - r, c.y)];
-        p.add(eframe::egui::Shape::closed_line(d, Stroke::new(1.4, online_ink)));
-        let alt = o.alt_m.map(|a| format!(" {a:.0} m")).unwrap_or_default();
+    for (j, (o, c, text)) in hub_marks.iter().enumerate() {
+        let c = *c;
+        let lit = hub_hover == Some(j) || selected.as_deref() == Some(o.serial.as_str());
+        let r = if lit { 5.5 } else { 4.0 };
+        let d =
+            vec![pos2(c.x, c.y - r), pos2(c.x + r, c.y), pos2(c.x, c.y + r), pos2(c.x - r, c.y)];
+        p.add(eframe::egui::Shape::closed_line(
+            d,
+            Stroke::new(if lit { 2.0 } else { 1.4 }, online_ink),
+        ));
         p.text(
             c + vec2(7.0, 0.0),
             Align2::LEFT_CENTER,
-            format!("{}{alt}", o.serial),
+            text,
             FontId::monospace(9.0),
-            alpha(online_ink, 190.0),
+            alpha(online_ink, if lit { 255.0 } else { 190.0 }),
         );
-        if let Some(m) = pointer.filter(|m| m.distance(c) <= HIT_RADIUS) {
-            let _ = m;
-            if resp.clicked() {
-                online_click = Some(o.serial.clone());
-            }
-            let mut tip = format!("SondeHub  {} {}", o.model, o.serial);
-            tip.push_str(&format!("
-{:.4}, {:.4}", o.lat, o.lon));
-            if let Some(a) = o.alt_m {
-                tip.push_str(&format!("
-{a:.0} m"));
-            }
-            if let Some(c) = o.climb_ms {
-                tip.push_str(&format!("  {c:+.1} m/s"));
-            }
-            if let Some(f) = o.freq_mhz {
-                tip.push_str(&format!("
-{f:.3} MHz"));
-            }
-            resp.clone().on_hover_text(tip);
-        }
     }
 
     // ── marks and labels ──
@@ -278,10 +378,7 @@ pub fn show(
             r,
             tick_from: 0.7,
             tick: alpha(tint, 110.0),
-            lines: vec![
-                (s.serial.clone(), alpha(tint, 240.0)),
-                (summary(s), alpha(tint, 190.0)),
-            ],
+            lines: vec![(s.serial.clone(), alpha(tint, 240.0)), (summary(s), alpha(tint, 190.0))],
             must: top || is_sel,
             rank: if top || is_sel { 0 } else { 1 },
             key: i as u32,
@@ -301,41 +398,81 @@ pub fn show(
         p.circle_stroke(c, 6.5, (1.2, alpha(map.home, 170.0)));
     }
 
+    // ── where the card pins itself ──
+    if let Some(sel) = selected.as_deref() {
+        let at = placed
+            .iter()
+            .find(|(s, ..)| s.serial == sel)
+            .map(|(_, lat, lon)| project(*lat, *lon))
+            .or_else(|| hub_marks.iter().find(|(o, ..)| o.serial == sel).map(|(_, c, _)| *c));
+        state.anchor = at.map(|a| rect.clamp(a));
+    }
+
     // ── interaction ──
     let mut clicked = None;
-    if let Some(serial) = online_click.filter(|_| hover.is_none()) {
-        // A sonde only SondeHub has heard: its card opens below the map.
-        state.selected = Some(serial.clone());
-        clicked = Some(serial);
-    } else if let Some(i) = hover {
-        let (s, lat, lon) = &placed[i];
-        let mut tip = format!("{}  {}\n{lat:.4}, {lon:.4}", s.model, s.serial);
-        tip.push_str(&format!("\n{}", summary(s)));
-        if let Some(v) = s.speed_ms {
-            tip.push_str(&format!("\n{:.0} km/h", v * 3.6));
-        }
-        tip.push_str(&format!("
-{:.3} MHz", s.freq_hz / 1e6));
-        if let Some(v) = s.battery_v {
-            tip.push_str(&format!("\n{v:.1} V"));
-        }
-        if let Some((hlat, hlon)) = home {
-            let km = sdroxide_types::distance_km((hlat, hlon), (*lat, *lon));
-            let bear = sdroxide_types::bearing_deg((hlat, hlon), (*lat, *lon));
-            tip.push_str(&format!(
-                "\n{}   {bear:.0}°",
-                sdroxide_types::AirUnits::current().distance(km)
-            ));
-        }
-        resp.clone().on_hover_text(tip);
+    if let Some(pick) = picked {
+        ui.ctx().set_cursor_icon(CursorIcon::PointingHand);
+        // One tooltip, at the pointer, at once: on the map's own response it
+        // would sit at the corner of the whole map, after a delay.
+        let tip = match pick {
+            Pick::Own(i) => {
+                let (s, lat, lon) = &placed[i];
+                own_tip(s, *lat, *lon, home)
+            }
+            Pick::Hub(j) => hub_tip(hub_marks[j].0),
+        };
+        Tooltip::for_widget(&resp).at_pointer().gap(12.0).show(|ui| {
+            ui.label(tip);
+        });
         if resp.clicked() {
-            state.selected = Some(s.serial.clone());
-            clicked = Some(s.serial.clone());
+            let serial = match pick {
+                Pick::Own(i) => placed[i].0.serial.clone(),
+                Pick::Hub(j) => hub_marks[j].0.serial.clone(),
+            };
+            state.select(serial.clone());
+            clicked = Some(serial);
         }
-    } else if resp.clicked() {
-        state.selected = None;
     }
+    // A click on empty map changes nothing: the card closes with its own
+    // button or Esc, so a near miss does not take it away.
     clicked
+}
+
+/// The tooltip of a sonde this radio decodes.
+fn own_tip(s: &SondeTrack, lat: f64, lon: f64, home: Option<(f64, f64)>) -> String {
+    let mut tip = format!("{}  {}\n{lat:.4}, {lon:.4}", s.model, s.serial);
+    tip.push_str(&format!("\n{}", summary(s)));
+    if let Some(v) = s.speed_ms {
+        tip.push_str(&format!("\n{:.0} km/h", v * 3.6));
+    }
+    tip.push_str(&format!("\n{:.3} MHz", s.freq_hz / 1e6));
+    if let Some(v) = s.battery_v {
+        tip.push_str(&format!("\n{v:.1} V"));
+    }
+    if let Some((hlat, hlon)) = home {
+        let km = sdroxide_types::distance_km((hlat, hlon), (lat, lon));
+        let bear = sdroxide_types::bearing_deg((hlat, hlon), (lat, lon));
+        tip.push_str(&format!(
+            "\n{}   {bear:.0}°",
+            sdroxide_types::AirUnits::current().distance(km)
+        ));
+    }
+    tip
+}
+
+/// The tooltip of a sonde only SondeHub has.
+fn hub_tip(o: &OnlineSonde) -> String {
+    let mut tip = format!("SondeHub  {} {}\n{:.4}, {:.4}", o.model, o.serial, o.lat, o.lon);
+    if let Some(a) = o.alt_m {
+        tip.push_str(&format!("\n{a:.0} m"));
+        if let Some(c) = o.climb_ms {
+            tip.push_str(&format!("  {c:+.1} m/s"));
+        }
+    }
+    if let Some(f) = o.freq_mhz {
+        tip.push_str(&format!("\n{f:.3} MHz"));
+    }
+    tip
 }
 
 #[cfg(test)]
@@ -371,6 +508,53 @@ mod tests {
         assert_eq!(phase(&sonde(Some(-8.0), 100), 110), Phase::Descending);
         assert_eq!(phase(&sonde(Some(-0.2), 100), 110), Phase::Ascending, "float, not a fall");
         assert_eq!(phase(&sonde(Some(5.0), 100), 100 + LOST_AFTER_S + 1), Phase::Silent);
+    }
+
+    #[test]
+    fn the_nearest_mark_within_reach_is_picked() {
+        let c = [(Pick::Own(0), 15.0), (Pick::Hub(1), 6.0), (Pick::Hub(2), 30.0)];
+        assert_eq!(nearest(&c, HIT_RADIUS), Some(Pick::Hub(1)), "nearest, not first");
+        assert_eq!(nearest(&[(Pick::Own(0), HIT_RADIUS + 1.0)], HIT_RADIUS), None);
+        let tie = [(Pick::Own(0), 5.0), (Pick::Hub(0), 5.0)];
+        assert_eq!(nearest(&tie, HIT_RADIUS), Some(Pick::Own(0)), "this radio's sonde wins a tie");
+        assert_eq!(nearest::<Pick>(&[], HIT_RADIUS), None);
+    }
+
+    #[test]
+    fn selecting_another_sonde_drops_the_copy_kept_of_the_first() {
+        let mut st = SondeMapState::default();
+        st.select("A".into());
+        st.kept.update(Some(&sonde(Some(1.0), 10)), None);
+        assert!(st.kept.radio.is_some());
+        st.select("A".into());
+        assert!(st.kept.radio.is_some(), "the same sonde keeps its copy");
+        st.select("B".into());
+        assert!(st.kept.radio.is_none() && st.selected.as_deref() == Some("B"));
+        st.detached = true;
+        st.deselect();
+        assert!(st.selected.is_none() && !st.detached, "closing re-attaches the next card");
+    }
+
+    #[test]
+    fn a_copy_outlives_the_list_it_came_from() {
+        let hub =
+            OnlineSonde { serial: "H".into(), lat: 50.0, lon: 5.0, unix: 9, ..Default::default() };
+        let mut k = Kept::default();
+        assert!(k.update(None, Some(&hub)), "live while a list has it");
+        assert!(!k.update(None, None), "gone from every list");
+        assert_eq!(k.hub.as_ref().map(|o| o.serial.as_str()), Some("H"), "but not forgotten");
+        let point = sdroxide_types::SondePoint {
+            lat: 1.0,
+            lon: 2.0,
+            alt_m: 3.0,
+            unix: 4,
+            temp_c: None,
+            humidity_pct: None,
+            pressure_hpa: None,
+        };
+        let long = SondeTrack { track: vec![point; 500], ..sonde(None, 1) };
+        k.update(Some(&long), None);
+        assert!(k.radio.as_ref().unwrap().track.is_empty(), "no track is kept for a card");
     }
 
     #[test]

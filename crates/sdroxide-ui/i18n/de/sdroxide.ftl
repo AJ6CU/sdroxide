@@ -9390,3 +9390,13 @@ smeter-arrow-prev-hover = Vorheriger Messwert: { $view }{ $when }
 smeter-arrow-next-hover = Nächster Messwert: { $view }{ $when }
 
 smeter-arrow-on-receive = (gilt beim Senden)
+
+sonde-card-source-both = Funk + SondeHub (beide empfangen sie)
+
+sonde-card-stale = Status
+
+sonde-card-stale-value = Nicht mehr in der Liste: letzte bekannte Position
+
+sonde-card-detach = Lösen
+
+sonde-card-attach = Anheften

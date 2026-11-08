@@ -9136,11 +9136,11 @@ sonde-export-csv-hover = このゾンデの飛行を表計算用の CSV とし�
 
 sonde-export-none = このゾンデの位置はまだ保存されていません。
 
-sonde-col-temp = æ°—æ¸©
+sonde-col-temp = 気温
 
-sonde-col-humidity = æ¹¿åº¦
+sonde-col-humidity = 湿度
 
-sonde-col-pressure = æ°—åœ§
+sonde-col-pressure = 気圧
 
 settings-net-broadcast-import-needs-station = インポートするには局に接続してください。
 
@@ -9340,3 +9340,13 @@ smeter-arrow-prev-hover = 前の表示: { $view }{ $when }
 smeter-arrow-next-hover = 次の表示: { $view }{ $when }
 
 smeter-arrow-on-receive = (送信中に使われます)
+
+sonde-card-source-both = 無線 + SondeHub（両方で受信）
+
+sonde-card-stale = 状態
+
+sonde-card-stale-value = 一覧から消えました：最後に分かっている位置
+
+sonde-card-detach = 切り離す
+
+sonde-card-attach = 戻す

@@ -27,6 +27,8 @@ use sdroxide_types::sonde_online::{parse, url};
 
 /// How often the list is asked for again.
 pub const REFRESH_S: i64 = 60;
+/// A list older than this is asked for again when a sonde is picked.
+pub const HURRY_AFTER_S: i64 = 20;
 /// The most bytes read of a reply.
 #[cfg(not(target_arch = "wasm32"))]
 const MAX_BYTES: u64 = 4 * 1024 * 1024;
@@ -154,6 +156,14 @@ impl Online {
         }
     }
 
+    /// Ask again soon when the list is older than [`HURRY_AFTER_S`]: a sonde was
+    /// just picked, and its card should not wait for the minute to be up.
+    pub fn hurry(&mut self, now: i64) {
+        if self.on && self.inflight.is_none() && now - self.last_ask >= HURRY_AFTER_S {
+            self.last_ask = 0;
+        }
+    }
+
     fn ask(&mut self, ctx: &eframe::egui::Context, lat: f64, lon: f64, peer: Option<&str>) {
         let (tx, rx) = channel();
         self.inflight = Some(rx);
@@ -272,8 +282,8 @@ async fn web_fetch(address: &str) -> Result<Vec<OnlineSonde>, Why> {
     let init = web_sys::RequestInit::new();
     init.set_method("GET");
     init.set_mode(web_sys::RequestMode::SameOrigin);
-    let request = web_sys::Request::new_with_str_and_init(address, &init)
-        .map_err(|_| Why::Unreadable)?;
+    let request =
+        web_sys::Request::new_with_str_and_init(address, &init).map_err(|_| Why::Unreadable)?;
     let response = wasm_bindgen_futures::JsFuture::from(window.fetch_with_request(&request))
         .await
         .map_err(|_| Why::Net("no answer".into()))?
@@ -283,13 +293,11 @@ async fn web_fetch(address: &str) -> Result<Vec<OnlineSonde>, Why> {
         200 => {}
         s => return Err(Why::of_status(s)),
     }
-    let text = wasm_bindgen_futures::JsFuture::from(
-        response.text().map_err(|_| Why::Unreadable)?,
-    )
-    .await
-    .ok()
-    .and_then(|t| t.as_string())
-    .unwrap_or_default();
+    let text = wasm_bindgen_futures::JsFuture::from(response.text().map_err(|_| Why::Unreadable)?)
+        .await
+        .ok()
+        .and_then(|t| t.as_string())
+        .unwrap_or_default();
     if text.len() as u64 > 4 * 1024 * 1024 {
         return Err(Why::Unreadable);
     }
@@ -342,6 +350,18 @@ mod tests {
         o.tick(&eframe::egui::Context::default(), Some((48.0, 2.0)), 1_000, None);
         assert!(o.sondes.is_empty() && !o.failed, "off clears the list and the failure");
         assert!(o.inflight.is_none(), "and asks nothing");
+    }
+
+    #[test]
+    fn picking_a_sonde_hurries_a_stale_list_but_not_a_fresh_one() {
+        let mut o = Online { on: true, last_ask: 1_000, ..Default::default() };
+        o.hurry(1_010);
+        assert_eq!(o.last_ask, 1_000, "asked 10 s ago: left alone");
+        o.hurry(1_000 + HURRY_AFTER_S);
+        assert_eq!(o.last_ask, 0, "old enough: the next tick asks");
+        let mut off = Online { last_ask: 5, ..Default::default() };
+        off.hurry(1_000);
+        assert_eq!(off.last_ask, 5, "switched off: nothing to hurry");
     }
 
     #[test]

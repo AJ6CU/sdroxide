@@ -9191,7 +9191,7 @@ sonde-col-temp = Temp.
 
 sonde-col-humidity = Humedad
 
-sonde-col-pressure = PresiÃ³n
+sonde-col-pressure = Presión
 
 settings-net-broadcast-import-needs-station = Conéctese a una estación para importar.
 
@@ -9391,3 +9391,13 @@ smeter-arrow-prev-hover = Medida anterior: { $view }{ $when }
 smeter-arrow-next-hover = Medida siguiente: { $view }{ $when }
 
 smeter-arrow-on-receive = (se usa al transmitir)
+
+sonde-card-source-both = Radio + SondeHub (ambas la reciben)
+
+sonde-card-stale = Estado
+
+sonde-card-stale-value = Ya no está en la lista: última posición conocida
+
+sonde-card-detach = Separar
+
+sonde-card-attach = Fijar
