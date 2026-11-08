@@ -254,6 +254,7 @@ async fn run_session(
         qo100_status,
         hfdl_status,
         sonde_status,
+        meshtastic_status,
         drm,
         hd,
         relay,
@@ -284,6 +285,7 @@ async fn run_session(
             latest.qo100_status.clone(),
             latest.hfdl_status.clone(),
             latest.sonde_status.clone(),
+            latest.meshtastic_status.clone(),
             latest.drm.clone(),
             latest.hd.clone(),
             latest.relay.clone(),
@@ -431,6 +433,9 @@ async fn run_session(
     }
     if let Some(st) = sonde_status {
         let _ = socket.send(msg(&ServerMsg::SondeStatus(st))).await;
+    }
+    if let Some(st) = meshtastic_status {
+        let _ = socket.send(msg(&ServerMsg::MeshtasticStatus(st))).await;
     }
     // And the transmit-image presets, for the same reason. The received
     // galleries are not replayed: a panel lists its store when it opens, which

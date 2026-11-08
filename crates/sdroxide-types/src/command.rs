@@ -1520,6 +1520,15 @@ pub enum Command {
     ///
     /// Appended for the usual reason.
     SelectRadioBandPlan { name: Option<String> },
+
+    /// Whether the Meshtastic receiver runs, and which channel, preset and keys
+    /// it uses. Kept in `meshtastic.json`, echoed back in
+    /// [`crate::RadioState::meshtastic`]. Turning it on records where the radio
+    /// was (`restore`); turning it off, or quitting, puts the dial and the mode
+    /// back. It never moves the dial to a band the receive list refuses: the
+    /// panel tunes with the ordinary tune command and the lane reports the
+    /// refusal. Appended for the usual reason.
+    SetMeshtasticConfig(crate::MeshtasticSettings),
 }
 
 /// What a [`Command::GetKnownCalls`] was answered with.

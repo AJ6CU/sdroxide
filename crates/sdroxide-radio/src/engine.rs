@@ -34,6 +34,7 @@ use sdroxide_dsp::{
     make_demod, make_modulator,
 };
 use sdroxide_hfdl::HfdlController;
+use sdroxide_meshtastic::controller::{MeshtasticController, lane_rate_hz, preset_of};
 use sdroxide_sonde::SondeBank;
 use sdroxide_wxsat::WxsatLane;
 use sdroxide_ism::{IsmAction, IsmController};
@@ -3675,6 +3676,29 @@ struct Engine {
     sonde: Option<SondeBank>,
     /// The stream rate `sonde` was built for.
     sonde_in_rate: f64,
+    /// Meshtastic receiver: a downconversion centred on the chosen channel,
+    /// resampled to the preset's lane rate, plus a worker-thread demodulator;
+    /// present only while the receiver is enabled. The same fixed-frequency
+    /// shape as the HFDL lane, so a retune is re-seating the mixer
+    /// (`sync_meshtastic_window`). It listens only while the channel is inside
+    /// the window and the receive band list lets the radio listen there
+    /// (`mesh_gate`); the list is read, never written.
+    mesh_ddc: Option<Ddc>,
+    mesh: Option<MeshtasticController>,
+    mesh_buf: Vec<Complex32>,
+    mesh_rs: Option<ComplexResampler>,
+    mesh_res_buf: Vec<Complex32>,
+    /// The stream rate `mesh_ddc` was built to decimate.
+    mesh_in_rate: f64,
+    /// The preset the lane was built for.
+    mesh_preset: &'static str,
+    /// The channel is inside the window and the receive list allows it.
+    mesh_gate: bool,
+    /// The last status the worker sent, kept so the flags can be refreshed and
+    /// the status repeated while the gate is shut.
+    mesh_last: Option<sdroxide_types::MeshtasticStatus>,
+    /// Unix second the last status went out.
+    mesh_sent_s: i64,
     /// Weather-satellite (NOAA APT) decoder lane: one 48 kS/s channel mixed
     /// from the wide window, only while the operator has it enabled. See
     /// `sdroxide_wxsat::WxsatLane`.
@@ -4874,6 +4898,12 @@ fn engine_thread(
     } else {
         sonde_cfg
     };
+    let mesh_cfg = sdroxide_config::load_meshtastic_config();
+    state.meshtastic = if audio_mode {
+        sdroxide_types::MeshtasticSettings { enabled: false, ..mesh_cfg } // wideband-only
+    } else {
+        mesh_cfg
+    };
     let dab_cfg = engine_cfg.store.load_dab_config();
     state.dab = if audio_mode {
         sdroxide_types::DabSettings::OFF // wideband-only, like the rest of the lanes
@@ -5365,6 +5395,16 @@ fn engine_thread(
         hfdl_in_rate: 0.0,
         sonde: None,
         sonde_in_rate: 0.0,
+        mesh_ddc: None,
+        mesh: None,
+        mesh_buf: Vec::new(),
+        mesh_rs: None,
+        mesh_res_buf: Vec::new(),
+        mesh_in_rate: 0.0,
+        mesh_preset: "",
+        mesh_gate: false,
+        mesh_last: None,
+        mesh_sent_s: 0,
         wxsat: None,
         wxsat_pass: 0,
         // From `hfdl.json`, as `qo100_cfg` is.
@@ -5544,6 +5584,7 @@ fn engine_thread(
         engine.sync_qo100(); // and the beacon lane, from qo100.json
         engine.sync_hfdl(); // ...and the HFDL lane, likewise
         engine.sync_sonde(); // ...and the radiosonde lane, likewise
+        engine.sync_meshtastic(); // ...and the Meshtastic lane, likewise
         engine.sync_wxsat(); // ...and the weather-satellite lane, likewise
     }
     // This radio's callsign override, read once here so the hot paths never
@@ -5743,6 +5784,9 @@ fn engine_thread(
                     engine.rig_tx = false;
                     engine.cw_gate_until = None;
                     engine.release_tx_gate();
+                    // Quitting with the Meshtastic receiver on puts the dial and
+                    // the mode back where they were before it took the radio.
+                    engine.restore_meshtastic_on_exit();
                     // A change made since the last session tick still has to
                     // reach the file, or quitting within ten seconds of making
                     // it forgets it.
@@ -5815,6 +5859,7 @@ fn engine_thread(
         engine.poll_qo100();
         engine.poll_hfdl();
         engine.poll_sonde();
+        engine.poll_meshtastic();
         engine.poll_wxsat();
         engine.poll_scanner();
         engine.poll_tci_server();
@@ -7088,6 +7133,25 @@ impl Engine {
         if let Some(bank) = self.sonde.as_mut() {
             bank.on_wide_iq(iq, unix_now());
         }
+        // ...and the Meshtastic receiver from a lane centred on its channel,
+        // resampled onto the preset's exact lane rate. Fed only while the
+        // channel is inside the window and the receive band list allows it.
+        if let Some(ddc) = self.mesh_ddc.as_mut() {
+            if self.mesh_gate {
+                self.mesh_buf.clear();
+                ddc.process(iq, &mut self.mesh_buf);
+                let lane = if let Some(rs) = self.mesh_rs.as_mut() {
+                    self.mesh_res_buf.clear();
+                    rs.push(&self.mesh_buf, &mut self.mesh_res_buf);
+                    &self.mesh_res_buf
+                } else {
+                    &self.mesh_buf
+                };
+                if let Some(c) = self.mesh.as_ref() {
+                    c.on_rx_iq(lane);
+                }
+            }
+        }
         // ...and the weather-satellite lane, only while the channel is inside
         // the window (a window parked elsewhere has nothing of it to decode).
         if let Some(lane) = self.wxsat.as_mut() {
@@ -7664,6 +7728,7 @@ impl Engine {
                 self.sync_qo100_window();
                 self.sync_hfdl_window();
                 self.sync_sonde_window();
+                self.sync_meshtastic_window();
                 self.sync_wxsat_window();
                 self.update_tuning();
                 let _ = self.event_tx.send(RadioEvent::State(self.state.clone()));
@@ -7949,6 +8014,7 @@ impl Engine {
         // is just re-seating the mixer.
         self.sync_hfdl_window();
                 self.sync_sonde_window();
+                self.sync_meshtastic_window();
                 self.sync_wxsat_window();
         // Re-seat the DDCs on the new centre. Without this the main receiver
         // keeps the offset it had against the old one, which is exactly how a
@@ -10131,6 +10197,7 @@ impl Engine {
                         // channel.
                         self.sync_hfdl_window();
                 self.sync_sonde_window();
+                self.sync_meshtastic_window();
                 self.sync_wxsat_window();
                     }
                 }
@@ -11545,6 +11612,8 @@ impl Engine {
                 // `sync_sonde` hands the new settings to a running bank itself.
                 self.sync_sonde();
             }
+
+            SetMeshtasticConfig(cfg) => self.set_meshtastic_config(cfg),
 
             SetWxsatConfig(cfg) => {
                 let cfg = cfg.sane();
@@ -13425,6 +13494,191 @@ impl Engine {
         let Some(bank) = self.sonde.as_mut() else { return };
         let Some(status) = bank.poll(now) else { return };
         let _ = self.event_tx.send(RadioEvent::SondeStatus(Box::new(status)));
+    }
+
+    /// Whether the Meshtastic channel is inside the window the radio captures,
+    /// and why the receive band list would not let the radio listen there. The
+    /// list is only read: the lane idles on a refusal and says so in its status,
+    /// it never moves the dial or edits the list.
+    fn mesh_gate_state(&self) -> (bool, Option<sdroxide_types::RxBlock>) {
+        let cfg = &self.state.meshtastic;
+        let rate = if self.state.usable_hz > 0.0 {
+            self.state.usable_hz.min(self.state.sample_rate)
+        } else {
+            self.state.sample_rate
+        };
+        let in_window = sdroxide_types::meshtastic_window_covers(
+            self.state.center_hz,
+            rate,
+            cfg.frequency_hz,
+            f64::from(preset_of(cfg).bw_hz),
+        );
+        (in_window, self.rx_band_refusal(cfg.frequency_hz))
+    }
+
+    /// Build (or rebuild) the Meshtastic downconverter on the current centre,
+    /// at the lane rate of the current preset.
+    fn build_mesh_lane(&mut self) {
+        let cfg = &self.state.meshtastic;
+        let preset = preset_of(cfg);
+        let rate = lane_rate_hz(preset);
+        let mut ddc = Ddc::new(self.state.sample_rate, rate);
+        ddc.set_offset_hz(cfg.frequency_hz - self.state.center_hz);
+        let out_rate = ddc.out_rate();
+        self.mesh_rs = ComplexResampler::new(out_rate, rate);
+        self.mesh_ddc = Some(ddc);
+        self.mesh_in_rate = self.state.sample_rate;
+        self.mesh_preset = preset.name;
+        self.mesh_buf.clear();
+        self.mesh_res_buf.clear();
+    }
+
+    /// Construct or tear down the Meshtastic receiver to match
+    /// `state.meshtastic.enabled`, and hand a running worker its new settings.
+    fn sync_meshtastic(&mut self) {
+        // Wideband-only, for the same reason as the other lanes.
+        if self.audio_mode {
+            self.state.meshtastic.enabled = false;
+        }
+        match (self.state.meshtastic.enabled, self.mesh.is_some()) {
+            (true, false) => {
+                self.build_mesh_lane();
+                self.mesh = Some(MeshtasticController::new(self.state.meshtastic.clone()));
+                info!(preset = self.mesh_preset, "meshtastic receiver started");
+            }
+            (false, true) => {
+                self.mesh = None;
+                self.mesh_ddc = None;
+                self.mesh_rs = None;
+                self.mesh_buf.clear();
+                self.mesh_res_buf.clear();
+                self.mesh_gate = false;
+                // A last status that says it stopped, with the table kept, so
+                // a panel does not keep showing a running receiver.
+                let mut last = self.mesh_last.take().unwrap_or_default();
+                last.running = false;
+                let _ = self.event_tx.send(RadioEvent::MeshtasticStatus(Box::new(last)));
+                info!("meshtastic receiver stopped");
+            }
+            (true, true) => {
+                self.sync_meshtastic_window();
+                if let Some(c) = self.mesh.as_ref() {
+                    c.set_config(&self.state.meshtastic);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    /// Re-seat the Meshtastic mixer after a retune, and rebuild the lane if the
+    /// sample rate feeding it, or its preset, has changed (a `Ddc` bakes its
+    /// input rate in at construction).
+    fn sync_meshtastic_window(&mut self) {
+        if self.mesh_ddc.is_none() {
+            return;
+        }
+        let preset = preset_of(&self.state.meshtastic);
+        if (self.state.sample_rate - self.mesh_in_rate).abs() >= 1.0
+            || preset.name != self.mesh_preset
+        {
+            self.build_mesh_lane();
+            info!(preset = self.mesh_preset, "meshtastic window rebuilt");
+        } else if let Some(ddc) = self.mesh_ddc.as_mut() {
+            ddc.set_offset_hz(self.state.meshtastic.frequency_hz - self.state.center_hz);
+        }
+        let (in_window, refused) = self.mesh_gate_state();
+        self.mesh_gate = in_window && refused.is_none();
+    }
+
+    /// Drain the Meshtastic receiver's latest status and forward it, with the
+    /// two facts only the engine knows: whether the channel is in the window,
+    /// and whether the receive band list refuses it. While the lane is idle for
+    /// either reason the last status is repeated once a second, so the panel
+    /// can say why.
+    fn poll_meshtastic(&mut self) {
+        if self.mesh.is_none() {
+            return;
+        }
+        let (in_window, refused) = self.mesh_gate_state();
+        self.mesh_gate = in_window && refused.is_none();
+        let fresh = self.mesh.as_ref().and_then(|c| c.poll());
+        let now = unix_now();
+        let mut status = match fresh {
+            Some(s) => s,
+            None if !self.mesh_gate && now != self.mesh_sent_s => {
+                self.mesh_last.clone().unwrap_or_default()
+            }
+            None => return,
+        };
+        status.running = true;
+        status.in_window = in_window;
+        status.refused = refused;
+        self.mesh_last = Some(status.clone());
+        self.mesh_sent_s = now;
+        let _ = self.event_tx.send(RadioEvent::MeshtasticStatus(Box::new(status)));
+    }
+
+    /// Apply the operator's Meshtastic settings. Turning the receiver on
+    /// records where the radio is; turning it off puts the dial and the mode
+    /// back. The restore point is the station's own: whatever a client sends in
+    /// it is ignored.
+    fn set_meshtastic_config(&mut self, cfg: sdroxide_types::MeshtasticSettings) {
+        let prev = self.state.meshtastic.clone();
+        let mut next = cfg.sane();
+        if self.audio_mode {
+            next.enabled = false;
+        }
+        next.restore = if next.enabled {
+            prev.restore.or_else(|| {
+                Some(sdroxide_types::MeshtasticRestore {
+                    dial_hz: match self.state.active_vfo {
+                        Vfo::A => self.state.vfo_a_hz,
+                        Vfo::B => self.state.vfo_b_hz,
+                    },
+                    mode: self.state.rx[0].mode,
+                })
+            })
+        } else {
+            None
+        };
+        if !next.enabled
+            && let Some(r) = prev.restore
+        {
+            self.restore_tuning(r);
+        }
+        self.state.meshtastic = next;
+        if let Err(e) = sdroxide_config::save_meshtastic_config(&self.state.meshtastic) {
+            warn!("saving meshtastic config: {e}");
+        }
+        self.sync_meshtastic();
+    }
+
+    /// Put the dial and the mode back where the receiver found them, through
+    /// the ordinary commands: the receive band list still decides, and a dial
+    /// it now refuses stays where it is.
+    fn restore_tuning(&mut self, r: sdroxide_types::MeshtasticRestore) {
+        let vfo = self.state.active_vfo;
+        self.apply(Command::SetVfo { vfo, hz: r.dial_hz });
+        if self.state.rx[0].mode != r.mode {
+            self.apply(Command::SetModeListen { rx: RxId::Main, mode: r.mode });
+        }
+    }
+
+    /// Quitting with the receiver on is leaving it: restore the radio, switch
+    /// the receiver off for the next start and write the session so the dial
+    /// that comes back is the one that is remembered.
+    fn restore_meshtastic_on_exit(&mut self) {
+        let Some(r) = self.state.meshtastic.restore else { return };
+        if !self.state.meshtastic.enabled {
+            return;
+        }
+        self.restore_tuning(r);
+        self.state.meshtastic.enabled = false;
+        self.state.meshtastic.restore = None;
+        if let Err(e) = sdroxide_config::save_meshtastic_config(&self.state.meshtastic) {
+            warn!("saving meshtastic config: {e}");
+        }
+        self.save_session();
     }
 
     /// Construct or tear down the weather-satellite lane: one fixed-frequency
@@ -19437,6 +19691,7 @@ impl Engine {
             self.sync_qo100();
             self.sync_hfdl();
             self.sync_sonde();
+            self.sync_meshtastic();
             self.sync_wxsat();
         }
         // Re-derive the TCI streams at the new device rate and push a fresh
@@ -21780,6 +22035,7 @@ impl Engine {
                 self.sync_qo100_window();
                 self.sync_hfdl_window();
                 self.sync_sonde_window();
+                self.sync_meshtastic_window();
                 self.sync_wxsat_window();
                 true
             }

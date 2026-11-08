@@ -4515,6 +4515,9 @@ impl SdroxideApp {
                     st.new_lines = Vec::new();
                     self.wxsat_status = Some(st);
                 }
+                // The panel that shows the receiver comes in the next change;
+                // until then the status is dropped on arrival.
+                RadioEvent::MeshtasticStatus(_) => {}
                 RadioEvent::VorStatus(st) => self.vor_status = Some(st),
                 RadioEvent::SstvStatus(s) => {
                     // Adopt a *newly* detected RX mode for the next transmit, but

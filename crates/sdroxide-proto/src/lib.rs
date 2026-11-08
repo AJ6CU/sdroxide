@@ -2339,8 +2339,16 @@ use sdroxide_types::{
 /// on the station; the date of birth never crosses the link. `#[serde(default)]`
 /// on every new field, so a stored `net.json` loads unchanged.
 /// `PROTO_VERSION` 285 → 286, `VERSION_BYTE` 0x69 → 0x6A.
-pub const PROTO_VERSION: u16 = 286;
-const VERSION_BYTE: u8 = 0x6A;
+///
+/// v287: **the Meshtastic receiver.** [`sdroxide_types::RadioState`] gains
+/// `meshtastic` ([`sdroxide_types::MeshtasticSettings`]: on, region, preset,
+/// channel, keys and where the radio was before the lane tuned it) at its tail,
+/// `Command` gains `SetMeshtasticConfig` last, and `ServerMsg` gains
+/// `MeshtasticStatus(Box<..>)` last (level, counters, nodes, packet log).
+/// `RadioState` crosses the link whole, so the appended field moves its layout.
+/// `PROTO_VERSION` 286 → 287, `VERSION_BYTE` 0x6A → 0x6B.
+pub const PROTO_VERSION: u16 = 287;
+const VERSION_BYTE: u8 = 0x6B;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -2945,6 +2953,9 @@ pub enum ServerMsg {
     /// The weather-satellite decoder: its state and the picture lines new since
     /// the previous message (the client builds the image). Appended last (v284).
     WxsatStatus(Box<sdroxide_types::WxsatStatus>),
+    /// The Meshtastic receiver: level, counters, the nodes heard and the packet
+    /// log, a whole snapshot each time. Appended last (v287).
+    MeshtasticStatus(Box<sdroxide_types::MeshtasticStatus>),
 }
 
 /// What [`ServerMsg::ClientSettings`] carries.
@@ -4334,6 +4345,66 @@ mod tests {
                 lines: vec![3; sdroxide_types::WXSAT_LRPT_WIDTH * sdroxide_types::WXSAT_LRPT_ROW_LINES],
             }],
             ..Default::default()
+        }));
+        let back: ServerMsg = decode(&encode(&st).unwrap()).unwrap();
+        assert_eq!(back, st);
+    }
+
+    /// The Meshtastic receiver's settings cross the wire both ways, with the
+    /// restore point they carry, and its status rides the last `ServerMsg`
+    /// variant. Set away from the defaults so a field that decoded into its
+    /// default would fail here.
+    #[test]
+    fn roundtrip_meshtastic_config_and_status() {
+        let cfg = sdroxide_types::MeshtasticSettings {
+            enabled: true,
+            region: "US".into(),
+            preset: "MediumFast".into(),
+            frequency_hz: 913_125_000.0,
+            keys: "club=simple2".into(),
+            restore: Some(sdroxide_types::MeshtasticRestore {
+                dial_hz: 14_074_000.0,
+                mode: sdroxide_types::Mode::Usb,
+            }),
+        };
+        let m = ClientMsg::Command(Command::SetMeshtasticConfig(cfg.clone()));
+        let back: ClientMsg = decode(&encode(&m).unwrap()).unwrap();
+        assert_eq!(back, m);
+        let mut state = sdroxide_types::RadioState::default();
+        state.meshtastic = cfg.clone();
+        let back: sdroxide_types::RadioState = decode(&encode(&state).unwrap()).unwrap();
+        assert_eq!(back.meshtastic, cfg);
+        assert_ne!(back.meshtastic, sdroxide_types::MeshtasticSettings::default());
+
+        let st = ServerMsg::MeshtasticStatus(Box::new(sdroxide_types::MeshtasticStatus {
+            running: true,
+            in_window: true,
+            refused: Some(sdroxide_types::RxBlock::BandOff(sdroxide_types::Band::Gen)),
+            level_dbfs: -61.5,
+            preambles: 7,
+            frames: 5,
+            crc_bad: 2,
+            nodes: vec![sdroxide_types::MeshNode {
+                id: 0xDEAD_BEEF,
+                long_name: "Seb".into(),
+                short_name: "SEB".into(),
+                last_heard: 1_700_000_000,
+                snr_db: -7.5,
+                packets: 3,
+                hops: Some(1),
+                lat_deg: Some(48.8584),
+                battery_pct: Some(87),
+                ..Default::default()
+            }],
+            log: vec![sdroxide_types::MeshEntry {
+                time: 1_700_000_000,
+                from: 0xDEAD_BEEF,
+                to: 0xFFFF_FFFF,
+                port: 1,
+                channel: "LongFast".into(),
+                text: Some("73 de F4NRM".into()),
+                ..Default::default()
+            }],
         }));
         let back: ServerMsg = decode(&encode(&st).unwrap()).unwrap();
         assert_eq!(back, st);

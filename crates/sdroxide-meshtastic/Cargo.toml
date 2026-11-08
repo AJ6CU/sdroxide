@@ -5,8 +5,16 @@ edition.workspace = true
 license.workspace = true
 description = "Meshtastic over LoRa: CSS demodulator and modulator, frame header, AES-CTR channel keys, protobuf envelope"
 
+[features]
+# The receiver as the engine runs it (a worker thread and the node table).
+# Native-only: the web client links the protocol tables and decoders without it.
+engine = ["dep:sdroxide-types", "dep:crossbeam-channel", "dep:tracing"]
+
 [dependencies]
 num-complex.workspace = true
 rustfft.workspace = true
 aes = "0.8"
 ctr = "0.9"
+sdroxide-types = { workspace = true, optional = true }
+crossbeam-channel = { workspace = true, optional = true }
+tracing = { workspace = true, optional = true }
