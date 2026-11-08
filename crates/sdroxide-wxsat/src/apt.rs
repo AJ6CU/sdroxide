@@ -69,7 +69,8 @@ impl ComplexFir {
                 } else {
                     (2.0 * std::f64::consts::PI * fc * x).sin() / (std::f64::consts::PI * x)
                 };
-                let w = 0.54 - 0.46 * (2.0 * std::f64::consts::PI * i as f64 / (n - 1) as f64).cos();
+                let w =
+                    0.54 - 0.46 * (2.0 * std::f64::consts::PI * i as f64 / (n - 1) as f64).cos();
                 (sinc * w) as f32
             })
             .collect();
@@ -278,8 +279,8 @@ impl AptDecoder {
                     }
                     let (at, s) = self.best_in(0, LINE_PIXELS - 1);
                     let next = LINE_PIXELS + at;
-                    let confirmed =
-                        s >= HUNT_THRESHOLD && self.best_in(next - 2, next + 2).1 >= CONFIRM_THRESHOLD;
+                    let confirmed = s >= HUNT_THRESHOLD
+                        && self.best_in(next - 2, next + 2).1 >= CONFIRM_THRESHOLD;
                     if confirmed {
                         // Keep the sync where it is: the tracking branch picks it up.
                         self.buf.drain(..at.saturating_sub(KEEP_BEHIND));

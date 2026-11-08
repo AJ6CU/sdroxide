@@ -105,7 +105,7 @@ impl FrameSync {
             return None;
         }
         let b = bit ^ u8::from(self.inverted);
-        if self.nbits % 8 == 0 {
+        if self.nbits.is_multiple_of(8) {
             self.buf.push(0);
         }
         let last = self.buf.len() - 1;
@@ -188,7 +188,8 @@ impl FrameDecoder {
         Some(Vcdu {
             vcid: v[1] & 0x3F,
             counter: u32::from_be_bytes([0, v[2], v[3], v[4]]),
-            first_header: (fhp != NO_HEADER && usize::from(fhp) < zone.len()).then_some(usize::from(fhp)),
+            first_header: (fhp != NO_HEADER && usize::from(fhp) < zone.len())
+                .then_some(usize::from(fhp)),
             zone,
             corrected,
         })
@@ -412,7 +413,13 @@ mod tests {
         for (n, z) in zones.drain(..).enumerate() {
             let lo = n * 882;
             let first = starts.iter().find(|&&s| s >= lo && s < lo + 882).map(|s| s - lo);
-            let v = Vcdu { vcid: 5, counter: 100 + n as u32, first_header: first, zone: z.to_vec(), corrected: 0 };
+            let v = Vcdu {
+                vcid: 5,
+                counter: 100 + n as u32,
+                first_header: first,
+                zone: z.to_vec(),
+                corrected: 0,
+            };
             got.extend(asm.push(&v));
         }
         // The last packet (500 bytes from 1220) is in two frames; with 1720 bytes
@@ -431,10 +438,17 @@ mod tests {
             p
         };
         let mut asm = PacketAssembler::new();
-        let first = Vcdu { vcid: 5, counter: 10, first_header: Some(0), zone: long[..882].to_vec(), corrected: 0 };
+        let first = Vcdu {
+            vcid: 5,
+            counter: 10,
+            first_header: Some(0),
+            zone: long[..882].to_vec(),
+            corrected: 0,
+        };
         assert!(asm.push(&first).is_empty());
         // Frame 11 is lost; 12 holds the rest but names no start.
-        let third = Vcdu { vcid: 5, counter: 12, first_header: None, zone: vec![7u8; 882], corrected: 0 };
+        let third =
+            Vcdu { vcid: 5, counter: 12, first_header: None, zone: vec![7u8; 882], corrected: 0 };
         assert!(asm.push(&third).is_empty(), "nothing is built across a hole");
     }
 }

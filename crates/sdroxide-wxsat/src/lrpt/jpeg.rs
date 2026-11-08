@@ -298,7 +298,15 @@ mod tests {
                     .map(|i| u8::from_str_radix(&f[6][i..i + 2], 16).unwrap())
                     .collect();
                 let first = f[5].split(',').map(|v| v.parse().unwrap()).collect();
-                (f[0].parse().unwrap(), f[1].parse().unwrap(), f[2].parse().unwrap(), f[3].parse().unwrap(), f[4].parse().unwrap(), first, hex)
+                (
+                    f[0].parse().unwrap(),
+                    f[1].parse().unwrap(),
+                    f[2].parse().unwrap(),
+                    f[3].parse().unwrap(),
+                    f[4].parse().unwrap(),
+                    first,
+                    hex,
+                )
             })
             .collect()
     }
@@ -339,7 +347,11 @@ mod tests {
         assert_eq!(DC_COUNTS.iter().map(|&c| usize::from(c)).sum::<usize>(), DC_VALS.len());
         assert_eq!(AC_COUNTS.iter().map(|&c| usize::from(c)).sum::<usize>(), AC_VALS.len());
         for counts in [DC_COUNTS, AC_COUNTS] {
-            let kraft: f64 = counts.iter().enumerate().map(|(i, &c)| f64::from(c) / f64::from(1u32 << (i + 1))).sum();
+            let kraft: f64 = counts
+                .iter()
+                .enumerate()
+                .map(|(i, &c)| f64::from(c) / f64::from(1u32 << (i + 1)))
+                .sum();
             assert!(kraft <= 1.0, "kraft {kraft}");
         }
     }
@@ -355,6 +367,12 @@ mod tests {
             assert_eq!(s.pixels.len(), 14 * 64);
         }
         // Not an image channel.
-        assert!(parse_image_packet(&[0x08, 0x46, 0, 0, 0, 20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]).is_none());
+        assert!(
+            parse_image_packet(&[
+                0x08, 0x46, 0, 0, 0, 20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0
+            ])
+            .is_none()
+        );
     }
 }

@@ -8,7 +8,7 @@
 use std::thread::JoinHandle;
 
 use crossbeam_channel::{Receiver, Sender, bounded, select, unbounded};
-use sdroxide_dsp::{ComplexResampler, Ddc, Complex32};
+use sdroxide_dsp::{Complex32, ComplexResampler, Ddc};
 use sdroxide_types::{WXSAT_MAX_NEW_LINES, WxsatSettings, WxsatStatus};
 
 use crate::WXSAT_LANE_RATE_HZ;
@@ -67,7 +67,7 @@ impl WxsatController {
                                     demod.process(&iq, &mut px);
                                     dec.process(&px, &mut lines);
                                 }
-                                if !lines.is_empty() || tick % IDLE_TICK == 0 || tick == 1 {
+                                if !lines.is_empty() || tick.is_multiple_of(IDLE_TICK) || tick == 1 {
                                     // A client that fell far behind loses the oldest.
                                     let skip = lines.len().saturating_sub(WXSAT_MAX_NEW_LINES);
                                     let first = total + skip as u32;
