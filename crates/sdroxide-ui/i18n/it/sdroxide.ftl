@@ -9419,3 +9419,37 @@ publicsdr-dock-hint = Aggancia questo elenco sotto la cascata (modi voce senza n
 publicsdr-undock-hint = Rimetti questo elenco in una finestra a parte
 
 publicsdr-close-hint = Chiudi Public SDRs
+
+wxsat-title = SATELLITI METEO
+
+extras-wxsat-hint = SATELLITI METEO — l'immagine che un satellite NOAA APT trasmette su 137 MHz, disegnata man mano che arriva, in una finestra staccabile
+
+wxsat-decode = Decodifica
+
+wxsat-channel = Satellite
+
+wxsat-tune = Sintonizza qui
+
+wxsat-tune-hint = Attiva il decodificatore e porta la frequenza su questo canale, in modo che il segnale sia dentro la finestra di campionamento.
+
+wxsat-clear = Cancella
+
+wxsat-save = Salva PNG
+
+wxsat-flip = Capovolgi
+
+wxsat-flip-hint = Capovolge l'immagine: un satellite che vola verso sud viene disegnato a testa in giù.
+
+wxsat-state-off = Decodificatore spento
+
+wxsat-level = Livello { $db } dBFS
+
+wxsat-locked = Sincronismo di riga agganciato
+
+wxsat-searching = Ricerca del sincronismo di riga
+
+wxsat-lines = { $n } righe
+
+wxsat-outside-window = Il canale è fuori dalla finestra di campionamento, o troppo vicino al bordo per l'intero segnale. Usa Sintonizza qui, o una finestra più ampia.
+
+wxsat-waiting = Ancora nessuna immagine. Attiva il decodificatore quando un satellite è sopra l'orizzonte; un passaggio dura circa dieci minuti.

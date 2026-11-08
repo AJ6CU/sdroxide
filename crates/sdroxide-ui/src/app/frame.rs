@@ -2151,6 +2151,7 @@ impl eframe::App for SdroxideApp {
         self.aircraft_watch_tick(&ctx);
         self.programs_sync_tick(&ctx);
         self.aircraft_window(&ctx, &mut cmds);
+        self.wxsat_window(&ctx, &mut cmds);
         self.help.ui(&ctx);
         // Last, so it lands on top of everything else that opened this frame.
         self.oob_tx_window(&ctx);

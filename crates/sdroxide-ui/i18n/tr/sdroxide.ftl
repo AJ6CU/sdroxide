@@ -9410,3 +9410,37 @@ publicsdr-dock-hint = Bu listeyi şelalenin altına sabitle (orada paneli olmaya
 publicsdr-undock-hint = Bu listeyi kendi penceresine geri koy
 
 publicsdr-close-hint = Public SDRs'yi kapat
+
+wxsat-title = HAVA UYDULARI
+
+extras-wxsat-hint = HAVA UYDULARI — bir NOAA APT uydusunun 137 MHz'de gönderdiği görüntü, geldikçe çizilir, ayrılabilen bir pencerede
+
+wxsat-decode = Çöz
+
+wxsat-channel = Uydu
+
+wxsat-tune = Buraya ayarla
+
+wxsat-tune-hint = Çözücüyü açar ve kadranı bu kanala getirir; böylece sinyal örnekleme penceresinin içinde olur.
+
+wxsat-clear = Temizle
+
+wxsat-save = PNG olarak kaydet
+
+wxsat-flip = Çevir
+
+wxsat-flip-hint = Görüntüyü ters çevirir: güneye giden bir uydu baş aşağı çizilir.
+
+wxsat-state-off = Çözücü kapalı
+
+wxsat-level = Seviye { $db } dBFS
+
+wxsat-locked = Satır senkronu kilitli
+
+wxsat-searching = Satır senkronu aranıyor
+
+wxsat-lines = { $n } satır
+
+wxsat-outside-window = Kanal örnekleme penceresinin dışında ya da sinyalin tamamı için kenarına çok yakın. Buraya ayarla'yı kullanın veya daha geniş bir pencere seçin.
+
+wxsat-waiting = Henüz görüntü yok. Bir uydu ufkun üzerindeyken çözücüyü açın; bir geçiş yaklaşık on dakika sürer.

@@ -9410,3 +9410,37 @@ publicsdr-dock-hint = Acoplar esta lista sob a cachoeira (modos de voz sem nada 
 publicsdr-undock-hint = Colocar esta lista de volta em uma janela própria
 
 publicsdr-close-hint = Fechar Public SDRs
+
+wxsat-title = SATÉLITES METEOROLÓGICOS
+
+extras-wxsat-hint = SATÉLITES METEOROLÓGICOS — a imagem que um satélite NOAA APT envia em 137 MHz, desenhada à medida que chega, em uma janela que pode ser destacada
+
+wxsat-decode = Decodificar
+
+wxsat-channel = Satélite
+
+wxsat-tune = Sintonizar aqui
+
+wxsat-tune-hint = Liga o decodificador e leva o dial para este canal, para que o sinal fique dentro da janela de amostragem.
+
+wxsat-clear = Limpar
+
+wxsat-save = Salvar PNG
+
+wxsat-flip = Girar
+
+wxsat-flip-hint = Vira a imagem: um satélite voando para o sul é desenhado de cabeça para baixo.
+
+wxsat-state-off = Decodificador desligado
+
+wxsat-level = Nível { $db } dBFS
+
+wxsat-locked = Sincronismo de linha travado
+
+wxsat-searching = Procurando o sincronismo de linha
+
+wxsat-lines = { $n } linhas
+
+wxsat-outside-window = O canal está fora da janela de amostragem, ou perto demais da borda para o sinal inteiro. Use Sintonizar aqui, ou uma janela mais larga.
+
+wxsat-waiting = Ainda sem imagem. Ligue o decodificador quando um satélite estiver acima do horizonte; uma passagem dura cerca de dez minutos.

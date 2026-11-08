@@ -9436,3 +9436,37 @@ publicsdr-dock-hint = Dock this list under the waterfall (voice modes with nothi
 publicsdr-undock-hint = Put this list back in a window of its own
 
 publicsdr-close-hint = Close Public SDRs
+
+wxsat-title = WEATHER SATELLITES
+
+extras-wxsat-hint = WEATHER SATELLITES — the picture a NOAA APT satellite sends on 137 MHz, drawn as it comes in, in a window you can detach
+
+wxsat-decode = Decode
+
+wxsat-channel = Satellite
+
+wxsat-tune = Tune here
+
+wxsat-tune-hint = Switch the decoder on and bring the dial to this channel, so that the signal is inside the sample window.
+
+wxsat-clear = Clear
+
+wxsat-save = Save PNG
+
+wxsat-flip = Flip
+
+wxsat-flip-hint = Turn the picture over: a satellite flying south is drawn upside down.
+
+wxsat-state-off = Decoder off
+
+wxsat-level = Level { $db } dBFS
+
+wxsat-locked = Line sync locked
+
+wxsat-searching = Looking for the line sync
+
+wxsat-lines = { $n } lines
+
+wxsat-outside-window = The channel is outside the sample window, or too close to its edge for the whole signal. Use Tune here, or a wider window.
+
+wxsat-waiting = No picture yet. Switch the decoder on when a satellite is above the horizon; a pass lasts about ten minutes.

@@ -9418,3 +9418,37 @@ publicsdr-dock-hint = Zet deze lijst vast onder de waterval (spraakmodi zonder p
 publicsdr-undock-hint = Zet deze lijst terug in een eigen venster
 
 publicsdr-close-hint = Public SDRs sluiten
+
+wxsat-title = WEERSATELLIETEN
+
+extras-wxsat-hint = WEERSATELLIETEN — het beeld dat een NOAA-APT-satelliet op 137 MHz uitzendt, getekend terwijl het binnenkomt, in een losmaakbaar venster
+
+wxsat-decode = Decoderen
+
+wxsat-channel = Satelliet
+
+wxsat-tune = Hier afstemmen
+
+wxsat-tune-hint = Zet de decoder aan en brengt de frequentie naar dit kanaal, zodat het signaal binnen het samplevenster valt.
+
+wxsat-clear = Wissen
+
+wxsat-save = Opslaan als PNG
+
+wxsat-flip = Omdraaien
+
+wxsat-flip-hint = Draait het beeld om: een satelliet die naar het zuiden vliegt wordt ondersteboven getekend.
+
+wxsat-state-off = Decoder uit
+
+wxsat-level = Niveau { $db } dBFS
+
+wxsat-locked = Lijnsync vergrendeld
+
+wxsat-searching = Zoeken naar de lijnsync
+
+wxsat-lines = { $n } lijnen
+
+wxsat-outside-window = Het kanaal ligt buiten het samplevenster, of te dicht bij de rand voor het hele signaal. Gebruik Hier afstemmen, of een breder venster.
+
+wxsat-waiting = Nog geen beeld. Zet de decoder aan zodra een satelliet boven de horizon staat; een overkomst duurt ongeveer tien minuten.

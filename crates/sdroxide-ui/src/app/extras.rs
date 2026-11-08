@@ -10,7 +10,7 @@ use eframe::egui;
 use sdroxide_types::{Command, Mode, RxId};
 
 /// How many launcher buttons the panel is wide enough for.
-pub(in crate::app) const EXTRAS_SLOTS: usize = 5;
+pub(in crate::app) const EXTRAS_SLOTS: usize = 6;
 
 /// One button's width and height, and the gap between buttons.
 const SLOT_W: f32 = 112.0;
@@ -19,7 +19,7 @@ const SLOT_GAP: f32 = 6.0;
 /// The window's opening height.
 const EXTRAS_H: f32 = 110.0;
 
-/// The window's width: the five slots, their gaps and the frame around them.
+/// The window's width: the slots, their gaps and the frame around them.
 pub(in crate::app) const EXTRAS_W: f32 =
     EXTRAS_SLOTS as f32 * SLOT_W + (EXTRAS_SLOTS as f32 - 1.0) * SLOT_GAP + 24.0;
 
@@ -263,6 +263,16 @@ impl super::SdroxideApp {
             if air.clicked() {
                 self.show_aircraft = !self.show_aircraft;
             }
+            let wx = crate::chrome::chip_sized(
+                ui,
+                self.show_wxsat,
+                "WXSAT",
+                egui::vec2(SLOT_W, SLOT_H),
+            )
+            .on_hover_text(tr!("extras-wxsat-hint"));
+            if wx.clicked() {
+                self.show_wxsat = !self.show_wxsat;
+            }
             let rc_active = self.radio_classic_active();
             let rc = crate::chrome::chip_sized(ui, rc_active, tr!("topbar-radio"), egui::vec2(SLOT_W, SLOT_H))
                 .on_hover_text(tr!("extras-radio-hint"));
@@ -291,7 +301,7 @@ impl super::SdroxideApp {
             }
             // The other slots are kept: the panel is sized for them, so a
             // receiver added here does not widen the window.
-            for _ in 5..EXTRAS_SLOTS {
+            for _ in 6..EXTRAS_SLOTS {
                 let (rect, _) =
                     ui.allocate_exact_size(egui::vec2(SLOT_W, SLOT_H), egui::Sense::hover());
                 ui.painter().rect_stroke(
@@ -310,9 +320,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn the_panel_holds_five_buttons_side_by_side() {
+    fn the_panel_holds_every_button_side_by_side() {
         let row = EXTRAS_SLOTS as f32 * SLOT_W + (EXTRAS_SLOTS as f32 - 1.0) * SLOT_GAP;
-        assert!(EXTRAS_W >= row, "{EXTRAS_W} pt is narrower than five buttons ({row} pt)");
+        assert!(EXTRAS_W >= row, "{EXTRAS_W} pt is narrower than the buttons ({row} pt)");
     }
 
     fn screen() -> egui::Rect {

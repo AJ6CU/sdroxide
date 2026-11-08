@@ -9358,3 +9358,37 @@ publicsdr-dock-hint = このリストをウォーターフォールの下にド�
 publicsdr-undock-hint = このリストを独立したウィンドウに戻す
 
 publicsdr-close-hint = Public SDRs を閉じる
+
+wxsat-title = 気象衛星
+
+extras-wxsat-hint = 気象衛星 — NOAA APT衛星が137 MHzで送る画像を、受信しながら描画します（別ウィンドウに切り離せます）
+
+wxsat-decode = デコード
+
+wxsat-channel = 衛星
+
+wxsat-tune = ここに同調
+
+wxsat-tune-hint = デコーダーをオンにし、ダイヤルをこのチャンネルに合わせて、信号がサンプルウィンドウ内に入るようにします。
+
+wxsat-clear = 消去
+
+wxsat-save = PNGで保存
+
+wxsat-flip = 反転
+
+wxsat-flip-hint = 画像を上下左右反転します。南へ飛ぶ衛星の画像は逆さまに描かれます。
+
+wxsat-state-off = デコーダーはオフ
+
+wxsat-level = レベル { $db } dBFS
+
+wxsat-locked = ライン同期ロック
+
+wxsat-searching = ライン同期を探しています
+
+wxsat-lines = { $n } ライン
+
+wxsat-outside-window = チャンネルがサンプルウィンドウの外か、信号全体には端に近すぎます。「ここに同調」を使うか、より広いウィンドウにしてください。
+
+wxsat-waiting = まだ画像がありません。衛星が地平線の上にあるときにデコーダーをオンにしてください。1回の通過は約10分です。

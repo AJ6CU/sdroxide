@@ -9348,3 +9348,37 @@ publicsdr-dock-hint = 将此列表停靠在瀑布图下方（下方无内容的�
 publicsdr-undock-hint = 将此列表放回独立窗口
 
 publicsdr-close-hint = 关闭 Public SDRs
+
+wxsat-title = 气象卫星
+
+extras-wxsat-hint = 气象卫星 — NOAA APT 卫星在 137 MHz 发送的图像，边接收边绘制，可在可分离的窗口中查看
+
+wxsat-decode = 解码
+
+wxsat-channel = 卫星
+
+wxsat-tune = 调谐到此
+
+wxsat-tune-hint = 打开解码器并将频率调到此信道，使信号位于采样窗口内。
+
+wxsat-clear = 清除
+
+wxsat-save = 保存为 PNG
+
+wxsat-flip = 翻转
+
+wxsat-flip-hint = 翻转图像：向南飞行的卫星的图像是倒置绘制的。
+
+wxsat-state-off = 解码器已关闭
+
+wxsat-level = 电平 { $db } dBFS
+
+wxsat-locked = 行同步已锁定
+
+wxsat-searching = 正在搜索行同步
+
+wxsat-lines = { $n } 行
+
+wxsat-outside-window = 信道在采样窗口之外，或离窗口边缘太近，容不下整个信号。请使用“调谐到此”，或换更宽的窗口。
+
+wxsat-waiting = 尚无图像。卫星在地平线以上时请打开解码器；一次过境约十分钟。

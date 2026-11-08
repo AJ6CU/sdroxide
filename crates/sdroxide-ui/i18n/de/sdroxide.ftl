@@ -9410,3 +9410,37 @@ publicsdr-dock-hint = Diese Liste unter dem Wasserfall andocken (Sprachmodi ohne
 publicsdr-undock-hint = Diese Liste wieder in ein eigenes Fenster setzen
 
 publicsdr-close-hint = Public SDRs schließen
+
+wxsat-title = WETTERSATELLITEN
+
+extras-wxsat-hint = WETTERSATELLITEN — das Bild, das ein NOAA-APT-Satellit auf 137 MHz sendet, beim Empfang gezeichnet, in einem abtrennbaren Fenster
+
+wxsat-decode = Dekodieren
+
+wxsat-channel = Satellit
+
+wxsat-tune = Hier abstimmen
+
+wxsat-tune-hint = Schaltet den Dekoder ein und stellt die Frequenz auf diesen Kanal, damit das Signal im Abtastfenster liegt.
+
+wxsat-clear = Löschen
+
+wxsat-save = Als PNG speichern
+
+wxsat-flip = Drehen
+
+wxsat-flip-hint = Dreht das Bild um: Ein Satellit auf dem Weg nach Süden wird kopfstehend gezeichnet.
+
+wxsat-state-off = Dekoder aus
+
+wxsat-level = Pegel { $db } dBFS
+
+wxsat-locked = Zeilensync eingerastet
+
+wxsat-searching = Suche nach dem Zeilensync
+
+wxsat-lines = { $n } Zeilen
+
+wxsat-outside-window = Der Kanal liegt außerhalb des Abtastfensters oder zu nah an dessen Rand für das ganze Signal. Nutzen Sie Hier abstimmen oder ein breiteres Fenster.
+
+wxsat-waiting = Noch kein Bild. Schalten Sie den Dekoder ein, wenn ein Satellit über dem Horizont steht; ein Überflug dauert etwa zehn Minuten.
