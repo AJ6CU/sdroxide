@@ -1,5 +1,5 @@
-//! The WEATHER SATELLITES window: the picture a NOAA APT satellite sends on
-//! 137 MHz, drawn as the lines come in.
+//! The WEATHER SATELLITES window: the picture a NOAA APT or Meteor LRPT
+//! satellite sends on 137 MHz, drawn as it comes in.
 //!
 //! Like SONDE it is a view, not a radio mode: the decoder runs off its own
 //! downconversion of the sample window (see `sdroxide_wxsat`) and the radio
@@ -9,13 +9,52 @@
 use crate::i18n::tr;
 use eframe::egui::{self, RichText};
 use sdroxide_types::{
-    Command, WXSAT_LINE_PIXELS, WxsatPicture, WxsatSettings, wxsat_window_covers,
+    Command, WXSAT_LINE_PIXELS, WXSAT_LRPT_WIDTH, WxsatKind, WxsatPicture, WxsatSettings,
+    wxsat_window_covers,
 };
 
 /// The APT satellites still on the air: name and downlink. Names and units are
 /// not translated.
-const SATELLITES: [(&str, f64); 3] =
+const APT_SATELLITES: [(&str, f64); 3] =
     [("NOAA-15", 137_620_000.0), ("NOAA-18", 137_912_500.0), ("NOAA-19", 137_100_000.0)];
+
+/// The Meteor satellites sending LRPT.
+const LRPT_SATELLITES: [(&str, f64); 2] =
+    [("METEOR-M2-3", 137_900_000.0), ("METEOR-M2-4", 137_100_000.0)];
+
+/// The satellites of a signal.
+fn satellites(kind: WxsatKind) -> &'static [(&'static str, f64)] {
+    match kind {
+        WxsatKind::Apt => &APT_SATELLITES,
+        WxsatKind::Lrpt => &LRPT_SATELLITES,
+    }
+}
+
+/// Rows of an LRPT picture drawn at once: a texture is at most 8192 pixels
+/// high, which is 1000 rows of 8 lines.
+const LRPT_SHOWN_ROWS: usize = 1000;
+
+/// One LRPT channel as grey pixels, the newest `LRPT_SHOWN_ROWS` rows at most;
+/// `flip` turns it through half a turn.
+pub(in crate::app) fn lrpt_gray(
+    pic: &WxsatPicture,
+    apid: u16,
+    flip: bool,
+) -> Option<([usize; 2], Vec<u8>)> {
+    let rows = pic.channels.get(&apid)?;
+    let from = rows.len().saturating_sub(LRPT_SHOWN_ROWS);
+    let row_px = WXSAT_LRPT_WIDTH * sdroxide_types::WXSAT_LRPT_ROW_LINES;
+    let mut out = vec![MISSING; (rows.len() - from) * row_px];
+    for (i, r) in rows[from..].iter().enumerate() {
+        if r.len() == row_px {
+            out[i * row_px..(i + 1) * row_px].copy_from_slice(r);
+        }
+    }
+    if flip {
+        out.reverse();
+    }
+    Some(([WXSAT_LRPT_WIDTH, (rows.len() - from) * sdroxide_types::WXSAT_LRPT_ROW_LINES], out))
+}
 
 /// Where each image strip starts in a line, and how wide it is.
 const STRIP_A: usize = 86;
@@ -73,8 +112,8 @@ pub(in crate::app) fn tune_commands(
 }
 
 /// The name of the satellite on `hz`, or the frequency in MHz.
-fn channel_name(hz: f64) -> String {
-    SATELLITES
+fn channel_name(hz: f64, kind: WxsatKind) -> String {
+    satellites(kind)
         .iter()
         .find(|(_, f)| (f - hz).abs() < 1_000.0)
         .map_or_else(|| format!("{:.4} MHz", hz / 1e6), |(n, f)| format!("{n}  {:.4} MHz", f / 1e6))
@@ -98,26 +137,33 @@ impl super::SdroxideApp {
         let mut edit = cfg;
         ui.horizontal_wrapped(|ui| {
             ui.checkbox(&mut edit.enabled, tr!("wxsat-decode"));
+            ui.label(tr!("wxsat-signal"));
+            ui.selectable_value(&mut edit.kind, WxsatKind::Apt, tr!("wxsat-kind-apt"));
+            ui.selectable_value(&mut edit.kind, WxsatKind::Lrpt, tr!("wxsat-kind-lrpt"));
+            if edit.kind != cfg.kind {
+                // Another signal, another channel: the first satellite of its list.
+                edit.frequency_hz = satellites(edit.kind)[0].1;
+            }
             ui.label(tr!("wxsat-channel"));
             egui::ComboBox::from_id_salt("wxsat-channel")
-                .selected_text(channel_name(edit.frequency_hz))
+                .selected_text(channel_name(edit.frequency_hz, edit.kind))
                 .show_ui(ui, |ui| {
-                    for (name, hz) in SATELLITES {
+                    for (name, hz) in satellites(edit.kind) {
                         let label = format!("{name}  {:.4} MHz", hz / 1e6);
-                        ui.selectable_value(&mut edit.frequency_hz, hz, label);
+                        ui.selectable_value(&mut edit.frequency_hz, *hz, label);
                     }
                 });
             if ui.button(tr!("wxsat-tune")).on_hover_text(tr!("wxsat-tune-hint")).clicked() {
-                cmds.extend(tune_commands(
-                    &edit,
-                    self.state.active_vfo,
-                    self.state.rx[0].mode,
-                ));
+                cmds.extend(tune_commands(&edit, self.state.active_vfo, self.state.rx[0].mode));
                 edit.enabled = true;
             }
         });
         if edit != cfg && !cmds.iter().any(|c| matches!(c, Command::SetWxsatConfig(_))) {
             cmds.push(Command::SetWxsatConfig(edit));
+        }
+        if edit.kind != cfg.kind {
+            self.wxsat_apid = 0;
+            self.wxsat_tex_lines = usize::MAX;
         }
 
         // The status line.
@@ -125,10 +171,27 @@ impl super::SdroxideApp {
         ui.horizontal_wrapped(|ui| {
             let dim = |s: String| RichText::new(s).size(11.0).color(crate::theme::gray(160));
             match st {
-                Some(st) if st.running => {
+                Some(st) if st.running && st.kind == cfg.kind => {
                     ui.label(dim(tr!("wxsat-level", db = format!("{:.0}", st.level_dbfs))));
-                    ui.label(dim(if st.locked { tr!("wxsat-locked") } else { tr!("wxsat-searching") }));
-                    ui.label(dim(tr!("wxsat-lines", n = st.total_lines)));
+                    match cfg.kind {
+                        WxsatKind::Apt => {
+                            ui.label(dim(if st.locked {
+                                tr!("wxsat-locked")
+                            } else {
+                                tr!("wxsat-searching")
+                            }));
+                            ui.label(dim(tr!("wxsat-lines", n = st.total_lines)));
+                        }
+                        WxsatKind::Lrpt => {
+                            ui.label(dim(if st.locked {
+                                tr!("wxsat-frame-locked")
+                            } else {
+                                tr!("wxsat-searching-frame")
+                            }));
+                            ui.label(dim(tr!("wxsat-frames", n = st.frames_ok)));
+                            ui.label(dim(tr!("wxsat-rows", n = st.total_lines / 8)));
+                        }
+                    }
                 }
                 _ => {
                     ui.label(dim(tr!("wxsat-state-off")));
@@ -136,7 +199,12 @@ impl super::SdroxideApp {
             }
         });
         if cfg.enabled
-            && !wxsat_window_covers(self.state.center_hz, self.state.sample_rate, cfg.frequency_hz)
+            && !wxsat_window_covers(
+                self.state.center_hz,
+                self.state.sample_rate,
+                cfg.frequency_hz,
+                cfg.kind,
+            )
         {
             ui.label(
                 RichText::new(tr!("wxsat-outside-window"))
@@ -145,7 +213,29 @@ impl super::SdroxideApp {
             );
         }
 
+        // The channels an LRPT pass has sent, one picture each.
+        if cfg.kind == WxsatKind::Lrpt {
+            let have: Vec<u16> = self.wxsat_picture.channels.keys().copied().collect();
+            if !have.contains(&self.wxsat_apid) {
+                self.wxsat_apid = have.first().copied().unwrap_or(0);
+            }
+            ui.horizontal(|ui| {
+                for apid in have {
+                    let before = self.wxsat_apid;
+                    ui.selectable_value(
+                        &mut self.wxsat_apid,
+                        apid,
+                        tr!("wxsat-image-channel", n = apid - 63),
+                    );
+                    if before != self.wxsat_apid {
+                        self.wxsat_tex_lines = usize::MAX;
+                    }
+                }
+            });
+        }
+
         // The picture's own controls.
+        let lrpt = cfg.kind == WxsatKind::Lrpt;
         ui.horizontal(|ui| {
             if ui.button(tr!("wxsat-clear")).clicked() {
                 self.wxsat_picture.clear();
@@ -156,25 +246,45 @@ impl super::SdroxideApp {
             if before != self.wxsat_flip {
                 self.wxsat_tex_lines = usize::MAX;
             }
-            let have = !self.wxsat_picture.lines.is_empty();
+            let have = !self.wxsat_picture.is_empty();
             if ui.add_enabled(have, egui::Button::new(tr!("wxsat-save"))).clicked() {
-                let ([w, h], gray) = picture_gray(&self.wxsat_picture, self.wxsat_flip);
-                let rgb: Vec<u8> = gray.iter().flat_map(|&g| [g, g, g]).collect();
-                if let Some(png) = crate::sstv::encode_png(&rgb, w as u16, h as u16) {
-                    crate::download::save_as(&wxsat_file_name(), &png, crate::download::Mime::Png);
+                let shot = if lrpt {
+                    self.wxsat_picture
+                        .channel_gray(self.wxsat_apid)
+                        .map(|(size, g)| (size, if self.wxsat_flip { g.into_iter().rev().collect() } else { g }))
+                } else {
+                    Some(picture_gray(&self.wxsat_picture, self.wxsat_flip))
+                };
+                if let Some(([w, h], gray)) = shot {
+                    let rgb: Vec<u8> = gray.iter().flat_map(|&g| [g, g, g]).collect();
+                    if let Some(png) = crate::sstv::encode_png(&rgb, w as u16, h as u16) {
+                        crate::download::save_as(
+                            &wxsat_file_name(lrpt.then_some(self.wxsat_apid)),
+                            &png,
+                            crate::download::Mime::Png,
+                        );
+                    }
                 }
             }
         });
         ui.separator();
 
-        if self.wxsat_picture.lines.is_empty() {
-            ui.label(RichText::new(tr!("wxsat-waiting")).color(crate::theme::gray(160)));
+        // What to draw, and a number that changes when it does.
+        let (key, shot) = if lrpt {
+            let rows = self.wxsat_picture.channels.get(&self.wxsat_apid);
+            let key = rows.map_or(0, |r| r.len() * 4096 + r.iter().filter(|x| !x.is_empty()).count() + 1);
+            (key, lrpt_gray(&self.wxsat_picture, self.wxsat_apid, self.wxsat_flip))
+        } else {
+            let n = self.wxsat_picture.lines.len();
+            (n, (n > 0).then(|| picture_gray(&self.wxsat_picture, self.wxsat_flip)))
+        };
+        let Some(([w, h], gray)) = shot else {
+            let waiting = if lrpt { tr!("wxsat-waiting-lrpt") } else { tr!("wxsat-waiting") };
+            ui.label(RichText::new(waiting).color(crate::theme::gray(160)));
             return;
-        }
-        // The texture follows the picture when it has grown.
-        let n = self.wxsat_picture.lines.len();
-        if self.wxsat_tex_lines != n || self.wxsat_tex.is_none() {
-            let ([w, h], gray) = picture_gray(&self.wxsat_picture, self.wxsat_flip);
+        };
+        // The texture follows the picture when it has changed.
+        if self.wxsat_tex_lines != key || self.wxsat_tex.is_none() {
             let img = egui::ColorImage::from_gray([w, h], &gray);
             match self.wxsat_tex.as_mut() {
                 Some(t) => t.set(img, egui::TextureOptions::LINEAR),
@@ -183,7 +293,7 @@ impl super::SdroxideApp {
                         Some(ui.ctx().load_texture("wxsat-picture", img, egui::TextureOptions::LINEAR));
                 }
             }
-            self.wxsat_tex_lines = n;
+            self.wxsat_tex_lines = key;
         }
         if let Some(tex) = &self.wxsat_tex {
             let size = tex.size_vec2();
@@ -195,9 +305,12 @@ impl super::SdroxideApp {
     }
 }
 
-/// A dated name for the saved picture.
-fn wxsat_file_name() -> String {
-    format!("wxsat-{}.png", crate::time::now_unix())
+/// A dated name for the saved picture; an LRPT one names its channel.
+fn wxsat_file_name(channel: Option<u16>) -> String {
+    match channel {
+        Some(apid) => format!("wxsat-ch{}-{}.png", apid.saturating_sub(63), crate::time::now_unix()),
+        None => format!("wxsat-{}.png", crate::time::now_unix()),
+    }
 }
 
 #[cfg(test)]
@@ -213,7 +326,7 @@ mod tests {
 
     #[test]
     fn the_two_strips_sit_side_by_side_with_a_gap() {
-        let pic = WxsatPicture { pass: 1, lines: vec![line(10)], dropped: 0 };
+        let pic = WxsatPicture { pass: 1, lines: vec![line(10)], ..Default::default() };
         let ([w, h], g) = picture_gray(&pic, false);
         assert_eq!((w, h), (PICTURE_W, 1));
         assert_eq!(g[0], 10);
@@ -224,7 +337,7 @@ mod tests {
 
     #[test]
     fn a_missing_line_is_grey_and_flip_turns_the_picture_half_a_turn() {
-        let pic = WxsatPicture { pass: 1, lines: vec![line(10), Vec::new()], dropped: 0 };
+        let pic = WxsatPicture { pass: 1, lines: vec![line(10), Vec::new()], ..Default::default() };
         let (_, g) = picture_gray(&pic, false);
         assert_eq!(g[PICTURE_W], MISSING);
         let (_, f) = picture_gray(&pic, true);
@@ -232,6 +345,24 @@ mod tests {
         // The first line is now last, and its pixels run backwards.
         assert_eq!(f[PICTURE_W], 245);
         assert_eq!(f[2 * PICTURE_W - 1], 10);
+    }
+
+    #[test]
+    fn an_lrpt_channel_is_drawn_from_its_rows_newest_last() {
+        let row_px = WXSAT_LRPT_WIDTH * 8;
+        let mut pic = WxsatPicture::default();
+        pic.channels.insert(65, vec![vec![200u8; row_px], Vec::new(), vec![50u8; row_px]]);
+        let ([w, h], g) = lrpt_gray(&pic, 65, false).unwrap();
+        assert_eq!((w, h), (1568, 24));
+        assert_eq!((g[0], g[8 * 1568], g[16 * 1568]), (200, MISSING, 50));
+        let (_, f) = lrpt_gray(&pic, 65, true).unwrap();
+        assert_eq!(f[0], 50, "turned through half a turn");
+        assert!(lrpt_gray(&pic, 66, false).is_none());
+        // A long pass shows its newest rows only.
+        pic.channels.insert(64, vec![vec![1u8; row_px]; LRPT_SHOWN_ROWS + 30]);
+        assert_eq!(lrpt_gray(&pic, 64, false).unwrap().0[1], LRPT_SHOWN_ROWS * 8);
+        assert!(wxsat_file_name(Some(65)).starts_with("wxsat-ch2-"));
+        assert!(wxsat_file_name(None).starts_with("wxsat-1") || wxsat_file_name(None).starts_with("wxsat-"));
     }
 
     #[test]
@@ -249,7 +380,10 @@ mod tests {
 
     #[test]
     fn channel_names_know_the_satellites() {
-        assert!(channel_name(137_100_000.0).starts_with("NOAA-19"));
-        assert_eq!(channel_name(137_500_000.0), "137.5000 MHz");
+        assert!(channel_name(137_100_000.0, WxsatKind::Apt).starts_with("NOAA-19"));
+        assert!(channel_name(137_900_000.0, WxsatKind::Lrpt).starts_with("METEOR-M2-3"));
+        // The same frequency is a different satellite in another signal.
+        assert!(channel_name(137_100_000.0, WxsatKind::Lrpt).starts_with("METEOR-M2-4"));
+        assert_eq!(channel_name(137_500_000.0, WxsatKind::Apt), "137.5000 MHz");
     }
 }

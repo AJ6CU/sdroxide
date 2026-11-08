@@ -5,26 +5,159 @@
 //! channel (a dropped block costs a fraction of a line) and drains statuses
 //! non-blocking, like `sdroxide_sonde::SondeController`.
 
+use std::collections::VecDeque;
 use std::thread::JoinHandle;
+use std::time::{Duration, Instant};
 
 use crossbeam_channel::{Receiver, Sender, bounded, select, unbounded};
 use sdroxide_dsp::{Complex32, ComplexResampler, Ddc};
-use sdroxide_types::{WXSAT_MAX_NEW_LINES, WxsatSettings, WxsatStatus};
+use sdroxide_types::{
+    WXSAT_MAX_NEW_LINES, WXSAT_MAX_NEW_ROWS, WxsatKind, WxsatRow, WxsatSettings, WxsatStatus,
+};
 
-use crate::WXSAT_LANE_RATE_HZ;
 use crate::apt::{AptDecoder, AptDemod, AptLine};
+use crate::lrpt::jpeg::PICTURE_WIDTH;
+use crate::lrpt::picture::{FinishedRow, LrptPicture, ROW_LINES};
+use crate::lrpt::rx::LrptRx;
+use crate::{WXSAT_LANE_RATE_HZ, lane_rate_hz};
 
-/// Bounded I/Q queue depth: a couple of seconds of 48 kS/s lane at a typical
-/// device read.
+/// Bounded I/Q queue depth: a couple of seconds of lane at a typical device
+/// read.
 const IQ_QUEUE_DEPTH: usize = 256;
 
 /// A status goes out at least once every N blocks even when no line was
 /// decoded, so the level meter keeps moving.
 const IDLE_TICK: u64 = 250;
 
+/// Seconds without a segment before the last rows of a pass are let go.
+const QUIET_S: f64 = 3.0;
+
 enum Ctl {
     Enabled(bool),
+    Flush,
     Stop,
+}
+
+/// What a worker runs.
+enum Work {
+    Apt { demod: AptDemod, dec: AptDecoder, px: Vec<f32>, lines: Vec<AptLine>, quality: f32, total: u32 },
+    Lrpt {
+        rx: Box<LrptRx>,
+        pic: LrptPicture,
+        pending: VecDeque<FinishedRow>,
+        last_segment: Option<Instant>,
+        power: f32,
+    },
+}
+
+impl Work {
+    fn new(kind: WxsatKind) -> Self {
+        match kind {
+            WxsatKind::Apt => Work::Apt {
+                demod: AptDemod::new(WXSAT_LANE_RATE_HZ),
+                dec: AptDecoder::new(),
+                px: Vec::new(),
+                lines: Vec::new(),
+                quality: 0.0,
+                total: 0,
+            },
+            WxsatKind::Lrpt => Work::Lrpt {
+                rx: Box::new(LrptRx::new()),
+                pic: LrptPicture::new(),
+                pending: VecDeque::new(),
+                last_segment: None,
+                power: 0.0,
+            },
+        }
+    }
+
+    /// Take a block of lane I/Q; says whether there is something to report.
+    fn feed(&mut self, iq: &[Complex32], enabled: bool) -> bool {
+        match self {
+            Work::Apt { demod, dec, px, lines, .. } => {
+                px.clear();
+                lines.clear();
+                if enabled {
+                    demod.process(iq, px);
+                    dec.process(px, lines);
+                }
+                !lines.is_empty()
+            }
+            Work::Lrpt { rx, pic, pending, last_segment, power } => {
+                for x in iq {
+                    *power += (x.norm_sqr() - *power) * 1e-4;
+                }
+                if !enabled {
+                    return false;
+                }
+                let segs = rx.process(iq);
+                if !segs.is_empty() {
+                    *last_segment = Some(Instant::now());
+                }
+                segs.iter().for_each(|s| pic.push(s));
+                let quiet = last_segment.is_some_and(|t| t.elapsed() > Duration::from_secs_f64(QUIET_S));
+                pending.extend(pic.take_finished(quiet));
+                !pending.is_empty()
+            }
+        }
+    }
+
+    /// Let go every row held back (the decoder is being switched off).
+    fn flush(&mut self) {
+        if let Work::Lrpt { pic, pending, .. } = self {
+            pending.extend(pic.take_finished(true));
+        }
+    }
+
+    fn status(&mut self, enabled: bool, pass: u32, first_apt: &mut u32) -> WxsatStatus {
+        match self {
+            Work::Apt { demod, dec, lines, quality, total, .. } => {
+                // A client that fell far behind loses the oldest.
+                let skip = lines.len().saturating_sub(WXSAT_MAX_NEW_LINES);
+                let first = *total + skip as u32;
+                if let Some(l) = lines.last() {
+                    *quality = l.quality;
+                }
+                let new_lines: Vec<Vec<u8>> = lines.drain(..).skip(skip).map(|l| l.pixels).collect();
+                *total = first + new_lines.len() as u32;
+                *first_apt = first;
+                WxsatStatus {
+                    running: enabled,
+                    level_dbfs: demod.level_dbfs(),
+                    locked: dec.locked(),
+                    quality: *quality,
+                    pass,
+                    total_lines: *total,
+                    first_line: first,
+                    new_lines,
+                    kind: WxsatKind::Apt,
+                    ..Default::default()
+                }
+            }
+            Work::Lrpt { rx, pic, pending, power, .. } => {
+                let n = pending.len().min(WXSAT_MAX_NEW_ROWS);
+                let rows: Vec<WxsatRow> = pending
+                    .drain(..n)
+                    .map(|f| WxsatRow { apid: f.apid, row: f.row, lines: f.lines })
+                    .collect();
+                let (carrier, evm) = rx.demod_figures();
+                debug_assert_eq!(PICTURE_WIDTH * ROW_LINES, sdroxide_types::WXSAT_LRPT_WIDTH * sdroxide_types::WXSAT_LRPT_ROW_LINES);
+                WxsatStatus {
+                    running: enabled,
+                    level_dbfs: 10.0 * power.max(1e-12).log10(),
+                    locked: rx.locked(),
+                    quality: (1.0 - evm).clamp(0.0, 1.0),
+                    pass,
+                    total_lines: (pic.rows() * ROW_LINES) as u32,
+                    kind: WxsatKind::Lrpt,
+                    frames_ok: rx.stats().frames_ok as u32,
+                    carrier_hz: carrier as f32,
+                    rows,
+                    ..Default::default()
+                }
+            }
+        }
+    }
 }
 
 /// The decoder worker, fed lane-rate I/Q.
@@ -38,55 +171,42 @@ pub struct WxsatController {
 impl WxsatController {
     /// `pass` is the number the statuses carry, so the client can tell a new
     /// picture from the continuation of the old one.
-    pub fn new(pass: u32) -> Self {
+    pub fn new(pass: u32, kind: WxsatKind) -> Self {
         let (iq_tx, iq_rx) = bounded::<Vec<Complex32>>(IQ_QUEUE_DEPTH);
         let (ctl_tx, ctl_rx) = unbounded::<Ctl>();
         let (res_tx, res_rx) = unbounded::<WxsatStatus>();
         let worker = std::thread::Builder::new()
             .name("sdroxide-wxsat".into())
             .spawn(move || {
-                let mut demod = AptDemod::new(WXSAT_LANE_RATE_HZ);
-                let mut dec = AptDecoder::new();
-                let (mut px, mut lines): (Vec<f32>, Vec<AptLine>) = (Vec::new(), Vec::new());
+                let mut work = Work::new(kind);
                 let mut enabled = true;
-                let mut total: u32 = 0;
                 let mut tick = 0u64;
-                let mut quality = 0.0f32;
+                let mut first_apt = 0u32;
                 loop {
                     select! {
                         recv(ctl_rx) -> msg => match msg {
-                            Ok(Ctl::Enabled(on)) => enabled = on,
+                            Ok(Ctl::Enabled(on)) => {
+                                if enabled && !on {
+                                    work.flush();
+                                    let st = work.status(false, pass, &mut first_apt);
+                                    let _ = res_tx.send(st);
+                                }
+                                enabled = on;
+                            }
+                            Ok(Ctl::Flush) => {
+                                work.flush();
+                                let st = work.status(enabled, pass, &mut first_apt);
+                                let _ = res_tx.send(st);
+                            }
                             Ok(Ctl::Stop) | Err(_) => break,
                         },
                         recv(iq_rx) -> msg => match msg {
                             Ok(iq) => {
                                 tick += 1;
-                                px.clear();
-                                lines.clear();
-                                if enabled {
-                                    demod.process(&iq, &mut px);
-                                    dec.process(&px, &mut lines);
-                                }
-                                if !lines.is_empty() || tick.is_multiple_of(IDLE_TICK) || tick == 1 {
-                                    // A client that fell far behind loses the oldest.
-                                    let skip = lines.len().saturating_sub(WXSAT_MAX_NEW_LINES);
-                                    let first = total + skip as u32;
-                                    if let Some(l) = lines.last() {
-                                        quality = l.quality;
-                                    }
-                                    let new_lines: Vec<Vec<u8>> =
-                                        lines.drain(..).skip(skip).map(|l| l.pixels).collect();
-                                    total = first + new_lines.len() as u32;
-                                    let _ = res_tx.send(WxsatStatus {
-                                        running: enabled,
-                                        level_dbfs: demod.level_dbfs(),
-                                        locked: dec.locked(),
-                                        quality,
-                                        pass,
-                                        total_lines: total,
-                                        first_line: first,
-                                        new_lines,
-                                    });
+                                let news = work.feed(&iq, enabled);
+                                if news || tick.is_multiple_of(IDLE_TICK) || tick == 1 {
+                                    let st = work.status(enabled, pass, &mut first_apt);
+                                    let _ = res_tx.send(st);
                                 }
                             }
                             Err(_) => break,
@@ -105,6 +225,11 @@ impl WxsatController {
 
     pub fn set_enabled(&self, on: bool) {
         let _ = self.ctl_tx.send(Ctl::Enabled(on));
+    }
+
+    /// Let go every row of picture still held back.
+    pub fn flush(&self) {
+        let _ = self.ctl_tx.send(Ctl::Flush);
     }
 
     /// Drain what the worker has said, oldest first. Every status is kept: each
@@ -130,6 +255,7 @@ impl Drop for WxsatController {
 /// The channel mixed out of the wide window, decoded.
 pub struct WxsatLane {
     in_rate: f64,
+    kind: WxsatKind,
     ddc: Ddc,
     rs: Option<ComplexResampler>,
     buf: Vec<Complex32>,
@@ -141,17 +267,19 @@ pub struct WxsatLane {
 
 impl WxsatLane {
     pub fn new(in_rate: f64, center_hz: f64, cfg: WxsatSettings, pass: u32) -> Self {
-        let mut ddc = Ddc::new(in_rate, WXSAT_LANE_RATE_HZ);
+        let rate = lane_rate_hz(cfg.kind);
+        let mut ddc = Ddc::new(in_rate, rate);
         ddc.set_offset_hz(cfg.frequency_hz - center_hz);
-        let rs = ComplexResampler::new(ddc.out_rate(), WXSAT_LANE_RATE_HZ);
+        let rs = ComplexResampler::new(ddc.out_rate(), rate);
         Self {
             in_rate,
+            kind: cfg.kind,
             ddc,
             rs,
             buf: Vec::new(),
             res_buf: Vec::new(),
             freq_hz: cfg.frequency_hz,
-            ctl: WxsatController::new(pass),
+            ctl: WxsatController::new(pass, cfg.kind),
             pass,
         }
     }
@@ -159,6 +287,11 @@ impl WxsatLane {
     /// The sample rate this lane was built for; a different one needs a new lane.
     pub fn in_rate(&self) -> f64 {
         self.in_rate
+    }
+
+    /// The signal this lane decodes; another one needs a new lane.
+    pub fn kind(&self) -> WxsatKind {
+        self.kind
     }
 
     pub fn pass(&self) -> u32 {
@@ -190,6 +323,11 @@ impl WxsatLane {
         self.ctl.on_rx_iq(lane);
     }
 
+    /// Let go every row of picture still held back.
+    pub fn flush(&self) {
+        self.ctl.flush();
+    }
+
     pub fn poll(&self) -> Vec<WxsatStatus> {
         self.ctl.poll()
     }
@@ -217,7 +355,7 @@ mod tests {
         let a: Vec<u8> = (0..IMAGE_WIDTH).map(|i| (i * 255 / (IMAGE_WIDTH - 1)) as u8).collect();
         let lines: Vec<Vec<u8>> = (0..12).map(|_| synth::line(&a, &a)).collect();
         let iq = synth::modulate(&lines, WXSAT_LANE_RATE_HZ, 1.0);
-        let c = WxsatController::new(5);
+        let c = WxsatController::new(5, WxsatKind::Apt);
         for chunk in iq.chunks(2048) {
             c.on_rx_iq(chunk);
         }
@@ -255,7 +393,7 @@ mod tests {
                 ph += w;
             }
         }
-        let cfg = WxsatSettings { enabled: true, frequency_hz: 137_100_000.0 };
+        let cfg = WxsatSettings { enabled: true, frequency_hz: 137_100_000.0, ..Default::default() };
         let mut lane = WxsatLane::new(wide_rate, 137_000_000.0, cfg, 1);
         for chunk in wide.chunks(16_384) {
             lane.on_wide_iq(chunk);
@@ -271,5 +409,60 @@ mod tests {
             std::thread::sleep(std::time::Duration::from_millis(20));
         }
         assert!(total >= 6, "{total} lines through the downconverter");
+    }
+
+    /// The real Meteor pass of the test data, as a wide window centred on the
+    /// channel: the lane has to mix, resample, decode and send finished rows.
+    #[test]
+    fn an_lrpt_lane_turns_a_real_pass_into_rows_of_picture() {
+        let raw = std::fs::read(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/testdata/lrpt/meteor_lrpt_137900_3s.wav")).unwrap();
+        let rate = f64::from(u32::from_le_bytes(raw[24..28].try_into().unwrap()));
+        let iq: Vec<Complex32> = raw[44..]
+            .chunks(4)
+            .filter(|c| c.len() == 4)
+            .map(|c| {
+                Complex32::new(
+                    f32::from(i16::from_le_bytes([c[0], c[1]])) / 32768.0,
+                    f32::from(i16::from_le_bytes([c[2], c[3]])) / 32768.0,
+                )
+            })
+            .collect();
+        let cfg = WxsatSettings { enabled: true, frequency_hz: 137_900_000.0, kind: WxsatKind::Lrpt };
+        let mut lane = WxsatLane::new(rate, 137_900_000.0, cfg, 3);
+        assert_eq!(lane.kind(), WxsatKind::Lrpt);
+        let mut got = Vec::new();
+        for chunk in iq.chunks(8192) {
+            lane.on_wide_iq(chunk);
+            // The queue is bounded and drops on backpressure: let the worker keep up.
+            std::thread::sleep(std::time::Duration::from_millis(5));
+            got.extend(lane.poll());
+        }
+        // The worker is slower than real time in a debug build: wait until it
+        // has caught up (no new frame for a second), then let the last rows go.
+        let mut quiet_since = std::time::Instant::now();
+        let mut frames = 0;
+        while quiet_since.elapsed() < std::time::Duration::from_secs(1) {
+            std::thread::sleep(std::time::Duration::from_millis(50));
+            for st in lane.poll() {
+                if st.frames_ok != frames {
+                    frames = st.frames_ok;
+                    quiet_since = std::time::Instant::now();
+                }
+                got.push(st);
+            }
+        }
+        lane.flush();
+        std::thread::sleep(std::time::Duration::from_millis(300));
+        got.extend(lane.poll());
+        let last = got.last().expect("a status");
+        assert_eq!((last.kind, last.pass), (WxsatKind::Lrpt, 3));
+        assert!(last.frames_ok >= 15, "{} frames", last.frames_ok);
+        let rows: Vec<&WxsatRow> = got.iter().flat_map(|s| s.rows.iter()).collect();
+        assert!(rows.len() >= 3, "{} rows", rows.len());
+        assert!(rows.iter().all(|r| r.lines.len() == 1568 * 8 && (64..=69).contains(&r.apid)));
+        // The picture client builds an image from them.
+        let mut pic = sdroxide_types::WxsatPicture::default();
+        got.iter().for_each(|s| pic.apply(s));
+        assert!(!pic.is_empty());
     }
 }

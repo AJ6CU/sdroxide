@@ -227,7 +227,9 @@ pub use sonde::{
 };
 pub use wxsat::{
     WXSAT_BAND_HZ, WXSAT_DEFAULT_HZ, WXSAT_LINE_PIXELS, WXSAT_MAX_NEW_LINES,
-    WXSAT_PICTURE_MAX_LINES, WxsatPicture, WxsatSettings, WxsatStatus, window_covers as wxsat_window_covers,
+    WXSAT_LRPT_DEFAULT_HZ, WXSAT_LRPT_MAX_ROWS, WXSAT_LRPT_ROW_LINES, WXSAT_LRPT_WIDTH,
+    WXSAT_MAX_NEW_ROWS, WXSAT_PICTURE_MAX_LINES, WxsatKind, WxsatPicture, WxsatRow,
+    WxsatSettings, WxsatStatus, window_covers as wxsat_window_covers,
 };
 pub use hfdl::{
     HFDL_DEFAULT_HZ, HFDL_LANE_RATE_HZ, HFDL_LOG_DEPTH, HfdlDecode, HfdlFix, HfdlSettings,

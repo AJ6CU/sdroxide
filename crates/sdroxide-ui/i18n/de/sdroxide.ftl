@@ -9413,7 +9413,7 @@ publicsdr-close-hint = Public SDRs schließen
 
 wxsat-title = WETTERSATELLITEN
 
-extras-wxsat-hint = WETTERSATELLITEN — das Bild, das ein NOAA-APT-Satellit auf 137 MHz sendet, beim Empfang gezeichnet, in einem abtrennbaren Fenster
+extras-wxsat-hint = WETTERSATELLITEN — das Bild, das ein NOAA- (APT) oder Meteor-Satellit (LRPT) auf 137 MHz sendet, beim Empfang gezeichnet, in einem abtrennbaren Fenster
 
 wxsat-decode = Dekodieren
 
@@ -9444,3 +9444,21 @@ wxsat-lines = { $n } Zeilen
 wxsat-outside-window = Der Kanal liegt außerhalb des Abtastfensters oder zu nah an dessen Rand für das ganze Signal. Nutzen Sie Hier abstimmen oder ein breiteres Fenster.
 
 wxsat-waiting = Noch kein Bild. Schalten Sie den Dekoder ein, wenn ein Satellit über dem Horizont steht; ein Überflug dauert etwa zehn Minuten.
+
+wxsat-signal = Signal
+
+wxsat-kind-apt = APT
+
+wxsat-kind-lrpt = LRPT
+
+wxsat-image-channel = Kanal { $n }
+
+wxsat-rows = { $n } Reihen
+
+wxsat-frame-locked = Rahmensync eingerastet
+
+wxsat-frames = { $n } gute Rahmen
+
+wxsat-waiting-lrpt = Noch kein Bild. Meteor LRPT ist digital: Das Bild beginnt einige Sekunden nach dem Empfang des Satelliten, Reihe für Reihe, und jeder Kanal ist ein eigenes Bild.
+
+wxsat-searching-frame = Suche nach dem Rahmensync

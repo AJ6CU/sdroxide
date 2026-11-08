@@ -9424,7 +9424,7 @@ publicsdr-close-hint = Fermer Public SDRs
 
 wxsat-title = SATELLITES MÉTÉO
 
-extras-wxsat-hint = SATELLITES MÉTÉO — l'image qu'un satellite NOAA APT envoie sur 137 MHz, dessinée au fur et à mesure, dans une fenêtre détachable
+extras-wxsat-hint = SATELLITES MÉTÉO — l'image qu'un satellite NOAA (APT) ou Meteor (LRPT) envoie sur 137 MHz, dessinée au fur et à mesure, dans une fenêtre détachable
 
 wxsat-decode = Décoder
 
@@ -9455,3 +9455,21 @@ wxsat-lines = { $n } lignes
 wxsat-outside-window = Le canal est hors de la fenêtre d'échantillonnage, ou trop près de son bord pour tout le signal. Utilisez Accorder ici, ou une fenêtre plus large.
 
 wxsat-waiting = Pas encore d'image. Activez le décodeur quand un satellite est au-dessus de l'horizon ; un passage dure environ dix minutes.
+
+wxsat-signal = Signal
+
+wxsat-kind-apt = APT
+
+wxsat-kind-lrpt = LRPT
+
+wxsat-image-channel = Canal { $n }
+
+wxsat-rows = { $n } rangées
+
+wxsat-frame-locked = Synchro trame verrouillée
+
+wxsat-frames = { $n } trames bonnes
+
+wxsat-waiting-lrpt = Pas encore d'image. Le LRPT de Meteor est numérique : l'image commence quelques secondes après la réception du satellite, rangée par rangée, et chaque canal est une image séparée.
+
+wxsat-searching-frame = Recherche de la synchro trame

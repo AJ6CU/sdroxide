@@ -9413,7 +9413,7 @@ publicsdr-close-hint = Public SDRs'yi kapat
 
 wxsat-title = HAVA UYDULARI
 
-extras-wxsat-hint = HAVA UYDULARI — bir NOAA APT uydusunun 137 MHz'de gönderdiği görüntü, geldikçe çizilir, ayrılabilen bir pencerede
+extras-wxsat-hint = HAVA UYDULARI — bir NOAA (APT) veya Meteor (LRPT) uydusunun 137 MHz'de gönderdiği görüntü, geldikçe çizilir, ayrılabilen bir pencerede
 
 wxsat-decode = Çöz
 
@@ -9444,3 +9444,21 @@ wxsat-lines = { $n } satır
 wxsat-outside-window = Kanal örnekleme penceresinin dışında ya da sinyalin tamamı için kenarına çok yakın. Buraya ayarla'yı kullanın veya daha geniş bir pencere seçin.
 
 wxsat-waiting = Henüz görüntü yok. Bir uydu ufkun üzerindeyken çözücüyü açın; bir geçiş yaklaşık on dakika sürer.
+
+wxsat-signal = Sinyal
+
+wxsat-kind-apt = APT
+
+wxsat-kind-lrpt = LRPT
+
+wxsat-image-channel = Kanal { $n }
+
+wxsat-rows = { $n } sıra
+
+wxsat-frame-locked = Çerçeve senkronu kilitli
+
+wxsat-frames = { $n } iyi çerçeve
+
+wxsat-waiting-lrpt = Henüz görüntü yok. Meteor LRPT dijitaldir: görüntü uydu duyulduktan birkaç saniye sonra sıra sıra başlar ve her kanal ayrı bir görüntüdür.
+
+wxsat-searching-frame = Çerçeve senkronu aranıyor

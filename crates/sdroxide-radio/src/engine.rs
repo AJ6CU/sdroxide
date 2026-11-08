@@ -7086,6 +7086,7 @@ impl Engine {
                 self.state.center_hz,
                 self.state.sample_rate,
                 lane.frequency_hz(),
+                lane.kind(),
             ) {
                 lane.on_wide_iq(iq);
             }
@@ -13443,7 +13444,22 @@ impl Engine {
                 self.wxsat = None;
                 info!("weather-satellite decoder stopped");
             }
-            (true, true) => self.sync_wxsat_window(),
+            (true, true) => {
+                let kind_changed = self.wxsat.as_ref().is_some_and(|l| l.kind() != self.state.wxsat.kind);
+                if kind_changed {
+                    // Another signal is another lane (its own rate) and another picture.
+                    self.wxsat_pass = self.wxsat_pass.wrapping_add(1);
+                    self.wxsat = Some(WxsatLane::new(
+                        self.state.sample_rate,
+                        self.state.center_hz,
+                        self.state.wxsat,
+                        self.wxsat_pass,
+                    ));
+                    info!(kind = ?self.state.wxsat.kind, "weather-satellite decoder switched");
+                } else {
+                    self.sync_wxsat_window();
+                }
+            }
             _ => {}
         }
     }

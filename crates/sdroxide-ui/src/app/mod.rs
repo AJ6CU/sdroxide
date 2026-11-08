@@ -777,6 +777,8 @@ pub struct SdroxideApp {
     /// (`usize::MAX` to force a rebuild).
     wxsat_tex: Option<eframe::egui::TextureHandle>,
     wxsat_tex_lines: usize,
+    /// The LRPT channel shown (an APID, 64 to 69); 0 until one is picked.
+    wxsat_apid: u16,
     /// HFDL: the aircraft plot table and the map's pan/zoom and selection. Its
     /// own table rather than the decode log's, so an aircraft stays on the map
     /// after its earliest decodes have scrolled out of the log.
@@ -2390,6 +2392,7 @@ impl SdroxideApp {
             wxsat_flip: false,
             wxsat_tex: None,
             wxsat_tex_lines: usize::MAX,
+            wxsat_apid: 0,
             hfdl_map: crate::hfdl_map::HfdlMapState::default(),
             sonde_map: crate::sonde_map::SondeMapState::default(),
             sonde_online: crate::sonde_online::Online::default(),
