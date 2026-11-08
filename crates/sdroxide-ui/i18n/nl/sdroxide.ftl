@@ -9593,3 +9593,6 @@ meshtastic-tx-bad-text = De tekst is leeg of te lang (maximaal 200 bytes).
 meshtastic-tx-busy = Er is al een uitzending bezig.
 
 meshtastic-tx-rails = De zender weigerde te zenden: zie de zendmelding voor de reden.
+rx-bands-swl-note = De SWL-modus staat aan voor deze radio: er is geen ontvangstvergrendeling. Alle banden kunnen worden afgestemd.
+
+rx-bands-always-open = Luisterbanden (en de SWL-modus) staan altijd open voor ontvangst.

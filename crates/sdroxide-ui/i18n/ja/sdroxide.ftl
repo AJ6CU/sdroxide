@@ -9533,3 +9533,6 @@ meshtastic-tx-bad-text = 文章が空か長すぎます（最大200バイト）�
 meshtastic-tx-busy = すでに送信中です。
 
 meshtastic-tx-rails = 送信機が送信状態になりませんでした。理由は送信メッセージをご覧ください。
+rx-bands-swl-note = この無線機は SWL モードです。受信ロックはありません。どのバンドにも同調できます。
+
+rx-bands-always-open = リスニング用バンド（および SWL モード）は常に受信できます。

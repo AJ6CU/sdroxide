@@ -9611,3 +9611,6 @@ meshtastic-tx-bad-text = The text is empty or too long (200 bytes at most).
 meshtastic-tx-busy = A transmission is already in progress.
 
 meshtastic-tx-rails = The transmitter refused to key up: see the transmit message for the reason.
+rx-bands-swl-note = SWL mode is on for this radio: there is no receive lock. Every band can be tuned.
+
+rx-bands-always-open = Listening bands (and SWL mode) are always open for reception.

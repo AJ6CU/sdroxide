@@ -3268,6 +3268,8 @@ struct Engine {
     rx_band_enable: Vec<Band>,
     rx_bands_confirmed: bool,
     rx_bands_enforced: bool,
+    /// The radio is in SWL mode (`RadioConfig::hide_tx`): no receive lock.
+    rx_swl: bool,
     /// [`EngineConfig::tx_bands_open`], for tests.
     tx_bands_open: bool,
     /// The operator's fixed receive-audio trim, in dB — the other part of
@@ -5264,6 +5266,7 @@ fn engine_thread(
         rx_band_enable: radio_cfg.rx_band_enable.clone().unwrap_or_default(),
         rx_bands_confirmed: radio_cfg.rx_bands_confirmed,
         rx_bands_enforced: engine_cfg.rx_bands_enforced,
+        rx_swl: radio_cfg.hide_tx,
         rx_af_gain_db: radio_cfg.rx_audio_gain_db,
         swap_iq: radio_cfg.swaps_iq(),
         tx_center_hz: 0.0,
@@ -12479,6 +12482,7 @@ impl Engine {
                 self.tx_bands_confirmed = cfg.tx_bands_confirmed;
                 self.rx_band_enable = cfg.rx_band_enable.clone().unwrap_or_default();
                 self.rx_bands_confirmed = cfg.rx_bands_confirmed;
+                self.rx_swl = cfg.hide_tx;
                 // And the ceiling beside it, live rather than at the next
                 // reopen: the operator setting one is very likely doing it
                 // because the radio is making too much power *now*.
@@ -18175,7 +18179,7 @@ impl Engine {
 
     /// [`Self::rx_band_refusal`] for a band chosen by name (a band button).
     fn rx_band_refusal_for(&self, band: Band) -> Option<sdroxide_types::RxBlock> {
-        if !self.rx_bands_enforced {
+        if !self.rx_bands_enforced || self.rx_swl || band.is_listen_service() {
             return None;
         }
         if !self.rx_bands_confirmed {

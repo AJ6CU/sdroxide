@@ -9523,3 +9523,6 @@ meshtastic-tx-bad-text = 文字为空或过长（最多 200 字节）。
 meshtastic-tx-busy = 已有一次发射正在进行。
 
 meshtastic-tx-rails = 发射机拒绝发射：原因见发射提示信息。
+rx-bands-swl-note = 此电台已启用 SWL 模式：没有接收锁定，可以调谐到任何波段。
+
+rx-bands-always-open = 收听波段（以及 SWL 模式）始终可以接收。

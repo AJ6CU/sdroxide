@@ -8090,9 +8090,19 @@ impl RadioConfig {
     /// [`Band::Gen`] (outside every band: ADS-B, DAB, AIS...) has no row of its
     /// own and is covered by a confirmed list.
     pub fn rx_band_allowed(&self, band: Band) -> bool {
-        self.rx_bands_confirmed
-            && (band == Band::Gen
-                || self.rx_band_enable.as_ref().is_some_and(|bands| bands.contains(&band)))
+        !self.rx_lock_active()
+            || band.is_listen_service()
+            || (self.rx_bands_confirmed
+                && (band == Band::Gen
+                    || self.rx_band_enable.as_ref().is_some_and(|bands| bands.contains(&band))))
+    }
+
+    /// Whether the receive band lock applies to this radio at all.
+    ///
+    /// A radio in SWL mode ([`Self::hide_tx`], "hide everything but listening")
+    /// is a listener's set: it has no receive lock, whatever the list says.
+    pub fn rx_lock_active(&self) -> bool {
+        !self.hide_tx
     }
 
     /// Whether this radio may be tuned to `dial_hz`. The band is the one the
@@ -8103,11 +8113,18 @@ impl RadioConfig {
 
     /// Why this radio may not receive at `dial_hz`, or `None` when it may.
     /// The same rule as [`Self::tx_block_reason`], on the receive list.
+    ///
+    /// Never in SWL mode, and never on a listening band (LW, MW, SW, FM, AIR,
+    /// MIL): those are always open for reception. Frequencies outside every band
+    /// (the gaps between them) are open once the list is confirmed.
     pub fn rx_block_reason(&self, dial_hz: f64) -> Option<RxBlock> {
+        let band = Band::containing(dial_hz);
+        if !self.rx_lock_active() || band.is_listen_service() {
+            return None;
+        }
         if !self.rx_bands_confirmed {
             return Some(RxBlock::Unconfirmed);
         }
-        let band = Band::containing(dial_hz);
         if band == Band::Gen || self.rx_band_enable.as_ref().is_some_and(|b| b.contains(&band)) {
             None
         } else {
@@ -9794,6 +9811,49 @@ mod tests {
             rx_bands_confirmed: confirmed,
             ..RadioConfig::default()
         }
+    }
+
+    #[test]
+    fn swl_mode_has_no_rx_lock() {
+        let mut c = rx_list(&[], false);
+        assert!(c.rx_block_reason(7_074_000.0).is_some());
+        c.hide_tx = true;
+        for hz in [150_000.0, 1_000_000.0, 7_074_000.0, 14_200_000.0, 45_000_000.0, 1_090_000_000.0] {
+            assert_eq!(c.rx_block_reason(hz), None, "{hz}");
+        }
+        assert!(c.rx_band_allowed(Band::M40));
+        assert!(!c.rx_lock_active());
+    }
+
+    #[test]
+    fn listening_bands_are_always_open_for_rx() {
+        // Unconfirmed, and explicitly off: LW/MW/SW/FM/AIR/MIL still listen.
+        let c = rx_list(&[], false);
+        for band in [Band::Lw, Band::Mw, Band::Sw, Band::Fm, Band::Air, Band::Mil] {
+            assert!(c.rx_band_allowed(band), "{band:?}");
+        }
+        assert_eq!(c.rx_block_reason(1_000_000.0), None, "MW");
+        assert_eq!(c.rx_block_reason(9_650_000.0), None, "SW");
+        assert_eq!(c.rx_block_reason(98_000_000.0), None, "FM");
+    }
+
+    #[test]
+    fn rx_has_no_hole_between_0_and_50_mhz_except_bands_set_to_no() {
+        // Confirmed list with every amateur/CB band off: only the bands the
+        // operator set to NO are refused; the gaps and listening bands are open.
+        let c = rx_list(&[], true);
+        let mut hz = 10_000.0;
+        while hz <= 50_000_000.0 {
+            let band = Band::containing(hz);
+            let refused = c.rx_block_reason(hz).is_some();
+            let expect = band != Band::Gen && !band.is_listen_service();
+            assert_eq!(refused, expect, "{hz} Hz ({band:?})");
+            hz += 10_000.0;
+        }
+        // A band set to YES is open, a band set to NO stays closed.
+        let c = rx_list(&[Band::M40], true);
+        assert_eq!(c.rx_block_reason(7_100_000.0), None);
+        assert!(c.rx_block_reason(14_200_000.0).is_some());
     }
 
     #[test]

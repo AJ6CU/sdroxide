@@ -9584,3 +9584,6 @@ meshtastic-tx-bad-text = El texto está vacío o es demasiado largo (200 bytes c
 meshtastic-tx-busy = Ya hay una transmisión en curso.
 
 meshtastic-tx-rails = El transmisor se negó a pasar a transmisión: vea el mensaje de transmisión para el motivo.
+rx-bands-swl-note = El modo SWL está activo en esta radio: no hay bloqueo de recepción. Se puede sintonizar cualquier banda.
+
+rx-bands-always-open = Las bandas de escucha (y el modo SWL) siempre están abiertas en recepción.

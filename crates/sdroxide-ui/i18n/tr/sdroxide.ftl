@@ -9585,3 +9585,6 @@ meshtastic-tx-bad-text = Metin boş ya da çok uzun (en fazla 200 bayt).
 meshtastic-tx-busy = Zaten bir yayın sürüyor.
 
 meshtastic-tx-rails = Verici yayına geçmeyi reddetti: nedeni yayın mesajında görün.
+rx-bands-swl-note = Bu telsiz için SWL modu açık: alma kilidi yok. Her banda ayarlanabilir.
+
+rx-bands-always-open = Dinleme bantları (ve SWL modu) alma için her zaman açıktır.

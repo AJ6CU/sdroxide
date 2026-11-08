@@ -9585,3 +9585,6 @@ meshtastic-tx-bad-text = Der Text ist leer oder zu lang (höchstens 200 Byte).
 meshtastic-tx-busy = Eine Aussendung läuft bereits.
 
 meshtastic-tx-rails = Der Sender hat das Tasten verweigert: den Grund nennt die Sendemeldung.
+rx-bands-swl-note = Der SWL-Modus ist für dieses Funkgerät aktiv: Es gibt keine Empfangssperre. Alle Bänder können abgestimmt werden.
+
+rx-bands-always-open = Hörbänder (und der SWL-Modus) sind für den Empfang immer offen.

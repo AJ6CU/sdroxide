@@ -977,6 +977,11 @@ fn band_plan_table(
         ui.add_space(2.0);
     }
     note(ui, &tr!("rx-bands-note"));
+    // SWL mode: no receive lock at all, the grid is shown open and read-only.
+    let swl = !cfg.rx_lock_active();
+    if swl {
+        note(ui, &tr!("rx-bands-swl-note"));
+    }
     ui.add_space(6.0);
 
     let mut set: Option<(Band, bool)> = None;
@@ -1051,10 +1056,13 @@ fn band_plan_table(
                 }
                 // Receive: the same menu. A band the hardware does not reach at
                 // all is greyed out and reads NO.
+                // Listening bands (LW, MW, SW, FM, AIR, MIL) are always open,
+                // and so is everything in SWL mode.
                 let reach = band_reached(caps, *band);
-                let on_rx = reach && listed_rx.contains(band);
+                let always = swl || band.is_listen_service();
+                let on_rx = reach && (always || listed_rx.contains(band));
                 let mut choice_rx = on_rx;
-                ui.add_enabled_ui(reach, |ui| {
+                ui.add_enabled_ui(reach && !always, |ui| {
                     egui::ComboBox::from_id_salt(("rx-band", i))
                         .width(64.0)
                         .selected_text(if on_rx { tr!("tx-bands-yes") } else { tr!("tx-bands-no") })
@@ -1064,8 +1072,12 @@ fn band_plan_table(
                         });
                 })
                 .response
-                .on_disabled_hover_text(tr!("rx-bands-out-of-range"));
-                if reach && choice_rx != on_rx {
+                .on_disabled_hover_text(if reach {
+                    tr!("rx-bands-always-open")
+                } else {
+                    tr!("rx-bands-out-of-range")
+                });
+                if reach && !always && choice_rx != on_rx {
                     set_rx = Some((*band, choice_rx));
                 }
                 if i % per_row == per_row - 1 {
@@ -1096,8 +1108,10 @@ fn band_plan_table(
         bands_confirmation(ui, "tx-bands", &mut cfg.tx_bands_confirmed, true);
     }
     ui.add_space(6.0);
-    ui.label(RichText::new(tr!("rx-bands-title")).strong());
-    bands_confirmation(ui, "rx-bands", &mut cfg.rx_bands_confirmed, false);
+    if !swl {
+        ui.label(RichText::new(tr!("rx-bands-title")).strong());
+        bands_confirmation(ui, "rx-bands", &mut cfg.rx_bands_confirmed, false);
+    }
     ui.end_row();
 }
 
