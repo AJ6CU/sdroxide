@@ -14,6 +14,7 @@ and the [README](https://github.com/madmedicnl/sdroxide-brown#readme).
 ## [Unreleased]
 
 ### Added
+- **Meshtastic: the decoding engine (no screen yet)** — new crate `sdroxide-meshtastic`: a LoRa chirp-spread-spectrum demodulator (SF7–SF12, any bandwidth, carrier and timing recovery, oversampled input), the matching modulator, the 16-byte Meshtastic header, AES-128/256-CTR channel decryption with the channel-hash dispatch, the default key, the presets and regions, and a protobuf reader. An example, `decode_iq`, reads a recorded IQ file. The panel, the radio switching and the transmit side follow in later changes.
 - **Public SDRs: ADD AS RADIO, a map and an ONLINE/SILENT check** — the receiver becomes a radio of its own, named after its directory entry, and the radio in use is never touched (USE, + TAB and their confirmation are gone; stars and MINE stay). LIST | MAP shows the filtered receivers on the world map; a click picks the receivers under the pointer and checks whether they answer. Ported from upstream dividebysandwich/sdroxide#799 (Hans-Dieter Zucht). Protocol 277.
 - **Public SDRs can dock under the waterfall** — like Radio Classic, in the voice modes that have nothing there (not CW, not a digital mode, not on a phone): the ⤓ chip on the list or Settings → UI → *Window: Public SDRs* docks it, ↗ puts it back in a window. Where the slot is taken it stays a window. Five messages in eleven languages.
 
