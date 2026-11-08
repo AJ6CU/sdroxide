@@ -9498,3 +9498,65 @@ qrzcard-switch = Показывать карточку QRZ при наведен
 qrzcard-switch-hint = Фото, имя, возраст, адрес, локатор и QSL с QRZ.com — в водопаде, декодерах и списках спотов. Для фото, e-mail и даты рождения нужна подписка QRZ XML.
 
 qrzcard-needs-login = Выберите QRZ в качестве поставщика и введите логин и пароль QRZ, чтобы включить карточку.
+
+meshtastic-title = Meshtastic
+
+meshtastic-receive = Приём
+
+meshtastic-region = Регион
+
+meshtastic-preset = Пресет
+
+meshtastic-channel = Канал
+
+meshtastic-tune = Слушать здесь
+
+meshtastic-tune-hint = Включает приёмник и переводит радио на этот канал. Список диапазонов приёма в меню «Радио» решает, можно ли здесь слушать. При выключении или выходе радио возвращается туда, где было.
+
+meshtastic-keys = Ключи
+
+meshtastic-keys-hint = Имя=ключ через запятую (hex:…, base64:…, simple1..10). Ключ по умолчанию пробуется всегда.
+
+meshtastic-state-off = Приёмник выключен.
+
+meshtastic-level = Уровень { $db } dBFS
+
+meshtastic-counts = { $pre } преамбул · { $ok } кадров · { $bad } с ошибкой CRC
+
+meshtastic-refused-band = ПРИЁМ ЗАПРЕЩЁН — { $freq } МГц ({ $band }) не является подтверждённым диапазоном приёма. Отметьте и подтвердите его в меню «Радио», диапазоны приёма.
+
+meshtastic-refused-unconfirmed = ПРИЁМ ЗАПРЕЩЁН — диапазоны приёма этого радио ещё не подтверждены. Проверьте и подтвердите их в меню «Радио», диапазоны приёма.
+
+meshtastic-out-of-window = Канал вне окна выборки, которое захватывает радио: настройтесь ближе или увеличьте частоту дискретизации.
+
+meshtastic-none-yet = Пока ничего не слышно.
+
+meshtastic-nodes = Узлы ({ $n })
+
+meshtastic-log = Пакеты ({ $n })
+
+meshtastic-col-id = Узел
+
+meshtastic-col-name = Имя
+
+meshtastic-col-heard = Услышан
+
+meshtastic-col-snr = SNR
+
+meshtastic-col-hops = Хопы
+
+meshtastic-col-position = Позиция
+
+meshtastic-col-battery = Батарея
+
+meshtastic-encrypted = зашифровано (нет ключа)
+
+meshtastic-via-mqtt = через MQTT
+
+meshtastic-bench-hint = Открывает окно Meshtastic: трафик LoRa-сети одного канала.
+
+extras-meshtastic-hint = Meshtastic: трафик LoRa-сети одного канала, услышанные узлы и пакеты.
+
+settings-ui-meshtastic-on = Показать панель
+
+settings-ui-meshtastic-hint = Добавляет кнопки Meshtastic в окно «Дополнительно» и на экспериментальную полку меню режимов и разрешает открывать окно. Окно закрепляется в главном или уходит в своё кнопкой в заголовке. Выключение закрывает окно; приёмник останавливается переключателем самого окна.

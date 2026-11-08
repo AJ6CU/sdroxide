@@ -9509,3 +9509,65 @@ qrzcard-switch = Show the QRZ card when the pointer rests on a callsign
 qrzcard-switch-hint = Photo, name, age, address, locator and QSL from QRZ.com, in the waterfall, the decoders and the spot lists. The photo, e-mail and date of birth need a QRZ XML subscription.
 
 qrzcard-needs-login = Choose QRZ as the provider and enter your QRZ username and password to enable the card.
+
+meshtastic-title = Meshtastic
+
+meshtastic-receive = Receive
+
+meshtastic-region = Region
+
+meshtastic-preset = Preset
+
+meshtastic-channel = Channel
+
+meshtastic-tune = Listen here
+
+meshtastic-tune-hint = Switch the receiver on and bring the radio to this channel. The receive band list in the Radio menu decides whether the radio may listen here. When you switch off, or quit, the radio returns to where it was.
+
+meshtastic-keys = Keys
+
+meshtastic-keys-hint = Name=key, comma separated (hex:…, base64:…, simple1..10). The default key is always tried.
+
+meshtastic-state-off = Receiver off.
+
+meshtastic-level = Level { $db } dBFS
+
+meshtastic-counts = { $pre } preambles · { $ok } frames · { $bad } bad CRC
+
+meshtastic-refused-band = RECEIVE FORBIDDEN — { $freq } MHz ({ $band }) is not a validated receive band. Tick and validate it in the Radio menu, receive bands.
+
+meshtastic-refused-unconfirmed = RECEIVE FORBIDDEN — the receive bands of this radio are not validated yet. Check them and confirm in the Radio menu, receive bands.
+
+meshtastic-out-of-window = The channel is outside the sample window the radio captures: tune nearer or use a wider sample rate.
+
+meshtastic-none-yet = Nothing heard yet.
+
+meshtastic-nodes = Nodes ({ $n })
+
+meshtastic-log = Packets ({ $n })
+
+meshtastic-col-id = Node
+
+meshtastic-col-name = Name
+
+meshtastic-col-heard = Heard
+
+meshtastic-col-snr = SNR
+
+meshtastic-col-hops = Hops
+
+meshtastic-col-position = Position
+
+meshtastic-col-battery = Battery
+
+meshtastic-encrypted = encrypted (no key)
+
+meshtastic-via-mqtt = via MQTT
+
+meshtastic-bench-hint = Open the Meshtastic window: the LoRa mesh traffic of one channel.
+
+extras-meshtastic-hint = Meshtastic: the LoRa mesh traffic of one channel, the nodes heard and the packets.
+
+settings-ui-meshtastic-on = Show the panel
+
+settings-ui-meshtastic-hint = Adds the Meshtastic chips to the Extras window and to the experimental bench of the mode menu, and lets the window open. The window docks in the main one or goes to its own with the title-bar button. Switching it off closes the window; the receiver stops from the window's own switch.

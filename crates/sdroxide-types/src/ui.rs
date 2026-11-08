@@ -1625,6 +1625,13 @@ pub struct UiSettings {
     /// arrangement and nothing else.
     #[serde(default)]
     pub classic_sections: String,
+    /// The Meshtastic panel is available: its chips show in the Extras window
+    /// and on the experimental bench, and its window may open. Off by default,
+    /// so the panel is not there until the operator asks for it in the
+    /// detachable-windows settings. Switching it off closes the window; it does
+    /// not stop the receiver (the panel's own switch does that).
+    #[serde(default)]
+    pub meshtastic_panel: bool,
 }
 
 /// One section of the Classic UI column — the units the operator drags into the
@@ -2026,6 +2033,7 @@ impl Default for UiSettings {
             tool_windows_repaired: 0,
             session_qso_sort: 0,
             session_qso_sort_desc: true,
+            meshtastic_panel: false,
         }
     }
 }

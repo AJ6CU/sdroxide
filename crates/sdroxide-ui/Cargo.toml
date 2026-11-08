@@ -26,6 +26,10 @@ tracing.workspace = true
 # operator whether their digipeater path is a reasonable one. Pure parsing with
 # no I/O and no clock, so it builds for wasm32 alongside everything else here.
 sdroxide-aprs = { path = "../sdroxide-aprs" }
+# The Meshtastic region and preset tables and the port names for its panel,
+# without the `engine` feature (no thread, no channel): pure data, builds for
+# wasm32 as well.
+sdroxide-meshtastic = { path = "../sdroxide-meshtastic" }
 serde.workspace = true
 # The relay's reply is JSON. Pure Rust, so it builds for wasm32 as well.
 serde_json.workspace = true

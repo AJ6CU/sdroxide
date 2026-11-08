@@ -6206,6 +6206,7 @@ dependencies = [
  "sdroxide-config",
  "sdroxide-dsp",
  "sdroxide-enigma",
+ "sdroxide-meshtastic",
  "sdroxide-midi",
  "sdroxide-proto",
  "sdroxide-solar",

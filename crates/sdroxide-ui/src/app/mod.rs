@@ -59,6 +59,7 @@ pub(in crate::app) mod sonde;
 mod vor;
 mod sonde_card;
 mod wxsat;
+pub(in crate::app) mod meshtastic;
 pub(in crate::app) mod ignore;
 pub(in crate::app) mod ism;
 pub(in crate::app) mod known_calls;
@@ -779,6 +780,13 @@ pub struct SdroxideApp {
     wxsat_tex_lines: usize,
     /// The LRPT channel shown (an APID, 64 to 69); 0 until one is picked.
     wxsat_apid: u16,
+    /// The Meshtastic receiver's latest status (level, counters, nodes, log).
+    meshtastic_status: Option<Box<sdroxide_types::MeshtasticStatus>>,
+    /// The MESHTASTIC window is open.
+    show_meshtastic: bool,
+    /// The key list being typed in the MESHTASTIC window, `None` until the
+    /// field is first drawn; sent to the station when the field is left.
+    meshtastic_keys: Option<String>,
     /// HFDL: the aircraft plot table and the map's pan/zoom and selection. Its
     /// own table rather than the decode log's, so an aircraft stays on the map
     /// after its earliest decodes have scrolled out of the log.
@@ -2393,6 +2401,9 @@ impl SdroxideApp {
             wxsat_tex: None,
             wxsat_tex_lines: usize::MAX,
             wxsat_apid: 0,
+            meshtastic_status: None,
+            show_meshtastic: false,
+            meshtastic_keys: None,
             hfdl_map: crate::hfdl_map::HfdlMapState::default(),
             sonde_map: crate::sonde_map::SondeMapState::default(),
             sonde_online: crate::sonde_online::Online::default(),
@@ -5537,10 +5548,10 @@ mod tests {
         assert!(r.top() >= bar && r.top() < bar + 12.0, "under the top bar: {r:?} vs {bar}");
         assert!(r.right() > w - 12.0, "at the right of the frame: {r:?}");
         let saved =
-            sdroxide_types::DetachedWindow { size: [800.0, 230.0], pos: Some([200.0, 300.0]) };
+            sdroxide_types::DetachedWindow { size: [900.0, 230.0], pos: Some([200.0, 300.0]) };
         let (r, _) = open_rect(Some(saved));
         assert!((r.min.x - 200.0).abs() < 2.0 && (r.min.y - 300.0).abs() < 2.0, "place: {r:?}");
-        assert!((r.width() - 800.0).abs() < 2.0, "size: {r:?}");
+        assert!((r.width() - 900.0).abs() < 2.0, "size: {r:?}");
     }
 
     /// Render the **operating panel as a floating window** to a PNG to look at.

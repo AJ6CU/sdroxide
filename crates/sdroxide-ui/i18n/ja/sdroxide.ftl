@@ -9431,3 +9431,65 @@ qrzcard-switch = コールサインにカーソルを置くと QRZ カードを�
 qrzcard-switch-hint = QRZ.com の写真・氏名・年齢・住所・ロケーター・QSL を、ウォーターフォール、デコーダー、スポット一覧に表示します。写真、メール、生年月日には QRZ XML の購読が必要です。
 
 qrzcard-needs-login = カードを有効にするには、プロバイダーに QRZ を選び、QRZ のユーザー名とパスワードを入力してください。
+
+meshtastic-title = Meshtastic
+
+meshtastic-receive = 受信
+
+meshtastic-region = 地域
+
+meshtastic-preset = プリセット
+
+meshtastic-channel = チャンネル
+
+meshtastic-tune = ここで受信
+
+meshtastic-tune-hint = 受信機をオンにして、無線機をこのチャンネルに合わせます。ここで受信できるかどうかは、無線メニューの受信バンド一覧が決めます。オフにするか終了すると、無線機は元の状態に戻ります。
+
+meshtastic-keys = 鍵
+
+meshtastic-keys-hint = 名前=鍵をカンマ区切りで入力（hex:…、base64:…、simple1..10）。既定の鍵は常に試されます。
+
+meshtastic-state-off = 受信機はオフです。
+
+meshtastic-level = レベル { $db } dBFS
+
+meshtastic-counts = プリアンブル { $pre } · フレーム { $ok } · CRC不良 { $bad }
+
+meshtastic-refused-band = 受信禁止 — { $freq } MHz（{ $band }）は確認済みの受信バンドではありません。無線メニューの受信バンドでチェックして確認してください。
+
+meshtastic-refused-unconfirmed = 受信禁止 — この無線機の受信バンドはまだ確認されていません。無線メニューの受信バンドで確認してください。
+
+meshtastic-out-of-window = チャンネルが無線機の取り込むサンプル範囲の外です。近くに同調するか、サンプルレートを上げてください。
+
+meshtastic-none-yet = まだ何も受信していません。
+
+meshtastic-nodes = ノード（{ $n }）
+
+meshtastic-log = パケット（{ $n }）
+
+meshtastic-col-id = ノード
+
+meshtastic-col-name = 名前
+
+meshtastic-col-heard = 受信時刻
+
+meshtastic-col-snr = SNR
+
+meshtastic-col-hops = ホップ
+
+meshtastic-col-position = 位置
+
+meshtastic-col-battery = 電池
+
+meshtastic-encrypted = 暗号化（鍵なし）
+
+meshtastic-via-mqtt = MQTT経由
+
+meshtastic-bench-hint = Meshtasticウィンドウを開きます：1つのチャンネルのLoRaメッシュ通信。
+
+extras-meshtastic-hint = Meshtastic：1つのチャンネルのLoRaメッシュ通信、受信したノードとパケット。
+
+settings-ui-meshtastic-on = パネルを表示
+
+settings-ui-meshtastic-hint = ExtrasウィンドウとモードメニューのExperimental欄にMeshtasticのチップを追加し、ウィンドウを開けるようにします。ウィンドウはメインに結合するか、タイトルバーのボタンで別ウィンドウにできます。オフにするとウィンドウが閉じます。受信機の停止はウィンドウ内のスイッチで行います。

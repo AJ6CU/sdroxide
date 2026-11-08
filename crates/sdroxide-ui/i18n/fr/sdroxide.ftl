@@ -9494,3 +9494,65 @@ qrzcard-switch = Afficher la fiche QRZ au survol d'un indicatif
 qrzcard-switch-hint = Photo, nom, âge, adresse, locator et QSL depuis QRZ.com, dans le waterfall, les décodeurs et les listes de spots. La photo, l'e-mail et la date de naissance demandent un abonnement QRZ XML.
 
 qrzcard-needs-login = Choisissez QRZ comme fournisseur et renseignez votre identifiant et votre mot de passe QRZ pour activer la fiche.
+
+meshtastic-title = Meshtastic
+
+meshtastic-receive = Réception
+
+meshtastic-region = Région
+
+meshtastic-preset = Préréglage
+
+meshtastic-channel = Canal
+
+meshtastic-tune = Écouter ici
+
+meshtastic-tune-hint = Active le récepteur et amène la radio sur ce canal. La liste des bandes de réception du menu Radio décide si la radio peut écouter ici. Quand vous coupez, ou quittez, la radio revient là où elle était.
+
+meshtastic-keys = Clés
+
+meshtastic-keys-hint = Nom=clé, séparés par des virgules (hex:…, base64:…, simple1..10). La clé par défaut est toujours essayée.
+
+meshtastic-state-off = Récepteur coupé.
+
+meshtastic-level = Niveau { $db } dBFS
+
+meshtastic-counts = { $pre } préambules · { $ok } trames · { $bad } CRC faux
+
+meshtastic-refused-band = RÉCEPTION INTERDITE — { $freq } MHz ({ $band }) n'est pas une bande de réception validée. Cochez-la et validez-la dans le menu Radio, bandes de réception.
+
+meshtastic-refused-unconfirmed = RÉCEPTION INTERDITE — les bandes de réception de cette radio ne sont pas encore validées. Vérifiez-les et confirmez dans le menu Radio, bandes de réception.
+
+meshtastic-out-of-window = Le canal est hors de la fenêtre d'échantillons que la radio capte : rapprochez l'accord ou prenez un débit d'échantillonnage plus large.
+
+meshtastic-none-yet = Rien entendu pour l'instant.
+
+meshtastic-nodes = Nœuds ({ $n })
+
+meshtastic-log = Paquets ({ $n })
+
+meshtastic-col-id = Nœud
+
+meshtastic-col-name = Nom
+
+meshtastic-col-heard = Entendu
+
+meshtastic-col-snr = SNR
+
+meshtastic-col-hops = Sauts
+
+meshtastic-col-position = Position
+
+meshtastic-col-battery = Batterie
+
+meshtastic-encrypted = chiffré (pas de clé)
+
+meshtastic-via-mqtt = via MQTT
+
+meshtastic-bench-hint = Ouvre la fenêtre Meshtastic : le trafic du réseau maillé LoRa d'un canal.
+
+extras-meshtastic-hint = Meshtastic : le trafic du réseau maillé LoRa d'un canal, les nœuds entendus et les paquets.
+
+settings-ui-meshtastic-on = Afficher le panneau
+
+settings-ui-meshtastic-hint = Ajoute les puces Meshtastic à la fenêtre Extras et au banc expérimental du menu des modes, et autorise l'ouverture de la fenêtre. La fenêtre s'ancre dans la principale ou passe dans la sienne avec le bouton de la barre de titre. La couper ferme la fenêtre ; le récepteur s'arrête avec l'interrupteur de la fenêtre.

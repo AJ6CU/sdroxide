@@ -9483,3 +9483,65 @@ qrzcard-switch = İmleç bir çağrı işaretinin üzerinde durunca QRZ kartın�
 qrzcard-switch-hint = QRZ.com'dan fotoğraf, ad, yaş, adres, lokatör ve QSL; şelalede, çözücülerde ve spot listelerinde. Fotoğraf, e-posta ve doğum tarihi için QRZ XML aboneliği gerekir.
 
 qrzcard-needs-login = Kartı etkinleştirmek için sağlayıcı olarak QRZ'yi seçin ve QRZ kullanıcı adı ile parolanızı girin.
+
+meshtastic-title = Meshtastic
+
+meshtastic-receive = Alım
+
+meshtastic-region = Bölge
+
+meshtastic-preset = Ön ayar
+
+meshtastic-channel = Kanal
+
+meshtastic-tune = Burayı dinle
+
+meshtastic-tune-hint = Alıcıyı açar ve radyoyu bu kanala getirir. Radyo menüsündeki alım bandı listesi burada dinlenip dinlenemeyeceğine karar verir. Kapattığınızda ya da çıktığınızda radyo eski yerine döner.
+
+meshtastic-keys = Anahtarlar
+
+meshtastic-keys-hint = Ad=anahtar, virgülle ayrılmış (hex:…, base64:…, simple1..10). Varsayılan anahtar her zaman denenir.
+
+meshtastic-state-off = Alıcı kapalı.
+
+meshtastic-level = Seviye { $db } dBFS
+
+meshtastic-counts = { $pre } öncül · { $ok } çerçeve · { $bad } hatalı CRC
+
+meshtastic-refused-band = ALIM YASAK — { $freq } MHz ({ $band }) onaylanmış bir alım bandı değil. Radyo menüsü, alım bantları bölümünde işaretleyip onaylayın.
+
+meshtastic-refused-unconfirmed = ALIM YASAK — bu radyonun alım bantları henüz onaylanmadı. Radyo menüsü, alım bantları bölümünde kontrol edip onaylayın.
+
+meshtastic-out-of-window = Kanal, radyonun yakaladığı örnek penceresinin dışında: daha yakına ayarlayın veya daha geniş bir örnekleme hızı kullanın.
+
+meshtastic-none-yet = Henüz bir şey duyulmadı.
+
+meshtastic-nodes = Düğümler ({ $n })
+
+meshtastic-log = Paketler ({ $n })
+
+meshtastic-col-id = Düğüm
+
+meshtastic-col-name = Ad
+
+meshtastic-col-heard = Duyuldu
+
+meshtastic-col-snr = SNR
+
+meshtastic-col-hops = Atlama
+
+meshtastic-col-position = Konum
+
+meshtastic-col-battery = Pil
+
+meshtastic-encrypted = şifreli (anahtar yok)
+
+meshtastic-via-mqtt = MQTT üzerinden
+
+meshtastic-bench-hint = Meshtastic penceresini açar: tek bir kanalın LoRa ağ trafiği.
+
+extras-meshtastic-hint = Meshtastic: tek bir kanalın LoRa ağ trafiği, duyulan düğümler ve paketler.
+
+settings-ui-meshtastic-on = Paneli göster
+
+settings-ui-meshtastic-hint = Meshtastic düğmelerini Ekstralar penceresine ve mod menüsünün deneysel bölümüne ekler ve pencerenin açılmasına izin verir. Pencere ana pencereye yerleşir veya başlık çubuğu düğmesiyle kendi penceresine geçer. Kapatmak pencereyi kapatır; alıcı pencerenin kendi anahtarıyla durur.

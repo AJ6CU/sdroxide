@@ -9483,3 +9483,65 @@ qrzcard-switch = QRZ-Karte anzeigen, wenn der Zeiger auf einem Rufzeichen ruht
 qrzcard-switch-hint = Foto, Name, Alter, Adresse, Locator und QSL von QRZ.com im Wasserfall, in den Decodern und in den Spot-Listen. Foto, E-Mail und Geburtsdatum erfordern ein QRZ-XML-Abonnement.
 
 qrzcard-needs-login = QRZ als Anbieter wählen und QRZ-Benutzername und -Passwort eingeben, um die Karte zu aktivieren.
+
+meshtastic-title = Meshtastic
+
+meshtastic-receive = Empfang
+
+meshtastic-region = Region
+
+meshtastic-preset = Voreinstellung
+
+meshtastic-channel = Kanal
+
+meshtastic-tune = Hier hören
+
+meshtastic-tune-hint = Schaltet den Empfänger ein und stellt das Funkgerät auf diesen Kanal. Die Empfangsbandliste im Radio-Menü entscheidet, ob hier gehört werden darf. Beim Ausschalten oder Beenden kehrt das Funkgerät dorthin zurück, wo es war.
+
+meshtastic-keys = Schlüssel
+
+meshtastic-keys-hint = Name=Schlüssel, durch Kommas getrennt (hex:…, base64:…, simple1..10). Der Standardschlüssel wird immer versucht.
+
+meshtastic-state-off = Empfänger aus.
+
+meshtastic-level = Pegel { $db } dBFS
+
+meshtastic-counts = { $pre } Präambeln · { $ok } Rahmen · { $bad } CRC-Fehler
+
+meshtastic-refused-band = EMPFANG GESPERRT — { $freq } MHz ({ $band }) ist kein bestätigtes Empfangsband. Haken setzen und bestätigen im Radio-Menü, Empfangsbänder.
+
+meshtastic-refused-unconfirmed = EMPFANG GESPERRT — die Empfangsbänder dieses Funkgeräts sind noch nicht bestätigt. Prüfen und bestätigen im Radio-Menü, Empfangsbänder.
+
+meshtastic-out-of-window = Der Kanal liegt außerhalb des Abtastfensters des Funkgeräts: näher abstimmen oder eine höhere Abtastrate wählen.
+
+meshtastic-none-yet = Noch nichts gehört.
+
+meshtastic-nodes = Knoten ({ $n })
+
+meshtastic-log = Pakete ({ $n })
+
+meshtastic-col-id = Knoten
+
+meshtastic-col-name = Name
+
+meshtastic-col-heard = Gehört
+
+meshtastic-col-snr = SNR
+
+meshtastic-col-hops = Hops
+
+meshtastic-col-position = Position
+
+meshtastic-col-battery = Akku
+
+meshtastic-encrypted = verschlüsselt (kein Schlüssel)
+
+meshtastic-via-mqtt = über MQTT
+
+meshtastic-bench-hint = Öffnet das Meshtastic-Fenster: der LoRa-Mesh-Verkehr eines Kanals.
+
+extras-meshtastic-hint = Meshtastic: der LoRa-Mesh-Verkehr eines Kanals, die gehörten Knoten und die Pakete.
+
+settings-ui-meshtastic-on = Panel anzeigen
+
+settings-ui-meshtastic-hint = Fügt die Meshtastic-Schaltflächen dem Extras-Fenster und der experimentellen Bank des Modusmenüs hinzu und erlaubt das Öffnen des Fensters. Das Fenster dockt im Hauptfenster an oder wechselt mit der Schaltfläche der Titelleiste in ein eigenes. Ausschalten schließt das Fenster; der Empfänger stoppt über den Schalter des Fensters.
