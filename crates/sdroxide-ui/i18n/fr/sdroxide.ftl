@@ -9387,3 +9387,19 @@ settings-general-band-plan-radio-hint = Utiliser un plan sur cette radio seuleme
 settings-general-band-plan-run-radio = CETTE RADIO SEULE
 
 settings-general-band-plan-radio-tag = cette radio
+
+meter-view-auto = Auto
+
+meter-view-rx = Signal (RX)
+
+meter-view-power = Puissance
+
+meter-view-swr = TOS
+
+meter-view-alc = ALC
+
+smeter-arrow-prev-hover = Mesure précédente : { $view }{ $when }
+
+smeter-arrow-next-hover = Mesure suivante : { $view }{ $when }
+
+smeter-arrow-on-receive = (utilisée à l'émission)

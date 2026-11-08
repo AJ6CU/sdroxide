@@ -9375,3 +9375,19 @@ settings-general-band-plan-radio-hint = Usar un plan solo en esta radio. El plan
 settings-general-band-plan-run-radio = SOLO ESTA RADIO
 
 settings-general-band-plan-radio-tag = esta radio
+
+meter-view-auto = Auto
+
+meter-view-rx = Señal (RX)
+
+meter-view-power = Potencia
+
+meter-view-swr = ROE
+
+meter-view-alc = ALC
+
+smeter-arrow-prev-hover = Medida anterior: { $view }{ $when }
+
+smeter-arrow-next-hover = Medida siguiente: { $view }{ $when }
+
+smeter-arrow-on-receive = (se usa al transmitir)

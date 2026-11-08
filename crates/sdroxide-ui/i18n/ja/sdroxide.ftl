@@ -9324,3 +9324,19 @@ settings-general-band-plan-radio-hint = プランをこの無線機だけで使�
 settings-general-band-plan-run-radio = この無線機のみ
 
 settings-general-band-plan-radio-tag = この無線機
+
+meter-view-auto = 自動
+
+meter-view-rx = 信号 (RX)
+
+meter-view-power = 出力
+
+meter-view-swr = SWR
+
+meter-view-alc = ALC
+
+smeter-arrow-prev-hover = 前の表示: { $view }{ $when }
+
+smeter-arrow-next-hover = 次の表示: { $view }{ $when }
+
+smeter-arrow-on-receive = (送信中に使われます)

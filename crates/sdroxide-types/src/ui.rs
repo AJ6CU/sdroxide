@@ -509,6 +509,57 @@ impl ChromeStyle {
     }
 }
 
+/// Which quantity the meter shows. Turned with the arrows on the instrument.
+///
+/// `Auto` is the stock choice and follows the radio: the signal on receive and,
+/// while transmitting, the output power — the reading an operator keys up to
+/// see. The other four pin one quantity. A pinned view the radio has no figure
+/// for (SWR on a rig with no bridge, power on one with no sensor) is skipped by
+/// the arrows and falls back to `Auto`, so the needle never sits on a quantity
+/// nobody is measuring. Kept in `[ui]` and in the profile's screen
+/// ([`ClientScreen`]) with [`SmeterStyle`], for the same reason.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum MeterView {
+    /// The received signal, S-units — on transmit the last one heard.
+    Rx,
+    /// Output power: the rig's own meter, or watts where it measures them.
+    Power,
+    /// Standing-wave ratio.
+    Swr,
+    /// The rig's automatic level control.
+    Alc,
+    /// Signal on receive, power on transmit.
+    ///
+    /// Declared last because serde demands the catch-all be the final variant:
+    /// it also swallows an unrecognised value in a hand-edited config, so a
+    /// typo degrades to the stock view instead of throwing the whole `[ui]`
+    /// table away (see [`SmeterStyle`], which does the same).
+    #[default]
+    #[serde(other)]
+    Auto,
+}
+
+impl MeterView {
+    /// Every view, in the order the arrows turn through them.
+    pub const ALL: [MeterView; 5] =
+        [MeterView::Auto, MeterView::Power, MeterView::Swr, MeterView::Alc, MeterView::Rx];
+
+    fn step(self, by: isize) -> Self {
+        let i = Self::ALL.iter().position(|v| *v == self).unwrap_or(0) as isize;
+        Self::ALL[(i + by).rem_euclid(Self::ALL.len() as isize) as usize]
+    }
+
+    /// The view after this one (right arrow).
+    pub fn next(self) -> Self {
+        self.step(1)
+    }
+
+    /// The view before this one (left arrow).
+    pub fn prev(self) -> Self {
+        self.step(-1)
+    }
+}
+
 /// Which face the S-meter wears. Cycled by clicking the meter itself.
 ///
 /// A preference of the operator rather than of the radio — which instrument
@@ -1160,6 +1211,10 @@ pub struct UiSettings {
     /// Cycled by clicking the meter; see [`SmeterStyle`] for why it is a
     /// screen preference rather than part of a radio's view.
     pub smeter_style: SmeterStyle,
+    /// What the meter measures — signal, power, SWR or ALC. Turned with the
+    /// arrows on the instrument; see [`MeterView`].
+    #[serde(default)]
+    pub smeter_view: MeterView,
     /// Ask sdroxide.com once per start whether a newer release has been
     /// published, and say so in the notice banner above the panadapter. In
     /// `[ui]` because it is this screen's preference, like the theme — the
@@ -1910,6 +1965,7 @@ impl Default for UiSettings {
             menu_font_size: FontSize::Medium,
             ui_zoom: 1.0,
             smeter_style: SmeterStyle::Needle,
+            smeter_view: MeterView::Auto,
             update_check: true,
             memory_sort: crate::MemorySort::Stored,
             memory_sort_desc: false,
@@ -2259,6 +2315,9 @@ pub struct ClientScreen {
     /// listener sees, and they see it from whichever device they signed in on.
     /// Appended last: this struct rides the wire positionally.
     pub broadcast_scope: BroadcastScope,
+    /// What the meter measures — [`UiSettings::smeter_view`]. Appended last:
+    /// this struct rides the wire positionally.
+    pub smeter_view: MeterView,
 }
 
 impl Default for ClientScreen {
@@ -2305,6 +2364,7 @@ impl ClientScreen {
             spectrum_fill_color: s.spectrum_fill_color,
             spectrum_fill_style: s.spectrum_fill_style,
             broadcast_scope: s.broadcast_scope,
+            smeter_view: s.smeter_view,
         }
     }
 
@@ -2342,6 +2402,7 @@ impl ClientScreen {
         s.spectrum_fill_color = self.spectrum_fill_color;
         s.spectrum_fill_style = self.spectrum_fill_style;
         s.broadcast_scope = self.broadcast_scope;
+        s.smeter_view = self.smeter_view;
     }
 }
 
@@ -2398,6 +2459,25 @@ mod client_screen_tests {
         let bytes = postcard::to_allocvec(&screen).expect("encodes");
         let back: ClientScreen = postcard::from_bytes(&bytes).expect("decodes");
         assert_eq!(back, screen);
+    }
+
+    /// The meter's view is part of the screen a profile keeps on the server, and
+    /// comes back out of it on the client that signs in.
+    #[test]
+    fn the_meter_view_travels_with_the_profile() {
+        let mut s = UiSettings { smeter_view: MeterView::Alc, ..UiSettings::default() };
+        let screen = ClientScreen::from_settings(&s);
+        let bytes = postcard::to_allocvec(&screen).expect("encodes");
+        let back: ClientScreen = postcard::from_bytes(&bytes).expect("decodes");
+        assert_eq!(back.smeter_view, MeterView::Alc);
+        s.smeter_view = MeterView::Auto;
+        back.apply_to(&mut s);
+        assert_eq!(s.smeter_view, MeterView::Alc);
+        assert_eq!(
+            ClientScreen::default().smeter_view,
+            MeterView::Auto,
+            "power on transmit is stock"
+        );
     }
 
     /// The sound welcome is on unless asked off, and the wake lock off unless
