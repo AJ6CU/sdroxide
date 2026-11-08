@@ -2728,10 +2728,19 @@ fn aoki_schedule_entry(bytes: &[u8], season: &str) -> Result<Vec<u8>, String> {
             return Ok(d.clone());
         }
     }
+    // **A zip can hold the schedule and a user list, and both say "Frequency
+    // List"** in their title (`nzb25.txt` and `userlist1.txt`). The schedule is the
+    // one whose column header reads `FRE   STATION`; the user list has a different
+    // layout. Taking the first title match picked whichever came first in the zip.
+    let head_of = |d: &Vec<u8>| String::from_utf8_lossy(&d[..d.len().min(256)]).into_owned();
     if let Some((n, d)) = entries.iter().find(|(_, d)| {
-        let head: String = String::from_utf8_lossy(&d[..d.len().min(256)]).into_owned();
-        head.contains("Frequency List")
+        let head = head_of(d);
+        head.contains("Frequency List") && head.contains("STATION")
     }) {
+        info!("Aoki's zip: {n} has the schedule's column header, so it is the schedule");
+        return Ok(d.clone());
+    }
+    if let Some((n, d)) = entries.iter().find(|(_, d)| head_of(d).contains("Frequency List")) {
         info!("Aoki's zip: {n} names itself a frequency list, so it is the schedule");
         return Ok(d.clone());
     }
