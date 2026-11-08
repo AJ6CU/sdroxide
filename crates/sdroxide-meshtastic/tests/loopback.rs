@@ -297,6 +297,39 @@ fn a_meshtastic_text_goes_from_the_air_to_the_screen() {
 }
 
 #[test]
+fn a_position_report_goes_from_the_air_to_typed_values() {
+    use sdroxide_meshtastic::Decoded;
+    use sdroxide_meshtastic::protobuf::{WIRE_FIXED32, WIRE_VARINT, put_tag, put_varint};
+
+    // Latitude 48.8584, longitude 2.2945, altitude 35 m, as a node sends them.
+    let mut pos = Vec::new();
+    for (field, deg) in [(1, 48.8584f64), (2, 2.2945)] {
+        put_tag(&mut pos, field, WIRE_FIXED32);
+        pos.extend_from_slice(&((deg * 1e7).round() as i32).to_le_bytes());
+    }
+    put_tag(&mut pos, 3, WIRE_VARINT);
+    put_varint(&mut pos, 35);
+
+    let p = TxParams::meshtastic(11, 5, 250_000);
+    let header =
+        Header { to: BROADCAST_NODE, from: 0xCAFE_F00D, packet_id: 9, flags: 0x07, ..Header::default() };
+    let data = Data { portnum: port::POSITION, payload: pos, ..Data::default() };
+    let frame = build_frame(header, "LongFast", &DEFAULT_PSK, &data).unwrap();
+
+    let ch = Channel { snr_db: Some(-6.0), ..Channel::clean() };
+    let got = decode(&through(&modulate(&frame, &p), &p, &ch), &p);
+    assert_one_frame(&got, &frame);
+
+    let pkt = decode_frame(&got[0].payload, &KeySet::with_defaults()).unwrap();
+    let Some(Decoded::Position(fix)) = pkt.data.unwrap().decode() else {
+        panic!("a position was expected");
+    };
+    assert!((fix.lat_deg.unwrap() - 48.8584).abs() < 1e-6);
+    assert!((fix.lon_deg.unwrap() - 2.2945).abs() < 1e-6);
+    assert_eq!(fix.altitude_m, Some(35));
+}
+
+#[test]
 fn the_decoder_counts_what_it_saw() {
     let p = TxParams::meshtastic(8, 5, 250_000);
     let iq = through(&modulate(&payload(12), &p), &p, &Channel::clean());

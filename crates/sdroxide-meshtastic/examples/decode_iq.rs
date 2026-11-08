@@ -17,7 +17,7 @@ use std::io::Read;
 
 use num_complex::Complex32;
 use sdroxide_meshtastic::protocol::{DEFAULT_PRESET, lookup_preset, port, port_name};
-use sdroxide_meshtastic::{DecoderConfig, KeySet, LoraDecoder, decode_frame};
+use sdroxide_meshtastic::{Decoded, DecoderConfig, KeySet, LoraDecoder, decode_frame};
 
 fn main() {
     let mut path = None;
@@ -151,8 +151,11 @@ fn show(n: usize, frame: &[u8], crc_ok: bool, snr_db: f32, cfo_bins: f32, keys: 
             match p.data {
                 Some(d) => {
                     print!(" [{}] {}", p.channel_name, port_name(d.portnum));
-                    if d.portnum == port::TEXT_MESSAGE {
-                        print!(": {:?}", String::from_utf8_lossy(&d.payload));
+                    match d.decode() {
+                        Some(Decoded::Text(t)) => print!(": {t:?}"),
+                        Some(v) => print!(": {v:?}"),
+                        None if d.portnum == port::TEXT_MESSAGE => {}
+                        None => print!(" ({} payload bytes, not decoded)", d.payload.len()),
                     }
                     println!();
                 }

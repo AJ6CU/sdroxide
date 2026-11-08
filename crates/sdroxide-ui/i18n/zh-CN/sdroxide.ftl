@@ -9421,3 +9421,65 @@ qrzcard-switch = 指针停在呼号上时显示 QRZ 卡片
 qrzcard-switch-hint = 在瀑布图、解码器和 Spot 列表中显示来自 QRZ.com 的照片、姓名、年龄、地址、定位格和 QSL。照片、电子邮件和出生日期需要 QRZ XML 订阅。
 
 qrzcard-needs-login = 请选择 QRZ 作为提供方，并输入 QRZ 用户名和密码以启用卡片。
+
+meshtastic-title = Meshtastic
+
+meshtastic-receive = 接收
+
+meshtastic-region = 地区
+
+meshtastic-preset = 预设
+
+meshtastic-channel = 信道
+
+meshtastic-tune = 在此收听
+
+meshtastic-tune-hint = 打开接收器并将电台调到此信道。能否在此收听由“电台”菜单中的接收频段列表决定。关闭或退出时，电台会回到原来的状态。
+
+meshtastic-keys = 密钥
+
+meshtastic-keys-hint = 名称=密钥，以逗号分隔（hex:…、base64:…、simple1..10）。始终会尝试默认密钥。
+
+meshtastic-state-off = 接收器已关闭。
+
+meshtastic-level = 电平 { $db } dBFS
+
+meshtastic-counts = { $pre } 个前导码 · { $ok } 帧 · { $bad } 个 CRC 错误
+
+meshtastic-refused-band = 禁止接收 — { $freq } MHz（{ $band }）不是已确认的接收频段。请在“电台”菜单的接收频段中勾选并确认。
+
+meshtastic-refused-unconfirmed = 禁止接收 — 此电台的接收频段尚未确认。请在“电台”菜单的接收频段中检查并确认。
+
+meshtastic-out-of-window = 该信道不在电台采集的采样窗口内：请调谐得更近，或使用更高的采样率。
+
+meshtastic-none-yet = 尚未收到任何内容。
+
+meshtastic-nodes = 节点（{ $n }）
+
+meshtastic-log = 数据包（{ $n }）
+
+meshtastic-col-id = 节点
+
+meshtastic-col-name = 名称
+
+meshtastic-col-heard = 收到时间
+
+meshtastic-col-snr = SNR
+
+meshtastic-col-hops = 跳数
+
+meshtastic-col-position = 位置
+
+meshtastic-col-battery = 电池
+
+meshtastic-encrypted = 已加密（无密钥）
+
+meshtastic-via-mqtt = 经 MQTT
+
+meshtastic-bench-hint = 打开 Meshtastic 窗口：一个信道上的 LoRa 网状网络流量。
+
+extras-meshtastic-hint = Meshtastic：一个信道上的 LoRa 网状网络流量、收到的节点和数据包。
+
+settings-ui-meshtastic-on = 显示面板
+
+settings-ui-meshtastic-hint = 在“附加”窗口和模式菜单的实验区添加 Meshtastic 按钮，并允许打开该窗口。窗口可停靠在主窗口，或用标题栏按钮移到独立窗口。关闭此项会关闭窗口；接收器需用窗口内的开关停止。

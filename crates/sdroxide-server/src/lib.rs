@@ -297,6 +297,9 @@ pub(crate) struct Latest {
     pub qo100_status: Option<sdroxide_types::Qo100Status>,
     pub hfdl_status: Option<sdroxide_types::HfdlStatus>,
     pub sonde_status: Option<Box<sdroxide_types::SondeStatus>>,
+    /// The Meshtastic receiver's nodes and packet log: a whole snapshot, kept
+    /// and replayed on connect like the sonde tracks.
+    pub meshtastic_status: Option<Box<sdroxide_types::MeshtasticStatus>>,
     /// What the DRM decoder has made of the broadcast currently tuned. Replayed
     /// on connect for the same reason as `rds`: a station's label and the
     /// transmission's parameters are standing conditions, and a client that
@@ -1276,6 +1279,10 @@ fn handle_event(shared: &Shared, ev: RadioEvent) {
             RadioEvent::SondeStatus(st) => {
                 latest.sonde_status = Some(st.clone());
                 Some(ServerMsg::SondeStatus(st))
+            }
+            RadioEvent::MeshtasticStatus(st) => {
+                latest.meshtastic_status = Some(st.clone());
+                Some(ServerMsg::MeshtasticStatus(st))
             }
             // Not kept for replay: each carries only the lines new since the
             // last, so a client that attaches late picks the picture up from

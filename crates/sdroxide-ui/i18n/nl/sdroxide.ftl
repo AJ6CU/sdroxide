@@ -9491,3 +9491,65 @@ qrzcard-switch = QRZ-kaart tonen als de aanwijzer op een roepletter rust
 qrzcard-switch-hint = Foto, naam, leeftijd, adres, locator en QSL van QRZ.com, in de waterval, de decoders en de spotlijsten. Foto, e-mail en geboortedatum vereisen een QRZ XML-abonnement.
 
 qrzcard-needs-login = Kies QRZ als aanbieder en vul je QRZ-gebruikersnaam en wachtwoord in om de kaart te activeren.
+
+meshtastic-title = Meshtastic
+
+meshtastic-receive = Ontvangen
+
+meshtastic-region = Regio
+
+meshtastic-preset = Voorinstelling
+
+meshtastic-channel = Kanaal
+
+meshtastic-tune = Hier luisteren
+
+meshtastic-tune-hint = Schakelt de ontvanger in en brengt de radio naar dit kanaal. De lijst met ontvangstbanden in het Radio-menu bepaalt of de radio hier mag luisteren. Bij uitschakelen of afsluiten keert de radio terug naar waar hij was.
+
+meshtastic-keys = Sleutels
+
+meshtastic-keys-hint = Naam=sleutel, door komma's gescheiden (hex:…, base64:…, simple1..10). De standaardsleutel wordt altijd geprobeerd.
+
+meshtastic-state-off = Ontvanger uit.
+
+meshtastic-level = Niveau { $db } dBFS
+
+meshtastic-counts = { $pre } preambules · { $ok } frames · { $bad } foute CRC
+
+meshtastic-refused-band = ONTVANGST VERBODEN — { $freq } MHz ({ $band }) is geen gevalideerde ontvangstband. Vink aan en valideer in het Radio-menu, ontvangstbanden.
+
+meshtastic-refused-unconfirmed = ONTVANGST VERBODEN — de ontvangstbanden van deze radio zijn nog niet gevalideerd. Controleer en bevestig ze in het Radio-menu, ontvangstbanden.
+
+meshtastic-out-of-window = Het kanaal ligt buiten het samplevenster van de radio: stem dichterbij af of gebruik een hogere samplefrequentie.
+
+meshtastic-none-yet = Nog niets gehoord.
+
+meshtastic-nodes = Knooppunten ({ $n })
+
+meshtastic-log = Pakketten ({ $n })
+
+meshtastic-col-id = Knooppunt
+
+meshtastic-col-name = Naam
+
+meshtastic-col-heard = Gehoord
+
+meshtastic-col-snr = SNR
+
+meshtastic-col-hops = Hops
+
+meshtastic-col-position = Positie
+
+meshtastic-col-battery = Accu
+
+meshtastic-encrypted = versleuteld (geen sleutel)
+
+meshtastic-via-mqtt = via MQTT
+
+meshtastic-bench-hint = Opent het Meshtastic-venster: het LoRa-meshverkeer van één kanaal.
+
+extras-meshtastic-hint = Meshtastic: het LoRa-meshverkeer van één kanaal, de gehoorde knooppunten en de pakketten.
+
+settings-ui-meshtastic-on = Paneel tonen
+
+settings-ui-meshtastic-hint = Voegt de Meshtastic-knoppen toe aan het Extras-venster en aan de experimentele bank van het modusmenu en laat het venster openen. Het venster dockt in het hoofdvenster of gaat met de knop in de titelbalk naar een eigen venster. Uitzetten sluit het venster; de ontvanger stopt met de schakelaar van het venster zelf.

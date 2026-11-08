@@ -5766,9 +5766,12 @@ name = "sdroxide-meshtastic"
 version = "2.3.0"
 dependencies = [
  "aes",
+ "crossbeam-channel",
  "ctr",
  "num-complex",
  "rustfft",
+ "sdroxide-types",
+ "tracing",
 ]
 
 [[package]]
@@ -5921,6 +5924,7 @@ dependencies = [
  "sdroxide-hfdl",
  "sdroxide-ism",
  "sdroxide-kiss",
+ "sdroxide-meshtastic",
  "sdroxide-net",
  "sdroxide-nrsc5",
  "sdroxide-picup",
@@ -6202,6 +6206,7 @@ dependencies = [
  "sdroxide-config",
  "sdroxide-dsp",
  "sdroxide-enigma",
+ "sdroxide-meshtastic",
  "sdroxide-midi",
  "sdroxide-proto",
  "sdroxide-solar",

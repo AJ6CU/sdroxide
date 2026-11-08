@@ -9482,3 +9482,65 @@ qrzcard-switch = Mostrar la ficha de QRZ al pasar el puntero sobre un indicativo
 qrzcard-switch-hint = Foto, nombre, edad, dirección, locator y QSL de QRZ.com, en la cascada, los decodificadores y las listas de spots. La foto, el correo y la fecha de nacimiento requieren una suscripción QRZ XML.
 
 qrzcard-needs-login = Elija QRZ como proveedor e introduzca su usuario y contraseña de QRZ para activar la ficha.
+
+meshtastic-title = Meshtastic
+
+meshtastic-receive = Recibir
+
+meshtastic-region = Región
+
+meshtastic-preset = Preajuste
+
+meshtastic-channel = Canal
+
+meshtastic-tune = Escuchar aquí
+
+meshtastic-tune-hint = Activa el receptor y lleva la radio a este canal. La lista de bandas de recepción del menú Radio decide si la radio puede escuchar aquí. Al desactivar o salir, la radio vuelve a donde estaba.
+
+meshtastic-keys = Claves
+
+meshtastic-keys-hint = Nombre=clave, separados por comas (hex:…, base64:…, simple1..10). La clave por defecto siempre se prueba.
+
+meshtastic-state-off = Receptor apagado.
+
+meshtastic-level = Nivel { $db } dBFS
+
+meshtastic-counts = { $pre } preámbulos · { $ok } tramas · { $bad } CRC erróneos
+
+meshtastic-refused-band = RECEPCIÓN PROHIBIDA — { $freq } MHz ({ $band }) no es una banda de recepción validada. Márquela y valídela en el menú Radio, bandas de recepción.
+
+meshtastic-refused-unconfirmed = RECEPCIÓN PROHIBIDA — las bandas de recepción de esta radio aún no están validadas. Compruébelas y confírmelas en el menú Radio, bandas de recepción.
+
+meshtastic-out-of-window = El canal está fuera de la ventana de muestras que capta la radio: sintonice más cerca o use una tasa de muestreo mayor.
+
+meshtastic-none-yet = Aún no se ha oído nada.
+
+meshtastic-nodes = Nodos ({ $n })
+
+meshtastic-log = Paquetes ({ $n })
+
+meshtastic-col-id = Nodo
+
+meshtastic-col-name = Nombre
+
+meshtastic-col-heard = Oído
+
+meshtastic-col-snr = SNR
+
+meshtastic-col-hops = Saltos
+
+meshtastic-col-position = Posición
+
+meshtastic-col-battery = Batería
+
+meshtastic-encrypted = cifrado (sin clave)
+
+meshtastic-via-mqtt = vía MQTT
+
+meshtastic-bench-hint = Abre la ventana Meshtastic: el tráfico de la malla LoRa de un canal.
+
+extras-meshtastic-hint = Meshtastic: el tráfico de la malla LoRa de un canal, los nodos oídos y los paquetes.
+
+settings-ui-meshtastic-on = Mostrar el panel
+
+settings-ui-meshtastic-hint = Añade los botones de Meshtastic a la ventana Extras y al banco experimental del menú de modos, y permite abrir la ventana. La ventana se acopla a la principal o pasa a la suya con el botón de la barra de título. Desactivarlo cierra la ventana; el receptor se detiene con el interruptor de la propia ventana.

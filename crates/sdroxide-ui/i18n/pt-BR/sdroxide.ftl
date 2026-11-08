@@ -9483,3 +9483,65 @@ qrzcard-switch = Mostrar a ficha do QRZ ao passar o ponteiro sobre um indicativo
 qrzcard-switch-hint = Foto, nome, idade, endereço, locator e QSL do QRZ.com, na cascata, nos decodificadores e nas listas de spots. A foto, o e-mail e a data de nascimento exigem uma assinatura QRZ XML.
 
 qrzcard-needs-login = Escolha o QRZ como provedor e informe seu usuário e senha do QRZ para ativar a ficha.
+
+meshtastic-title = Meshtastic
+
+meshtastic-receive = Receber
+
+meshtastic-region = Região
+
+meshtastic-preset = Predefinição
+
+meshtastic-channel = Canal
+
+meshtastic-tune = Ouvir aqui
+
+meshtastic-tune-hint = Liga o receptor e leva o rádio a este canal. A lista de bandas de recepção do menu Rádio decide se o rádio pode ouvir aqui. Ao desligar ou sair, o rádio volta para onde estava.
+
+meshtastic-keys = Chaves
+
+meshtastic-keys-hint = Nome=chave, separados por vírgulas (hex:…, base64:…, simple1..10). A chave padrão é sempre tentada.
+
+meshtastic-state-off = Receptor desligado.
+
+meshtastic-level = Nível { $db } dBFS
+
+meshtastic-counts = { $pre } preâmbulos · { $ok } quadros · { $bad } CRC inválidos
+
+meshtastic-refused-band = RECEPÇÃO PROIBIDA — { $freq } MHz ({ $band }) não é uma banda de recepção validada. Marque e valide no menu Rádio, bandas de recepção.
+
+meshtastic-refused-unconfirmed = RECEPÇÃO PROIBIDA — as bandas de recepção deste rádio ainda não foram validadas. Verifique e confirme no menu Rádio, bandas de recepção.
+
+meshtastic-out-of-window = O canal está fora da janela de amostras que o rádio captura: sintonize mais perto ou use uma taxa de amostragem maior.
+
+meshtastic-none-yet = Nada ouvido ainda.
+
+meshtastic-nodes = Nós ({ $n })
+
+meshtastic-log = Pacotes ({ $n })
+
+meshtastic-col-id = Nó
+
+meshtastic-col-name = Nome
+
+meshtastic-col-heard = Ouvido
+
+meshtastic-col-snr = SNR
+
+meshtastic-col-hops = Saltos
+
+meshtastic-col-position = Posição
+
+meshtastic-col-battery = Bateria
+
+meshtastic-encrypted = criptografado (sem chave)
+
+meshtastic-via-mqtt = via MQTT
+
+meshtastic-bench-hint = Abre a janela Meshtastic: o tráfego da malha LoRa de um canal.
+
+extras-meshtastic-hint = Meshtastic: o tráfego da malha LoRa de um canal, os nós ouvidos e os pacotes.
+
+settings-ui-meshtastic-on = Mostrar o painel
+
+settings-ui-meshtastic-hint = Adiciona os botões do Meshtastic à janela Extras e à bancada experimental do menu de modos e permite abrir a janela. A janela se acopla à principal ou vai para a sua com o botão da barra de título. Desligar fecha a janela; o receptor para pelo interruptor da própria janela.
