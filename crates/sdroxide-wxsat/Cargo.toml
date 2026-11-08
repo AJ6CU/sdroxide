@@ -15,4 +15,7 @@ license.workspace = true
 sdroxide-types.workspace = true
 sdroxide-dsp.workspace = true
 crossbeam-channel.workspace = true
+# Reed-Solomon (255,223), the same code the LMS6 radiosonde uses.
+sdroxide-sonde = { path = "../sdroxide-sonde" }
 tracing.workspace = true
+rustfft.workspace = true

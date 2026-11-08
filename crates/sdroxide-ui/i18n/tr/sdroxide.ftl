@@ -9414,3 +9414,54 @@ publicsdr-close-hint = Public SDRs'yi kapat
 settings-net-hfcc-file-hint = HFCC programını kendi kaydettiğiniz bir paketten alın: HFCC'nin yayımladığı zip (örneğin b26allx2.zip), program ve iki tablosuyla birlikte.
 
 schedule-import = İçe aktar…
+wxsat-title = HAVA UYDULARI
+
+extras-wxsat-hint = HAVA UYDULARI — bir NOAA (APT) veya Meteor (LRPT) uydusunun 137 MHz'de gönderdiği görüntü, geldikçe çizilir, ayrılabilen bir pencerede
+
+wxsat-decode = Çöz
+
+wxsat-channel = Uydu
+
+wxsat-tune = Buraya ayarla
+
+wxsat-tune-hint = Çözücüyü açar ve kadranı bu kanala getirir; böylece sinyal örnekleme penceresinin içinde olur.
+
+wxsat-clear = Temizle
+
+wxsat-save = PNG olarak kaydet
+
+wxsat-flip = Çevir
+
+wxsat-flip-hint = Görüntüyü ters çevirir: güneye giden bir uydu baş aşağı çizilir.
+
+wxsat-state-off = Çözücü kapalı
+
+wxsat-level = Seviye { $db } dBFS
+
+wxsat-locked = Satır senkronu kilitli
+
+wxsat-searching = Satır senkronu aranıyor
+
+wxsat-lines = { $n } satır
+
+wxsat-outside-window = Kanal örnekleme penceresinin dışında ya da sinyalin tamamı için kenarına çok yakın. Buraya ayarla'yı kullanın veya daha geniş bir pencere seçin.
+
+wxsat-waiting = Henüz görüntü yok. Bir uydu ufkun üzerindeyken çözücüyü açın; bir geçiş yaklaşık on dakika sürer.
+
+wxsat-signal = Sinyal
+
+wxsat-kind-apt = APT
+
+wxsat-kind-lrpt = LRPT
+
+wxsat-image-channel = Kanal { $n }
+
+wxsat-rows = { $n } sıra
+
+wxsat-frame-locked = Çerçeve senkronu kilitli
+
+wxsat-frames = { $n } iyi çerçeve
+
+wxsat-waiting-lrpt = Henüz görüntü yok. Meteor LRPT dijitaldir: görüntü uydu duyulduktan birkaç saniye sonra sıra sıra başlar ve her kanal ayrı bir görüntüdür.
+
+wxsat-searching-frame = Çerçeve senkronu aranıyor

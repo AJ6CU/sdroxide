@@ -9352,3 +9352,54 @@ publicsdr-close-hint = 关闭 Public SDRs
 settings-net-hfcc-file-hint = 从您自己保存的软件包中读取 HFCC 节目表：HFCC 发布的 zip（例如 b26allx2.zip），其中包含节目表和两张对照表。
 
 schedule-import = 导入…
+wxsat-title = 气象卫星
+
+extras-wxsat-hint = 气象卫星 — NOAA（APT）或 Meteor（LRPT）卫星在 137 MHz 发送的图像，边接收边绘制，可在可分离的窗口中查看
+
+wxsat-decode = 解码
+
+wxsat-channel = 卫星
+
+wxsat-tune = 调谐到此
+
+wxsat-tune-hint = 打开解码器并将频率调到此信道，使信号位于采样窗口内。
+
+wxsat-clear = 清除
+
+wxsat-save = 保存为 PNG
+
+wxsat-flip = 翻转
+
+wxsat-flip-hint = 翻转图像：向南飞行的卫星的图像是倒置绘制的。
+
+wxsat-state-off = 解码器已关闭
+
+wxsat-level = 电平 { $db } dBFS
+
+wxsat-locked = 行同步已锁定
+
+wxsat-searching = 正在搜索行同步
+
+wxsat-lines = { $n } 行
+
+wxsat-outside-window = 信道在采样窗口之外，或离窗口边缘太近，容不下整个信号。请使用“调谐到此”，或换更宽的窗口。
+
+wxsat-waiting = 尚无图像。卫星在地平线以上时请打开解码器；一次过境约十分钟。
+
+wxsat-signal = 信号
+
+wxsat-kind-apt = APT
+
+wxsat-kind-lrpt = LRPT
+
+wxsat-image-channel = 通道 { $n }
+
+wxsat-rows = { $n } 排
+
+wxsat-frame-locked = 帧同步已锁定
+
+wxsat-frames = { $n } 个好帧
+
+wxsat-waiting-lrpt = 尚无图像。Meteor 的 LRPT 是数字信号：收到卫星几秒后图像开始逐排出现，每个通道是一幅单独的图像。
+
+wxsat-searching-frame = 正在搜索帧同步

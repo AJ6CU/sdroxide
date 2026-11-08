@@ -6284,6 +6284,25 @@ stays listed). The window has to cover the sondes: centre the radio with the *Ch
 box, and note that a 2.4 MS/s receiver sees about 2.4 MHz of the 5.85 MHz band. The decoder needs a wideband source (a receiver that sends
 I/Q); it is off for a rig that only hands over audio. The setting is kept in `sonde.json`.
 
+**Weather satellites.** The **WXSAT** chip in EXTRAS opens the WEATHER SATELLITES window:
+the picture a weather satellite sends on 137 MHz, drawn as it comes in. The *Signal* choice
+picks the kind. **APT** is the analogue signal of NOAA-15, 18 and 19: channel A on the left
+and channel B on the right, line by line. **LRPT** is the digital signal of Meteor-M2-3
+(137.900 MHz) and Meteor-M2-4 (137.100 MHz): QPSK at 72 ksym/s, picture rows of 1568 pixels,
+one separate picture for each channel the satellite sends (*Channel 1* to *Channel 6*, the
+visible and infrared bands), shown one at a time. Like SONDE it is not a radio mode: pick the
+satellite, then *Tune here* switches the decoder on and brings the dial to its channel (the
+lane works off the sample window, so the window has to hold the whole signal, about 40 kHz
+for APT and 115 kHz for LRPT; a note says so when it does not). Start it when the satellite
+rises; a pass lasts about ten minutes. The status line shows the level, the sync (line sync
+for APT, frame sync for LRPT) and the lines, or the good frames and rows, so far. LRPT needs
+a signal about 8 dB above the noise to lock; the receiver follows the Doppler and the drift of
+the sample clock by itself. *Flip* turns the picture over (a satellite flying south is drawn
+upside down), *Clear* empties it and *Save PNG* writes it out (the channel shown, for LRPT).
+The decoder needs a wideband source (a receiver that sends I/Q); it is off for a rig that only
+hands over audio. The setting is kept in `wxsat.json`. A window opened in the middle of a
+pass starts the picture where it joined.
+
 **Export.** The **CSV** and **JSON** buttons under *Export* in the AIRCRAFT window
 save the tracked aircraft as a table you can open in a spreadsheet or feed to a
 script. One row per aircraft: ICAO address, callsign, registration, category, type,

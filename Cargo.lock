@@ -5887,6 +5887,7 @@ dependencies = [
  "sdroxide-vor",
  "sdroxide-winlink",
  "sdroxide-wsjtx",
+ "sdroxide-wxsat",
  "shine-rs",
  "soapysdr",
  "symphonia",
@@ -6229,7 +6230,9 @@ name = "sdroxide-wxsat"
 version = "2.3.0"
 dependencies = [
  "crossbeam-channel",
+ "rustfft",
  "sdroxide-dsp",
+ "sdroxide-sonde",
  "sdroxide-types",
  "tracing",
 ]

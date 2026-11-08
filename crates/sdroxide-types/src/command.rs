@@ -1443,6 +1443,11 @@ pub enum Command {
     /// Appended for the usual reason — postcard numbers variants by position.
     SetSondeConfig(crate::SondeSettings),
 
+    /// Whether the weather-satellite (NOAA APT) decoder runs, and which
+    /// downlink channel it centres on. Kept in `wxsat.json`, echoed back in
+    /// [`crate::RadioState::wxsat`]. Appended for the usual reason.
+    SetWxsatConfig(crate::WxsatSettings),
+
     /// Add a band plan to the station's `bandplans` folder under `name`, from
     /// the text of a plan file. The screen reads the file wherever the operator
     /// is — a browser has no folder of the station's to write to — and the

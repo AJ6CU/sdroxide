@@ -9413,3 +9413,54 @@ publicsdr-close-hint = Cerrar Public SDRs
 settings-net-hfcc-file-hint = Tomar el horario de HFCC de un paquete que usted guardó: el zip que publica HFCC (por ejemplo b26allx2.zip), con su horario y sus dos tablas.
 
 schedule-import = Importar…
+wxsat-title = SATÉLITES METEOROLÓGICOS
+
+extras-wxsat-hint = SATÉLITES METEOROLÓGICOS — la imagen que envía un satélite NOAA (APT) o Meteor (LRPT) en 137 MHz, dibujada a medida que llega, en una ventana que se puede separar
+
+wxsat-decode = Decodificar
+
+wxsat-channel = Satélite
+
+wxsat-tune = Sintonizar aquí
+
+wxsat-tune-hint = Activa el decodificador y lleva el dial a este canal, para que la señal quede dentro de la ventana de muestreo.
+
+wxsat-clear = Borrar
+
+wxsat-save = Guardar PNG
+
+wxsat-flip = Girar
+
+wxsat-flip-hint = Da la vuelta a la imagen: un satélite que vuela hacia el sur se dibuja boca abajo.
+
+wxsat-state-off = Decodificador apagado
+
+wxsat-level = Nivel { $db } dBFS
+
+wxsat-locked = Sincronismo de línea enganchado
+
+wxsat-searching = Buscando el sincronismo de línea
+
+wxsat-lines = { $n } líneas
+
+wxsat-outside-window = El canal está fuera de la ventana de muestreo, o demasiado cerca de su borde para toda la señal. Use Sintonizar aquí, o una ventana más ancha.
+
+wxsat-waiting = Aún no hay imagen. Active el decodificador cuando un satélite esté sobre el horizonte; un paso dura unos diez minutos.
+
+wxsat-signal = Señal
+
+wxsat-kind-apt = APT
+
+wxsat-kind-lrpt = LRPT
+
+wxsat-image-channel = Canal { $n }
+
+wxsat-rows = { $n } filas
+
+wxsat-frame-locked = Sincronismo de trama enganchado
+
+wxsat-frames = { $n } tramas buenas
+
+wxsat-waiting-lrpt = Aún no hay imagen. El LRPT de Meteor es digital: la imagen empieza unos segundos después de oír el satélite, fila por fila, y cada canal es una imagen aparte.
+
+wxsat-searching-frame = Buscando el sincronismo de trama
