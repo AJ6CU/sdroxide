@@ -1,0 +1,12 @@
+[package]
+name = "sdroxide-meshtastic"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Meshtastic over LoRa: CSS demodulator and modulator, frame header, AES-CTR channel keys, protobuf envelope"
+
+[dependencies]
+num-complex.workspace = true
+rustfft.workspace = true
+aes = "0.8"
+ctr = "0.9"
