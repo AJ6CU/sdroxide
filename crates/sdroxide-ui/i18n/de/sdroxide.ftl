@@ -9483,3 +9483,7 @@ qrzcard-switch = QRZ-Karte anzeigen, wenn der Zeiger auf einem Rufzeichen ruht
 qrzcard-switch-hint = Foto, Name, Alter, Adresse, Locator und QSL von QRZ.com im Wasserfall, in den Decodern und in den Spot-Listen. Foto, E-Mail und Geburtsdatum erfordern ein QRZ-XML-Abonnement.
 
 qrzcard-needs-login = QRZ als Anbieter wählen und QRZ-Benutzername und -Passwort eingeben, um die Karte zu aktivieren.
+
+rx-bands-swl-note = Der SWL-Modus ist für dieses Funkgerät aktiv: Es gibt keine Empfangssperre. Alle Bänder können abgestimmt werden.
+
+rx-bands-always-open = Hörbänder (und der SWL-Modus) sind für den Empfang immer offen.

@@ -9483,3 +9483,7 @@ qrzcard-switch = İmleç bir çağrı işaretinin üzerinde durunca QRZ kartın�
 qrzcard-switch-hint = QRZ.com'dan fotoğraf, ad, yaş, adres, lokatör ve QSL; şelalede, çözücülerde ve spot listelerinde. Fotoğraf, e-posta ve doğum tarihi için QRZ XML aboneliği gerekir.
 
 qrzcard-needs-login = Kartı etkinleştirmek için sağlayıcı olarak QRZ'yi seçin ve QRZ kullanıcı adı ile parolanızı girin.
+
+rx-bands-swl-note = Bu telsiz için SWL modu açık: alma kilidi yok. Her banda ayarlanabilir.
+
+rx-bands-always-open = Dinleme bantları (ve SWL modu) alma için her zaman açıktır.

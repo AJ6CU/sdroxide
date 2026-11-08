@@ -9509,3 +9509,7 @@ qrzcard-switch = Show the QRZ card when the pointer rests on a callsign
 qrzcard-switch-hint = Photo, name, age, address, locator and QSL from QRZ.com, in the waterfall, the decoders and the spot lists. The photo, e-mail and date of birth need a QRZ XML subscription.
 
 qrzcard-needs-login = Choose QRZ as the provider and enter your QRZ username and password to enable the card.
+
+rx-bands-swl-note = SWL mode is on for this radio: there is no receive lock. Every band can be tuned.
+
+rx-bands-always-open = Listening bands (and SWL mode) are always open for reception.

@@ -9494,3 +9494,7 @@ qrzcard-switch = Afficher la fiche QRZ au survol d'un indicatif
 qrzcard-switch-hint = Photo, nom, âge, adresse, locator et QSL depuis QRZ.com, dans le waterfall, les décodeurs et les listes de spots. La photo, l'e-mail et la date de naissance demandent un abonnement QRZ XML.
 
 qrzcard-needs-login = Choisissez QRZ comme fournisseur et renseignez votre identifiant et votre mot de passe QRZ pour activer la fiche.
+
+rx-bands-swl-note = Le mode SWL est actif pour cette radio : il n'y a pas de verrou en réception. Toutes les bandes peuvent être écoutées.
+
+rx-bands-always-open = Les bandes d'écoute (et le mode SWL) sont toujours ouvertes en réception.

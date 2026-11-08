@@ -9431,3 +9431,7 @@ qrzcard-switch = コールサインにカーソルを置くと QRZ カードを�
 qrzcard-switch-hint = QRZ.com の写真・氏名・年齢・住所・ロケーター・QSL を、ウォーターフォール、デコーダー、スポット一覧に表示します。写真、メール、生年月日には QRZ XML の購読が必要です。
 
 qrzcard-needs-login = カードを有効にするには、プロバイダーに QRZ を選び、QRZ のユーザー名とパスワードを入力してください。
+
+rx-bands-swl-note = この無線機は SWL モードです。受信ロックはありません。どのバンドにも同調できます。
+
+rx-bands-always-open = リスニング用バンド（および SWL モード）は常に受信できます。

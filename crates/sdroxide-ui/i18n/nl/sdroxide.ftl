@@ -9491,3 +9491,7 @@ qrzcard-switch = QRZ-kaart tonen als de aanwijzer op een roepletter rust
 qrzcard-switch-hint = Foto, naam, leeftijd, adres, locator en QSL van QRZ.com, in de waterval, de decoders en de spotlijsten. Foto, e-mail en geboortedatum vereisen een QRZ XML-abonnement.
 
 qrzcard-needs-login = Kies QRZ als aanbieder en vul je QRZ-gebruikersnaam en wachtwoord in om de kaart te activeren.
+
+rx-bands-swl-note = De SWL-modus staat aan voor deze radio: er is geen ontvangstvergrendeling. Alle banden kunnen worden afgestemd.
+
+rx-bands-always-open = Luisterbanden (en de SWL-modus) staan altijd open voor ontvangst.

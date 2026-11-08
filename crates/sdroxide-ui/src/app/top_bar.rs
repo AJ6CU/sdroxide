@@ -9089,7 +9089,7 @@ fn atsmini_band_menu(ui: &mut egui::Ui, state: &RadioState, cmds: &mut Vec<Comma
 
 /// What the top bar needs of the radio's receive band list, published once per
 /// frame by [`publish_rx_plan`]: whether it is confirmed, and the bands ticked.
-type RxPlan = Option<(bool, Vec<Band>)>;
+type RxPlan = Option<(bool, bool, Vec<Band>)>;
 
 fn rx_plan_id() -> egui::Id {
     egui::Id::new("rx-band-plan")
@@ -9098,7 +9098,7 @@ fn rx_plan_id() -> egui::Id {
 /// Publish this radio's receive band list for the band buttons drawn this frame.
 pub(in crate::app) fn publish_rx_plan(ctx: &egui::Context, cfg: Option<&sdroxide_types::RadioConfig>) {
     let plan: RxPlan =
-        cfg.map(|c| (c.rx_bands_confirmed, c.rx_band_enable.clone().unwrap_or_default()));
+        cfg.map(|c| (c.rx_lock_active(), c.rx_bands_confirmed, c.rx_band_enable.clone().unwrap_or_default()));
     ctx.data_mut(|d| d.insert_temp(rx_plan_id(), plan));
 }
 
@@ -9106,7 +9106,13 @@ pub(in crate::app) fn publish_rx_plan(ctx: &egui::Context, cfg: Option<&sdroxide
 /// published (no configuration yet) offers everything.
 fn rx_plan_allows(ctx: &egui::Context, band: Band) -> bool {
     match ctx.data(|d| d.get_temp::<RxPlan>(rx_plan_id())).flatten() {
-        Some((confirmed, bands)) => confirmed && bands.contains(&band),
+        // SWL mode has no lock, listening bands are always open, and the gaps
+        // between bands ("ALL") open with a confirmed list.
+        Some((lock, confirmed, bands)) => {
+            !lock
+                || band.is_listen_service()
+                || (confirmed && (band == Band::Gen || bands.contains(&band)))
+        }
         None => true,
     }
 }

@@ -9421,3 +9421,7 @@ qrzcard-switch = 指针停在呼号上时显示 QRZ 卡片
 qrzcard-switch-hint = 在瀑布图、解码器和 Spot 列表中显示来自 QRZ.com 的照片、姓名、年龄、地址、定位格和 QSL。照片、电子邮件和出生日期需要 QRZ XML 订阅。
 
 qrzcard-needs-login = 请选择 QRZ 作为提供方，并输入 QRZ 用户名和密码以启用卡片。
+
+rx-bands-swl-note = 此电台已启用 SWL 模式：没有接收锁定，可以调谐到任何波段。
+
+rx-bands-always-open = 收听波段（以及 SWL 模式）始终可以接收。
