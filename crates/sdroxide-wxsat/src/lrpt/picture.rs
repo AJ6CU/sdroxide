@@ -4,7 +4,7 @@
 //! apart, and a lost row leaves a gap of the right size instead of shifting
 //! everything after it.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 
 use super::jpeg::{MCU_PER_LINE, MCU_PER_SEGMENT, PICTURE_WIDTH, Segment};
 
@@ -32,6 +32,17 @@ pub struct LrptPicture {
     /// Number of the first row of this picture, so that the height is counted
     /// from it.
     first_row: Option<i64>,
+    /// Rows already handed out by [`LrptPicture::take_finished`].
+    sent: HashSet<(u16, i64)>,
+}
+
+/// A row of one channel, finished: `ROW_LINES` lines of `PICTURE_WIDTH` pixels.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FinishedRow {
+    pub apid: u16,
+    /// Row number from the top of the picture.
+    pub row: u32,
+    pub lines: Vec<u8>,
 }
 
 impl LrptPicture {
@@ -82,6 +93,27 @@ impl LrptPicture {
                     .copy_from_slice(&block[line * 8..line * 8 + 8]);
             }
         }
+    }
+
+    /// The rows nobody has taken yet that are done: every row older than the
+    /// newest one seen, or every row when `flush` says the pass has gone quiet.
+    /// Each row is handed out once, so a link can carry a row when it is whole
+    /// rather than each time one more of its 14 segments arrives.
+    pub fn take_finished(&mut self, flush: bool) -> Vec<FinishedRow> {
+        let Some(first) = self.first_row else { return Vec::new() };
+        let newest = self.channels.values().filter_map(|c| c.rows.keys().next_back()).max().copied().unwrap_or(first);
+        let mut out = Vec::new();
+        for (&apid, ch) in &self.channels {
+            for (&r, lines) in &ch.rows {
+                if (r < newest || flush) && self.sent.insert((apid, r)) {
+                    out.push(FinishedRow { apid, row: (r - first).max(0) as u32, lines: lines.clone() });
+                }
+            }
+        }
+        // Rows long gone need not be remembered.
+        self.sent.retain(|&(_, r)| r + 64 >= newest);
+        out.sort_by_key(|f| (f.row, f.apid));
+        out
     }
 
     /// The channels that have anything, by APID.
@@ -166,6 +198,23 @@ mod tests {
         let (_, _, g) = p.gray(64).unwrap();
         assert_eq!(g[14 * 8], 7);
         assert_eq!(p.rows(), 2);
+    }
+
+    #[test]
+    fn a_row_is_handed_out_once_when_a_newer_one_has_begun() {
+        let mut p = LrptPicture::new();
+        p.push(&seg(64, 1_000_000, 0, 10));
+        p.push(&seg(65, 1_000_000, 0, 11));
+        assert!(p.take_finished(false).is_empty(), "the only row may still grow");
+        p.push(&seg(64, 1_001_231, 0, 12));
+        let done = p.take_finished(false);
+        assert_eq!(done.iter().map(|f| (f.apid, f.row)).collect::<Vec<_>>(), vec![(64, 0), (65, 0)]);
+        assert_eq!(done[0].lines.len(), PICTURE_WIDTH * ROW_LINES);
+        assert_eq!(done[0].lines[0], 10);
+        assert!(p.take_finished(false).is_empty(), "each row once");
+        // The pass goes quiet: the last row is let go.
+        let last = p.take_finished(true);
+        assert_eq!(last.iter().map(|f| (f.apid, f.row)).collect::<Vec<_>>(), vec![(64, 1)]);
     }
 
     #[test]

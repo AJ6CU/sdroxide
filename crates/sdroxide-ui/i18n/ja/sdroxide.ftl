@@ -9361,7 +9361,7 @@ publicsdr-close-hint = Public SDRs を閉じる
 
 wxsat-title = 気象衛星
 
-extras-wxsat-hint = 気象衛星 — NOAA APT衛星が137 MHzで送る画像を、受信しながら描画します（別ウィンドウに切り離せます）
+extras-wxsat-hint = 気象衛星 — NOAA（APT）または Meteor（LRPT）衛星が137 MHzで送る画像を、受信しながら描画します（別ウィンドウに切り離せます）
 
 wxsat-decode = デコード
 
@@ -9392,3 +9392,21 @@ wxsat-lines = { $n } ライン
 wxsat-outside-window = チャンネルがサンプルウィンドウの外か、信号全体には端に近すぎます。「ここに同調」を使うか、より広いウィンドウにしてください。
 
 wxsat-waiting = まだ画像がありません。衛星が地平線の上にあるときにデコーダーをオンにしてください。1回の通過は約10分です。
+
+wxsat-signal = 信号
+
+wxsat-kind-apt = APT
+
+wxsat-kind-lrpt = LRPT
+
+wxsat-image-channel = チャンネル { $n }
+
+wxsat-rows = { $n } 行
+
+wxsat-frame-locked = フレーム同期ロック
+
+wxsat-frames = 良好なフレーム { $n }
+
+wxsat-waiting-lrpt = まだ画像がありません。Meteor の LRPT はデジタルです。衛星を受信して数秒後から1行ずつ画像が現れ、各チャンネルは別々の画像です。
+
+wxsat-searching-frame = フレーム同期を探しています

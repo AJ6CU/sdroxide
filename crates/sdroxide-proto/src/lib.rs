@@ -2322,8 +2322,15 @@ use sdroxide_types::{
 /// lines new since the previous one (the client builds the image). `RadioState`
 /// crosses the link whole, so the appended field moves its layout.
 /// `PROTO_VERSION` 283 → 284, `VERSION_BYTE` 0x67 → 0x68.
-pub const PROTO_VERSION: u16 = 284;
-const VERSION_BYTE: u8 = 0x68;
+///
+/// v285: **Meteor LRPT beside NOAA APT.** [`sdroxide_types::WxsatSettings`]
+/// gains `kind` ([`sdroxide_types::WxsatKind`]) at its tail and
+/// [`sdroxide_types::WxsatStatus`] gains `kind`, `frames_ok`, `carrier_hz` and
+/// `rows` (finished rows of picture, one per channel) at its tail. Both ride
+/// whole (`RadioState` and `ServerMsg::WxsatStatus`), so the appended fields move
+/// their layouts. `PROTO_VERSION` 284 → 285, `VERSION_BYTE` 0x68 → 0x69.
+pub const PROTO_VERSION: u16 = 285;
+const VERSION_BYTE: u8 = 0x69;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -3627,7 +3634,7 @@ mod tests {
             ServerMsg::TxRefused(w, hz) => assert_eq!((w, hz), (why, 7_074_000.0)),
             _ => panic!("TxRefused did not round-trip"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (284, 0x68));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (285, 0x69));
         // v280: the CB refusal is a new tail variant of `TxBlock`; the ones
         // before it keep their positions.
         let cb = ServerMsg::TxRefused(sdroxide_types::TxBlock::CbOff, 27_185_000.0);
@@ -3683,7 +3690,7 @@ mod tests {
             }
             other => panic!("the answer did not round-trip: {other:?}"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (284, 0x68));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (285, 0x69));
     }
 
     /// The VOR read-out rides the wire whole, locked or not, and the message is
@@ -4271,7 +4278,11 @@ mod tests {
     /// picture lines ride the last `ServerMsg` variant.
     #[test]
     fn roundtrip_wxsat_config_and_status() {
-        let cfg = sdroxide_types::WxsatSettings { enabled: true, frequency_hz: 137_620_000.0 };
+        let cfg = sdroxide_types::WxsatSettings {
+            enabled: true,
+            frequency_hz: 137_900_000.0,
+            kind: sdroxide_types::WxsatKind::Lrpt,
+        };
         let m = ClientMsg::Command(Command::SetWxsatConfig(cfg));
         let back: ClientMsg = decode(&encode(&m).unwrap()).unwrap();
         assert_eq!(back, m);
@@ -4286,6 +4297,14 @@ mod tests {
             total_lines: 5,
             first_line: 4,
             new_lines: vec![vec![9; sdroxide_types::WXSAT_LINE_PIXELS]],
+            kind: sdroxide_types::WxsatKind::Lrpt,
+            frames_ok: 41,
+            carrier_hz: -812.5,
+            rows: vec![sdroxide_types::WxsatRow {
+                apid: 65,
+                row: 7,
+                lines: vec![3; sdroxide_types::WXSAT_LRPT_WIDTH * sdroxide_types::WXSAT_LRPT_ROW_LINES],
+            }],
             ..Default::default()
         }));
         let back: ServerMsg = decode(&encode(&st).unwrap()).unwrap();

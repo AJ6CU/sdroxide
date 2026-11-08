@@ -9421,7 +9421,7 @@ publicsdr-close-hint = Public SDRs sluiten
 
 wxsat-title = WEERSATELLIETEN
 
-extras-wxsat-hint = WEERSATELLIETEN — het beeld dat een NOAA-APT-satelliet op 137 MHz uitzendt, getekend terwijl het binnenkomt, in een losmaakbaar venster
+extras-wxsat-hint = WEERSATELLIETEN — het beeld dat een NOAA- (APT) of Meteor-satelliet (LRPT) op 137 MHz uitzendt, getekend terwijl het binnenkomt, in een losmaakbaar venster
 
 wxsat-decode = Decoderen
 
@@ -9452,3 +9452,21 @@ wxsat-lines = { $n } lijnen
 wxsat-outside-window = Het kanaal ligt buiten het samplevenster, of te dicht bij de rand voor het hele signaal. Gebruik Hier afstemmen, of een breder venster.
 
 wxsat-waiting = Nog geen beeld. Zet de decoder aan zodra een satelliet boven de horizon staat; een overkomst duurt ongeveer tien minuten.
+
+wxsat-signal = Signaal
+
+wxsat-kind-apt = APT
+
+wxsat-kind-lrpt = LRPT
+
+wxsat-image-channel = Kanaal { $n }
+
+wxsat-rows = { $n } rijen
+
+wxsat-frame-locked = Framesync vergrendeld
+
+wxsat-frames = { $n } goede frames
+
+wxsat-waiting-lrpt = Nog geen beeld. Meteor LRPT is digitaal: het beeld begint een paar seconden nadat de satelliet is gehoord, rij voor rij, en elk kanaal is een apart beeld.
+
+wxsat-searching-frame = Zoeken naar de framesync
