@@ -2339,8 +2339,44 @@ use sdroxide_types::{
 /// on the station; the date of birth never crosses the link. `#[serde(default)]`
 /// on every new field, so a stored `net.json` loads unchanged.
 /// `PROTO_VERSION` 285 → 286, `VERSION_BYTE` 0x69 → 0x6A.
-pub const PROTO_VERSION: u16 = 286;
-const VERSION_BYTE: u8 = 0x6A;
+///
+/// v287: **the Meshtastic receiver.** [`sdroxide_types::RadioState`] gains
+/// `meshtastic` ([`sdroxide_types::MeshtasticSettings`]: on, region, preset,
+/// channel, keys and where the radio was before the lane tuned it) at its tail,
+/// `Command` gains `SetMeshtasticConfig` last, and `ServerMsg` gains
+/// `MeshtasticStatus(Box<..>)` last (level, counters, nodes, packet log).
+/// `RadioState` crosses the link whole, so the appended field moves its layout.
+/// `PROTO_VERSION` 286 → 287, `VERSION_BYTE` 0x6A → 0x6B.
+///
+/// v288: **Meshtastic transmit, and the 868 MHz band.** `Band` gains `Ism868`
+/// last (863–870 MHz, on the transmit list like the other bands; `Band`
+/// is postcard-encoded by declaration index and rides `RadioConfig`, the band
+/// stacks and the memories). [`sdroxide_types::MeshtasticSettings`] gains
+/// `node_id` at its tail, `Command` gains `SendMeshtastic` last, and
+/// [`sdroxide_types::MeshtasticStatus`] gains `tx_refused`, `tx_busy`,
+/// `tx_sent`, `tx_used_ms` and `tx_budget_ms` at its tail.
+/// `PROTO_VERSION` 287 → 288, `VERSION_BYTE` 0x6B → 0x6C.
+///
+/// v289: **SAT lock on a CAT rig's split.** `SatLockConfig` (carried by
+/// `Command::SetSatLock`) gains `ctcss_hz: Option<f64>` last, so a CAT rig can
+/// set the tone on VFO B, and `TxState` gains `rig_keyed: bool` last, the rig
+/// transmitting under its own control. Both cross the link inside postcard
+/// structs. `PROTO_VERSION` 288 → 289, `VERSION_BYTE` 0x6C → 0x6D.
+///
+/// v290: **the profile no longer carries the interface language.** PR #579 is
+/// reverted: [`sdroxide_types::ClientScreen`] loses `language` (added in v282),
+/// so the layout of `ClientScreen`, which rides `ClientMsg::SetClientSettings`
+/// and `ServerMsg::ClientSettings` whole, changes again.
+/// `PROTO_VERSION` 289 → 290, `VERSION_BYTE` 0x6D → 0x6E.
+///
+/// v291: **the QRZ card, second round.** [`sdroxide_types::CallsignInfo`] gains
+/// `photo_pending`, `native_text` and `note` at its tail (it rides
+/// `ServerMsg::CallsignResult` whole), and [`sdroxide_types::NetworkConfig`]
+/// gains `qrz_card_off` at its tail (it rides `SetNetworkConfig` whole): the
+/// card is now on by default and this is how it is switched off.
+/// `PROTO_VERSION` 290 → 291, `VERSION_BYTE` 0x6E → 0x6F.
+pub const PROTO_VERSION: u16 = 291;
+const VERSION_BYTE: u8 = 0x6F;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -2945,6 +2981,9 @@ pub enum ServerMsg {
     /// The weather-satellite decoder: its state and the picture lines new since
     /// the previous message (the client builds the image). Appended last (v284).
     WxsatStatus(Box<sdroxide_types::WxsatStatus>),
+    /// The Meshtastic receiver: level, counters, the nodes heard and the packet
+    /// log, a whole snapshot each time. Appended last (v287).
+    MeshtasticStatus(Box<sdroxide_types::MeshtasticStatus>),
 }
 
 /// What [`ServerMsg::ClientSettings`] carries.
@@ -3644,7 +3683,7 @@ mod tests {
             ServerMsg::TxRefused(w, hz) => assert_eq!((w, hz), (why, 7_074_000.0)),
             _ => panic!("TxRefused did not round-trip"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (286, 0x6A));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (291, 0x6F));
         // v280: the CB refusal is a new tail variant of `TxBlock`; the ones
         // before it keep their positions.
         let cb = ServerMsg::TxRefused(sdroxide_types::TxBlock::CbOff, 27_185_000.0);
@@ -3700,7 +3739,7 @@ mod tests {
             }
             other => panic!("the answer did not round-trip: {other:?}"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (286, 0x6A));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (291, 0x6F));
     }
 
     /// v286: the QRZ card rides `CallsignResult` — photo, age and all.
@@ -3713,12 +3752,15 @@ mod tests {
         info.class = Some("Novice".into());
         info.qsl_lotw = true;
         info.photo = Some(vec![0xFF, 0xD8, 0xFF, 0xD9]);
+        info.photo_pending = true;
+        info.native_text = Some("山东省淄博市".into());
+        info.note = Some("subscription needed".into());
         let bytes = encode(&ServerMsg::CallsignResult(info.clone())).unwrap();
         match decode::<ServerMsg>(&bytes).unwrap() {
             ServerMsg::CallsignResult(back) => assert_eq!(back, info),
             other => panic!("the card did not round-trip: {other:?}"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (286, 0x6A));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (291, 0x6F));
     }
 
     /// The VOR read-out rides the wire whole, locked or not, and the message is
@@ -4339,6 +4381,101 @@ mod tests {
         assert_eq!(back, st);
     }
 
+    /// The Meshtastic receiver's settings cross the wire both ways, with the
+    /// restore point they carry, and its status rides the last `ServerMsg`
+    /// variant. Set away from the defaults so a field that decoded into its
+    /// default would fail here.
+    #[test]
+    fn roundtrip_meshtastic_config_and_status() {
+        let cfg = sdroxide_types::MeshtasticSettings {
+            enabled: true,
+            region: "US".into(),
+            preset: "MediumFast".into(),
+            frequency_hz: 913_125_000.0,
+            keys: "club=simple2".into(),
+            restore: Some(sdroxide_types::MeshtasticRestore {
+                dial_hz: 14_074_000.0,
+                mode: sdroxide_types::Mode::Usb,
+            }),
+            node_id: 0x1234_ABCD,
+        };
+        // The transmit side: the command, the new band, the status tail.
+        let send = ClientMsg::Command(Command::SendMeshtastic(sdroxide_types::MeshtasticSend {
+            text: "73 de F4NRM".into(),
+            to: 0xFFFF_FFFF,
+        }));
+        let back: ClientMsg = decode(&encode(&send).unwrap()).unwrap();
+        assert_eq!(back, send);
+        let band = ClientMsg::Command(Command::SetBand(sdroxide_types::Band::Ism868));
+        let back: ClientMsg = decode(&encode(&band).unwrap()).unwrap();
+        assert_eq!(back, band);
+        let m = ClientMsg::Command(Command::SetMeshtasticConfig(cfg.clone()));
+        let back: ClientMsg = decode(&encode(&m).unwrap()).unwrap();
+        assert_eq!(back, m);
+        let mut state = sdroxide_types::RadioState::default();
+        state.meshtastic = cfg.clone();
+        let back: sdroxide_types::RadioState = decode(&encode(&state).unwrap()).unwrap();
+        assert_eq!(back.meshtastic, cfg);
+        assert_ne!(back.meshtastic, sdroxide_types::MeshtasticSettings::default());
+
+        let st = ServerMsg::MeshtasticStatus(Box::new(sdroxide_types::MeshtasticStatus {
+            running: true,
+            in_window: true,
+            refused: Some(sdroxide_types::RxBlock::BandOff(sdroxide_types::Band::Gen)),
+            level_dbfs: -61.5,
+            preambles: 7,
+            frames: 5,
+            crc_bad: 2,
+            nodes: vec![sdroxide_types::MeshNode {
+                id: 0xDEAD_BEEF,
+                long_name: "Seb".into(),
+                short_name: "SEB".into(),
+                last_heard: 1_700_000_000,
+                snr_db: -7.5,
+                packets: 3,
+                hops: Some(1),
+                lat_deg: Some(48.8584),
+                battery_pct: Some(87),
+                ..Default::default()
+            }],
+            log: vec![sdroxide_types::MeshEntry {
+                time: 1_700_000_000,
+                from: 0xDEAD_BEEF,
+                to: 0xFFFF_FFFF,
+                port: 1,
+                channel: "LongFast".into(),
+                text: Some("73 de F4NRM".into()),
+                ..Default::default()
+            }],
+            tx_refused: Some(sdroxide_types::MeshTxRefusal::DutyCycle(1234)),
+            tx_busy: true,
+            tx_sent: 3,
+            tx_used_ms: 21_500,
+            tx_budget_ms: Some(36_000),
+        }));
+        let back: ServerMsg = decode(&encode(&st).unwrap()).unwrap();
+        assert_eq!(back, st);
+        // Every refusal crosses the link.
+        for why in [
+            sdroxide_types::MeshTxRefusal::Band(sdroxide_types::TxBlock::BandOff(
+                sdroxide_types::Band::Ism868,
+            )),
+            sdroxide_types::MeshTxRefusal::TooLong,
+            sdroxide_types::MeshTxRefusal::OffChannel,
+            sdroxide_types::MeshTxRefusal::NoTransmitter,
+            sdroxide_types::MeshTxRefusal::BadText,
+            sdroxide_types::MeshTxRefusal::Busy,
+            sdroxide_types::MeshTxRefusal::Rails,
+        ] {
+            let m = ServerMsg::MeshtasticStatus(Box::new(sdroxide_types::MeshtasticStatus {
+                tx_refused: Some(why),
+                ..Default::default()
+            }));
+            let back: ServerMsg = decode(&encode(&m).unwrap()).unwrap();
+            assert_eq!(back, m);
+        }
+    }
+
     /// The radiosonde lane's settings cross the wire both ways: the command,
     /// and the state field that tells a remote client whether it runs and on
     /// which channel. Set away from the default so a field that decoded into
@@ -4632,5 +4769,32 @@ mod tests {
     fn rejects_wrong_version_byte() {
         assert!(matches!(decode::<ClientMsg>(&[0x7f, 0, 0]), Err(ProtoError::Version(0x7f))));
         assert!(matches!(decode::<ClientMsg>(&[]), Err(ProtoError::Empty)));
+    }
+
+    /// v289: the satellite lock's CTCSS tone rides the end of `SatLockConfig`,
+    /// and the rig's own keying the end of `TxState`; the version is pinned.
+    #[test]
+    fn the_sat_lock_tone_and_the_rig_keyed_flag_round_trip() {
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (291, 0x6F));
+        let cfg = sdroxide_types::SatLockConfig {
+            norad_id: 25544,
+            ctcss_hz: Some(67.0),
+            ..Default::default()
+        };
+        let msg = ClientMsg::Command(Command::SetSatLock(Some(Box::new(cfg.clone()))));
+        match decode::<ClientMsg>(&encode(&msg).unwrap()).unwrap() {
+            ClientMsg::Command(Command::SetSatLock(Some(back))) => assert_eq!(*back, cfg),
+            _ => panic!("SetSatLock did not round-trip"),
+        }
+        // No tone encodes as one byte less than a tone: the field is the tail.
+        let none = sdroxide_types::SatLockConfig { ctcss_hz: None, ..cfg.clone() };
+        let (a, b) = (
+            encode(&ClientMsg::Command(Command::SetSatLock(Some(Box::new(none))))).unwrap(),
+            encode(&msg).unwrap(),
+        );
+        assert!(b.len() > a.len());
+        let tx = sdroxide_types::TxState { rig_keyed: true, ..Default::default() };
+        let back: sdroxide_types::TxState = postcard::from_bytes(&postcard::to_allocvec(&tx).unwrap()).unwrap();
+        assert!(back.rig_keyed);
     }
 }

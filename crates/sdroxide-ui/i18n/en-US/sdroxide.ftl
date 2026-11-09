@@ -3182,7 +3182,6 @@ sat-downlink-mhz = DOWNLINK (MHz)
 sat-uplink-mhz = UPLINK (MHz)
 sat-mode = MODE
 sat-tune = TUNE
-sat-set-dial-mode-link-no = Set the dial and mode to this link — no lock, no correction
 sat-locked = {" "}LOCKED{" "}
 sat-lock = {" "}LOCK ON{" "}
 sat-track-satellite-doppler-correction-rx = Track this satellite: Doppler correction on RX and TX, transponder-mapped uplink, and the 3D view follows it
@@ -9403,12 +9402,15 @@ meter-view-swr = SWR
 
 meter-view-alc = ALC
 
-# $view is the name of the reading (meter-view-*); $when is smeter-arrow-on-receive or empty.
-smeter-arrow-prev-hover = Previous reading: { $view }{ $when }
+# $view is the name of the reading (meter-view-*). The arrows turn the readings
+# while transmitting and the face (needle, bar, trace) on receive.
+smeter-arrow-prev-hover = Previous reading: { $view }
 
-smeter-arrow-next-hover = Next reading: { $view }{ $when }
+smeter-arrow-next-hover = Next reading: { $view }
 
-smeter-arrow-on-receive = (used when transmitting)
+smeter-arrow-prev-face = Previous face
+
+smeter-arrow-next-face = Next face
 
 sonde-card-source-both = Radio + SondeHub (both hear it)
 
@@ -9492,7 +9494,7 @@ wxsat-waiting-lrpt = No picture yet. Meteor LRPT is digital: the picture starts 
 
 wxsat-searching-frame = Looking for the frame sync
 
-qrzcard-loading = Looking up QRZ…
+qrzcard-loading = Searching QRZ.com…
 
 qrzcard-not-found = Not found on QRZ.
 
@@ -9509,3 +9511,120 @@ qrzcard-switch = Show the QRZ card when the pointer rests on a callsign
 qrzcard-switch-hint = Photo, name, age, address, locator and QSL from QRZ.com, in the waterfall, the decoders and the spot lists. The photo, e-mail and date of birth need a QRZ XML subscription.
 
 qrzcard-needs-login = Choose QRZ as the provider and enter your QRZ username and password to enable the card.
+
+meshtastic-title = Meshtastic
+
+meshtastic-receive = Receive
+
+meshtastic-region = Region
+
+meshtastic-preset = Preset
+
+meshtastic-channel = Channel
+
+meshtastic-tune = Listen here
+
+meshtastic-tune-hint = Switch the receiver on and bring the radio to this channel. The receive band list in the Radio menu decides whether the radio may listen here. When you switch off, or quit, the radio returns to where it was.
+
+meshtastic-keys = Keys
+
+meshtastic-keys-hint = Name=key, comma separated (hex:…, base64:…, simple1..10). The default key is always tried.
+
+meshtastic-state-off = Receiver off.
+
+meshtastic-level = Level { $db } dBFS
+
+meshtastic-counts = { $pre } preambles · { $ok } frames · { $bad } bad CRC
+
+meshtastic-refused-band = RECEIVE FORBIDDEN — { $freq } MHz ({ $band }) is not a validated receive band. Tick and validate it in the Radio menu, receive bands.
+
+meshtastic-refused-unconfirmed = RECEIVE FORBIDDEN — the receive bands of this radio are not validated yet. Check them and confirm in the Radio menu, receive bands.
+
+meshtastic-out-of-window = The channel is outside the sample window the radio captures: tune nearer or use a wider sample rate.
+
+meshtastic-none-yet = Nothing heard yet.
+
+meshtastic-nodes = Nodes ({ $n })
+
+meshtastic-log = Packets ({ $n })
+
+meshtastic-col-id = Node
+
+meshtastic-col-name = Name
+
+meshtastic-col-heard = Heard
+
+meshtastic-col-snr = SNR
+
+meshtastic-col-hops = Hops
+
+meshtastic-col-position = Position
+
+meshtastic-col-battery = Battery
+
+meshtastic-encrypted = encrypted (no key)
+
+meshtastic-via-mqtt = via MQTT
+
+meshtastic-bench-hint = Open the Meshtastic window: the LoRa mesh traffic of one channel.
+
+extras-meshtastic-hint = Meshtastic: the LoRa mesh traffic of one channel, the nodes heard and the packets.
+
+meshtastic-message = Message
+
+meshtastic-message-hint = Text for everyone on the channel (200 bytes at most)
+
+meshtastic-send = Send…
+
+meshtastic-send-hint = Transmit this text on the channel, after you confirm. The transmit band list in Settings, Radio decides whether the radio may transmit here; the radio must be on the channel (Listen here).
+
+meshtastic-confirm = Transmit on { $freq } MHz now ({ $air } s of air time)? Everyone in range will hear it, and you answer for it under your licence and the rules of this band.
+
+meshtastic-confirm-yes = Transmit
+
+meshtastic-confirm-no = Cancel
+
+meshtastic-transmitting = TRANSMITTING…
+
+meshtastic-tx-airtime = Air time this hour: { $used } s of { $budget } s
+
+meshtastic-tx-airtime-free = Air time this hour: { $used } s (no limit set for this region)
+
+meshtastic-tx-sent = { $n } sent
+
+meshtastic-tx-band-off = TRANSMIT FORBIDDEN — { $freq } MHz ({ $band }) is not a validated transmit band. Tick and validate it in Settings → Radio → Transmit bands.
+
+meshtastic-tx-unconfirmed = TRANSMIT FORBIDDEN — the transmit bands of this radio are not validated yet. Check them and confirm in Settings → Radio → Transmit bands.
+
+meshtastic-tx-duty = Duty cycle reached for this region: wait { $s } s before the next message.
+
+meshtastic-tx-too-long = This message alone is longer than the whole hour's air-time budget for this region.
+
+meshtastic-tx-off-channel = The radio is not on the channel: press Listen here first, so the dial sits on it.
+
+meshtastic-tx-no-transmitter = This radio cannot send raw I/Q (a rig that takes audio, or a receive-only device).
+
+meshtastic-tx-bad-text = The text is empty or too long (200 bytes at most).
+
+meshtastic-tx-busy = A transmission is already in progress.
+
+meshtastic-tx-rails = The transmitter refused to key up: see the transmit message for the reason.
+rx-bands-swl-note = SWL mode is on for this radio: there is no receive lock. Every band can be tuned.
+
+rx-bands-always-open = Listening bands (and SWL mode) are always open for reception.
+
+sat-tune-link-both-vfos = Set the dial, the other VFO and the mode to this link — the downlink on this VFO, the uplink on the other; a lock on this satellite moves to it
+
+sat-move-lock = {" "}MOVE LOCK{" "}
+
+sat-locked-other-link-move-lock = Locked to this satellite on another link: move the lock to this one — its uplink, its tone and its Doppler
+
+sat-rig-rx = RIG RX
+
+sat-rig-tx = RIG TX
+
+topbar-sat-locked-vfo-a-downlink-b-uplink = Locked to a satellite: VFO A is the downlink and VFO B the uplink until the lock ends
+
+qrzcard-photo-loading = Loading photo…
+
+qrzcard-no-photo = Record without photo

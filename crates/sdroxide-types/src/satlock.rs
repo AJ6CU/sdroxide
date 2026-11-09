@@ -90,7 +90,8 @@ impl SatUplink {
 /// the element sets and the operator's grid — fills in the rest. The optional
 /// fields exist so a client that *does* know better (a pasted TLE, a portable
 /// station at a different grid) can say so.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
 pub struct SatLockConfig {
     pub norad_id: u64,
     /// Display name, carried so status can name the bird even if the element
@@ -111,6 +112,9 @@ pub struct SatLockConfig {
     /// Apply Doppler corrections. Off, the lock still tracks — az/el, passes,
     /// rotator — which is what a CAT-rig station gets regardless.
     pub doppler: bool,
+    /// CTCSS tone for the uplink, in Hz (e.g. 67.0 for ISS). `None` means
+    /// no tone. Used by CAT rigs to set the tone on VFO B.
+    pub ctcss_hz: Option<f64>,
     /// Drive the rotator client while locked.
     pub rotator: bool,
 }
@@ -267,6 +271,7 @@ mod tests {
                 inverting: true,
             }),
             doppler: true,
+            ctcss_hz: Some(67.0),
             rotator: false,
         };
         let bytes = postcard::to_allocvec(&cfg).unwrap();

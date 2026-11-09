@@ -3158,7 +3158,6 @@ sat-downlink-mhz = ダウンリンク（MHz）
 sat-uplink-mhz = アップリンク（MHz）
 sat-mode = モード
 sat-tune = 同調
-sat-set-dial-mode-link-no = ダイヤルとモードをこのリンクに設定します。ロックも補正もしません
 sat-locked = {" "}ロック中{" "}
 sat-lock = {" "}ロック{" "}
 sat-track-satellite-doppler-correction-rx = この衛星を追跡します。RX と TX のドップラー補正、トランスポンダーにマップされたアップリンク、3D ビューもそれに従います
@@ -9326,11 +9325,13 @@ meter-view-swr = SWR
 
 meter-view-alc = ALC
 
-smeter-arrow-prev-hover = 前の表示: { $view }{ $when }
+smeter-arrow-prev-hover = 前の表示: { $view }
 
-smeter-arrow-next-hover = 次の表示: { $view }{ $when }
+smeter-arrow-next-hover = 次の表示: { $view }
 
-smeter-arrow-on-receive = (送信中に使われます)
+smeter-arrow-prev-face = 前のメーター
+
+smeter-arrow-next-face = 次のメーター
 
 sonde-card-source-both = 無線 + SondeHub（両方で受信）
 
@@ -9431,3 +9432,120 @@ qrzcard-switch = コールサインにカーソルを置くと QRZ カードを�
 qrzcard-switch-hint = QRZ.com の写真・氏名・年齢・住所・ロケーター・QSL を、ウォーターフォール、デコーダー、スポット一覧に表示します。写真、メール、生年月日には QRZ XML の購読が必要です。
 
 qrzcard-needs-login = カードを有効にするには、プロバイダーに QRZ を選び、QRZ のユーザー名とパスワードを入力してください。
+
+meshtastic-title = Meshtastic
+
+meshtastic-receive = 受信
+
+meshtastic-region = 地域
+
+meshtastic-preset = プリセット
+
+meshtastic-channel = チャンネル
+
+meshtastic-tune = ここで受信
+
+meshtastic-tune-hint = 受信機をオンにして、無線機をこのチャンネルに合わせます。ここで受信できるかどうかは、無線メニューの受信バンド一覧が決めます。オフにするか終了すると、無線機は元の状態に戻ります。
+
+meshtastic-keys = 鍵
+
+meshtastic-keys-hint = 名前=鍵をカンマ区切りで入力（hex:…、base64:…、simple1..10）。既定の鍵は常に試されます。
+
+meshtastic-state-off = 受信機はオフです。
+
+meshtastic-level = レベル { $db } dBFS
+
+meshtastic-counts = プリアンブル { $pre } · フレーム { $ok } · CRC不良 { $bad }
+
+meshtastic-refused-band = 受信禁止 — { $freq } MHz（{ $band }）は確認済みの受信バンドではありません。無線メニューの受信バンドでチェックして確認してください。
+
+meshtastic-refused-unconfirmed = 受信禁止 — この無線機の受信バンドはまだ確認されていません。無線メニューの受信バンドで確認してください。
+
+meshtastic-out-of-window = チャンネルが無線機の取り込むサンプル範囲の外です。近くに同調するか、サンプルレートを上げてください。
+
+meshtastic-none-yet = まだ何も受信していません。
+
+meshtastic-nodes = ノード（{ $n }）
+
+meshtastic-log = パケット（{ $n }）
+
+meshtastic-col-id = ノード
+
+meshtastic-col-name = 名前
+
+meshtastic-col-heard = 受信時刻
+
+meshtastic-col-snr = SNR
+
+meshtastic-col-hops = ホップ
+
+meshtastic-col-position = 位置
+
+meshtastic-col-battery = 電池
+
+meshtastic-encrypted = 暗号化（鍵なし）
+
+meshtastic-via-mqtt = MQTT経由
+
+meshtastic-bench-hint = Meshtasticウィンドウを開きます：1つのチャンネルのLoRaメッシュ通信。
+
+extras-meshtastic-hint = Meshtastic：1つのチャンネルのLoRaメッシュ通信、受信したノードとパケット。
+
+meshtastic-message = メッセージ
+
+meshtastic-message-hint = チャンネルの全員へ送る文章（最大200バイト）
+
+meshtastic-send = 送信…
+
+meshtastic-send-hint = 確認後、この文章をチャンネルで送信します。ここで送信できるかどうかは、設定の無線にある送信バンド一覧が決めます。無線機はチャンネルに合わせておく必要があります（ここで受信）。
+
+meshtastic-confirm = 今すぐ { $freq } MHz で送信しますか（送信時間 { $air } 秒）？範囲内の全員に聞こえます。免許とこのバンドの規則に基づき、責任は操作者にあります。
+
+meshtastic-confirm-yes = 送信する
+
+meshtastic-confirm-no = キャンセル
+
+meshtastic-transmitting = 送信中…
+
+meshtastic-tx-airtime = この1時間の送信時間：{ $used } 秒 / { $budget } 秒
+
+meshtastic-tx-airtime-free = この1時間の送信時間：{ $used } 秒（この地域には上限の設定なし）
+
+meshtastic-tx-sent = 送信済み { $n }
+
+meshtastic-tx-band-off = 送信禁止 — { $freq } MHz（{ $band }）は確認済みの送信バンドではありません。設定 → 無線 → 送信バンドでチェックして確認してください。
+
+meshtastic-tx-unconfirmed = 送信禁止 — この無線機の送信バンドはまだ確認されていません。設定 → 無線 → 送信バンドで確認してください。
+
+meshtastic-tx-duty = この地域のデューティサイクル上限に達しました。次のメッセージまで { $s } 秒お待ちください。
+
+meshtastic-tx-too-long = このメッセージだけで、この地域の1時間分の送信時間の上限を超えています。
+
+meshtastic-tx-off-channel = 無線機がチャンネルに合っていません。先に「ここで受信」を押して、ダイヤルを合わせてください。
+
+meshtastic-tx-no-transmitter = この無線機は生のI/Qを送信できません（音声を受け取る無線機、または受信専用の機器）。
+
+meshtastic-tx-bad-text = 文章が空か長すぎます（最大200バイト）。
+
+meshtastic-tx-busy = すでに送信中です。
+
+meshtastic-tx-rails = 送信機が送信状態になりませんでした。理由は送信メッセージをご覧ください。
+rx-bands-swl-note = この無線機は SWL モードです。受信ロックはありません。どのバンドにも同調できます。
+
+rx-bands-always-open = リスニング用バンド（および SWL モード）は常に受信できます。
+
+sat-tune-link-both-vfos = ダイヤル、もう一方のVFO、モードをこのリンクに設定します — ダウンリンクをこのVFOに、アップリンクをもう一方に。この衛星のロックも移動します
+
+sat-move-lock = {" "}ロック移動{" "}
+
+sat-locked-other-link-move-lock = この衛星は別のリンクでロック中です：ロックをこのリンクに移動します — アップリンク、トーン、ドップラーも含みます
+
+sat-rig-rx = 無線機RX
+
+sat-rig-tx = 無線機TX
+
+topbar-sat-locked-vfo-a-downlink-b-uplink = 衛星にロック中：ロックが終わるまで、VFO Aはダウンリンク、VFO Bはアップリンクです
+
+qrzcard-photo-loading = 写真を読み込み中…
+
+qrzcard-no-photo = 写真なしの記録

@@ -269,6 +269,12 @@ pub struct Kenwood {
     caps: ModelCaps,
     /// True once `ID;` has been answered, so the model is only logged once.
     model_known: bool,
+    /// Whether the last meter read asked for was the transmit one. A `PC` reply
+    /// that arrives in that state is the power the rig is *set to* while it is
+    /// on the air, and is the only output-power figure this family has (see
+    /// [`Protocol::tx_telemetry_requests`]); in the other state it is the level
+    /// the operator's slider adopts.
+    tx_meters_asked: std::sync::atomic::AtomicBool,
 }
 
 impl Kenwood {
@@ -282,6 +288,7 @@ impl Kenwood {
             md_replies: 0,
             caps: UNKNOWN_CAPS,
             model_known: false,
+            tx_meters_asked: std::sync::atomic::AtomicBool::new(false),
         }
     }
 
@@ -532,10 +539,19 @@ impl Protocol for Kenwood {
         // One read, every meter: the rig answers `RM10000;RM20000;RM30000;` and
         // the digit says which is which.
         reqs.push(b"RM;".to_vec());
+        // This family has no output-power meter on CAT: `RM` carries SWR, COMP
+        // and ALC and `SM` reads zero on transmit. The only figure there is
+        // for "how much am I putting out" is the power the rig is set to, which
+        // is what the power dial shows (as a fraction of the 100 W scale the
+        // `PC` command uses everywhere else). It is the setting, not a
+        // measurement: into a bad match the real output is lower.
+        self.tx_meters_asked.store(true, std::sync::atomic::Ordering::Relaxed);
+        reqs.push(crate::pc_read_frame());
         reqs
     }
 
     fn rx_telemetry_requests(&self) -> Vec<Vec<u8>> {
+        self.tx_meters_asked.store(false, std::sync::atomic::Ordering::Relaxed);
         if self.caps.smeter_has_vfo { vec![b"SM0;".to_vec()] } else { vec![b"SM;".to_vec()] }
     }
 
@@ -674,7 +690,13 @@ impl Protocol for Kenwood {
                 }
             } else if let Some(rest) = msg.strip_prefix("PC") {
                 if let Some(frac) = crate::pc_parse(rest) {
-                    out.push(CatUpdate::Power(frac));
+                    if self.tx_meters_asked.load(std::sync::atomic::Ordering::Relaxed) {
+                        // On the air: this is the output-power figure, not a
+                        // level for the slider to adopt.
+                        out.push(CatUpdate::Po(frac));
+                    } else {
+                        out.push(CatUpdate::Power(frac));
+                    }
                 }
             } else if let Some(rest) = msg.strip_prefix("ID") {
                 if let Ok(id) = rest.trim().parse::<u32>() {
@@ -1014,7 +1036,7 @@ mod tests {
         // arrives on one read.
         let mut k = kenwood();
         parse_str(&mut k, "ID021;");
-        assert_eq!(frames(k.tx_telemetry_requests()), vec!["RM;"]);
+        assert_eq!(frames(k.tx_telemetry_requests()), vec!["RM;", "PC;"]);
         assert_eq!(swr(&mut k, "RM10012;"), Some(2.0));
 
         // The identical reading on a TS-2000, whose scale is twenty bars, is a
@@ -1028,11 +1050,27 @@ mod tests {
         // has to be told to report it at all.
         let mut k = kenwood();
         parse_str(&mut k, "ID024;");
-        assert_eq!(frames(k.tx_telemetry_requests()), vec!["RM21;", "RM;"]);
+        assert_eq!(frames(k.tx_telemetry_requests()), vec!["RM21;", "RM;", "PC;"]);
         assert_eq!(swr(&mut k, "RM20023;"), Some(2.0));
         // Reading meter 1 there would show a clean antenna as a fault whenever
         // the ALC moved.
         assert_eq!(swr(&mut k, "RM10023;"), None);
+    }
+
+    /// The report from a TS-2000 (F4NRM): on the air the power dial showed the
+    /// SWR because the rig never gave an output power. The set power is the only
+    /// figure the family has, so while transmitting its `PC` reply is the
+    /// output-power reading, and on receive it is still the level the slider
+    /// adopts.
+    #[test]
+    fn the_set_power_is_the_output_power_while_transmitting() {
+        let mut k = kenwood();
+        parse_str(&mut k, "ID019;");
+        assert_eq!(parse_str(&mut k, "PC050;"), vec![CatUpdate::Power(0.5)], "receiving");
+        k.tx_telemetry_requests();
+        assert_eq!(parse_str(&mut k, "PC050;"), vec![CatUpdate::Po(0.5)], "transmitting");
+        k.rx_telemetry_requests();
+        assert_eq!(parse_str(&mut k, "PC100;"), vec![CatUpdate::Power(1.0)], "receiving again");
     }
 
     #[test]

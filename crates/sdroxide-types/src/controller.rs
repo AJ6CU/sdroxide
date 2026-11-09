@@ -527,6 +527,10 @@ pub enum RadioEvent {
         /// The text of the file.
         json: String,
     },
+    /// The Meshtastic receiver's level, counters, nodes and packet log, a whole
+    /// snapshot each time. Bridged to remote and web clients as
+    /// `ServerMsg::MeshtasticStatus`.
+    MeshtasticStatus(Box<crate::MeshtasticStatus>),
 }
 
 /// Snapshot of the frontend's switchable sound devices (native clients).

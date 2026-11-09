@@ -573,6 +573,33 @@ fn pass_diagram(ui: &mut egui::Ui, curve: &PassCurve, now: i64, height: f32) {
     crate::chrome::paint_cut_border(&p, rect, theme::LINE_LIT(), theme::PANEL());
 }
 
+/// Parse a CTCSS tone from a SatLink's note (e.g. "CTCSS 67.0 Hz"): the first
+/// number after the word, or `None` when the note names no tone.
+fn parse_ctcss_hz(note: &str) -> Option<f64> {
+    let lower = note.to_lowercase();
+    if let Some(idx) = lower.find("ctcss") {
+        // Sliced from `lower`, the string `idx` was found in: lowercasing can
+        // change a character's width, so it is not an index into `note`.
+        let rest = &lower[idx..];
+        let mut num_str = String::new();
+        let mut found_dot = false;
+        for c in rest.chars().skip(5) {
+            if c.is_ascii_digit() {
+                num_str.push(c);
+            } else if c == '.' && !found_dot {
+                num_str.push(c);
+                found_dot = true;
+            } else if !num_str.is_empty() {
+                break;
+            }
+        }
+        if !num_str.is_empty() {
+            return num_str.parse().ok();
+        }
+    }
+    None
+}
+
 /// The mode a link's published emission maps onto. Satellite SSB convention
 /// is USB on the downlink, whatever the band. An SSTV downlink is FM on V/UHF,
 /// and tuning it as plain NFM would leave the picture undecoded (#622).
@@ -582,6 +609,11 @@ fn mode_for_link(l: &sdroxide_types::SatLink) -> Mode {
     if sstv && m.contains("FM") {
         Mode::SstvFm
     } else if m.contains("FM") || m.contains("APT") {
+        Mode::Nfm
+    } else if m.contains("AFSK") || m.contains("G3RUH") || m.contains("FSK 9K6") {
+        // Packet that rides an FM channel: 1200 Bd AFSK (APRS, the ISS
+        // digipeater's "AX.25 1k2 AFSK") and 9600 Bd G3RUH FSK. Caught before
+        // the AX.25 rule below, which would put them on USB.
         Mode::Nfm
     } else if m.contains("SSB") || m.contains("BPSK") || m.contains("GMSK") || m.contains("AX.25") {
         Mode::Usb
@@ -968,6 +1000,29 @@ impl SdroxideApp {
                 );
                 ui.label(dim(&tr!("sat-doppler-tx")));
                 ui.label(RichText::new(fmt_hz_signed(t.doppler_tx_hz)).size(11.5));
+                ui.end_row();
+            }
+
+            // Where the radio itself is tuned while the corrections ride on it:
+            // the dial above stays on the published frequency, so this is the
+            // one place the number on a CAT rig's own display can be read off.
+            if t.corrections_active {
+                // To the hertz, as the radio shows it, rather than `fmt_mhz`'s
+                // 100 Hz: the correction moves in steps far smaller than that.
+                ui.label(dim(&tr!("sat-rig-rx")));
+                ui.label(
+                    RichText::new(format!("{:.6} MHz", (t.downlink_hz + t.doppler_rx_hz) / 1e6))
+                        .size(11.5)
+                        .strong(),
+                );
+                if let Some(up) = t.uplink_hz {
+                    ui.label(dim(&tr!("sat-rig-tx")));
+                    ui.label(
+                        RichText::new(format!("{:.6} MHz", (up + t.doppler_tx_hz) / 1e6))
+                            .size(11.5)
+                            .strong(),
+                    );
+                }
                 ui.end_row();
             }
         });
@@ -1363,39 +1418,83 @@ impl SdroxideApp {
         }
         ui.add_space(6.0);
 
+        // Locked to this satellite on *this* link, as opposed to on another of
+        // its links: the lock carries the link's uplink mapping and its tone.
+        let on_this_link = locked_here
+            && win.sent.as_ref().is_some_and(|c| {
+                c.uplink == SatUplink::from_link(link) && c.ctcss_hz == parse_ctcss_hz(&link.note)
+            });
+        let e = &list.entries[entry_idx];
+        let lock_cfg = |dial_hz: f64, rotator: bool| SatLockConfig {
+            norad_id: id,
+            name: e.name.clone(),
+            tle: e.tle.clone(),
+            observer: qth,
+            downlink_hz: lock_downlink_hz(link, dial_hz),
+            uplink: SatUplink::from_link(link),
+            doppler: true,
+            ctcss_hz: parse_ctcss_hz(&link.note),
+            rotator,
+        };
+        let rotator = win.sent.as_ref().map(|c| c.rotator).unwrap_or(true);
+
         ui.horizontal(|ui| {
             if crate::chrome::chip(ui, false, tr!("sat-tune"))
-                .on_hover_text(tr!("sat-set-dial-mode-link-no"))
+                .on_hover_text(tr!("sat-tune-link-both-vfos"))
                 .clicked()
             {
                 if link.downlink.is_some() {
                     let active_hz = self.state.active_freq_hz();
-                    cmds.extend(tune_commands(link, self.state.active_vfo, active_hz));
+                    let active = self.state.active_vfo;
+                    cmds.extend(tune_commands(link, active, active_hz));
+                    // Both halves of the link: its uplink onto the other VFO,
+                    // the one a split transmits on.
+                    let down = lock_downlink_hz(link, active_hz);
+                    if let Some(u) = SatUplink::from_link(link) {
+                        let other = match active {
+                            Vfo::A => Vfo::B,
+                            Vfo::B => Vfo::A,
+                        };
+                        cmds.push(Command::SetVfo { vfo: other, hz: u.uplink_for(down) });
+                    }
+                    // Locked to this satellite on another of its links: the lock
+                    // follows to this one, uplink mapping and tone included.
+                    if locked_here && !on_this_link {
+                        let cfg = lock_cfg(active_hz, rotator);
+                        cmds.push(Command::SetSatLock(Some(Box::new(cfg.clone()))));
+                        win.sent = Some(cfg);
+                    }
                 }
             }
+            let locked_on_link = locked_here && on_this_link;
+            // Locked to this satellite on another of its links: the lock is
+            // still running there, and this moves it here — said as such, so a
+            // row picked in the list does not read as a lock that was lost.
+            let label = if locked_on_link {
+                tr!("sat-locked")
+            } else if locked_here {
+                tr!("sat-move-lock")
+            } else {
+                tr!("sat-lock")
+            };
             if crate::chrome::chip_accent(
                 ui,
                 locked_here,
-                RichText::new(if locked_here { tr!("sat-locked") } else { tr!("sat-lock") })
-                    .strong(),
+                RichText::new(label).strong(),
                 theme::GREEN(),
                 theme::INK_ON_CYAN(),
             )
-            .on_hover_text(tr!("sat-track-satellite-doppler-correction-rx"))
+            .on_hover_text(if locked_here && !locked_on_link {
+                tr!("sat-locked-other-link-move-lock")
+            } else {
+                tr!("sat-track-satellite-doppler-correction-rx")
+            })
             .clicked()
-                && !locked_here
+                && !locked_on_link
             {
-                let e = &list.entries[entry_idx];
-                let cfg = SatLockConfig {
-                    norad_id: id,
-                    name: e.name.clone(),
-                    tle: e.tle.clone(),
-                    observer: qth,
-                    downlink_hz: lock_downlink_hz(link, self.state.active_freq_hz()),
-                    uplink: SatUplink::from_link(link),
-                    doppler: true,
-                    rotator: win.sent.as_ref().map(|c| c.rotator).unwrap_or(true),
-                };
+                // Not locked, or locked on another of this satellite's links:
+                // either way the lock is (re)made on the link selected.
+                let cfg = lock_cfg(self.state.active_freq_hz(), rotator);
                 cmds.push(Command::SetMode {
                     rx: sdroxide_types::RxId::Main,
                     mode: mode_for_link(link),
@@ -1451,6 +1550,7 @@ impl SdroxideApp {
             downlink_hz: lock_downlink_hz(link, self.state.active_freq_hz()),
             uplink: SatUplink::from_link(link),
             doppler: true,
+            ctcss_hz: parse_ctcss_hz(&link.note),
             rotator: true,
         };
         cmds.push(Command::SetMode { rx: sdroxide_types::RxId::Main, mode: mode_for_link(link) });
@@ -1518,5 +1618,28 @@ mod tests {
         // Voice stays voice.
         let voice = SatLink::down("FM voice", "FM", Passband::at(145.800));
         assert_eq!(mode_for_link(&voice), Mode::Nfm);
+    }
+
+    /// The tone a link's note names, or none.
+    #[test]
+    fn the_ctcss_tone_is_read_from_the_note() {
+        assert_eq!(parse_ctcss_hz("FM voice, CTCSS 67.0 Hz"), Some(67.0));
+        assert_eq!(parse_ctcss_hz("ctcss: 141.3Hz uplink"), Some(141.3));
+        assert_eq!(parse_ctcss_hz("CTCSS 88"), Some(88.0));
+        assert_eq!(parse_ctcss_hz("no tone here"), None);
+        assert_eq!(parse_ctcss_hz("CTCSS"), None);
+        assert_eq!(parse_ctcss_hz(""), None);
+        // A character whose lowercase is wider (İ) ahead of the word must not
+        // shift the slice.
+        assert_eq!(parse_ctcss_hz("İİİ CTCSS 67.0"), Some(67.0));
+    }
+
+    /// 1200 Bd AFSK rides FM: the ISS digipeater must not come up on USB.
+    #[test]
+    fn afsk_packet_tunes_in_fm_and_bpsk_stays_on_usb() {
+        let aprs = SatLink::down("APRS digipeater", "AX.25 1k2 AFSK", Passband::at(145.825));
+        assert_eq!(mode_for_link(&aprs), Mode::Nfm);
+        let bpsk = SatLink::down("Telemetry", "BPSK 1k2", Passband::at(145.935));
+        assert_eq!(mode_for_link(&bpsk), Mode::Usb);
     }
 }

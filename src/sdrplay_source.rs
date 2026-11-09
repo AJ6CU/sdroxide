@@ -716,14 +716,10 @@ impl IqSource for SdrPlaySource {
                     ));
                 }
             }
-            (_, DuoMode::Split) => notes.push(format!(
-                "Running on the RSPduo's tuner {}, with its other tuner free for a second \
-                 radio on its own frequency. Both share one ADC clock, so both run at \
-                 {:.3} Msps.",
-                self.handle.tuner() + 1,
-                self.handle.out_rate_hz() / 1e6,
-            )),
-            (false, DuoMode::Single) => {}
+            // Split is the configuration the operator asked for: nothing to warn
+            // about. The tuner and the shared 2.000 Msps rate are in the log and
+            // the manual.
+            (_, DuoMode::Split) | (false, DuoMode::Single) => {}
         }
         if notes.is_empty() { None } else { Some(notes.join("\n")) }
     }

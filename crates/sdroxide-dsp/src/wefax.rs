@@ -531,6 +531,26 @@ pub struct WefaxRx {
     inst_hz: f64,
     in_level: f32,
 
+    // The picture's own discriminator: a wider band-pass than the detection
+    // one (so edges are not rounded off), and a phase step kept per sample
+    // instead of a frequency, so a pixel is the angle of the *sum* of the steps
+    // across it. That weights each sample by its own signal strength: a weak or
+    // crashed sample barely moves a pixel that has strong ones beside it.
+    pic_lpf: ComplexFir,
+    pic_prev: Complex32,
+    pic_have_prev: bool,
+    /// Recent mean length of a phase step, which a single step is capped to
+    /// twice of, so an impulse cannot outvote the signal it lands on.
+    pic_mag: f32,
+    /// The phase steps of the samples since the line being built began (and the
+    /// last one before it), and the sample position of the first of them.
+    px_buf: Vec<Complex32>,
+    px_start: f64,
+    /// Whether the picture goes through the S-shaped contrast curve.
+    contrast: bool,
+    /// Whether a pixel with nothing to say takes its neighbour's value.
+    fill: bool,
+
     // Settings.
     ioc: Ioc,
     lpm: Lpm,
@@ -948,6 +968,14 @@ impl WefaxRx {
             have_prev: false,
             inst_hz: CENTRE_HZ,
             in_level: 0.0,
+            pic_lpf: ComplexFir::new(bandpass_taps(129, -PIC_HALF_BW_HZ, PIC_HALF_BW_HZ, rate)),
+            pic_prev: Complex32::new(0.0, 0.0),
+            pic_have_prev: false,
+            pic_mag: 0.0,
+            px_buf: Vec::new(),
+            px_start: 0.0,
+            contrast: true,
+            fill: true,
             ioc: Ioc::default(),
             lpm: Lpm::default(),
             auto_start: true,
@@ -1181,6 +1209,7 @@ impl WefaxRx {
         self.ioc = ioc;
         self.phase = Phase::Phasing;
         self.line_buf.clear();
+        self.px_buf.clear();
         self.line_start = self.sample_idx as f64;
         self.line_no = 0;
         self.phase_samples = 0;
@@ -1226,6 +1255,7 @@ impl WefaxRx {
         self.start_pending = false;
         self.phase = Phase::Idle;
         self.line_buf.clear();
+        self.px_buf.clear();
         self.rephase_lines = 0;
         self.start_det.reset();
         self.stop_det.reset();
@@ -1312,9 +1342,12 @@ impl WefaxRx {
         }
         let mut bb = Vec::with_capacity(audio.len());
         self.lpf.process(&mixed, &mut bb);
+        let mut pic = Vec::with_capacity(audio.len());
+        self.pic_lpf.process(&mixed, &mut pic);
 
         for (i, z) in bb.into_iter().enumerate() {
             let a = audio.get(i).copied().unwrap_or(0.0);
+            let step = self.pic_step(pic.get(i).copied().unwrap_or_default());
             self.band_raw += a * a;
             self.band_sub += z.norm_sqr();
             if let Some(tone) = self.audio_tone.push(a) {
@@ -1338,9 +1371,114 @@ impl WefaxRx {
 
             match self.phase {
                 Phase::Idle => self.step_idle(level, out),
-                Phase::Phasing | Phase::Image => self.step_receiving(level, out),
+                Phase::Phasing | Phase::Image => self.step_receiving(level, step, out),
             }
         }
+    }
+
+    /// Switch the S-shaped contrast curve, for before/after measurements.
+    #[cfg(test)]
+    fn set_contrast(&mut self, on: bool) {
+        self.contrast = on;
+    }
+
+    /// Switch the filling of empty pixels, for measurements.
+    #[cfg(test)]
+    fn set_fill(&mut self, on: bool) {
+        self.fill = on;
+    }
+
+    /// Re-cut the picture band-pass, for measurements.
+    #[cfg(test)]
+    fn set_pic_band(&mut self, half_hz: f64) {
+        self.pic_lpf = ComplexFir::new(bandpass_taps(129, -half_hz, half_hz, self.rate));
+    }
+
+    /// The picture discriminator's phase step for one sample, capped.
+    fn pic_step(&mut self, z: Complex32) -> Complex32 {
+        let d = if self.pic_have_prev { z * self.pic_prev.conj() } else { Complex32::default() };
+        self.pic_prev = z;
+        self.pic_have_prev = true;
+        let m = d.norm();
+        let cap = PIC_CRASH * self.pic_mag;
+        if self.pic_mag > 0.0 && m > cap {
+            // Slowly, so a signal that really has grown is not blanked for good.
+            self.pic_mag += 0.0002 * (m - self.pic_mag);
+            return Complex32::default();
+        }
+        self.pic_mag += 0.002 * (m - self.pic_mag);
+        d
+    }
+
+    /// Draw the line that began at `from` (in samples) from the phase steps in
+    /// hand, then drop the steps before the next one.
+    fn picture(&mut self, from: f64) -> Vec<u8> {
+        let origin = from - self.px_start - PIC_DELAY_SAMPLES;
+        let sums =
+            picture_line(&self.px_buf, origin, self.samples_per_line(), self.ioc.width() as usize);
+        self.shade(&sums)
+    }
+
+    /// Brightness of each pixel's summed phase step, 0..255.
+    ///
+    /// A pixel the crash blanker emptied (less than a third of the signal it
+    /// should hold) or whose steps point every way (no coherence, which is what
+    /// noise on a weak pixel looks like) has nothing to say: it takes the
+    /// nearest pixel that does, up to [`PIC_FILL_PX`] away, and is left as it
+    /// is when none is that close.
+    fn shade(&self, sums: &[(Complex32, f32)]) -> Vec<u8> {
+        let expect = self.samples_per_line() as f32 / sums.len().max(1) as f32 * self.pic_mag;
+        let valid = |&(s, m): &(Complex32, f32)| {
+            !self.fill || (m >= PIC_MIN_WEIGHT * expect && s.norm() >= PIC_COHERENCE * m)
+        };
+        let level = |&(s, _): &(Complex32, f32)| -> u8 {
+            if s.norm_sqr() <= 0.0 {
+                return 0;
+            }
+            let hz = CENTRE_HZ + f64::from(s.arg()) * self.rate / TAU;
+            let mut l = self.level_of(hz);
+            if self.contrast {
+                l = 0.5 * l + 0.5 * l * l * (3.0 - 2.0 * l);
+            }
+            (l * 255.0).round().clamp(0.0, 255.0) as u8
+        };
+        let ok: Vec<bool> = sums.iter().map(valid).collect();
+        // Nearest valid pixel on each side, by one pass each way.
+        let n = sums.len();
+        let mut left = vec![usize::MAX; n];
+        let mut last = usize::MAX;
+        for i in 0..n {
+            if ok[i] {
+                last = i;
+            }
+            left[i] = last;
+        }
+        let mut right = vec![usize::MAX; n];
+        last = usize::MAX;
+        for i in (0..n).rev() {
+            if ok[i] {
+                last = i;
+            }
+            right[i] = last;
+        }
+        (0..n)
+            .map(|i| {
+                if ok[i] {
+                    return level(&sums[i]);
+                }
+                let dl = if left[i] == usize::MAX { usize::MAX } else { i - left[i] };
+                let dr = if right[i] == usize::MAX { usize::MAX } else { right[i] - i };
+                let j = if dl <= dr { left[i] } else { right[i] };
+                if dl.min(dr) <= PIC_FILL_PX { level(&sums[j]) } else { level(&sums[i]) }
+            })
+            .collect()
+    }
+
+    /// Forget the phase steps before sample `from`.
+    fn trim_steps(&mut self, from: f64) {
+        let cut = ((from - self.px_start).floor().max(0.0) as usize).min(self.px_buf.len());
+        self.px_buf.drain(..cut);
+        self.px_start += cut as f64;
     }
 
     /// A window of plain audio has been classified.
@@ -1612,7 +1750,12 @@ impl WefaxRx {
 
     /// Receiving: accumulate the line, watch for the stop tone — and for the
     /// next transmission arriving on top of this one.
-    fn step_receiving(&mut self, level: f32, out: &mut Vec<WefaxEvent>) {
+    fn step_receiving(&mut self, level: f32, step: Complex32, out: &mut Vec<WefaxEvent>) {
+        if self.px_buf.is_empty() {
+            // The sample just counted occupies [sample_idx - 1, sample_idx).
+            self.px_start = self.sample_idx as f64 - 1.0;
+        }
+        self.px_buf.push(step);
         self.line_buf.push(level);
         self.hz_buf.push(self.inst_hz as f32);
 
@@ -1700,7 +1843,10 @@ impl WefaxRx {
         // One line's worth of brightness is in hand.
         let line: Vec<f32> = std::mem::take(&mut self.line_buf);
         let line_hz: Vec<f32> = std::mem::take(&mut self.hz_buf);
+        let from = self.line_start;
         self.line_start = end;
+        // Earlier lines are drawn and gone: keep this one and what follows.
+        self.trim_steps(from);
 
         match self.phase {
             Phase::Phasing => {
@@ -1786,13 +1932,13 @@ impl WefaxRx {
                     self.lead_phasing = None;
                 }
                 if self.auto_begun && self.note_blank_line(&line) {
-                    let gray = resample_line(&line, self.ioc.width() as usize);
+                    let gray = self.picture(from);
                     out.push(WefaxEvent::Line { y: self.line_no, gray });
                     self.line_no = self.line_no.saturating_add(1);
                     self.finish(false, out);
                     return;
                 }
-                let gray = resample_line(&line, self.ioc.width() as usize);
+                let gray = self.picture(from);
                 out.push(WefaxEvent::Line { y: self.line_no, gray });
                 self.line_no = self.line_no.saturating_add(1);
                 if self.line_no >= MAX_LINES {
@@ -1809,23 +1955,54 @@ fn brightness_between(hz: f64, black: f64, white: f64) -> f32 {
     (((hz - black) / (white - black)) as f32).clamp(0.0, 1.0)
 }
 
-/// Average a line's samples down to `width` pixels.
-///
-/// A box average rather than a pick: at 120 LPM and a 12 kHz tap there are
-/// three or four samples per pixel, and taking one of them throws away most of
-/// the signal-to-noise the wide-band discriminator just earned.
-fn resample_line(line: &[f32], width: usize) -> Vec<u8> {
-    let mut out = vec![0u8; width];
-    if line.is_empty() {
+/// Half the picture band-pass's width, Hz. The detection filter is ±1100 Hz and
+/// is kept as it is. A wider one for the picture sharpens an edge (1.8 pixels
+/// wide at ±1100, 1.6 at ±1300, 1.4 at ±1400 on the test chart) and lets in
+/// noise at the same rate: on a real recording the isolated pixels per line
+/// went 1.5, 2.1, 2.7, 3.2 over the same widths. ±1200 is the middle.
+const PIC_HALF_BW_HZ: f64 = 1200.0;
+
+/// The detection brightness is smoothed by a one-pole filter that lags the raw
+/// discriminator by a sample; the picture is cut on the raw one, so its line
+/// starts this much earlier than the line clock found on the smoothed one.
+const PIC_DELAY_SAMPLES: f64 = 1.0;
+
+/// A phase step longer than this many times the recent mean is a crash, not
+/// signal, and is left out of the pixel it lands in.
+const PIC_CRASH: f32 = 3.0;
+
+/// Share of its expected signal a pixel needs to be drawn from its own steps.
+const PIC_MIN_WEIGHT: f32 = 0.34;
+
+/// Coherence a pixel needs, and how far its stand-in may be, pixels.
+const PIC_COHERENCE: f32 = 0.25;
+const PIC_FILL_PX: usize = 24;
+
+/// Sum the phase steps across each of `width` pixels of a line that begins
+/// `origin` steps into `px` and is `spl` long. The ends of a pixel count in
+/// part, by how much of the step they cover, so no pixel is a step wider than
+/// its neighbour. Returns each pixel's sum and the sum of its steps' lengths.
+fn picture_line(px: &[Complex32], origin: f64, spl: f64, width: usize) -> Vec<(Complex32, f32)> {
+    let mut out = vec![(Complex32::default(), 0.0f32); width];
+    if px.is_empty() || width == 0 {
         return out;
     }
-    let step = line.len() as f64 / width as f64;
-    for (x, px) in out.iter_mut().enumerate() {
-        let a = (x as f64 * step) as usize;
-        let b = (((x + 1) as f64 * step) as usize).max(a + 1).min(line.len());
-        let sum: f32 = line[a..b].iter().sum();
-        let mean = sum / (b - a) as f32;
-        *px = (mean * 255.0).round().clamp(0.0, 255.0) as u8;
+    let step = spl / width as f64;
+    let last = px.len() as f64;
+    for (x, o) in out.iter_mut().enumerate() {
+        let a = (origin + x as f64 * step).clamp(0.0, last);
+        let b = (origin + (x + 1) as f64 * step).clamp(0.0, last);
+        if b <= a {
+            continue;
+        }
+        let (ia, ib) = (a.floor() as usize, (b.ceil() as usize).min(px.len()));
+        let (mut s, mut m) = (Complex32::default(), 0.0f32);
+        for (i, d) in px.iter().enumerate().take(ib).skip(ia) {
+            let w = ((i as f64 + 1.0).min(b) - (i as f64).max(a)) as f32;
+            s += *d * w;
+            m += d.norm() * w;
+        }
+        *o = (s, m);
     }
     out
 }
@@ -3103,13 +3280,20 @@ mod tests {
     }
 
     #[test]
-    fn a_line_is_averaged_down_to_the_requested_width() {
-        // Two samples per pixel, so the box average is the mean of each pair.
-        let line: Vec<f32> = vec![0.0, 1.0, 0.0, 1.0, 1.0, 1.0];
-        assert_eq!(resample_line(&line, 3), vec![128, 128, 255]);
-        // Fewer samples than pixels still fills the row rather than panicking.
-        assert_eq!(resample_line(&[1.0], 4).len(), 4);
-        assert_eq!(resample_line(&[], 4), vec![0, 0, 0, 0]);
+    fn a_line_is_summed_down_to_the_requested_width_with_partial_ends() {
+        let one = Complex32::new(1.0, 0.0);
+        let px = vec![one; 6];
+        // Two steps per pixel: each pixel's sum is two steps long.
+        let s = picture_line(&px, 0.0, 6.0, 3);
+        assert!(s.iter().all(|(c, m)| (c.re - 2.0).abs() < 1e-5 && (m - 2.0).abs() < 1e-5));
+        // A pixel boundary in the middle of a step splits the step's weight:
+        // 2.5 steps per pixel from half a step in.
+        let s = picture_line(&px, 0.5, 5.0, 2);
+        assert!((s[0].1 - 2.5).abs() < 1e-5 && (s[1].1 - 2.5).abs() < 1e-5, "{s:?}");
+        // Before the buffer and after it there is nothing, not a panic.
+        let s = picture_line(&px, -3.0, 6.0, 3);
+        assert!(s[0].1 == 0.0 && s[2].1 > 0.0);
+        assert_eq!(picture_line(&[], 0.0, 6.0, 3).len(), 3);
     }
     /// **The real thing: an off-air recording decodes a picture.**
     ///
@@ -3337,6 +3521,194 @@ mod tests {
         rx.set_sensitivity(5);
         let loose = rx.audio_tone.purity_threshold();
         assert!(loose < AUDIO_TONE_PURITY && AUDIO_TONE_PURITY < strict, "{loose} < {strict}");
+    }
+
+    // ----- Sharpness of a strong picture -------------------------------------
+
+    /// One line of the sharpness chart, as pixel values 0.0 / 1.0, 1809 of them:
+    /// white, 3-pixel stripes at 330..670, a black block at 700..899, a white
+    /// field at 900..1499, a black block at 1500..1699, white to the end.
+    fn sharp_pixel(x: usize) -> f32 {
+        match x {
+            330..670 => {
+                if ((x - 330) / 3) % 2 == 0 {
+                    0.0
+                } else {
+                    1.0
+                }
+            }
+            700..900 | 1500..1700 => 0.0,
+            _ => 1.0,
+        }
+    }
+
+    /// `lines` lines of that chart at 120 LPM, modulated.
+    fn sharp_chart(lines: usize) -> Vec<f32> {
+        let per = (RATE * Lpm::L120.line_secs()) as usize;
+        let w = Ioc::I576.width() as usize;
+        let mut levels = Vec::with_capacity(per * lines);
+        for _ in 0..lines {
+            for i in 0..per {
+                levels.push(sharp_pixel(i * w / per));
+            }
+        }
+        modulate(&levels)
+    }
+
+    /// What the receiver draws of the chart, averaged over the lines.
+    #[derive(Debug)]
+    struct Sharpness {
+        /// Pixels in the middle of the edge at x = 700 (values 25..230).
+        front: f32,
+        /// Stripe contrast: brightest minus darkest in each 6-pixel period, 0..255.
+        stripes: f32,
+        /// Pixels in the flats on the wrong side of 127, per line.
+        stray: f32,
+        /// Pixels in the flats more than 40 from the right value, per line.
+        off: f32,
+    }
+
+    fn sharpness(audio: &[f32]) -> Sharpness {
+        sharpness_with(audio, |_| {})
+    }
+
+    fn sharpness_with(audio: &[f32], setup: impl Fn(&mut WefaxRx)) -> Sharpness {
+        let mut rx = WefaxRx::new(RATE);
+        setup(&mut rx);
+        into_image(&mut rx, Lpm::L120);
+        let ev = drain(&mut rx, audio);
+        let rows: Vec<&Vec<u8>> = ev
+            .iter()
+            .filter_map(|e| match e {
+                WefaxEvent::Line { gray, .. } => Some(gray),
+                _ => None,
+            })
+            .collect();
+        assert!(rows.len() >= 12, "only {} lines", rows.len());
+        // The first and last lines carry the junction with the phasing signal.
+        let rows = &rows[3..rows.len() - 1];
+        let n = rows.len() as f32;
+        let (mut front, mut stripes, mut stray, mut off) = (0.0f32, 0.0f32, 0.0f32, 0.0f32);
+        for r in rows {
+            // Where the edge really is, so a pixel or two of line phase does not
+            // change what is measured.
+            let d = (690..712).find(|&x| r[x] < 127 && r[x + 1] >= 127).unwrap_or(700) as i32 - 700;
+            let at = |x: i32| r[(x + d) as usize];
+            front += (694..706).filter(|&x| (25..=230).contains(&at(x))).count() as f32;
+            let mut c = 0.0f32;
+            let mut k = 0.0f32;
+            for p in (336..660).step_by(6) {
+                let seg = (p..p + 6).map(|x| at(x) as f32);
+                let hi = seg.clone().fold(0.0f32, f32::max);
+                let lo = seg.fold(255.0f32, f32::min);
+                c += hi - lo;
+                k += 1.0;
+            }
+            stripes += c / k;
+            for (a, b, want) in [(712, 888, 0u8), (912, 1488, 255), (1512, 1688, 0)] {
+                for x in a..b {
+                    let v = at(x);
+                    if (v >= 127) != (want == 255) {
+                        stray += 1.0;
+                    }
+                    if (i32::from(v) - i32::from(want)).abs() > 40 {
+                        off += 1.0;
+                    }
+                }
+            }
+        }
+        Sharpness { front: front / n, stripes: stripes / n, stray: stray / n, off: off / n }
+    }
+
+    /// Bursts of impulse noise: 40 samples every 2900, at amplitude 6.
+    fn crashes(audio: &mut [f32]) {
+        let mut s = 0x9E37_79B9_7F4A_7C15u64;
+        for (i, v) in audio.iter_mut().enumerate() {
+            if i % 2900 < 40 {
+                s ^= s << 13;
+                s ^= s >> 7;
+                s ^= s << 17;
+                *v += (((s >> 40) as f32) / 16_777_216.0 - 0.5) * 12.0;
+            }
+        }
+    }
+
+    /// Measurement only: the chart with several settings, printed.
+    #[test]
+    #[ignore]
+    fn sharpness_sweep() {
+        let clean = sharp_chart(40);
+        let mut noisy = sharp_chart(40);
+        noise(&mut noisy, 0.3);
+        crashes(&mut noisy);
+        for (bw, curve, fill) in [
+            (1100.0, false, false),
+            (1100.0, false, true),
+            (1100.0, true, true),
+            (1300.0, true, true),
+            (1400.0, true, true),
+            (1500.0, true, true),
+        ] {
+            {
+                let set = |rx: &mut WefaxRx| {
+                    rx.set_pic_band(bw);
+                    rx.set_contrast(curve);
+                    rx.set_fill(fill);
+                };
+                eprintln!("bw {bw} curve {curve} fill {fill}");
+                eprintln!("  clean: {:?}", sharpness_with(&clean, set));
+                eprintln!("  noisy: {:?}", sharpness_with(&noisy, set));
+            }
+        }
+    }
+
+    /// A strong, clean chart comes out with a sharp edge and full stripes.
+    #[test]
+    fn a_clean_strong_chart_is_sharp() {
+        let m = sharpness(&sharp_chart(40));
+        eprintln!("clean: {m:?}");
+        // Measured: front 2.0, stripes 255 (before the weighted detector: 2.0, 243).
+        assert!(m.front <= 2.5, "{m:?}");
+        assert!(m.stripes >= 250.0, "{m:?}");
+        assert!(m.stray < 0.5, "{m:?}");
+    }
+
+    /// The pieces that are only for the picture each earn their place on a
+    /// noisy chart: filling a pixel the crash blanker emptied removes strays,
+    /// and the contrast curve narrows the edge and pulls grey back to the rails.
+    #[test]
+    fn the_fill_and_the_contrast_curve_each_help_a_noisy_chart() {
+        let mut audio = sharp_chart(40);
+        noise(&mut audio, 0.3);
+        crashes(&mut audio);
+        let plain = sharpness_with(&audio, |rx| {
+            rx.set_fill(false);
+            rx.set_contrast(false);
+        });
+        let fill = sharpness_with(&audio, |rx| rx.set_contrast(false));
+        let both = sharpness(&audio);
+        eprintln!("plain {plain:?}\nfill  {fill:?}\nboth  {both:?}");
+        assert!(fill.stray < plain.stray - 1.0, "{plain:?} {fill:?}");
+        assert!(both.front < fill.front - 0.3, "{fill:?} {both:?}");
+        assert!(both.off < fill.off * 0.8, "{fill:?} {both:?}");
+    }
+
+    /// A strong chart under noise and impulse crashes has no stray pixels in
+    /// its flat areas.
+    #[test]
+    fn a_strong_chart_with_noise_and_crashes_has_no_stray_pixels() {
+        let mut audio = sharp_chart(40);
+        noise(&mut audio, 0.3);
+        crashes(&mut audio);
+        let m = sharpness(&audio);
+        eprintln!("noisy: {m:?}");
+        // Measured with the 40-sample crashes every 2900 samples: stray 8.8, off
+        // 16 per line (before this change: 8.3 and 18; the receiver's own
+        // crashes bury a pixel, and the guard is that no more get through).
+        assert!(m.stray < 11.0, "{m:?}");
+        assert!(m.off < 25.0, "{m:?}");
+        assert!(m.front <= 2.5, "{m:?}");
+        assert!(m.stripes >= 240.0, "{m:?}");
     }
 }
 

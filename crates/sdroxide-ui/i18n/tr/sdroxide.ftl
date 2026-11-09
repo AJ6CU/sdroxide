@@ -3182,7 +3182,6 @@ sat-downlink-mhz = AŞAĞI BAĞLANTI (MHz)
 sat-uplink-mhz = YUKARI BAĞLANTI (MHz)
 sat-mode = MOD
 sat-tune = AYARLA
-sat-set-dial-mode-link-no = Skalayı ve modu bu bağlantıya ayarlayın — kilit yok, düzeltme yok
 sat-locked = {" "}KİLİTLİ{" "}
 sat-lock = {" "}KİLİTLE{" "}
 sat-track-satellite-doppler-correction-rx = Bu uyduyu izleyin: RX ve TX'te Doppler düzeltmesi, transponder eşleşmeli yukarı bağlantı ve 3B görünüm onu izler
@@ -9378,11 +9377,13 @@ meter-view-swr = SWR
 
 meter-view-alc = ALC
 
-smeter-arrow-prev-hover = Önceki ölçüm: { $view }{ $when }
+smeter-arrow-prev-hover = Önceki ölçüm: { $view }
 
-smeter-arrow-next-hover = Sonraki ölçüm: { $view }{ $when }
+smeter-arrow-next-hover = Sonraki ölçüm: { $view }
 
-smeter-arrow-on-receive = (vericiyle yayın yaparken kullanılır)
+smeter-arrow-prev-face = Önceki kadran
+
+smeter-arrow-next-face = Sonraki kadran
 
 sonde-card-source-both = Telsiz + SondeHub (ikisi de alıyor)
 
@@ -9483,3 +9484,120 @@ qrzcard-switch = İmleç bir çağrı işaretinin üzerinde durunca QRZ kartın�
 qrzcard-switch-hint = QRZ.com'dan fotoğraf, ad, yaş, adres, lokatör ve QSL; şelalede, çözücülerde ve spot listelerinde. Fotoğraf, e-posta ve doğum tarihi için QRZ XML aboneliği gerekir.
 
 qrzcard-needs-login = Kartı etkinleştirmek için sağlayıcı olarak QRZ'yi seçin ve QRZ kullanıcı adı ile parolanızı girin.
+
+meshtastic-title = Meshtastic
+
+meshtastic-receive = Alım
+
+meshtastic-region = Bölge
+
+meshtastic-preset = Ön ayar
+
+meshtastic-channel = Kanal
+
+meshtastic-tune = Burayı dinle
+
+meshtastic-tune-hint = Alıcıyı açar ve radyoyu bu kanala getirir. Radyo menüsündeki alım bandı listesi burada dinlenip dinlenemeyeceğine karar verir. Kapattığınızda ya da çıktığınızda radyo eski yerine döner.
+
+meshtastic-keys = Anahtarlar
+
+meshtastic-keys-hint = Ad=anahtar, virgülle ayrılmış (hex:…, base64:…, simple1..10). Varsayılan anahtar her zaman denenir.
+
+meshtastic-state-off = Alıcı kapalı.
+
+meshtastic-level = Seviye { $db } dBFS
+
+meshtastic-counts = { $pre } öncül · { $ok } çerçeve · { $bad } hatalı CRC
+
+meshtastic-refused-band = ALIM YASAK — { $freq } MHz ({ $band }) onaylanmış bir alım bandı değil. Radyo menüsü, alım bantları bölümünde işaretleyip onaylayın.
+
+meshtastic-refused-unconfirmed = ALIM YASAK — bu radyonun alım bantları henüz onaylanmadı. Radyo menüsü, alım bantları bölümünde kontrol edip onaylayın.
+
+meshtastic-out-of-window = Kanal, radyonun yakaladığı örnek penceresinin dışında: daha yakına ayarlayın veya daha geniş bir örnekleme hızı kullanın.
+
+meshtastic-none-yet = Henüz bir şey duyulmadı.
+
+meshtastic-nodes = Düğümler ({ $n })
+
+meshtastic-log = Paketler ({ $n })
+
+meshtastic-col-id = Düğüm
+
+meshtastic-col-name = Ad
+
+meshtastic-col-heard = Duyuldu
+
+meshtastic-col-snr = SNR
+
+meshtastic-col-hops = Atlama
+
+meshtastic-col-position = Konum
+
+meshtastic-col-battery = Pil
+
+meshtastic-encrypted = şifreli (anahtar yok)
+
+meshtastic-via-mqtt = MQTT üzerinden
+
+meshtastic-bench-hint = Meshtastic penceresini açar: tek bir kanalın LoRa ağ trafiği.
+
+extras-meshtastic-hint = Meshtastic: tek bir kanalın LoRa ağ trafiği, duyulan düğümler ve paketler.
+
+meshtastic-message = Mesaj
+
+meshtastic-message-hint = Kanaldaki herkes için metin (en fazla 200 bayt)
+
+meshtastic-send = Gönder…
+
+meshtastic-send-hint = Onayınızdan sonra bu metni kanalda yayınlar. Ayarlar, Radyo bölümündeki yayın bandı listesi burada yayın yapılıp yapılamayacağına karar verir; radyo kanalda olmalıdır (Burayı dinle).
+
+meshtastic-confirm = Şimdi { $freq } MHz üzerinde yayın yapılsın mı ({ $air } sn yayın süresi)? Menzildeki herkes duyacak ve bundan lisansınız ile bu bandın kuralları uyarınca siz sorumlusunuz.
+
+meshtastic-confirm-yes = Yayınla
+
+meshtastic-confirm-no = İptal
+
+meshtastic-transmitting = YAYINDA…
+
+meshtastic-tx-airtime = Bu saatte yayın süresi: { $used } sn / { $budget } sn
+
+meshtastic-tx-airtime-free = Bu saatte yayın süresi: { $used } sn (bu bölge için sınır tanımlı değil)
+
+meshtastic-tx-sent = { $n } gönderildi
+
+meshtastic-tx-band-off = YAYIN YASAK — { $freq } MHz ({ $band }) onaylanmış bir yayın bandı değil. Ayarlar → Radyo → Yayın bantları bölümünde işaretleyip onaylayın.
+
+meshtastic-tx-unconfirmed = YAYIN YASAK — bu radyonun yayın bantları henüz onaylanmadı. Ayarlar → Radyo → Yayın bantları bölümünde kontrol edip onaylayın.
+
+meshtastic-tx-duty = Bu bölge için görev döngüsü sınırına ulaşıldı: sonraki mesajdan önce { $s } sn bekleyin.
+
+meshtastic-tx-too-long = Bu mesaj tek başına bu bölge için bir saatlik yayın süresi bütçesinin tamamından uzun.
+
+meshtastic-tx-off-channel = Radyo kanalda değil: önce Burayı dinle düğmesine basın, böylece kadran kanala gelir.
+
+meshtastic-tx-no-transmitter = Bu radyo ham I/Q gönderemez (ses alan bir telsiz veya yalnızca alıcı bir cihaz).
+
+meshtastic-tx-bad-text = Metin boş ya da çok uzun (en fazla 200 bayt).
+
+meshtastic-tx-busy = Zaten bir yayın sürüyor.
+
+meshtastic-tx-rails = Verici yayına geçmeyi reddetti: nedeni yayın mesajında görün.
+rx-bands-swl-note = Bu telsiz için SWL modu açık: alma kilidi yok. Her banda ayarlanabilir.
+
+rx-bands-always-open = Dinleme bantları (ve SWL modu) alma için her zaman açıktır.
+
+sat-tune-link-both-vfos = Kadranı, diğer VFO'yu ve modu bu bağlantıya ayarlar — iniş hattı bu VFO'da, yükseliş hattı diğerinde; bu uydudaki kilit ona geçer
+
+sat-move-lock = {" "}KİLİDİ TAŞI{" "}
+
+sat-locked-other-link-move-lock = Bu uyduya başka bir bağlantıyla kilitli: kilidi buna taşı — yükseliş hattı, tonu ve Doppler'i ile
+
+sat-rig-rx = TELSİZ RX
+
+sat-rig-tx = TELSİZ TX
+
+topbar-sat-locked-vfo-a-downlink-b-uplink = Bir uyduya kilitli: kilit bitene kadar VFO A iniş hattı, VFO B yükseliş hattıdır
+
+qrzcard-photo-loading = Fotoğraf yükleniyor…
+
+qrzcard-no-photo = Fotoğrafsız kayıt

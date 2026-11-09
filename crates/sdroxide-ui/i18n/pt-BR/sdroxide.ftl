@@ -3182,7 +3182,6 @@ sat-downlink-mhz = DESCIDA (MHz)
 sat-uplink-mhz = SUBIDA (MHz)
 sat-mode = MODO
 sat-tune = SINTONIZAR
-sat-set-dial-mode-link-no = Define o dial e o modo para este enlace — sem travamento, sem correção
 sat-locked = {" "}TRAVADO{" "}
 sat-lock = {" "}TRAVAR{" "}
 sat-track-satellite-doppler-correction-rx = Rastreia este satélite: correção Doppler no RX e no TX, subida mapeada no transponder, e a visão 3D o acompanha
@@ -9378,11 +9377,13 @@ meter-view-swr = ROE
 
 meter-view-alc = ALC
 
-smeter-arrow-prev-hover = Medição anterior: { $view }{ $when }
+smeter-arrow-prev-hover = Medição anterior: { $view }
 
-smeter-arrow-next-hover = Próxima medição: { $view }{ $when }
+smeter-arrow-next-hover = Próxima medição: { $view }
 
-smeter-arrow-on-receive = (usada ao transmitir)
+smeter-arrow-prev-face = Mostrador anterior
+
+smeter-arrow-next-face = Próximo mostrador
 
 sonde-card-source-both = Rádio + SondeHub (ambos a recebem)
 
@@ -9483,3 +9484,120 @@ qrzcard-switch = Mostrar a ficha do QRZ ao passar o ponteiro sobre um indicativo
 qrzcard-switch-hint = Foto, nome, idade, endereço, locator e QSL do QRZ.com, na cascata, nos decodificadores e nas listas de spots. A foto, o e-mail e a data de nascimento exigem uma assinatura QRZ XML.
 
 qrzcard-needs-login = Escolha o QRZ como provedor e informe seu usuário e senha do QRZ para ativar a ficha.
+
+meshtastic-title = Meshtastic
+
+meshtastic-receive = Receber
+
+meshtastic-region = Região
+
+meshtastic-preset = Predefinição
+
+meshtastic-channel = Canal
+
+meshtastic-tune = Ouvir aqui
+
+meshtastic-tune-hint = Liga o receptor e leva o rádio a este canal. A lista de bandas de recepção do menu Rádio decide se o rádio pode ouvir aqui. Ao desligar ou sair, o rádio volta para onde estava.
+
+meshtastic-keys = Chaves
+
+meshtastic-keys-hint = Nome=chave, separados por vírgulas (hex:…, base64:…, simple1..10). A chave padrão é sempre tentada.
+
+meshtastic-state-off = Receptor desligado.
+
+meshtastic-level = Nível { $db } dBFS
+
+meshtastic-counts = { $pre } preâmbulos · { $ok } quadros · { $bad } CRC inválidos
+
+meshtastic-refused-band = RECEPÇÃO PROIBIDA — { $freq } MHz ({ $band }) não é uma banda de recepção validada. Marque e valide no menu Rádio, bandas de recepção.
+
+meshtastic-refused-unconfirmed = RECEPÇÃO PROIBIDA — as bandas de recepção deste rádio ainda não foram validadas. Verifique e confirme no menu Rádio, bandas de recepção.
+
+meshtastic-out-of-window = O canal está fora da janela de amostras que o rádio captura: sintonize mais perto ou use uma taxa de amostragem maior.
+
+meshtastic-none-yet = Nada ouvido ainda.
+
+meshtastic-nodes = Nós ({ $n })
+
+meshtastic-log = Pacotes ({ $n })
+
+meshtastic-col-id = Nó
+
+meshtastic-col-name = Nome
+
+meshtastic-col-heard = Ouvido
+
+meshtastic-col-snr = SNR
+
+meshtastic-col-hops = Saltos
+
+meshtastic-col-position = Posição
+
+meshtastic-col-battery = Bateria
+
+meshtastic-encrypted = criptografado (sem chave)
+
+meshtastic-via-mqtt = via MQTT
+
+meshtastic-bench-hint = Abre a janela Meshtastic: o tráfego da malha LoRa de um canal.
+
+extras-meshtastic-hint = Meshtastic: o tráfego da malha LoRa de um canal, os nós ouvidos e os pacotes.
+
+meshtastic-message = Mensagem
+
+meshtastic-message-hint = Texto para todos no canal (no máximo 200 bytes)
+
+meshtastic-send = Enviar…
+
+meshtastic-send-hint = Transmite este texto no canal, após a sua confirmação. A lista de bandas de transmissão em Configurações, Rádio decide se o rádio pode transmitir aqui; o rádio precisa estar no canal (Ouvir aqui).
+
+meshtastic-confirm = Transmitir agora em { $freq } MHz ({ $air } s no ar)? Todos ao alcance vão ouvir, e você responde por isso conforme a sua licença e as regras desta banda.
+
+meshtastic-confirm-yes = Transmitir
+
+meshtastic-confirm-no = Cancelar
+
+meshtastic-transmitting = TRANSMITINDO…
+
+meshtastic-tx-airtime = Tempo no ar nesta hora: { $used } s de { $budget } s
+
+meshtastic-tx-airtime-free = Tempo no ar nesta hora: { $used } s (nenhum limite definido para esta região)
+
+meshtastic-tx-sent = { $n } enviado(s)
+
+meshtastic-tx-band-off = TRANSMISSÃO PROIBIDA — { $freq } MHz ({ $band }) não é uma banda de transmissão validada. Marque e valide em Configurações → Rádio → Bandas de transmissão.
+
+meshtastic-tx-unconfirmed = TRANSMISSÃO PROIBIDA — as bandas de transmissão deste rádio ainda não foram validadas. Verifique e confirme em Configurações → Rádio → Bandas de transmissão.
+
+meshtastic-tx-duty = Ciclo de trabalho atingido para esta região: aguarde { $s } s antes da próxima mensagem.
+
+meshtastic-tx-too-long = Esta mensagem sozinha é mais longa que todo o orçamento de tempo no ar de uma hora para esta região.
+
+meshtastic-tx-off-channel = O rádio não está no canal: pressione primeiro Ouvir aqui, para que o dial fique nele.
+
+meshtastic-tx-no-transmitter = Este rádio não pode enviar I/Q bruto (um rádio que recebe áudio, ou um dispositivo só de recepção).
+
+meshtastic-tx-bad-text = O texto está vazio ou é longo demais (no máximo 200 bytes).
+
+meshtastic-tx-busy = Já há uma transmissão em andamento.
+
+meshtastic-tx-rails = O transmissor se recusou a transmitir: veja a mensagem de transmissão para o motivo.
+rx-bands-swl-note = O modo SWL está ativo neste rádio: não há bloqueio de recepção. Qualquer banda pode ser sintonizada.
+
+rx-bands-always-open = As bandas de escuta (e o modo SWL) estão sempre abertas para recepção.
+
+sat-tune-link-both-vfos = Ajusta o dial, o outro VFO e o modo para este enlace — o downlink neste VFO, o uplink no outro; um travamento neste satélite passa para ele
+
+sat-move-lock = {" "}MOVER TRAVA{" "}
+
+sat-locked-other-link-move-lock = Travado neste satélite por outro enlace: mova a trava para este — com o uplink, o tom e o Doppler
+
+sat-rig-rx = RX RÁDIO
+
+sat-rig-tx = TX RÁDIO
+
+topbar-sat-locked-vfo-a-downlink-b-uplink = Travado em um satélite: o VFO A é o downlink e o VFO B o uplink até a trava terminar
+
+qrzcard-photo-loading = Carregando foto…
+
+qrzcard-no-photo = Ficha sem foto

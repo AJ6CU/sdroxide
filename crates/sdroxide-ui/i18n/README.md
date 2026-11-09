@@ -10,11 +10,9 @@ i18n/
 ```
 
 Files are embedded in the binary when it is built, so a new or changed file
-takes effect on the next build. The web client is the exception: its wasm
-embeds English only, and the page fetches the one language the operator uses
-from `i18n/<tag>/sdroxide.ftl` beside it (`trunk` copies this folder into
-`dist`). The language is picked in Settings → UI → Language; "System" follows
-the operating system (or the browser, for the web client).
+takes effect on the next build. The language is picked in Settings → UI →
+Language; "System" follows the operating system (or the browser, for the web
+client).
 
 ## Adding a language
 
@@ -25,10 +23,7 @@ the operating system (or the browser, for the web client).
    its own name.
 3. Translate the values. Leave the ids (left of `=`) and the `{ $name }`
    placeables as they are.
-4. Add the tag and the same name to `LANGUAGES` in `src/i18n.rs` (English
-   first, then by tag). The web client lists languages from that table, not
-   from the folders, and a test fails if the two disagree.
-5. Run `cargo test -p sdroxide-ui i18n` (see *Checks* below).
+4. Run `cargo test -p sdroxide-ui i18n` (see *Checks* below).
 
 A translation does not have to be complete. Any message it leaves out is shown
 in English, so a file can start with the most-seen text and fill in over

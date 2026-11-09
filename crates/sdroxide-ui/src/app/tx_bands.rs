@@ -201,7 +201,7 @@ impl SdroxideApp {
     /// Whether this radio's receive band list still waits for the operator.
     /// Every radio has one, a receive-only one and a listening screen too.
     pub(in crate::app) fn rx_bands_unconfirmed(&self) -> bool {
-        self.radio_cfg.as_ref().is_some_and(|c| !c.rx_bands_confirmed)
+        self.radio_cfg.as_ref().is_some_and(|c| c.rx_lock_active() && !c.rx_bands_confirmed)
     }
 
     /// Warn, without ever touching the dial, when the frequency is outside the

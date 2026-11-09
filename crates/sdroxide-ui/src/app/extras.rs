@@ -10,7 +10,7 @@ use eframe::egui;
 use sdroxide_types::{Command, Mode, RxId};
 
 /// How many launcher buttons the panel is wide enough for.
-pub(in crate::app) const EXTRAS_SLOTS: usize = 6;
+pub(in crate::app) const EXTRAS_SLOTS: usize = 7;
 
 /// One button's width and height, and the gap between buttons.
 const SLOT_W: f32 = 112.0;
@@ -273,6 +273,16 @@ impl super::SdroxideApp {
             if wx.clicked() {
                 self.show_wxsat = !self.show_wxsat;
             }
+            let mesh = crate::chrome::chip_sized(
+                ui,
+                self.show_meshtastic,
+                "MESHTASTIC",
+                egui::vec2(SLOT_W, SLOT_H),
+            )
+            .on_hover_text(tr!("extras-meshtastic-hint"));
+            if mesh.clicked() {
+                self.show_meshtastic = !self.show_meshtastic;
+            }
             let rc_active = self.radio_classic_active();
             let rc = crate::chrome::chip_sized(ui, rc_active, tr!("topbar-radio"), egui::vec2(SLOT_W, SLOT_H))
                 .on_hover_text(tr!("extras-radio-hint"));
@@ -301,7 +311,7 @@ impl super::SdroxideApp {
             }
             // The other slots are kept: the panel is sized for them, so a
             // receiver added here does not widen the window.
-            for _ in 6..EXTRAS_SLOTS {
+            for _ in 7..EXTRAS_SLOTS {
                 let (rect, _) =
                     ui.allocate_exact_size(egui::vec2(SLOT_W, SLOT_H), egui::Sense::hover());
                 ui.painter().rect_stroke(
@@ -339,9 +349,9 @@ mod tests {
 
     #[test]
     fn a_remembered_place_and_size_win() {
-        let g = sdroxide_types::DetachedWindow { size: [800.0, 200.0], pos: Some([300.0, 400.0]) };
+        let g = sdroxide_types::DetachedWindow { size: [900.0, 200.0], pos: Some([300.0, 400.0]) };
         let (pos, size) = extras_place(Some(g), screen(), screen());
-        assert_eq!((pos, size), (egui::pos2(300.0, 400.0), egui::vec2(800.0, 200.0)));
+        assert_eq!((pos, size), (egui::pos2(300.0, 400.0), egui::vec2(900.0, 200.0)));
     }
 
     #[test]

@@ -133,6 +133,7 @@ fn engine_with_lock(
                 inverting: true,
             }),
             doppler: false,
+            ctcss_hz: None,
             rotator: true,
         }))))
         .unwrap();

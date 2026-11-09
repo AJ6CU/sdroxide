@@ -2195,6 +2195,20 @@ pub fn save_wxsat_config(cfg: &sdroxide_types::WxsatSettings) -> Result<(), Conf
     save_json("wxsat.json", cfg)
 }
 
+/// Meshtastic receiver preferences: on/off, region, preset, channel and keys,
+/// and where the radio was before the lane tuned it (`meshtastic.json`). Kept
+/// on the station, so every client sees the same settings and the dial comes
+/// back whichever one turned the receiver on.
+pub fn load_meshtastic_config() -> sdroxide_types::MeshtasticSettings {
+    load_json::<sdroxide_types::MeshtasticSettings>("meshtastic.json").sane()
+}
+
+pub fn save_meshtastic_config(
+    cfg: &sdroxide_types::MeshtasticSettings,
+) -> Result<(), ConfigError> {
+    save_json("meshtastic.json", cfg)
+}
+
 pub fn save_sonde_config(cfg: &sdroxide_types::SondeSettings) -> Result<(), ConfigError> {
     save_json("sonde.json", cfg)
 }

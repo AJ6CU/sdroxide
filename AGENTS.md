@@ -55,6 +55,22 @@ text or more choices than it is worth is a bad trade even when it is correct —
 and the operator at the bench is the one who pays for it. Nobody is pushed to
 the back of the queue for being the reason the program exists.
 
+## Line endings: one method (decided 2026-11-08, do not re-think it)
+
+State: `core.autocrlf=true`, the repo is mixed: about 1300 files have a **CRLF blob** (`i/crlf`), about
+620 an LF blob (`i/lf`), working tree CRLF for both. Rule: **a file keeps the line endings it has.**
+Never convert a file, never "normalise" the repo.
+
+1. **Edit existing files with the Edit tool only.** It keeps CRLF (checked: a multi-line `old_string`
+   written with LF matches a CRLF file, the diff stays minimal). Never `sed -i`, never a Python/`awk`
+   rewrite, never `cat >`/heredoc or the Write tool over an existing repo file. New files: Write is fine.
+2. `rustfmt` on a touched file turns it LF: always follow it with the gate below.
+3. **Gate, before every `git add` / commit, no exception:** `bash /d/sdrfull/tools/sdr-eol.sh` (puts CRLF
+   back on every `i/crlf w/lf` file, then prints `git diff --numstat`). Read that numstat: a file whose
+   changed-line count is its whole length is an ending accident, fix it before committing.
+4. Do not try a pre-commit hook: `git add` has already turned the file LF in the index by then (tried).
+5. Do not write `.gitattributes` or change `core.autocrlf`: repo-wide change, PR only, not ours.
+6. In messages, tables and PR bodies, never paste text copied from a CRLF file without checking it.
 
 ## F4NRM's areas (PR required, never straight to main)
 
@@ -152,9 +168,7 @@ an option: a PR with English only is not finished, and it is not mergeable.
 - Full rules and the Fluent syntax: `CLAUDE.md` and
   `crates/sdroxide-ui/i18n/README.md`.
 
-**This list must match `CLAUDE.md`.** When a language is added or removed, `LANGUAGES` in
-`crates/sdroxide-ui/src/i18n.rs` changes too (the web client embeds English only and
-fetches the rest; a test checks the table against `i18n/`), and both
+**This list must match `CLAUDE.md`.** When a language is added or removed, both
 files are updated in the same change (see "Adding a language" in `CLAUDE.md`).
 
 ## Working autonomously

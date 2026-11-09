@@ -3175,7 +3175,6 @@ sat-downlink-mhz = DOWNLINK (MHz)
 sat-uplink-mhz = UPLINK (MHz)
 sat-mode = BETRIEBSART
 sat-tune = ABSTIMMEN
-sat-set-dial-mode-link-no = Skala und Betriebsart auf diese Verbindung setzen — keine Verfolgung, keine Korrektur
 sat-locked = {" "}EINGERASTET{" "}
 sat-lock = {" "}EINRASTEN{" "}
 sat-track-satellite-doppler-correction-rx = Diesen Satelliten verfolgen: Doppler-Korrektur auf Empfang und Senden, auf den Transponder abgebildeter Uplink, und die 3D-Ansicht folgt ihm
@@ -9378,11 +9377,13 @@ meter-view-swr = SWR
 
 meter-view-alc = ALC
 
-smeter-arrow-prev-hover = Vorheriger Messwert: { $view }{ $when }
+smeter-arrow-prev-hover = Vorheriger Messwert: { $view }
 
-smeter-arrow-next-hover = Nächster Messwert: { $view }{ $when }
+smeter-arrow-next-hover = Nächster Messwert: { $view }
 
-smeter-arrow-on-receive = (gilt beim Senden)
+smeter-arrow-prev-face = Vorheriges Instrument
+
+smeter-arrow-next-face = Nächstes Instrument
 
 sonde-card-source-both = Funk + SondeHub (beide empfangen sie)
 
@@ -9483,3 +9484,120 @@ qrzcard-switch = QRZ-Karte anzeigen, wenn der Zeiger auf einem Rufzeichen ruht
 qrzcard-switch-hint = Foto, Name, Alter, Adresse, Locator und QSL von QRZ.com im Wasserfall, in den Decodern und in den Spot-Listen. Foto, E-Mail und Geburtsdatum erfordern ein QRZ-XML-Abonnement.
 
 qrzcard-needs-login = QRZ als Anbieter wählen und QRZ-Benutzername und -Passwort eingeben, um die Karte zu aktivieren.
+
+meshtastic-title = Meshtastic
+
+meshtastic-receive = Empfang
+
+meshtastic-region = Region
+
+meshtastic-preset = Voreinstellung
+
+meshtastic-channel = Kanal
+
+meshtastic-tune = Hier hören
+
+meshtastic-tune-hint = Schaltet den Empfänger ein und stellt das Funkgerät auf diesen Kanal. Die Empfangsbandliste im Radio-Menü entscheidet, ob hier gehört werden darf. Beim Ausschalten oder Beenden kehrt das Funkgerät dorthin zurück, wo es war.
+
+meshtastic-keys = Schlüssel
+
+meshtastic-keys-hint = Name=Schlüssel, durch Kommas getrennt (hex:…, base64:…, simple1..10). Der Standardschlüssel wird immer versucht.
+
+meshtastic-state-off = Empfänger aus.
+
+meshtastic-level = Pegel { $db } dBFS
+
+meshtastic-counts = { $pre } Präambeln · { $ok } Rahmen · { $bad } CRC-Fehler
+
+meshtastic-refused-band = EMPFANG GESPERRT — { $freq } MHz ({ $band }) ist kein bestätigtes Empfangsband. Haken setzen und bestätigen im Radio-Menü, Empfangsbänder.
+
+meshtastic-refused-unconfirmed = EMPFANG GESPERRT — die Empfangsbänder dieses Funkgeräts sind noch nicht bestätigt. Prüfen und bestätigen im Radio-Menü, Empfangsbänder.
+
+meshtastic-out-of-window = Der Kanal liegt außerhalb des Abtastfensters des Funkgeräts: näher abstimmen oder eine höhere Abtastrate wählen.
+
+meshtastic-none-yet = Noch nichts gehört.
+
+meshtastic-nodes = Knoten ({ $n })
+
+meshtastic-log = Pakete ({ $n })
+
+meshtastic-col-id = Knoten
+
+meshtastic-col-name = Name
+
+meshtastic-col-heard = Gehört
+
+meshtastic-col-snr = SNR
+
+meshtastic-col-hops = Hops
+
+meshtastic-col-position = Position
+
+meshtastic-col-battery = Akku
+
+meshtastic-encrypted = verschlüsselt (kein Schlüssel)
+
+meshtastic-via-mqtt = über MQTT
+
+meshtastic-bench-hint = Öffnet das Meshtastic-Fenster: der LoRa-Mesh-Verkehr eines Kanals.
+
+extras-meshtastic-hint = Meshtastic: der LoRa-Mesh-Verkehr eines Kanals, die gehörten Knoten und die Pakete.
+
+meshtastic-message = Nachricht
+
+meshtastic-message-hint = Text für alle im Kanal (höchstens 200 Byte)
+
+meshtastic-send = Senden…
+
+meshtastic-send-hint = Sendet diesen Text auf dem Kanal, nach Ihrer Bestätigung. Die Sendebandliste in Einstellungen, Radio entscheidet, ob hier gesendet werden darf; das Funkgerät muss auf dem Kanal sein (Hier hören).
+
+meshtastic-confirm = Jetzt auf { $freq } MHz senden ({ $air } s Sendezeit)? Alle in Reichweite hören es, und Sie verantworten es nach Ihrer Lizenz und den Regeln dieses Bandes.
+
+meshtastic-confirm-yes = Senden
+
+meshtastic-confirm-no = Abbrechen
+
+meshtastic-transmitting = SENDET…
+
+meshtastic-tx-airtime = Sendezeit in dieser Stunde: { $used } s von { $budget } s
+
+meshtastic-tx-airtime-free = Sendezeit in dieser Stunde: { $used } s (für diese Region ist keine Grenze gesetzt)
+
+meshtastic-tx-sent = { $n } gesendet
+
+meshtastic-tx-band-off = SENDEN GESPERRT — { $freq } MHz ({ $band }) ist kein bestätigtes Sendeband. Haken setzen und bestätigen unter Einstellungen → Radio → Sendebänder.
+
+meshtastic-tx-unconfirmed = SENDEN GESPERRT — die Sendebänder dieses Funkgeräts sind noch nicht bestätigt. Prüfen und bestätigen unter Einstellungen → Radio → Sendebänder.
+
+meshtastic-tx-duty = Tastverhältnis für diese Region erreicht: { $s } s bis zur nächsten Nachricht warten.
+
+meshtastic-tx-too-long = Diese Nachricht allein ist länger als das gesamte Sendezeit-Budget einer Stunde für diese Region.
+
+meshtastic-tx-off-channel = Das Funkgerät ist nicht auf dem Kanal: zuerst Hier hören drücken, damit die Frequenz darauf steht.
+
+meshtastic-tx-no-transmitter = Dieses Funkgerät kann kein rohes I/Q senden (ein Transceiver, der Audio annimmt, oder ein reines Empfangsgerät).
+
+meshtastic-tx-bad-text = Der Text ist leer oder zu lang (höchstens 200 Byte).
+
+meshtastic-tx-busy = Eine Aussendung läuft bereits.
+
+meshtastic-tx-rails = Der Sender hat das Tasten verweigert: den Grund nennt die Sendemeldung.
+rx-bands-swl-note = Der SWL-Modus ist für dieses Funkgerät aktiv: Es gibt keine Empfangssperre. Alle Bänder können abgestimmt werden.
+
+rx-bands-always-open = Hörbänder (und der SWL-Modus) sind für den Empfang immer offen.
+
+sat-tune-link-both-vfos = Stellt Frequenz, das andere VFO und die Betriebsart auf diese Verbindung ein — den Downlink auf diesem VFO, den Uplink auf dem anderen; eine Sperre auf diesem Satelliten folgt ihr
+
+sat-move-lock = {" "}SPERRE VERSETZEN{" "}
+
+sat-locked-other-link-move-lock = Auf diesen Satelliten über eine andere Verbindung gesperrt: Sperre auf diese Verbindung versetzen — mit Uplink, Ton und Doppler
+
+sat-rig-rx = RX FUNKGERÄT
+
+sat-rig-tx = TX FUNKGERÄT
+
+topbar-sat-locked-vfo-a-downlink-b-uplink = Auf einen Satelliten gesperrt: VFO A ist der Downlink und VFO B der Uplink, bis die Sperre endet
+
+qrzcard-photo-loading = Foto wird geladen…
+
+qrzcard-no-photo = Eintrag ohne Foto

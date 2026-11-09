@@ -38,15 +38,17 @@ fn drop_key(id: &str) {
 /// How long a card is kept. A person's record changes rarely, and QRZ counts
 /// every query against the account, so a callsign seen again within the day is
 /// answered from here.
-const CARD_TTL: Duration = Duration::from_secs(24 * 3600);
-/// Cap on kept cards, so a long session on a busy band cannot grow without end.
-const CARD_MAX: usize = 400;
-/// A photo bigger than this is not fetched, and the thumbnail kept is smaller.
-const PHOTO_FETCH_MAX: u64 = 400 * 1024;
+const CARD_TTL: Duration = Duration::from_secs(7 * 24 * 3600);
+/// Cap on kept cards: the pointer sweeps over hundreds of callsigns in a
+/// session ("zapping"), and a card seen once should still be there the next
+/// time. A card is a few kilobytes, a thumbnail included.
+const CARD_MAX: usize = 3000;
+/// A photo bigger than this is not fetched; the thumbnail kept is small.
+const PHOTO_FETCH_MAX: u64 = 6 * 1024 * 1024;
 const PHOTO_SIDE: u32 = 96;
 /// Lookups running at once. The rest are dropped; the screen asks again when the
 /// pointer returns to the callsign.
-const MAX_IN_FLIGHT: usize = 4;
+const MAX_IN_FLIGHT: usize = 8;
 
 /// `call -> (card, obtained_at, photo_was_asked_for)`.
 type Cards = HashMap<String, (CallsignInfo, Instant, bool)>;
@@ -110,6 +112,7 @@ pub fn lookup(
     hamqth: &Credentials,
     call: &str,
     card: bool,
+    interim: &dyn Fn(CallsignInfo),
 ) -> Result<CallsignInfo, String> {
     let call = call.trim().to_ascii_uppercase();
     if call.is_empty() {
@@ -124,7 +127,7 @@ pub fn lookup(
                 }
                 return Ok(hit);
             }
-            let info = match qrz_lookup(qrz, &call, card) {
+            let info = match qrz_lookup(qrz, &call, card, interim) {
                 Ok(i) => i,
                 Err(e) if card && e.to_ascii_lowercase().contains("not found") => {
                     CallsignInfo::for_call(&call)
@@ -140,7 +143,12 @@ pub fn lookup(
 
 // ── QRZ.com XML ──────────────────────────────────────────────────────────
 
-fn qrz_lookup(creds: &Credentials, call: &str, card: bool) -> Result<CallsignInfo, String> {
+fn qrz_lookup(
+    creds: &Credentials,
+    call: &str,
+    card: bool,
+    interim: &dyn Fn(CallsignInfo),
+) -> Result<CallsignInfo, String> {
     if creds.user.trim().is_empty() {
         return Err("QRZ username/password not set".into());
     }
@@ -169,9 +177,34 @@ fn qrz_lookup(creds: &Credentials, call: &str, card: bool) -> Result<CallsignInf
             return Err(err);
         }
         let mut info = parse_qrz(&doc, call, today());
-        if card && let Some(url) = tag_text(&doc, "image").filter(|u| u.starts_with("https://")) {
-            // A picture that cannot be had is no reason to lose the rest.
-            info.photo = http::get_bytes(&url, PHOTO_FETCH_MAX).ok().and_then(|b| thumbnail(&b));
+        if card {
+            // What QRZ answered, by field name only (never a value): the way to
+            // tell, from the log, a record QRZ gave in full from one it cut
+            // short for lack of a subscription.
+            let tags: Vec<&str> = doc
+                .descendants()
+                .filter(|n| n.is_element() && n.has_children())
+                .map(|n| n.tag_name().name())
+                .collect();
+            tracing::debug!("QRZ card {call}: fields {}", tags.join(","));
+            let image =
+                tag_text(&doc, "image").filter(|u| u.starts_with("https://") || u.starts_with("http://"));
+            // The text first, so the card is not held up by the picture or the
+            // translation; the whole record follows.
+            info.photo_pending = image.is_some();
+            interim(info.clone());
+            translate_card(&mut info);
+            if let Some(url) = image {
+                // A picture that cannot be had is no reason to lose the rest.
+                info.photo = match http::get_bytes(&url, PHOTO_FETCH_MAX) {
+                    Ok(b) => thumbnail(&b),
+                    Err(e) => {
+                        tracing::debug!("QRZ photo of {call}: {e}");
+                        None
+                    }
+                };
+                info.photo_pending = false;
+            }
         }
         return Ok(info);
     }
@@ -242,7 +275,8 @@ fn age_from_born(born: &str, today: (i32, u32, u32)) -> Option<u8> {
 /// A JPEG thumbnail of at most [`PHOTO_SIDE`] pixels a side, or `None` when the
 /// bytes are not a picture this build can read.
 fn thumbnail(bytes: &[u8]) -> Option<Vec<u8>> {
-    let img = image::load_from_memory_with_format(bytes, image::ImageFormat::Jpeg).ok()?;
+    // QRZ serves whatever the operator uploaded: JPEG mostly, PNG and GIF too.
+    let img = image::load_from_memory(bytes).ok()?;
     let small = img.thumbnail(PHOTO_SIDE, PHOTO_SIDE).to_rgb8();
     let mut out = Vec::new();
     image::codecs::jpeg::JpegEncoder::new_with_quality(&mut out, 80)
@@ -276,7 +310,59 @@ fn parse_qrz(doc: &roxmltree::Document, call: &str, today: (i32, u32, u32)) -> C
     info.cq_zone = tag_text(doc, "cqzone").and_then(|s| s.parse().ok());
     info.itu_zone = tag_text(doc, "ituzone").and_then(|s| s.parse().ok());
     info.qsl_via = tag_text(doc, "qslmgr").filter(|s| !s.is_empty());
+    // QRZ's own remark, e.g. that the complete record needs a subscription.
+    info.note = tag_text(doc, "Message");
     info
+}
+
+// ── Translation of a record written in another script ────────────────────
+
+/// Whether `s` holds letters of a script other than Latin (Chinese, Japanese,
+/// Korean, Cyrillic, Greek, Arabic, Thai…): what an English-reading operator
+/// cannot read. Accented Latin, Vietnamese included, is left alone.
+fn needs_translation(s: &str) -> bool {
+    s.chars().any(|c| c.is_alphabetic() && (c as u32) > 0x24F && !(0x1E00..=0x1EFF).contains(&(c as u32)))
+}
+
+/// English for `text`, from the free MyMemory service (no account, no key; the
+/// source language is detected). `None` when it is offline, over its daily
+/// quota or answers nothing usable — the card then keeps the original.
+fn translate(text: &str) -> Option<String> {
+    if text.chars().count() > 450 {
+        return None;
+    }
+    let url = format!(
+        "https://api.mymemory.translated.net/get?q={}&langpair=Autodetect%7Cen",
+        urlencode(text)
+    );
+    let body = http::get(&url).ok()?;
+    let v: serde_json::Value = serde_json::from_str(&body).ok()?;
+    let out = v.pointer("/responseData/translatedText")?.as_str()?.trim().to_string();
+    let bad = out.is_empty()
+        || out.to_ascii_uppercase().contains("MYMEMORY WARNING")
+        || out.to_ascii_uppercase().contains("QUERY LENGTH LIMIT")
+        || needs_translation(&out);
+    (!bad).then_some(out)
+}
+
+/// Turn the name and the place of a record into English when they are written
+/// in another script, keeping the original in `native_text`. Each field alone,
+/// so one that fails leaves the others translated.
+fn translate_card(info: &mut CallsignInfo) {
+    let mut original: Vec<String> = Vec::new();
+    for field in [&mut info.name, &mut info.addr1, &mut info.qth, &mut info.state] {
+        let Some(text) = field.as_deref() else { continue };
+        if !needs_translation(text) {
+            continue;
+        }
+        if let Some(en) = translate(text) {
+            original.push(text.to_string());
+            *field = Some(en);
+        }
+    }
+    if !original.is_empty() {
+        info.native_text = Some(original.join(" · "));
+    }
 }
 
 // ── HamQTH XML ───────────────────────────────────────────────────────────
@@ -401,6 +487,33 @@ mod tests {
         assert!(i.qsl_lotw && !i.qsl_eqsl && i.qsl_paper);
         assert_eq!(i.qsl_via.as_deref(), Some("F4DEF"));
         assert!(i.photo.is_none(), "the picture is fetched separately");
+    }
+
+    #[test]
+    fn another_script_asks_for_a_translation_and_latin_does_not() {
+        assert!(needs_translation("山东省淄博市周村区丝绸路106号"));
+        assert!(needs_translation("Москва"));
+        assert!(needs_translation("東京"));
+        assert!(!needs_translation("DOMONT"));
+        assert!(!needs_translation("Besançon, Köln, Łódź"));
+        assert!(!needs_translation("Hà Nội"), "Vietnamese is Latin");
+        assert!(!needs_translation("12 rue des Lilas"));
+    }
+
+    #[test]
+    fn qrz_own_remark_is_kept_and_a_png_makes_a_thumbnail() {
+        let xml = r#"<QRZDatabase><Callsign><call>F4ABC</call><name>Dupont</name></Callsign>
+<Session><Message>A subscription is required to access the complete record.</Message></Session></QRZDatabase>"#;
+        let doc = roxmltree::Document::parse(xml).unwrap();
+        let i = parse_qrz(&doc, "F4ABC", (2026, 11, 8));
+        assert_eq!(i.note.as_deref(), Some("A subscription is required to access the complete record."));
+        let img = image::RgbImage::new(200, 300);
+        let mut png = Vec::new();
+        image::DynamicImage::ImageRgb8(img)
+            .write_to(&mut std::io::Cursor::new(&mut png), image::ImageFormat::Png)
+            .unwrap();
+        let t = thumbnail(&png).expect("a PNG is a picture too");
+        assert!(image::load_from_memory(&t).unwrap().width() <= PHOTO_SIDE);
     }
 
     #[test]

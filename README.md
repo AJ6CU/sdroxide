@@ -606,6 +606,10 @@ of its code is used**: the ideas are theirs and the implementation here is ours,
 written against our own satellite and Doppler code. Thank you for showing what the
 shape should be.
 
+The **Meshtastic** decoder (LoRa demodulator and modulator, channel keys and
+packet decoding) is the work of **F4NRM**. Its source files keep their original
+copyright and licence headers (GPL-3.0-or-later).
+
 Several of the listener's propagation tools were adapted from
 **[OpenHamClock](https://github.com/accius/openhamclock)** (MIT): the
 band-opening detector, the grey-line shading on the flat maps, the

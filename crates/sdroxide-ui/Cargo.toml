@@ -26,6 +26,10 @@ tracing.workspace = true
 # operator whether their digipeater path is a reasonable one. Pure parsing with
 # no I/O and no clock, so it builds for wasm32 alongside everything else here.
 sdroxide-aprs = { path = "../sdroxide-aprs" }
+# The Meshtastic region and preset tables and the port names for its panel,
+# without the `engine` feature (no thread, no channel): pure data, builds for
+# wasm32 as well.
+sdroxide-meshtastic = { path = "../sdroxide-meshtastic" }
 serde.workspace = true
 # The relay's reply is JSON. Pure Rust, so it builds for wasm32 as well.
 serde_json.workspace = true
@@ -85,7 +89,7 @@ i18n-embed-fl = "0.10.1"
 # For `FluentValue`, the type a message's arguments are passed as. The version
 # i18n-embed itself uses.
 fluent = "0.17.0"
-rust-embed = { version = "8.12.0", features = ["debug-embed", "include-exclude"] }
+rust-embed = { version = "8.12.0", features = ["debug-embed"] }
 # The operating system's language list — or the browser's, with `js` — for an
 # operator who has not picked one.
 sys-locale = { version = "0.3.2", features = ["js"] }

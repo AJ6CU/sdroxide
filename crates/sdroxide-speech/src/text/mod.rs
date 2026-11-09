@@ -240,6 +240,7 @@ impl<'a> Speaker<'a> {
             Band::Fm => "F M",
             Band::Air => "air band",
             Band::Mil => "military air band",
+            Band::Ism868 => "eight sixty eight licence free band",
             Band::Gen => "general coverage",
         }
     }

@@ -208,7 +208,10 @@ fn known_row(ui: &mut egui::Ui, call: &str, info: Option<&sdroxide_types::Entity
         .show(ui, |ui| {
             ui.set_width(ui.available_width());
             ui.horizontal_wrapped(|ui| {
-                ui.label(RichText::new(call).monospace().strong().color(crate::theme::CYAN()));
+                crate::callsign_card::on_hover(
+                    ui.label(RichText::new(call).monospace().strong().color(crate::theme::CYAN())),
+                    call,
+                );
                 match info {
                     // A CB country resolves ahead of the amateur table, so this
                     // is the 11 m numbering and not a DXCC prefix guess.

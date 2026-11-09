@@ -74,23 +74,27 @@ pub(crate) async fn post_import_route(
         return json(StatusCode::INTERNAL_SERVER_ERROR, String::new());
     }
 
-    let result = if let Ok(got) = sdroxide_config::import_schedule_file(&tmp) {
-        serde_json::json!({
+    // The same single entry point the desktop button uses (EiBi, Aoki, HFCC or
+    // the operator's own list), so the two cannot disagree about a file.
+    let got = sdroxide_config::import_any_file(&tmp);
+    let _ = fs::remove_file(&tmp);
+    let result = match got {
+        Ok(sdroxide_config::ImportedFile::Schedule(got)) => serde_json::json!({
             "kind": "schedule",
-            "source": format!("{:?}", got.source),
+            "source": got.source.label(),
             "season": got.season,
             "stations": got.stations,
-        })
-    } else if let Ok(n) = sdroxide_config::import_broadcast_stations(&tmp) {
-        serde_json::json!({
+        }),
+        Ok(sdroxide_config::ImportedFile::List(n)) => serde_json::json!({
             "kind": "list",
             "stations": n,
-        })
-    } else {
-        let _ = fs::remove_file(&tmp);
-        return json(StatusCode::BAD_REQUEST, String::new());
+        }),
+        Err(e) => {
+            return json(
+                StatusCode::BAD_REQUEST,
+                serde_json::json!({ "error": e }).to_string(),
+            );
+        }
     };
-
-    let _ = fs::remove_file(&tmp);
     json(StatusCode::OK, result.to_string())
 }

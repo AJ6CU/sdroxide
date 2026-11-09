@@ -297,6 +297,9 @@ pub(crate) struct Latest {
     pub qo100_status: Option<sdroxide_types::Qo100Status>,
     pub hfdl_status: Option<sdroxide_types::HfdlStatus>,
     pub sonde_status: Option<Box<sdroxide_types::SondeStatus>>,
+    /// The Meshtastic receiver's nodes and packet log: a whole snapshot, kept
+    /// and replayed on connect like the sonde tracks.
+    pub meshtastic_status: Option<Box<sdroxide_types::MeshtasticStatus>>,
     /// What the DRM decoder has made of the broadcast currently tuned. Replayed
     /// on connect for the same reason as `rds`: a station's label and the
     /// transmission's parameters are standing conditions, and a client that
@@ -762,6 +765,11 @@ pub async fn serve(params: ServerParams) -> Result<(), ServerError> {
     get(broadcast_schedule::get_route).post(broadcast_schedule::post_import_route)
         .layer(axum::extract::DefaultBodyLimit::max(broadcast_schedule::MAX_BODY_BYTES)),
 )
+.route(
+    "/broadcast-schedule/import",
+    axum::routing::post(broadcast_schedule::post_import_route)
+        .layer(axum::extract::DefaultBodyLimit::max(broadcast_schedule::MAX_BODY_BYTES)),
+)
         // Where a browser trades its password for a signed cookie, and gives
         // it back. Both are plain HTTP because a cookie is a response header
         // and the socket handshake's headers are spent before the sign-in
@@ -808,6 +816,10 @@ fn is_root_route(path: &str) -> bool {
     match path {
         "/ws" | "/solar-ws" | "/radios" | "/aircraft-history" | "/aircraft-export"
         | "/aircraft-online" | "/aircraft-photo" | "/aircraft-watch" => true,
+        // The schedule and the browser's import of a file. The second has a
+        // directory in it, so without being named here it read as a file under
+        // a prefix and was answered with the web page (`/import`).
+        "/broadcast-schedule" | "/broadcast-schedule/import" => true,
         // Whatever follows is the question, and a bad one is the endpoint's to
         // refuse with a 400, not the static handler's to answer with a page.
         _ if path
@@ -1277,6 +1289,10 @@ fn handle_event(shared: &Shared, ev: RadioEvent) {
                 latest.sonde_status = Some(st.clone());
                 Some(ServerMsg::SondeStatus(st))
             }
+            RadioEvent::MeshtasticStatus(st) => {
+                latest.meshtastic_status = Some(st.clone());
+                Some(ServerMsg::MeshtasticStatus(st))
+            }
             // Not kept for replay: each carries only the lines new since the
             // last, so a client that attaches late picks the picture up from
             // the next ones.
@@ -1570,11 +1586,6 @@ fn cache_policy_for(path: &str) -> &'static str {
     let name = path.rsplit('/').next().unwrap_or(path);
     if name.ends_with(".wasm") || (name.starts_with("sdroxide-web-") && name.ends_with(".js")) {
         "max-age=31536000, immutable"
-    } else if name.ends_with(".ftl") {
-        // A translation the browser fetches for itself. Fixed name, so never
-        // trusted without asking; but the answer is a 304 when it has not
-        // changed, so a language of ~700 KB is not sent again every session.
-        "no-cache"
     } else {
         "no-store"
     }
@@ -1707,6 +1718,19 @@ mod proxy_prefix_tests {
         assert_eq!(strip_proxy_prefix("/ws/ws/3"), Some("/ws/3".to_string()));
     }
 
+    /// The browser's file import posts to a two-level path. It is an endpoint,
+    /// not "a file called `import` under a prefix": it was rewritten to
+    /// `/import` and answered with the station's own web page.
+    #[test]
+    fn the_schedule_import_is_an_endpoint_not_a_file() {
+        assert_eq!(strip_proxy_prefix("/broadcast-schedule"), None);
+        assert_eq!(strip_proxy_prefix("/broadcast-schedule/import"), None);
+        assert_eq!(
+            strip_proxy_prefix("/sdroxide/broadcast-schedule/import"),
+            Some("/broadcast-schedule/import".to_string())
+        );
+    }
+
     /// The picture of the open card is an endpoint too, behind any prefix.
     #[test]
     fn the_aircraft_photo_survives_a_proxy_prefix() {
@@ -1793,10 +1817,6 @@ mod cache_policy_tests {
         assert_eq!(cache_policy_for("/ws_arraybuffer.js"), "no-store");
         assert_eq!(cache_policy_for("/manifest.json"), "no-store");
         assert_eq!(cache_policy_for("/sdroxide-brown-192.png"), "no-store");
-        // The translations the browser fetches: revalidated, not stored blind,
-        // not kept forever (an update changes the ids the new client asks for).
-        assert_eq!(cache_policy_for("/i18n/fr/sdroxide.ftl"), "no-cache");
-        assert_eq!(cache_policy_for("/sdroxide/i18n/pt-BR/sdroxide.ftl"), "no-cache");
         assert_eq!(
             cache_policy_for("/sdroxide-web-9a78ba26f0438e5a_bg.wasm"),
             "max-age=31536000, immutable"

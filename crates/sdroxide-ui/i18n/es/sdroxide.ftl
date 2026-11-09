@@ -3166,7 +3166,6 @@ sat-downlink-mhz = DOWNLINK (MHz)
 sat-uplink-mhz = UPLINK (MHz)
 sat-mode = MODO
 sat-tune = SINTONIZAR
-sat-set-dial-mode-link-no = Fija el dial y el modo en este enlace — sin enganche, sin corrección
 sat-locked = {" "}ENGANCHADO{" "}
 sat-lock = {" "}ENGANCHAR{" "}
 sat-track-satellite-doppler-correction-rx = Sigue este satélite: corrección Doppler en RX y TX, enlace ascendente mapeado al transpondedor, y la vista 3D lo sigue
@@ -9377,11 +9376,13 @@ meter-view-swr = ROE
 
 meter-view-alc = ALC
 
-smeter-arrow-prev-hover = Medida anterior: { $view }{ $when }
+smeter-arrow-prev-hover = Medida anterior: { $view }
 
-smeter-arrow-next-hover = Medida siguiente: { $view }{ $when }
+smeter-arrow-next-hover = Medida siguiente: { $view }
 
-smeter-arrow-on-receive = (se usa al transmitir)
+smeter-arrow-prev-face = Esfera anterior
+
+smeter-arrow-next-face = Esfera siguiente
 
 sonde-card-source-both = Radio + SondeHub (ambas la reciben)
 
@@ -9482,3 +9483,120 @@ qrzcard-switch = Mostrar la ficha de QRZ al pasar el puntero sobre un indicativo
 qrzcard-switch-hint = Foto, nombre, edad, dirección, locator y QSL de QRZ.com, en la cascada, los decodificadores y las listas de spots. La foto, el correo y la fecha de nacimiento requieren una suscripción QRZ XML.
 
 qrzcard-needs-login = Elija QRZ como proveedor e introduzca su usuario y contraseña de QRZ para activar la ficha.
+
+meshtastic-title = Meshtastic
+
+meshtastic-receive = Recibir
+
+meshtastic-region = Región
+
+meshtastic-preset = Preajuste
+
+meshtastic-channel = Canal
+
+meshtastic-tune = Escuchar aquí
+
+meshtastic-tune-hint = Activa el receptor y lleva la radio a este canal. La lista de bandas de recepción del menú Radio decide si la radio puede escuchar aquí. Al desactivar o salir, la radio vuelve a donde estaba.
+
+meshtastic-keys = Claves
+
+meshtastic-keys-hint = Nombre=clave, separados por comas (hex:…, base64:…, simple1..10). La clave por defecto siempre se prueba.
+
+meshtastic-state-off = Receptor apagado.
+
+meshtastic-level = Nivel { $db } dBFS
+
+meshtastic-counts = { $pre } preámbulos · { $ok } tramas · { $bad } CRC erróneos
+
+meshtastic-refused-band = RECEPCIÓN PROHIBIDA — { $freq } MHz ({ $band }) no es una banda de recepción validada. Márquela y valídela en el menú Radio, bandas de recepción.
+
+meshtastic-refused-unconfirmed = RECEPCIÓN PROHIBIDA — las bandas de recepción de esta radio aún no están validadas. Compruébelas y confírmelas en el menú Radio, bandas de recepción.
+
+meshtastic-out-of-window = El canal está fuera de la ventana de muestras que capta la radio: sintonice más cerca o use una tasa de muestreo mayor.
+
+meshtastic-none-yet = Aún no se ha oído nada.
+
+meshtastic-nodes = Nodos ({ $n })
+
+meshtastic-log = Paquetes ({ $n })
+
+meshtastic-col-id = Nodo
+
+meshtastic-col-name = Nombre
+
+meshtastic-col-heard = Oído
+
+meshtastic-col-snr = SNR
+
+meshtastic-col-hops = Saltos
+
+meshtastic-col-position = Posición
+
+meshtastic-col-battery = Batería
+
+meshtastic-encrypted = cifrado (sin clave)
+
+meshtastic-via-mqtt = vía MQTT
+
+meshtastic-bench-hint = Abre la ventana Meshtastic: el tráfico de la malla LoRa de un canal.
+
+extras-meshtastic-hint = Meshtastic: el tráfico de la malla LoRa de un canal, los nodos oídos y los paquetes.
+
+meshtastic-message = Mensaje
+
+meshtastic-message-hint = Texto para todos en el canal (200 bytes como máximo)
+
+meshtastic-send = Enviar…
+
+meshtastic-send-hint = Transmite este texto en el canal, tras su confirmación. La lista de bandas de transmisión en Ajustes, Radio decide si la radio puede transmitir aquí; la radio debe estar en el canal (Escuchar aquí).
+
+meshtastic-confirm = ¿Transmitir ahora en { $freq } MHz ({ $air } s en el aire)? Todos los que estén al alcance lo oirán, y usted responde de ello según su licencia y las reglas de esta banda.
+
+meshtastic-confirm-yes = Transmitir
+
+meshtastic-confirm-no = Cancelar
+
+meshtastic-transmitting = TRANSMITIENDO…
+
+meshtastic-tx-airtime = Tiempo en el aire esta hora: { $used } s de { $budget } s
+
+meshtastic-tx-airtime-free = Tiempo en el aire esta hora: { $used } s (sin límite fijado para esta región)
+
+meshtastic-tx-sent = { $n } enviado(s)
+
+meshtastic-tx-band-off = TRANSMISIÓN PROHIBIDA — { $freq } MHz ({ $band }) no es una banda de transmisión validada. Márquela y valídela en Ajustes → Radio → Bandas de transmisión.
+
+meshtastic-tx-unconfirmed = TRANSMISIÓN PROHIBIDA — las bandas de transmisión de esta radio aún no están validadas. Compruébelas y confírmelas en Ajustes → Radio → Bandas de transmisión.
+
+meshtastic-tx-duty = Ciclo de trabajo alcanzado para esta región: espere { $s } s antes del siguiente mensaje.
+
+meshtastic-tx-too-long = Este mensaje por sí solo es más largo que todo el presupuesto de tiempo en el aire de una hora para esta región.
+
+meshtastic-tx-off-channel = La radio no está en el canal: pulse primero Escuchar aquí, para que el dial quede en él.
+
+meshtastic-tx-no-transmitter = Esta radio no puede enviar I/Q en bruto (un equipo que recibe audio, o un dispositivo solo de recepción).
+
+meshtastic-tx-bad-text = El texto está vacío o es demasiado largo (200 bytes como máximo).
+
+meshtastic-tx-busy = Ya hay una transmisión en curso.
+
+meshtastic-tx-rails = El transmisor se negó a pasar a transmisión: vea el mensaje de transmisión para el motivo.
+rx-bands-swl-note = El modo SWL está activo en esta radio: no hay bloqueo de recepción. Se puede sintonizar cualquier banda.
+
+rx-bands-always-open = Las bandas de escucha (y el modo SWL) siempre están abiertas en recepción.
+
+sat-tune-link-both-vfos = Ajusta el dial, el otro VFO y el modo a este enlace: el enlace descendente en este VFO y el ascendente en el otro; un bloqueo sobre este satélite pasa a este enlace
+
+sat-move-lock = {" "}MOVER BLOQUEO{" "}
+
+sat-locked-other-link-move-lock = Bloqueado en este satélite por otro enlace: mueve el bloqueo a este: su enlace ascendente, su tono y su Doppler
+
+sat-rig-rx = RX EQUIPO
+
+sat-rig-tx = TX EQUIPO
+
+topbar-sat-locked-vfo-a-downlink-b-uplink = Bloqueado en un satélite: el VFO A es el enlace descendente y el VFO B el ascendente hasta que termine el bloqueo
+
+qrzcard-photo-loading = Cargando foto…
+
+qrzcard-no-photo = Ficha sin foto

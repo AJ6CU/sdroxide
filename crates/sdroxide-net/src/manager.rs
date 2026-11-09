@@ -392,7 +392,10 @@ impl SpotManager {
         std::thread::Builder::new()
             .name("sdroxide-lookup".into())
             .spawn(move || {
-                let r = crate::lookup::lookup(provider, &qrz, &hamqth, &call, card);
+                let first = tx.clone();
+                let r = crate::lookup::lookup(provider, &qrz, &hamqth, &call, card, &|i| {
+                    let _ = first.send(NetEvent::Callsign(i));
+                });
                 if card {
                     crate::lookup::finish(&call);
                 }

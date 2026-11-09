@@ -3190,7 +3190,6 @@ sat-downlink-mhz = НИСХОДЯЩАЯ (МГц)
 sat-uplink-mhz = ВОСХОДЯЩАЯ (МГц)
 sat-mode = РЕЖИМ
 sat-tune = НАСТРОИТЬ
-sat-set-dial-mode-link-no = Установить шкалу и режим на эту связь — без захвата и поправок
 sat-locked = {" "}ЗАХВАЧЕН{" "}
 sat-lock = {" "}ЗАХВАТ{" "}
 sat-track-satellite-doppler-correction-rx = Сопровождать этот спутник: поправка доплера на RX и TX, восходящая линия по транспондеру, и трёхмерный вид следует за ним
@@ -9393,11 +9392,13 @@ meter-view-swr = КСВ
 
 meter-view-alc = АРУ передачи (ALC)
 
-smeter-arrow-prev-hover = Предыдущее показание: { $view }{ $when }
+smeter-arrow-prev-hover = Предыдущее показание: { $view }
 
-smeter-arrow-next-hover = Следующее показание: { $view }{ $when }
+smeter-arrow-next-hover = Следующее показание: { $view }
 
-smeter-arrow-on-receive = (используется при передаче)
+smeter-arrow-prev-face = Предыдущий циферблат
+
+smeter-arrow-next-face = Следующий циферблат
 
 sonde-card-source-both = Радио + SondeHub (слышат оба)
 
@@ -9498,3 +9499,120 @@ qrzcard-switch = Показывать карточку QRZ при наведен
 qrzcard-switch-hint = Фото, имя, возраст, адрес, локатор и QSL с QRZ.com — в водопаде, декодерах и списках спотов. Для фото, e-mail и даты рождения нужна подписка QRZ XML.
 
 qrzcard-needs-login = Выберите QRZ в качестве поставщика и введите логин и пароль QRZ, чтобы включить карточку.
+
+meshtastic-title = Meshtastic
+
+meshtastic-receive = Приём
+
+meshtastic-region = Регион
+
+meshtastic-preset = Пресет
+
+meshtastic-channel = Канал
+
+meshtastic-tune = Слушать здесь
+
+meshtastic-tune-hint = Включает приёмник и переводит радио на этот канал. Список диапазонов приёма в меню «Радио» решает, можно ли здесь слушать. При выключении или выходе радио возвращается туда, где было.
+
+meshtastic-keys = Ключи
+
+meshtastic-keys-hint = Имя=ключ через запятую (hex:…, base64:…, simple1..10). Ключ по умолчанию пробуется всегда.
+
+meshtastic-state-off = Приёмник выключен.
+
+meshtastic-level = Уровень { $db } dBFS
+
+meshtastic-counts = { $pre } преамбул · { $ok } кадров · { $bad } с ошибкой CRC
+
+meshtastic-refused-band = ПРИЁМ ЗАПРЕЩЁН — { $freq } МГц ({ $band }) не является подтверждённым диапазоном приёма. Отметьте и подтвердите его в меню «Радио», диапазоны приёма.
+
+meshtastic-refused-unconfirmed = ПРИЁМ ЗАПРЕЩЁН — диапазоны приёма этого радио ещё не подтверждены. Проверьте и подтвердите их в меню «Радио», диапазоны приёма.
+
+meshtastic-out-of-window = Канал вне окна выборки, которое захватывает радио: настройтесь ближе или увеличьте частоту дискретизации.
+
+meshtastic-none-yet = Пока ничего не слышно.
+
+meshtastic-nodes = Узлы ({ $n })
+
+meshtastic-log = Пакеты ({ $n })
+
+meshtastic-col-id = Узел
+
+meshtastic-col-name = Имя
+
+meshtastic-col-heard = Услышан
+
+meshtastic-col-snr = SNR
+
+meshtastic-col-hops = Хопы
+
+meshtastic-col-position = Позиция
+
+meshtastic-col-battery = Батарея
+
+meshtastic-encrypted = зашифровано (нет ключа)
+
+meshtastic-via-mqtt = через MQTT
+
+meshtastic-bench-hint = Открывает окно Meshtastic: трафик LoRa-сети одного канала.
+
+extras-meshtastic-hint = Meshtastic: трафик LoRa-сети одного канала, услышанные узлы и пакеты.
+
+meshtastic-message = Сообщение
+
+meshtastic-message-hint = Текст для всех на канале (не более 200 байт)
+
+meshtastic-send = Отправить…
+
+meshtastic-send-hint = Передаёт этот текст на канале после вашего подтверждения. Список диапазонов передачи в Настройках, Радио решает, можно ли здесь передавать; радио должно быть на канале (Слушать здесь).
+
+meshtastic-confirm = Передать сейчас на { $freq } МГц ({ $air } с в эфире)? Услышат все в зоне досягаемости, и вы отвечаете за это по своей лицензии и правилам этого диапазона.
+
+meshtastic-confirm-yes = Передать
+
+meshtastic-confirm-no = Отмена
+
+meshtastic-transmitting = ПЕРЕДАЧА…
+
+meshtastic-tx-airtime = Время в эфире за этот час: { $used } с из { $budget } с
+
+meshtastic-tx-airtime-free = Время в эфире за этот час: { $used } с (для этого региона лимит не задан)
+
+meshtastic-tx-sent = отправлено: { $n }
+
+meshtastic-tx-band-off = ПЕРЕДАЧА ЗАПРЕЩЕНА — { $freq } МГц ({ $band }) не является подтверждённым диапазоном передачи. Отметьте и подтвердите его в Настройки → Радио → Диапазоны передачи.
+
+meshtastic-tx-unconfirmed = ПЕРЕДАЧА ЗАПРЕЩЕНА — диапазоны передачи этого радио ещё не подтверждены. Проверьте и подтвердите их в Настройки → Радио → Диапазоны передачи.
+
+meshtastic-tx-duty = Достигнут лимит рабочего цикла для этого региона: подождите { $s } с до следующего сообщения.
+
+meshtastic-tx-too-long = Это сообщение само по себе дольше всего часового бюджета времени в эфире для этого региона.
+
+meshtastic-tx-off-channel = Радио не на канале: сначала нажмите «Слушать здесь», чтобы частота стояла на нём.
+
+meshtastic-tx-no-transmitter = Это радио не может передавать сырой I/Q (трансивер, принимающий звук, или устройство только для приёма).
+
+meshtastic-tx-bad-text = Текст пуст или слишком длинный (не более 200 байт).
+
+meshtastic-tx-busy = Передача уже идёт.
+
+meshtastic-tx-rails = Передатчик отказался включиться на передачу: причина указана в сообщении о передаче.
+rx-bands-swl-note = Для этого радио включён режим SWL: блокировки приёма нет. Можно настраиваться на любой диапазон.
+
+rx-bands-always-open = Диапазоны для прослушивания (и режим SWL) всегда открыты для приёма.
+
+sat-tune-link-both-vfos = Устанавливает частоту, второй VFO и режим для этой линии: нисходящую на этом VFO, восходящую на другом; захват этого спутника переходит на неё
+
+sat-move-lock = {" "}ПЕРЕНЕСТИ ЗАХВАТ{" "}
+
+sat-locked-other-link-move-lock = Захват этого спутника на другой линии: перенести захват на эту — её восходящую частоту, тон и доплер
+
+sat-rig-rx = RX РАДИО
+
+sat-rig-tx = TX РАДИО
+
+topbar-sat-locked-vfo-a-downlink-b-uplink = Захват спутника: VFO A — нисходящая линия, VFO B — восходящая, пока захват не снят
+
+qrzcard-photo-loading = Загрузка фото…
+
+qrzcard-no-photo = Карточка без фото
