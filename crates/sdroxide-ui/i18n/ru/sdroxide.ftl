@@ -9392,11 +9392,13 @@ meter-view-swr = КСВ
 
 meter-view-alc = АРУ передачи (ALC)
 
-smeter-arrow-prev-hover = Предыдущее показание: { $view }{ $when }
+smeter-arrow-prev-hover = Предыдущее показание: { $view }
 
-smeter-arrow-next-hover = Следующее показание: { $view }{ $when }
+smeter-arrow-next-hover = Следующее показание: { $view }
 
-smeter-arrow-on-receive = (используется при передаче)
+smeter-arrow-prev-face = Предыдущий циферблат
+
+smeter-arrow-next-face = Следующий циферблат
 
 sonde-card-source-both = Радио + SondeHub (слышат оба)
 

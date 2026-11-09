@@ -9315,11 +9315,13 @@ meter-view-swr = 驻波比
 
 meter-view-alc = ALC
 
-smeter-arrow-prev-hover = 上一个读数：{ $view }{ $when }
+smeter-arrow-prev-hover = 上一个读数：{ $view }
 
-smeter-arrow-next-hover = 下一个读数：{ $view }{ $when }
+smeter-arrow-next-hover = 下一个读数：{ $view }
 
-smeter-arrow-on-receive = (发射时使用)
+smeter-arrow-prev-face = 上一个表盘
+
+smeter-arrow-next-face = 下一个表盘
 
 sonde-card-source-both = 无线电 + SondeHub（两者都收到）
 

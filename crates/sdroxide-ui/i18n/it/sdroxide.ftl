@@ -9386,11 +9386,13 @@ meter-view-swr = ROS
 
 meter-view-alc = ALC
 
-smeter-arrow-prev-hover = Misura precedente: { $view }{ $when }
+smeter-arrow-prev-hover = Misura precedente: { $view }
 
-smeter-arrow-next-hover = Misura successiva: { $view }{ $when }
+smeter-arrow-next-hover = Misura successiva: { $view }
 
-smeter-arrow-on-receive = (usata in trasmissione)
+smeter-arrow-prev-face = Quadrante precedente
+
+smeter-arrow-next-face = Quadrante successivo
 
 sonde-card-source-both = Radio + SondeHub (la ricevono entrambe)
 

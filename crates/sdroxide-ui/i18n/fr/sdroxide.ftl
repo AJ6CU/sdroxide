@@ -9388,11 +9388,13 @@ meter-view-swr = TOS
 
 meter-view-alc = ALC
 
-smeter-arrow-prev-hover = Mesure précédente : { $view }{ $when }
+smeter-arrow-prev-hover = Mesure précédente : { $view }
 
-smeter-arrow-next-hover = Mesure suivante : { $view }{ $when }
+smeter-arrow-next-hover = Mesure suivante : { $view }
 
-smeter-arrow-on-receive = (utilisée à l'émission)
+smeter-arrow-prev-face = Cadran précédent
+
+smeter-arrow-next-face = Cadran suivant
 
 sonde-card-source-both = Radio + SondeHub (reçue par les deux)
 

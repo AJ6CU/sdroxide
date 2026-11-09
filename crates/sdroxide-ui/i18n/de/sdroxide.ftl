@@ -9377,11 +9377,13 @@ meter-view-swr = SWR
 
 meter-view-alc = ALC
 
-smeter-arrow-prev-hover = Vorheriger Messwert: { $view }{ $when }
+smeter-arrow-prev-hover = Vorheriger Messwert: { $view }
 
-smeter-arrow-next-hover = Nächster Messwert: { $view }{ $when }
+smeter-arrow-next-hover = Nächster Messwert: { $view }
 
-smeter-arrow-on-receive = (gilt beim Senden)
+smeter-arrow-prev-face = Vorheriges Instrument
+
+smeter-arrow-next-face = Nächstes Instrument
 
 sonde-card-source-both = Funk + SondeHub (beide empfangen sie)
 
