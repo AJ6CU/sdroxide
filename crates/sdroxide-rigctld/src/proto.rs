@@ -18,7 +18,7 @@ use sdroxide_types::{
 use crate::state::{
     RigState, agc_from_hamlib, agc_to_hamlib, apf_level, apf_width_for, centred_on,
     decimation_for_span, filter_for, from_hamlib_mode, nr_engine_for, nr_on_level, nr_strength_for,
-    nr_to_hamlib, squelch_db_for, to_hamlib_mode,
+    nr_to_hamlib, spectrum_spans, squelch_db_for, to_hamlib_mode,
 };
 
 /// Hamlib error codes (`rig.h`), returned negated in `RPRT`.
@@ -265,6 +265,13 @@ impl Out {
         } else {
             self.body.push_str(&format!("{v}\n"));
         }
+    }
+
+    /// One line of text as it stands, label and all — for `\dump_caps`,
+    /// which Hamlib prints as text in either protocol.
+    fn line(&mut self, text: &str) {
+        self.body.push_str(text);
+        self.body.push(if self.fmt.extended { self.fmt.sep } else { '\n' });
     }
 
     /// Finish with a return code. The default protocol prints `RPRT` only for
@@ -696,6 +703,17 @@ fn dispatch(
         "dump_caps" => {
             // netrigctl never parses this; it exists for `rigctl -m 2 1`.
             out.value("Caps", format!("{} rigctld-compatible", cfg.rig_name));
+            // The spans `SPECTRUM_SPAN` can give, on Hamlib's own line for a
+            // scope's spans — narrowest first, each as `%.0f ` — so a
+            // client offers exactly those (issue #469). Not in `\dump_state`:
+            // netrigctl parses that line by line, and every client with it.
+            if st.can_decimate {
+                let spans = spectrum_spans(st.device_rate_hz);
+                if !spans.is_empty() {
+                    let list: String = spans.iter().map(|s| format!("{s:.0} ")).collect();
+                    out.line(&format!("Spectrum spans: {list}"));
+                }
+            }
             out.finish(OK, true)
         }
         "dump_state" => Reply::Send(dump_state(st, cfg)),
@@ -1547,5 +1565,45 @@ mod tests {
     #[test]
     fn dump_state_uses_only_newlines() {
         assert!(!run("\\dump_state").0.contains('\r'));
+    }
+
+    /// `\dump_caps` lists the spans `SPECTRUM_SPAN` gives, on Hamlib's
+    /// "Spectrum spans:" line, narrowest first (issue #469).
+    #[test]
+    fn dump_caps_lists_the_spectrum_spans() {
+        let s = RigState {
+            can_decimate: true,
+            device_rate_hz: 1_536_000.0,
+            span_hz: 768_000.0,
+            ..st()
+        };
+        let reply = run_with("\\dump_caps", &s, &RigctldConfig::default()).0;
+        assert!(
+            reply.contains("Spectrum spans: 48000 96000 192000 384000 768000 1536000 \n"),
+            "{reply}"
+        );
+        let ext = run_with("+\\dump_caps", &s, &RigctldConfig::default()).0;
+        assert!(ext.contains("Spectrum spans: 48000 96000 "), "{ext}");
+        assert!(ext.ends_with("RPRT 0\n"), "{ext}");
+    }
+
+    /// Each span listed is one `L SPECTRUM_SPAN` sets exactly.
+    #[test]
+    fn every_listed_span_is_one_the_decimation_gives() {
+        for rate in [768_000.0, 1_536_000.0, 2_400_000.0, 10_000_000.0, 96_000.0] {
+            for span in spectrum_spans(rate) {
+                let factor = decimation_for_span(rate, span);
+                assert_eq!(rate / factor as f64, span, "rate {rate}, span {span}");
+            }
+        }
+        assert!(spectrum_spans(0.0).is_empty());
+    }
+
+    /// No spans where there is no decimation: the line is left out.
+    #[test]
+    fn dump_caps_has_no_spans_without_a_decimation() {
+        let s = RigState { can_decimate: false, device_rate_hz: 1_536_000.0, ..st() };
+        let reply = run_with("\\dump_caps", &s, &RigctldConfig::default()).0;
+        assert!(!reply.contains("Spectrum spans"), "{reply}");
     }
 }
