@@ -5346,8 +5346,6 @@ recjobs-kind-iq = I/Q
 
 recjobs-kind-both = Ambos
 
-panels-sensitivity = Sensibilidad
-
 navtex-hunting = buscando
 
 navtex-hunting-hint =
@@ -5359,19 +5357,8 @@ navtex-hunting-hint =
     
     Recuerde también que NAVTEX sigue un horario, no es una conversación: una estación costera transmite diez minutos cada cuatro horas, así que el silencio es normal la mayor parte del tiempo. Hay que estar escuchando cuando le toque a su estación. Y los 518 kHz solo cobran vida de noche: una banda silenciosa de día no es un decodificador averiado.
 
-navtex-sensitivity-hint =
-    Sensibilidad: con qué facilidad el decodificador se engancha a una señal y la mantiene.
-    
-    Auto usa los umbrales de referencia (0), el comportamiento de fábrica.
-    
-    + acepta una señal más débil o ruidosa; − espera una más limpia antes de declarar sincronismo, lo que evita que el ruido se lea como caracteres.
-    
-    No es volumen: NAVTEX es FSK, los grises vienen de los tonos, no de la intensidad de la señal.
 
-
-navtex-auto-hint = Vuelve a los umbrales de referencia (0). Resaltado mientras está activo.
-
-navtex-tune-dial-usb-below-channel = Sintoniza el dial aquí (USB, 1,710 kHz por debajo del canal).
+navtex-tune-dial-usb-below-channel = Sintoniza el dial aquí (USB, 1,700 kHz por debajo del canal).
 
 settings-audio-your-audio = Su audio
 
@@ -9634,3 +9621,13 @@ wefax-revert-auto-slant-hint = Anula la corrección automática de inclinación 
 qrzcard-no-account = Sin cuenta de QRZ.com registrada -
 
 qrzcard-account-link = ver el estado de la cuenta
+
+navtex-other-frequencies = FRECUENCIAS NAVTEX Y ESTACIONES COSTERAS
+
+navtex-other-frequencies-hint = Todas las frecuencias de la lista NAVTEX publicada, por región. Al elegir una se sintoniza el dial para banda lateral superior. Las entradas marcadas CW son boletines meteorológicos en Morse, que este decodificador no lee.
+
+navtex-freq-cw = modo CW
+
+navtex-freq-international = internacional, en inglés
+
+navtex-freq-national = nacional, en el idioma local
