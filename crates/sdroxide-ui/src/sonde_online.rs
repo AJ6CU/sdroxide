@@ -23,20 +23,40 @@ use std::sync::mpsc::{Receiver, channel};
 
 pub use sdroxide_types::sonde_online::OnlineSonde;
 #[cfg(not(target_arch = "wasm32"))]
-use sdroxide_types::sonde_online::{parse, url};
+use sdroxide_types::sonde_online::{flight_url, parse, parse_flight, url};
 
 /// How often the list is asked for again.
 pub const REFRESH_S: i64 = 60;
+/// After a failed ask the next one comes this soon, not after a whole minute:
+/// a hiccup (a busy station, a dropped connection) must not leave the list
+/// and the cards dead until the minute is up.
+pub const RETRY_S: i64 = 15;
 /// A list older than this is asked for again when a sonde is picked.
 pub const HURRY_AFTER_S: i64 = 20;
-/// The most bytes read of a reply.
+/// The most bytes read of a reply. A whole flight from SondeHub is every
+/// frame of the sonde (about 7 MB after three hours), far more than the list.
 #[cfg(not(target_arch = "wasm32"))]
-const MAX_BYTES: u64 = 4 * 1024 * 1024;
+const MAX_BYTES: u64 = 32 * 1024 * 1024;
 
 /// The station's address for the list, the locator rounded to 0.1°.
 pub fn station_url(peer: &str, lat: f64, lon: f64) -> Option<String> {
     let base = crate::login::http_base(&crate::login::station_key(peer))?;
     Some(format!("{base}/sonde-online?lat={lat:.1}&lon={lon:.1}"))
+}
+
+/// The station's address for one sonde's flight.
+pub fn station_flight_url(peer: &str, serial: &str) -> Option<String> {
+    if !sdroxide_types::sonde_online::serial_ok(serial) {
+        return None;
+    }
+    let base = crate::login::http_base(&crate::login::station_key(peer))?;
+    Some(format!("{base}/sonde-track?serial={serial}"))
+}
+
+/// The station's answer for a flight: `[[lat, lon], ...]`, or nothing usable.
+pub fn parse_station_flight(body: &str) -> Option<Vec<(f64, f64)>> {
+    let v: Vec<(f64, f64)> = serde_json::from_str(body).ok()?;
+    v.iter().all(|(a, b)| sdroxide_types::sonde_online::place_ok(*a, *b)).then_some(v)
 }
 
 /// The station's answer: a JSON array of sondes, or nothing usable.
@@ -133,11 +153,13 @@ impl Online {
                     self.failed = true;
                     self.why = Some(why);
                     self.inflight = None;
+                    self.last_ask = now - REFRESH_S + RETRY_S;
                 }
                 Err(std::sync::mpsc::TryRecvError::Disconnected) => {
                     self.failed = true;
                     self.why = Some(Why::Net("the request stopped".into()));
                     self.inflight = None;
+                    self.last_ask = now - REFRESH_S + RETRY_S;
                 }
                 Err(std::sync::mpsc::TryRecvError::Empty) => {}
             }
@@ -192,6 +214,99 @@ impl Online {
                 Ok(v) => Reply::Sondes(v),
                 Err(why) => Reply::Failed(why),
             });
+            ctx.request_repaint();
+        });
+    }
+}
+
+/// The flight so far of the sonde whose card is open, from SondeHub: where a
+/// sonde heard only by other stations has been, drawn like a radio's own track.
+/// Asked once when the card opens, then again every [`REFRESH_S`] while it stays
+/// open; dropped when the card closes.
+#[derive(Default)]
+pub struct Flight {
+    serial: Option<String>,
+    /// The places, oldest first.
+    pub points: Vec<(f64, f64)>,
+    last_ask: i64,
+    inflight: Option<Receiver<Result<Vec<(f64, f64)>, Why>>>,
+}
+
+impl Flight {
+    /// The places for `serial`, or none when it is not the open card's.
+    pub fn of(&self, serial: &str) -> &[(f64, f64)] {
+        if self.serial.as_deref() == Some(serial) { &self.points } else { &[] }
+    }
+
+    /// Called every frame with the serial of the open card (`None` when no card
+    /// is open or the switch is off): collect an answer, ask when it is time.
+    pub fn tick(
+        &mut self,
+        ctx: &eframe::egui::Context,
+        want: Option<&str>,
+        now: i64,
+        peer: Option<&str>,
+    ) {
+        if self.serial.as_deref() != want {
+            self.serial = want.map(str::to_string);
+            self.points.clear();
+            self.inflight = None;
+            self.last_ask = 0;
+        }
+        if let Some(rx) = &self.inflight {
+            match rx.try_recv() {
+                Ok(Ok(v)) => {
+                    // An empty answer keeps what is drawn: the flight may be
+                    // gone from SondeHub while the radio's own track is not.
+                    if !v.is_empty() {
+                        self.points = v;
+                    }
+                    self.inflight = None;
+                }
+                Ok(Err(_)) | Err(std::sync::mpsc::TryRecvError::Disconnected) => {
+                    self.inflight = None;
+                    self.last_ask = now - REFRESH_S + RETRY_S;
+                }
+                Err(std::sync::mpsc::TryRecvError::Empty) => {}
+            }
+        }
+        let Some(serial) = want else { return };
+        if self.inflight.is_none() && now - self.last_ask >= REFRESH_S {
+            self.last_ask = now;
+            self.ask(ctx, serial, peer);
+        }
+    }
+
+    fn ask(&mut self, ctx: &eframe::egui::Context, serial: &str, peer: Option<&str>) {
+        let (tx, rx) = channel();
+        self.inflight = Some(rx);
+        let ctx = ctx.clone();
+        let serial = serial.to_string();
+        let via = peer.and_then(|p| {
+            station_flight_url(p, &serial).map(|u| (u, crate::login::station_key(p)))
+        });
+        #[cfg(not(target_arch = "wasm32"))]
+        std::thread::spawn(move || {
+            let reply = match via {
+                Some((address, station)) => station_body(&address, &station)
+                    .and_then(|b| parse_station_flight(&b).ok_or(Why::Unreadable)),
+                None => match flight_url(&serial) {
+                    Some(address) => fetch(&address, None).map(|b| parse_flight(&b)),
+                    None => Err(Why::Unreadable),
+                },
+            };
+            let _ = tx.send(reply);
+            ctx.request_repaint();
+        });
+        #[cfg(target_arch = "wasm32")]
+        wasm_bindgen_futures::spawn_local(async move {
+            let reply = match via {
+                Some((address, _)) => web_text(&address)
+                    .await
+                    .and_then(|t| parse_station_flight(&t).ok_or(Why::Unreadable)),
+                None => Err(Why::NoStation),
+            };
+            let _ = tx.send(reply);
             ctx.request_repaint();
         });
     }
@@ -256,6 +371,12 @@ fn sign_in(agent: &ureq::Agent, station: &str) -> Option<String> {
 
 #[cfg(not(target_arch = "wasm32"))]
 fn fetch_via_station(address: &str, station: &str) -> Result<Vec<OnlineSonde>, Why> {
+    station_body(address, station).and_then(|b| parse_station(&b).ok_or(Why::Unreadable))
+}
+
+/// The body of the station's 200 for `address`, signing in once if it asks.
+#[cfg(not(target_arch = "wasm32"))]
+fn station_body(address: &str, station: &str) -> Result<String, Why> {
     let agent = agent();
     let cookie = COOKIES.lock().unwrap_or_else(|e| e.into_inner()).get(station).cloned();
     let mut got = get(&agent, address, cookie.as_deref())?;
@@ -269,7 +390,7 @@ fn fetch_via_station(address: &str, station: &str) -> Result<Vec<OnlineSonde>, W
         }
     }
     match got {
-        (200, body) => parse_station(&body).ok_or(Why::Unreadable),
+        (200, body) => Ok(body),
         (s, _) => Err(Why::of_status(s)),
     }
 }
@@ -277,6 +398,12 @@ fn fetch_via_station(address: &str, station: &str) -> Result<Vec<OnlineSonde>, W
 /// The browser's ask: same origin, with the cookie it already holds.
 #[cfg(target_arch = "wasm32")]
 async fn web_fetch(address: &str) -> Result<Vec<OnlineSonde>, Why> {
+    web_text(address).await.and_then(|t| parse_station(&t).ok_or(Why::Unreadable))
+}
+
+/// The text of the same-origin answer to `address`.
+#[cfg(target_arch = "wasm32")]
+async fn web_text(address: &str) -> Result<String, Why> {
     use wasm_bindgen::JsCast;
     let window = web_sys::window().ok_or(Why::NoStation)?;
     let init = web_sys::RequestInit::new();
@@ -301,7 +428,7 @@ async fn web_fetch(address: &str) -> Result<Vec<OnlineSonde>, Why> {
     if text.len() as u64 > 4 * 1024 * 1024 {
         return Err(Why::Unreadable);
     }
-    parse_station(&text).ok_or(Why::Unreadable)
+    Ok(text)
 }
 
 #[cfg(test)]
@@ -362,6 +489,45 @@ mod tests {
         let mut off = Online { last_ask: 5, ..Default::default() };
         off.hurry(1_000);
         assert_eq!(off.last_ask, 5, "switched off: nothing to hurry");
+    }
+
+    #[test]
+    fn after_a_failed_ask_the_next_comes_soon_not_after_a_minute() {
+        let (tx, rx) = channel();
+        let mut o = Online { on: true, last_ask: 1_000, inflight: Some(rx), ..Default::default() };
+        tx.send(Reply::Failed(Why::Busy)).unwrap();
+        o.tick(&eframe::egui::Context::default(), Some((48.0, 2.0)), 1_010, None);
+        assert!(o.failed && o.inflight.is_none());
+        assert_eq!(o.last_ask, 1_010 - REFRESH_S + RETRY_S);
+    }
+
+    #[test]
+    fn a_flight_belongs_to_the_open_card_and_goes_with_it() {
+        let mut f = Flight::default();
+        let ctx = eframe::egui::Context::default();
+        f.tick(&ctx, None, 1_000, None);
+        assert!(f.of("A").is_empty());
+        f.serial = Some("A".into());
+        f.points = vec![(1.0, 2.0)];
+        assert_eq!(f.of("A"), &[(1.0, 2.0)]);
+        assert!(f.of("B").is_empty(), "another sonde's card gets nothing");
+        f.tick(&ctx, None, 1_001, None);
+        assert!(f.points.is_empty() && f.of("A").is_empty(), "closing the card drops it");
+    }
+
+    #[test]
+    fn the_stations_flight_is_read_and_nonsense_is_refused() {
+        assert_eq!(
+            parse_station_flight("[[48.0,4.0],[49.0,5.0]]"),
+            Some(vec![(48.0, 4.0), (49.0, 5.0)])
+        );
+        assert!(parse_station_flight("[[95.0,4.0]]").is_none());
+        assert!(parse_station_flight("{}").is_none());
+        assert_eq!(
+            station_flight_url("wss://radio.example/ws/2", "W4871102").unwrap(),
+            "https://radio.example/sonde-track?serial=W4871102"
+        );
+        assert!(station_flight_url("wss://radio.example/ws/2", "a/b").is_none());
     }
 
     #[test]

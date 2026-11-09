@@ -20,18 +20,25 @@ use axum::extract::{Query, State};
 use axum::http::{HeaderMap, StatusCode, header};
 use axum::response::{IntoResponse, Response};
 
-use sdroxide_types::sonde_online::{OnlineSonde, parse, place_ok, tenths, url};
+use sdroxide_types::sonde_online::{
+    OnlineSonde, flight_url, parse, parse_flight, place_ok, serial_ok, tenths, url,
+};
 
 use crate::Station;
 
 /// How long an answer is served again without asking SondeHub.
 pub(crate) const HOLD: Duration = Duration::from_secs(60);
+/// How long a flight is served again without asking SondeHub.
+const FLIGHT_HOLD: Duration = Duration::from_secs(120);
 /// Cells kept at once; the oldest goes first.
 const MAX_CELLS: usize = 32;
 /// Questions to SondeHub per minute, whoever is asking.
 pub(crate) const MAX_ASKS_PER_MINUTE: usize = 12;
 /// The most bytes read of a reply.
 const MAX_BYTES: u64 = 4 * 1024 * 1024;
+/// The most bytes read of a flight: SondeHub sends every frame (about 7 MB
+/// after three hours), which is reduced to a few hundred places here.
+const FLIGHT_MAX_BYTES: u64 = 32 * 1024 * 1024;
 
 /// How a request ended.
 #[derive(Debug, PartialEq)]
@@ -49,6 +56,10 @@ pub(crate) enum Answer {
 pub(crate) struct SondeRelay {
     book: Mutex<Vec<((i32, i32), Instant, Arc<String>)>>,
     asks: Mutex<Vec<Instant>>,
+    /// Flights held by serial, and the times of the flight questions in the
+    /// last minute (their own ceiling, so a card never starves the list).
+    flights: Mutex<Vec<(String, Instant, Arc<String>)>>,
+    flight_asks: Mutex<Vec<Instant>>,
 }
 
 impl SondeRelay {
@@ -88,6 +99,109 @@ impl SondeRelay {
             }
             Err(_) => Answer::Failed,
         }
+    }
+}
+
+impl SondeRelay {
+    /// One sonde's flight: the held answer, else `fetch(url)`, within the
+    /// flight ceiling. The answer is the places as JSON `[[lat, lon], ...]`.
+    pub(crate) fn flight_at(
+        &self,
+        now: Instant,
+        serial: &str,
+        fetch: impl FnOnce(&str) -> Result<String, String>,
+    ) -> Answer {
+        let Some(address) = flight_url(serial) else { return Answer::Failed };
+        {
+            let mut book = self.flights.lock().unwrap_or_else(|e| e.into_inner());
+            book.retain(|(_, until, _)| *until > now);
+            if let Some((_, _, body)) = book.iter().find(|(s, ..)| s == serial) {
+                return Answer::Held(body.clone());
+            }
+        }
+        {
+            let mut asks = self.flight_asks.lock().unwrap_or_else(|e| e.into_inner());
+            asks.retain(|t| now.saturating_duration_since(*t) < Duration::from_secs(60));
+            if asks.len() >= MAX_ASKS_PER_MINUTE {
+                return Answer::Busy;
+            }
+            asks.push(now);
+        }
+        match fetch(&address) {
+            Ok(body) => {
+                let body = Arc::new(body);
+                let mut book = self.flights.lock().unwrap_or_else(|e| e.into_inner());
+                book.retain(|(s, ..)| s != serial);
+                book.push((serial.to_string(), now + FLIGHT_HOLD, body.clone()));
+                while book.len() > MAX_CELLS {
+                    book.remove(0);
+                }
+                Answer::Held(body)
+            }
+            Err(_) => Answer::Failed,
+        }
+    }
+}
+
+/// SondeHub's flight for the address, reduced to the places and written back
+/// as the JSON the clients read.
+fn ask_flight(address: &str) -> Result<String, String> {
+    let agent: ureq::Agent = ureq::Agent::config_builder()
+        .timeout_connect(Some(Duration::from_secs(10)))
+        .timeout_global(Some(Duration::from_secs(30)))
+        .http_status_as_error(false)
+        .build()
+        .into();
+    let mut resp = agent
+        .get(address)
+        .header("User-Agent", "sdroxide-brown")
+        .header("Accept", "application/json")
+        .call()
+        .map_err(|e| e.to_string())?;
+    let status = resp.status().as_u16();
+    if status != 200 {
+        return Err(format!("HTTP {status}"));
+    }
+    let body = resp
+        .body_mut()
+        .with_config()
+        .limit(FLIGHT_MAX_BYTES)
+        .read_to_string()
+        .map_err(|e| e.to_string())?;
+    serde_json::to_string(&parse_flight(&body)).map_err(|e| e.to_string())
+}
+
+/// `GET /sonde-track?serial=..`: where one sonde has been, from SondeHub.
+pub(crate) async fn track_route(
+    State(station): State<Arc<Station>>,
+    Query(query): Query<HashMap<String, String>>,
+    headers: HeaderMap,
+) -> Response {
+    let plain =
+        |status: StatusCode| (status, [(header::CACHE_CONTROL, "no-store")]).into_response();
+    let needed = station.auth.required().is_some();
+    let signed = crate::session_cookie::from_headers(&headers, &station.auth).is_some();
+    if needed && !signed {
+        return plain(StatusCode::UNAUTHORIZED);
+    }
+    let Some(serial) = query.get("serial").filter(|s| serial_ok(s)).cloned() else {
+        return plain(StatusCode::BAD_REQUEST);
+    };
+    let relay = station.sonde.clone();
+    let got = tokio::task::spawn_blocking(move || {
+        relay.flight_at(Instant::now(), &serial, ask_flight)
+    })
+    .await
+    .unwrap_or(Answer::Failed);
+    match got {
+        Answer::Held(body) => (
+            StatusCode::OK,
+            [(header::CONTENT_TYPE, "application/json"), (header::CACHE_CONTROL, "no-store")],
+            body.as_str().to_string(),
+        )
+            .into_response(),
+        Answer::Busy => plain(StatusCode::TOO_MANY_REQUESTS),
+        Answer::Failed => plain(StatusCode::BAD_GATEWAY),
     }
 }
 
@@ -228,6 +342,38 @@ mod tests {
         // A minute later the room is back.
         let later = t0 + Duration::from_secs(61);
         assert!(matches!(relay.get_at(later, (999, 0), |_| Ok("[]".into())), Answer::Held(_)));
+    }
+
+    #[test]
+    fn a_flight_is_asked_once_for_two_minutes_and_only_for_a_plain_serial() {
+        let relay = SondeRelay::default();
+        let t0 = Instant::now();
+        let asked = Cell::new(0);
+        let fetch = |a: &str| {
+            asked.set(asked.get() + 1);
+            assert_eq!(a, "https://api.v2.sondehub.org/sonde/W4871102");
+            Ok("[[1.0,2.0]]".to_string())
+        };
+        assert!(matches!(relay.flight_at(t0, "W4871102", fetch), Answer::Held(_)));
+        let soon = t0 + Duration::from_secs(100);
+        assert!(matches!(relay.flight_at(soon, "W4871102", fetch), Answer::Held(_)));
+        assert_eq!(asked.get(), 1);
+        let later = t0 + Duration::from_secs(121);
+        assert!(matches!(relay.flight_at(later, "W4871102", fetch), Answer::Held(_)));
+        assert_eq!(asked.get(), 2);
+        assert_eq!(relay.flight_at(t0, "../x", |_| Ok("[]".into())), Answer::Failed);
+    }
+
+    #[test]
+    fn flights_have_their_own_ceiling_and_do_not_starve_the_list() {
+        let relay = SondeRelay::default();
+        let t0 = Instant::now();
+        for i in 0..MAX_ASKS_PER_MINUTE {
+            let serial = format!("S{i}");
+            assert!(matches!(relay.flight_at(t0, &serial, |_| Ok("[]".into())), Answer::Held(_)));
+        }
+        assert_eq!(relay.flight_at(t0, "Z1", |_| Ok("[]".into())), Answer::Busy);
+        assert!(matches!(relay.get_at(t0, (1, 1), |_| Ok("[]".into())), Answer::Held(_)));
     }
 
     #[test]

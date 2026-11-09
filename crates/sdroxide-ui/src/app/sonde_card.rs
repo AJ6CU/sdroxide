@@ -20,6 +20,13 @@ pub(in crate::app) struct Card {
     pub serial: String,
     /// The pairs of label and value, in the order they are drawn.
     pub rows: Vec<(String, String)>,
+    /// The channel it transmits on, Hz: drawn large, and a click on it tunes
+    /// the radio there.
+    pub freq_hz: Option<f64>,
+    /// Where it is now, and its altitude: the head of the card.
+    pub place: Option<(f64, f64, Option<f64>)>,
+    /// This radio decodes it (so the card carries the radio's own rows).
+    pub from_radio: bool,
 }
 
 /// "42 s", "7 min", "3 h".
@@ -88,7 +95,14 @@ pub(in crate::app) fn own(s: &SondeTrack, home: Option<(f64, f64)>, now: i64) ->
     push(&mut rows, tr!("sonde-col-pressure"), s.pressure_hpa.map(|v| format!("{v:.0} hPa")));
     rows.push((tr!("sonde-card-frames"), s.frames.to_string()));
     rows.push((tr!("sonde-col-heard"), ago(now - s.last_unix)));
-    Card { title: format!("{} {}", s.model, s.serial), serial: s.serial.clone(), rows }
+    Card {
+        title: format!("{} {}", s.model, s.serial),
+        serial: s.serial.clone(),
+        rows,
+        freq_hz: (s.freq_hz > 0.0).then_some(s.freq_hz),
+        place: s.lat.zip(s.lon).map(|(a, b)| (a, b, s.alt_m.map(f64::from))),
+        from_radio: true,
+    }
 }
 
 /// A sonde only SondeHub's list has.
@@ -117,7 +131,14 @@ pub(in crate::app) fn online(o: &OnlineSonde, home: Option<(f64, f64)>, now: i64
     push(&mut rows, tr!("sonde-card-antenna"), o.antenna.clone());
     push(&mut rows, tr!("sonde-card-software"), o.software.clone());
     rows.push((tr!("sonde-col-heard"), ago(now - o.unix)));
-    Card { title: format!("{} {}", o.model, o.serial), serial: o.serial.clone(), rows }
+    Card {
+        title: format!("{} {}", o.model, o.serial),
+        serial: o.serial.clone(),
+        rows,
+        freq_hz: o.freq_mhz.filter(|f| *f > 0.0).map(|f| f * 1e6),
+        place: Some((o.lat, o.lon, o.alt_m)),
+        from_radio: false,
+    }
 }
 
 /// A sonde both sources know: this radio's rows first (its own frames are the
@@ -136,6 +157,11 @@ fn merged(s: &SondeTrack, o: &OnlineSonde, home: Option<(f64, f64)>, now: i64) -
         }
     }
     c.rows.extend(heard);
+    // What this radio lacks, SondeHub fills: a sonde heard but with no GPS fix
+    // yet still shows where the network last saw it.
+    let hub = online(o, home, now);
+    c.freq_hz = c.freq_hz.or(hub.freq_hz);
+    c.place = c.place.or(hub.place);
     c
 }
 

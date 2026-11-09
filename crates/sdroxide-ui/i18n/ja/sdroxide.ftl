@@ -9549,3 +9549,15 @@ topbar-sat-locked-vfo-a-downlink-b-uplink = 衛星にロック中：ロックが
 qrzcard-photo-loading = 写真を読み込み中…
 
 qrzcard-no-photo = 写真なしの記録
+
+sonde-card-listen-hover = クリックすると無線機をこのチャンネルに合わせます。ダイヤルが移動し、デコーダーはこのチャンネルだけを受信します。
+
+sonde-card-decoding = この無線機でデコード中
+
+sonde-card-waiting = このチャンネルを受信中、まだデコードされていません
+
+sonde-card-click-to-listen = 周波数をクリックして受信
+
+sonde-type-all = すべてのタイプ
+
+sonde-type-hover = ゾンデの種類を指定して探します。選ぶとスキャンが始まり、その種類が受信できるまでウィンドウをバンド内で動かします。その種類だけが一覧と地図に表示されます。

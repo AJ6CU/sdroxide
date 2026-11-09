@@ -10307,6 +10307,14 @@ impl Engine {
                 self.sync_meshtastic_window();
                 self.sync_wxsat_window();
                     }
+                    // Same for a sonde: with the decoder on one channel, the
+                    // dial is the channel. Tuning onto a sonde by hand used to
+                    // leave the lane on the channel box's old value, so a signal
+                    // with packets on the waterfall decoded nothing.
+                    if let Some(cfg) = self.state.sonde.following_dial(hz) {
+                        self.state.sonde = cfg;
+                        self.sync_sonde();
+                    }
                 }
                 self.update_tuning();
             }

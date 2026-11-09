@@ -9609,3 +9609,15 @@ topbar-sat-locked-vfo-a-downlink-b-uplink = Vergrendeld op een satelliet: VFO A 
 qrzcard-photo-loading = Foto laden…
 
 qrzcard-no-photo = Kaart zonder foto
+
+sonde-card-listen-hover = Klik om de radio op dit kanaal af te stemmen: de afstemknop gaat erheen en de decoder luistert alleen daar.
+
+sonde-card-decoding = Gedecodeerd door deze radio
+
+sonde-card-waiting = Luistert op dit kanaal, nog niets gedecodeerd
+
+sonde-card-click-to-listen = Klik op de frequentie om te luisteren
+
+sonde-type-all = Alle typen
+
+sonde-type-hover = Zoek één type sonde: een keuze start de scan, die het venster over de band verschuift tot dat type te horen is. Alleen dat type wordt getoond en getekend.

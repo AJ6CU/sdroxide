@@ -79,6 +79,89 @@ pub struct SondeMapState {
     pub card_size: Option<Vec2>,
     /// The card is its own window, off the map.
     pub detached: bool,
+    /// The flight so far of the selected sonde, from SondeHub.
+    pub flight: crate::sonde_online::Flight,
+    /// Only this type is drawn and listed (`None`: every type).
+    pub type_filter: Option<&'static str>,
+    /// Walks the window across the band while a scan finds nothing.
+    pub stepper: Stepper,
+}
+
+/// How long the window rests on one stretch of the band before the scan moves on.
+pub const SCAN_DWELL_S: i64 = 10;
+/// A sonde heard this recently keeps the scan where it is.
+pub const SCAN_HOLD_S: i64 = 45;
+
+/// Lowest frequency a scan visits (the band's floor, Hz).
+const SCAN_LOW_HZ: f64 = 400_150_000.0;
+
+/// The window centre a scan moves to after `current_hz`, for a window `rate_hz`
+/// wide: the band is covered in steps of four fifths of the window (so the
+/// stretches overlap), the last stretch ends on the band's top edge, and after
+/// it the walk starts over from the bottom. A window as wide as the band
+/// stays on the middle. A centre that is not one of the stretches (the dial
+/// was somewhere else) starts at the bottom.
+pub fn next_scan_centre(current_hz: f64, rate_hz: f64) -> f64 {
+    let top = sdroxide_types::SONDE_BAND_HZ.1;
+    let rate = rate_hz.abs();
+    if rate >= top - SCAN_LOW_HZ {
+        return (SCAN_LOW_HZ + top) / 2.0;
+    }
+    let half = rate / 2.0;
+    let (first, last) = (SCAN_LOW_HZ + half, top - half);
+    if current_hz < first - 1.0 || current_hz > last + 1.0 {
+        return first;
+    }
+    let next = current_hz + rate * 0.8;
+    if next <= last + 1.0 {
+        next
+    } else if current_hz < last - 1.0 {
+        last
+    } else {
+        first
+    }
+}
+
+/// When the scan moves the window: after [`SCAN_DWELL_S`] of nothing heard.
+#[derive(Default, Debug, Clone, Copy, PartialEq)]
+pub struct Stepper {
+    moved_at: i64,
+}
+
+impl Stepper {
+    /// Forget the dwell, so the next frame of an active scan moves at once.
+    pub fn restart(&mut self) {
+        self.moved_at = 1;
+    }
+
+    /// Whether to move the window now. `active`: a scan is running; `busy`: a
+    /// sonde is being heard, so the window stays.
+    pub fn due(&mut self, now: i64, active: bool, busy: bool) -> bool {
+        if !active {
+            self.moved_at = 0;
+            return false;
+        }
+        if busy || self.moved_at == 0 {
+            self.moved_at = now;
+            return false;
+        }
+        if now - self.moved_at >= SCAN_DWELL_S {
+            self.moved_at = now;
+            return true;
+        }
+        false
+    }
+}
+
+/// Whether a type (as the picker names it, e.g. "C34/C50" or "iMet") covers a
+/// sonde's type as a decoder or SondeHub writes it ("iMet-4", "RS41").
+pub fn type_matches(filter: &str, model: &str) -> bool {
+    let norm = |t: &str| -> String {
+        t.chars().filter(|c| c.is_ascii_alphanumeric()).map(|c| c.to_ascii_lowercase()).collect()
+    };
+    let m = norm(model);
+    !m.is_empty()
+        && filter.split('/').map(norm).any(|f| !f.is_empty() && (m.starts_with(&f) || f.starts_with(&m)))
 }
 
 impl SondeMapState {
@@ -314,6 +397,17 @@ pub fn show(
         }
     }
 
+    // ── the flight SondeHub holds for the selected sonde: where it has been ──
+    if let Some(sel) = selected.as_deref() {
+        let line: Vec<_> = state.flight.of(sel).iter().map(|(a, b)| project(*a, *b)).collect();
+        let ink = alpha(Color32::from_rgb(110, 165, 255), 220.0);
+        for seg in line.windows(2) {
+            if (seg[0].x - seg[1].x).abs() < rect.width() * 0.5 {
+                p.line_segment([seg[0], seg[1]], Stroke::new(2.2, ink));
+            }
+        }
+    }
+
     // ── the sondes other stations hear (SondeHub), hollow diamonds ──
     let online_ink = alpha(Color32::from_rgb(110, 165, 255), 230.0);
     for (j, (o, c, text)) in hub_marks.iter().enumerate() {
@@ -478,6 +572,62 @@ fn hub_tip(o: &OnlineSonde) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_scan_walks_a_narrow_window_over_the_whole_band_and_starts_over() {
+        let rate = 2_400_000.0;
+        let mut c = 1_090_000_000.0; // the dial was somewhere else
+        let mut seen = Vec::new();
+        for _ in 0..8 {
+            c = next_scan_centre(c, rate);
+            seen.push(c);
+        }
+        assert_eq!(seen[0], SCAN_LOW_HZ + rate / 2.0, "starts at the bottom of the band");
+        let top = sdroxide_types::SONDE_BAND_HZ.1;
+        assert!(seen.iter().any(|c| *c == top - rate / 2.0), "reaches the top edge");
+        assert!(seen.windows(2).all(|w| w[0] != w[1]));
+        let last = seen.iter().position(|c| *c == top - rate / 2.0).unwrap();
+        assert_eq!(seen[last + 1], seen[0], "then starts over");
+        // Every stretch overlaps the next: nothing falls between two of them.
+        assert!(seen[..=last].windows(2).all(|w| w[1] - w[0] < rate));
+        assert_eq!(next_scan_centre(403e6, 8_000_000.0), (SCAN_LOW_HZ + top) / 2.0);
+    }
+
+    #[test]
+    fn the_stepper_waits_a_dwell_holds_while_a_sonde_is_heard_and_restarts() {
+        let mut s = Stepper::default();
+        assert!(!s.due(100, false, false), "no scan, no move");
+        assert!(!s.due(100, true, false), "the first look rests a dwell");
+        assert!(!s.due(100 + SCAN_DWELL_S - 1, true, false));
+        assert!(s.due(100 + SCAN_DWELL_S, true, false));
+        assert!(!s.due(100 + SCAN_DWELL_S + 1, true, false), "and the next dwell starts");
+        let t = 200;
+        assert!(!s.due(t, true, true), "a sonde heard: stay");
+        assert!(!s.due(t + 3 * SCAN_DWELL_S, true, true), "as long as it is heard");
+        s.restart();
+        assert!(s.due(t + 3 * SCAN_DWELL_S + 1, true, false), "a new choice moves at once");
+        assert!(!s.due(1_000, false, false));
+        assert!(!s.due(1_001, true, false), "off then on starts with a dwell");
+    }
+
+    #[test]
+    fn a_type_covers_the_names_decoders_and_sondehub_give_it() {
+        for (filter, model) in [
+            ("RS41", "RS41"),
+            ("RS41", "RS41-SG"),
+            ("DFM", "DFM09"),
+            ("iMet", "iMet-4"),
+            ("iMet", "iMet-54"),
+            ("C34/C50", "C50"),
+            ("CF06/HT03", "HT03"),
+            ("M10", "m10"),
+        ] {
+            assert!(type_matches(filter, model), "{filter} / {model}");
+        }
+        for (filter, model) in [("RS41", "M10"), ("M10", "M20"), ("DFM", ""), ("iMet-54", "iMet-4")] {
+            assert!(!type_matches(filter, model), "{filter} / {model}");
+        }
+    }
 
     fn sonde(climb: Option<f32>, last: i64) -> SondeTrack {
         SondeTrack {

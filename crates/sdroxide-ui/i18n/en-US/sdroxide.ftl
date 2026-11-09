@@ -9628,3 +9628,15 @@ topbar-sat-locked-vfo-a-downlink-b-uplink = Locked to a satellite: VFO A is the 
 qrzcard-photo-loading = Loading photo…
 
 qrzcard-no-photo = Record without photo
+
+sonde-card-listen-hover = Click to tune the radio to this channel: the dial goes there and the decoder listens on it alone.
+
+sonde-card-decoding = Decoded by this radio
+
+sonde-card-waiting = Listening on this channel, nothing decoded yet
+
+sonde-card-click-to-listen = Click the frequency to listen
+
+sonde-type-all = All types
+
+sonde-type-hover = Look for one type of sonde: choosing one starts the scan, which moves the window across the band until that type is heard. Only that type is listed and drawn.

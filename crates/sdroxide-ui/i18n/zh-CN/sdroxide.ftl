@@ -9539,3 +9539,15 @@ topbar-sat-locked-vfo-a-downlink-b-uplink = 已锁定卫星：锁定结束前，
 qrzcard-photo-loading = 正在加载照片…
 
 qrzcard-no-photo = 无照片的记录
+
+sonde-card-listen-hover = 点击可将电台调到此信道：频率移到此处，解码器只监听该信道。
+
+sonde-card-decoding = 正由本电台解码
+
+sonde-card-waiting = 正在监听此信道，尚未解码
+
+sonde-card-click-to-listen = 点击频率即可收听
+
+sonde-type-all = 所有类型
+
+sonde-type-hover = 查找某一类探空仪：选择后开始扫描，窗口会在频段内移动，直到听到该类型。只列出并绘制该类型。
