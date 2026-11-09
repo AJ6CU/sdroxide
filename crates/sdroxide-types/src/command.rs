@@ -1537,6 +1537,20 @@ pub enum Command {
     /// asks the operator to confirm before it sends this. Appended for the
     /// usual reason.
     SendMeshtastic(crate::MeshtasticSend),
+
+    /// [`Command::ImportMemories`] for a list that names folders (issue #623):
+    /// each channel comes with the **name** of the folder it was filed under,
+    /// `None` for the top level.
+    ///
+    /// A folder id means something only on the station that made it, so the
+    /// file carries the name and the engine finds the folder of that name
+    /// (compared without regard to case), or creates it, and files the channel
+    /// there. Everything else is as for `ImportMemories`: ids are the engine's,
+    /// a channel already stored (same frequency and mode) is skipped and left
+    /// where it is.
+    ///
+    /// Appended for the usual reason — postcard numbers variants by position.
+    ImportMemoriesFiled(Vec<(crate::MemoryChannel, Option<String>)>),
 }
 
 /// What a [`Command::GetKnownCalls`] was answered with.

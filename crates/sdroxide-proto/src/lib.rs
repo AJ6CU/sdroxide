@@ -2375,8 +2375,14 @@ use sdroxide_types::{
 /// gains `qrz_card_off` at its tail (it rides `SetNetworkConfig` whole): the
 /// card is now on by default and this is how it is switched off.
 /// `PROTO_VERSION` 290 → 291, `VERSION_BYTE` 0x6E → 0x6F.
-pub const PROTO_VERSION: u16 = 291;
-const VERSION_BYTE: u8 = 0x6F;
+///
+/// v292: **channel lists keep their folders (issue #623).**
+/// [`sdroxide_types::Command`] gains `ImportMemoriesFiled`, appended: a channel
+/// list with the folder name of each channel, so a CSV exported with its
+/// folders imports into them. A v291 station does not know the variant.
+/// `PROTO_VERSION` 291 → 292, `VERSION_BYTE` 0x6F → 0x70.
+pub const PROTO_VERSION: u16 = 292;
+const VERSION_BYTE: u8 = 0x70;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -3683,7 +3689,7 @@ mod tests {
             ServerMsg::TxRefused(w, hz) => assert_eq!((w, hz), (why, 7_074_000.0)),
             _ => panic!("TxRefused did not round-trip"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (291, 0x6F));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (292, 0x70));
         // v280: the CB refusal is a new tail variant of `TxBlock`; the ones
         // before it keep their positions.
         let cb = ServerMsg::TxRefused(sdroxide_types::TxBlock::CbOff, 27_185_000.0);
@@ -3739,7 +3745,7 @@ mod tests {
             }
             other => panic!("the answer did not round-trip: {other:?}"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (291, 0x6F));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (292, 0x70));
     }
 
     /// v286: the QRZ card rides `CallsignResult` — photo, age and all.
@@ -3760,7 +3766,7 @@ mod tests {
             ServerMsg::CallsignResult(back) => assert_eq!(back, info),
             other => panic!("the card did not round-trip: {other:?}"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (291, 0x6F));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (292, 0x70));
     }
 
     /// The VOR read-out rides the wire whole, locked or not, and the message is
@@ -4495,6 +4501,30 @@ mod tests {
         assert_ne!(back.sonde, sdroxide_types::SondeSettings::default());
     }
 
+    /// A channel list that names folders crosses the wire (issue #623).
+    #[test]
+    fn roundtrip_import_memories_filed() {
+        let m = sdroxide_types::MemoryChannel {
+            id: 0,
+            name: "7.194".into(),
+            freq_hz: 7_194_000.0,
+            mode: sdroxide_types::Mode::Usb,
+            filter_lo: 300.0,
+            filter_hi: 2700.0,
+            folder: None,
+            rtty: None,
+            repeater: None,
+            antenna: None,
+            color: None,
+        };
+        let c = Command::ImportMemoriesFiled(vec![
+            (m.clone(), Some("TestfolderBrown".into())),
+            (m, None),
+        ]);
+        let msg = ClientMsg::Command(c);
+        assert_eq!(decode::<ClientMsg>(&encode(&msg).unwrap()).unwrap(), msg);
+    }
+
     /// The band plan library crosses the wire: the three commands, the list the
     /// station announces and the name of the plan it runs, and the fingerprint a
     /// radio keeps beside its confirmed band lists. Filled rather than left at
@@ -4775,7 +4805,7 @@ mod tests {
     /// and the rig's own keying the end of `TxState`; the version is pinned.
     #[test]
     fn the_sat_lock_tone_and_the_rig_keyed_flag_round_trip() {
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (291, 0x6F));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (292, 0x70));
         let cfg = sdroxide_types::SatLockConfig {
             norad_id: 25544,
             ctcss_hz: Some(67.0),

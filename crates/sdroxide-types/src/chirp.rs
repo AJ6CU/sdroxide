@@ -21,7 +21,8 @@
 //! a mode, the repeater set-up and a name.
 
 use crate::{
-    CTCSS_TONES, DCS_CODES, MAX_OFFSET_HZ, MemoryChannel, Mode, RepeaterState, Shift, ToneMode,
+    CTCSS_TONES, DCS_CODES, MAX_OFFSET_HZ, MemoryChannel, MemoryFolder, Mode, RepeaterState, Shift,
+    ToneMode,
 };
 
 /// The columns CHIRP writes, in the order it writes them. Used for export, and
@@ -48,6 +49,10 @@ const COLUMNS: &[&str] = &[
     "RPT1CALL",
     "RPT2CALL",
     "DVCODE",
+    // Not CHIRP's: the name of the folder the memory is filed under, empty at
+    // the top level (issue #623). CHIRP matches columns by name and ignores one
+    // it does not know, so a file carrying it still loads there.
+    "Folder",
 ];
 
 /// The CHIRP mode name for one of ours, and the reverse.
@@ -162,6 +167,15 @@ fn mhz(s: &str) -> Option<f64> {
 /// Returns `(channels, skipped)`, so the caller can tell an operator how much
 /// of their file was read.
 pub fn chirp_csv_to_memories(text: &str) -> (Vec<MemoryChannel>, usize) {
+    let (filed, skipped) = chirp_csv_to_filed_memories(text);
+    (filed.into_iter().map(|(m, _)| m).collect(), skipped)
+}
+
+/// [`chirp_csv_to_memories`] that also returns the `Folder` column: the name
+/// of the folder each channel was filed under, `None` when the column is
+/// absent or empty (issue #623). The names are trimmed; resolving them to
+/// folders is the engine's business, since only it knows which exist.
+pub fn chirp_csv_to_filed_memories(text: &str) -> (Vec<(MemoryChannel, Option<String>)>, usize) {
     let mut lines = text.lines().filter(|l| !l.trim().is_empty());
     // The header names the columns; without one there is nothing to match
     // against and a first channel would be eaten as a heading.
@@ -252,40 +266,49 @@ pub fn chirp_csv_to_memories(text: &str) -> (Vec<MemoryChannel>, usize) {
             n => n.to_string(),
         };
 
-        out.push(MemoryChannel {
-            id: 0,
-            name,
-            freq_hz,
-            mode,
-            filter_lo,
-            filter_hi,
-            folder: None,
-            rtty: None,
-            repeater: Some(
-                RepeaterState {
-                    shift,
-                    offset_hz,
-                    auto: false,
-                    tone,
-                    ctcss_tenths: ctcss_tenths_v,
-                    dcs_code,
-                    dcs_invert,
-                    ..default
-                }
-                .clamped(),
-            ),
-            // Not in the format, and a socket invented for an imported channel
-            // would move a relay the operator never asked to move.
-            antenna: None,
-            color: None,
-        });
+        let folder_name = Some(get(at("Folder"))).filter(|n| !n.is_empty()).map(str::to_string);
+        out.push((
+            MemoryChannel {
+                id: 0,
+                name,
+                freq_hz,
+                mode,
+                filter_lo,
+                filter_hi,
+                folder: None,
+                rtty: None,
+                repeater: Some(
+                    RepeaterState {
+                        shift,
+                        offset_hz,
+                        auto: false,
+                        tone,
+                        ctcss_tenths: ctcss_tenths_v,
+                        dcs_code,
+                        dcs_invert,
+                        ..default
+                    }
+                    .clamped(),
+                ),
+                // Not in the format, and a socket invented for an imported channel
+                // would move a relay the operator never asked to move.
+                antenna: None,
+                color: None,
+            },
+            folder_name,
+        ));
     }
     (out, skipped)
 }
 
 /// Write channels out in the same format, so a list built here can be taken to
 /// a handheld — and so the reader above has something to be tested against.
-pub fn memories_to_chirp_csv(mems: &[MemoryChannel]) -> String {
+///
+/// `folders` names the folders the memories are filed under, so the `Folder`
+/// column carries the name (an id means nothing on another station); a memory
+/// whose folder is gone from the list is written at the top level, as the
+/// memory list itself draws it.
+pub fn memories_to_chirp_csv(mems: &[MemoryChannel], folders: &[MemoryFolder]) -> String {
     let mut s = String::new();
     s.push_str(&COLUMNS.join(","));
     s.push('\n');
@@ -343,6 +366,10 @@ pub fn memories_to_chirp_csv(mems: &[MemoryChannel]) -> String {
             String::new(),
             String::new(),
             String::new(),
+            m.folder
+                .and_then(|id| folders.iter().find(|f| f.id == id))
+                .map(|f| f.name.clone())
+                .unwrap_or_default(),
         ];
         s.push_str(&fields.iter().map(|f| quote_csv(f)).collect::<Vec<_>>().join(","));
         s.push('\n');
@@ -479,13 +506,42 @@ Location,Name,Frequency,Duplex,Offset,Tone,rToneFreq,cToneFreq,DtcsCode,DtcsPola
     #[test]
     fn the_writer_and_the_reader_agree() {
         let (before, _) = chirp_csv_to_memories(SAMPLE);
-        let (after, skipped) = chirp_csv_to_memories(&memories_to_chirp_csv(&before));
+        let (after, skipped) = chirp_csv_to_memories(&memories_to_chirp_csv(&before, &[]));
         assert_eq!(skipped, 0);
         assert_eq!(after.len(), before.len());
         for (a, b) in after.iter().zip(&before) {
             assert_eq!((a.name.as_str(), a.freq_hz, a.mode), (b.name.as_str(), b.freq_hz, b.mode));
             assert_eq!(a.repeater, b.repeater, "{}", a.name);
         }
+    }
+
+    /// Issue #623: a memory filed in a folder came back at the top level,
+    /// because the file carried no folder at all. The name now rides in a
+    /// `Folder` column, including a name with a comma in it, and a file from
+    /// before (no such column) still reads, filed nowhere.
+    #[test]
+    fn the_folder_name_goes_out_and_comes_back() {
+        let (mut mems, _) = chirp_csv_to_memories(SAMPLE);
+        mems[0].folder = Some(7);
+        mems[1].folder = Some(9);
+        mems[2].folder = Some(404); // its folder is gone: written at the top level
+        let folders = [
+            MemoryFolder { id: 7, name: "Test, Brown".into() },
+            MemoryFolder { id: 9, name: "7.194".into() },
+        ];
+        let csv = memories_to_chirp_csv(&mems, &folders);
+        assert!(csv.lines().next().unwrap().ends_with(",Folder"));
+        let (back, skipped) = chirp_csv_to_filed_memories(&csv);
+        assert_eq!(skipped, 0);
+        let names: Vec<Option<&str>> = back.iter().map(|(_, f)| f.as_deref()).collect();
+        assert_eq!(names, [Some("Test, Brown"), Some("7.194"), None, None]);
+        // The channels themselves are unchanged by the extra column.
+        assert_eq!(back[0].0.repeater, mems[0].repeater);
+
+        // A file written before the column existed reads, filed nowhere.
+        let (old, _) = chirp_csv_to_filed_memories(SAMPLE);
+        assert_eq!(old.len(), 4);
+        assert!(old.iter().all(|(_, f)| f.is_none()));
     }
 
     /// The parser has to survive whatever file it is handed, not merely report

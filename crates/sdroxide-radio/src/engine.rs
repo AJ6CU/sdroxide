@@ -11108,39 +11108,9 @@ impl Engine {
                 }
             }
             ImportMemories(channels) => {
-                // The engine owns the numbering: an id that came in over the
-                // wire, or out of somebody's file, is not one this list can
-                // trust not to collide with what is already stored.
-                let mut next = self.memories.iter().map(|m| m.id).max().unwrap_or(0) + 1;
-                let mut added = 0usize;
-                for mut m in channels {
-                    let name = m.name.trim().to_string();
-                    if !m.freq_hz.is_finite() || m.freq_hz <= 0.0 {
-                        continue;
-                    }
-                    // A channel already on the list is not stored twice, so
-                    // re-importing an updated directory adds what is new
-                    // rather than doubling what is not. Frequency and mode
-                    // rather than name: two clubs name the same machine
-                    // differently, and nobody wants it twice for that.
-                    if self
-                        .memories
-                        .iter()
-                        .any(|o| (o.freq_hz - m.freq_hz).abs() < 1.0 && o.mode == m.mode)
-                    {
-                        continue;
-                    }
-                    m.id = next;
-                    m.name = name;
-                    m.repeater = Some(m.repeater.unwrap_or_default().clamped());
-                    next += 1;
-                    self.memories.push(m);
-                    added += 1;
-                }
-                if added > 0 {
-                    self.save_memories();
-                }
+                self.import_memories(channels.into_iter().map(|m| (m, None)).collect(), false);
             }
+            ImportMemoriesFiled(channels) => self.import_memories(channels, true),
             DeleteMemory(id) => {
                 self.memories.retain(|m| m.id != id);
                 self.save_memories();
@@ -19140,6 +19110,65 @@ impl Engine {
         }
         self.mark_shared_store_write();
         let _ = self.event_tx.send(RadioEvent::Memories(self.memories.clone()));
+    }
+
+    /// Add channels read from a file to the memory list (issues #234, #623).
+    ///
+    /// `filed` says the file named folders: each channel then goes into the
+    /// folder of the name it came with (found without regard to case, created
+    /// when there is none, and only for a channel that is actually added), or
+    /// to the top level when it came with none. Otherwise the channel keeps
+    /// the folder field it arrived with, as before folders could be named.
+    fn import_memories(&mut self, channels: Vec<(MemoryChannel, Option<String>)>, filed: bool) {
+        // The engine owns the numbering: an id that came in over the
+        // wire, or out of somebody's file, is not one this list can
+        // trust not to collide with what is already stored.
+        let mut next = self.memories.iter().map(|m| m.id).max().unwrap_or(0) + 1;
+        let (mut added, mut made_folder) = (0usize, false);
+        for (mut m, folder) in channels {
+            let name = m.name.trim().to_string();
+            if !m.freq_hz.is_finite() || m.freq_hz <= 0.0 {
+                continue;
+            }
+            // A channel already on the list is not stored twice, so
+            // re-importing an updated directory adds what is new
+            // rather than doubling what is not. Frequency and mode
+            // rather than name: two clubs name the same machine
+            // differently, and nobody wants it twice for that. The one
+            // already stored stays where it is, folder included.
+            if self.memories.iter().any(|o| (o.freq_hz - m.freq_hz).abs() < 1.0 && o.mode == m.mode)
+            {
+                continue;
+            }
+            if filed {
+                m.folder = None;
+                if let Some(fname) = folder.as_deref().map(str::trim).filter(|n| !n.is_empty()) {
+                    let known = self
+                        .mem_folders
+                        .iter()
+                        .find(|f| f.name.trim().to_lowercase() == fname.to_lowercase())
+                        .map(|f| f.id);
+                    m.folder = Some(known.unwrap_or_else(|| {
+                        let id = self.mem_folders.iter().map(|f| f.id).max().unwrap_or(0) + 1;
+                        self.mem_folders.push(MemoryFolder { id, name: fname.to_string() });
+                        made_folder = true;
+                        id
+                    }));
+                }
+            }
+            m.id = next;
+            m.name = name;
+            m.repeater = Some(m.repeater.unwrap_or_default().clamped());
+            next += 1;
+            self.memories.push(m);
+            added += 1;
+        }
+        if made_folder {
+            self.save_mem_folders();
+        }
+        if added > 0 {
+            self.save_memories();
+        }
     }
 
     fn save_mem_folders(&mut self) {
