@@ -93,7 +93,7 @@ fn cat_caps() -> DeviceCaps {
 fn run(cmds: &[Command]) -> (Log, sdroxide_types::RadioState) {
     let log = Arc::new(Mutex::new(Log::default()));
     let src = MockCat { log: Arc::clone(&log), rate: 48_000.0 };
-    let cfg = EngineConfig { tx_ham_only: false, ..Default::default() };
+    let cfg = EngineConfig { tx_bands_open: true, tx_ham_only: false, ..Default::default() };
     let mut h = start_engine(Box::new(src), cat_caps(), cfg);
     let thread = h.thread.take();
 

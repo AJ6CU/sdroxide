@@ -161,7 +161,7 @@ fn a_band_change_re_sizes_the_window_without_a_restart() {
     let mut h = start_engine(
         Box::new(Quiet { center, rate: RATE, lo_offset: 0.0, seed: 0x1234_5678_9ABC_DEF0 }),
         caps_at(RATE),
-        EngineConfig {
+        EngineConfig { tx_bands_open: true,
             remember_session: false,
             audio: Some(AudioParams { producer, out_rate: 48_000.0 }),
             ..Default::default()
@@ -259,7 +259,7 @@ fn one_window_serves_both_lanes_when_the_front_end_has_room() {
     let mut h = start_engine(
         Box::new(Quiet { center, rate: PLUTO_RATE, lo_offset: 0.0, seed: 0x0BAD_F00D_DEAD_BEEF }),
         caps_at(PLUTO_RATE),
-        EngineConfig {
+        EngineConfig { tx_bands_open: true,
             remember_session: false,
             audio: Some(AudioParams { producer, out_rate: 48_000.0 }),
             ..Default::default()
@@ -348,7 +348,7 @@ fn the_band_button_tunes_for_the_window_not_for_the_dial() {
             seed: 0x5EED_1234_5678_9ABC,
         }),
         caps_at(RATE_2M5),
-        EngineConfig {
+        EngineConfig { tx_bands_open: true,
             remember_session: false,
             audio: Some(AudioParams { producer, out_rate: 48_000.0 }),
             ..Default::default()

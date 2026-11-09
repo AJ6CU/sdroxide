@@ -64,7 +64,7 @@ async fn spawn_station(port: u16, password: bool, open: bool) {
         remove_radio: None,
         rename_radio: None,
         radio_power: None,
-        aircraft_online: open,
+        aircraft_online: Some(open),
     }));
     tokio::time::sleep(Duration::from_millis(400)).await;
 }
@@ -214,4 +214,118 @@ async fn nothing_is_fetched_for_an_aircraft_nobody_asked_about_and_a_release_nee
     assert!(bare.starts_with("HTTP/1.1 403"), "{bare}");
     let ok = send(PORT_PHOTO_OPEN, "DELETE", "/aircraft-photo", "x-sdroxide: 1\r\n").await;
     assert!(ok.starts_with("HTTP/1.1 204"), "{ok}");
+    let one = send(PORT_PHOTO_OPEN, "DELETE", "/aircraft-photo/484006", "x-sdroxide: 1\r\n").await;
+    assert!(one.starts_with("HTTP/1.1 204"), "{one}");
+    let bare_one = send(PORT_PHOTO_OPEN, "DELETE", "/aircraft-photo/484006", "").await;
+    assert!(bare_one.starts_with("HTTP/1.1 403"), "{bare_one}");
+    let junk = send(PORT_PHOTO_OPEN, "DELETE", "/aircraft-photo/zz", "x-sdroxide: 1\r\n").await;
+    assert!(junk.starts_with("HTTP/1.1 400"), "{junk}");
+}
+
+const PORT_AIRPORT_SHUT: u16 = 39487;
+const PORT_AIRPORT_PASSWORD: u16 = 39488;
+const PORT_AIRPORT_OPEN: u16 = 39489;
+
+const ARTICLE: &str = "?lang=en&title=Amsterdam_Airport_Schiphol";
+
+/// An airport's picture follows the same switch as an aircraft's, through a prefix too.
+#[tokio::test]
+async fn the_airport_photo_is_shut_while_the_relay_is_off() {
+    spawn_station(PORT_AIRPORT_SHUT, false, false).await;
+    for path in ["/airport-photo", "/sdroxide/airport-photo"] {
+        let answer = get(PORT_AIRPORT_SHUT, &format!("{path}{ARTICLE}"), None).await;
+        assert!(answer.starts_with("HTTP/1.1 503"), "{path}: {answer}");
+        assert!(answer.to_ascii_lowercase().contains("cache-control: no-store"), "{answer}");
+    }
+}
+
+/// Same door as the sockets, for the picture and for letting it go.
+#[tokio::test]
+async fn the_airport_photo_and_its_release_want_the_cookie() {
+    spawn_station(PORT_AIRPORT_PASSWORD, true, true).await;
+    let without = get(PORT_AIRPORT_PASSWORD, &format!("/airport-photo{ARTICLE}"), None).await;
+    assert!(without.starts_with("HTTP/1.1 401"), "{without}");
+    let release = send(
+        PORT_AIRPORT_PASSWORD,
+        "DELETE",
+        &format!("/airport-photo{ARTICLE}"),
+        "x-sdroxide: 1\r\n",
+    )
+    .await;
+    assert!(release.starts_with("HTTP/1.1 401"), "{release}");
+}
+
+/// The client names a language and a title, never an address: anything that could
+/// aim the request elsewhere is refused before the station reaches out, and a
+/// release needs the custom header a stray page cannot send.
+#[tokio::test]
+async fn an_airport_title_that_is_not_plain_is_refused_and_a_release_needs_the_header() {
+    spawn_station(PORT_AIRPORT_OPEN, false, true).await;
+    for query in [
+        "",
+        "?lang=en",
+        "?title=Paris",
+        "?lang=en&title=..%2Fetc",
+        "?lang=en&title=a/b",
+        "?lang=eng&title=Paris",
+        "?lang=en&title=https://evil.example/x.jpg",
+        "?lang=en.evil.example&title=Paris",
+    ] {
+        let bad = get(PORT_AIRPORT_OPEN, &format!("/airport-photo{query}"), None).await;
+        assert!(bad.starts_with("HTTP/1.1 400"), "{query}: {bad}");
+    }
+    let path = format!("/airport-photo{ARTICLE}");
+    let bare = send(PORT_AIRPORT_OPEN, "DELETE", &path, "").await;
+    assert!(bare.starts_with("HTTP/1.1 403"), "{bare}");
+    let ok = send(PORT_AIRPORT_OPEN, "DELETE", &path, "x-sdroxide: 1\r\n").await;
+    assert!(ok.starts_with("HTTP/1.1 204"), "{ok}");
+    let junk =
+        send(PORT_AIRPORT_OPEN, "DELETE", "/airport-photo?lang=EN&title=x", "x-sdroxide: 1\r\n")
+            .await;
+    assert!(junk.starts_with("HTTP/1.1 400"), "{junk}");
+}
+
+const PORT_WEATHER_SHUT: u16 = 39490;
+const PORT_WEATHER_PASSWORD: u16 = 39491;
+const PORT_WEATHER_OPEN: u16 = 39492;
+
+const PLACE: &str = "?lat=52.31&lon=4.76";
+
+/// An airport's weather follows the same switch as the aircraft's, through a prefix too.
+#[tokio::test]
+async fn the_airport_weather_is_shut_while_the_relay_is_off() {
+    spawn_station(PORT_WEATHER_SHUT, false, false).await;
+    for path in ["/airport-weather", "/sdroxide/airport-weather"] {
+        let answer = get(PORT_WEATHER_SHUT, &format!("{path}{PLACE}"), None).await;
+        assert!(answer.starts_with("HTTP/1.1 503"), "{path}: {answer}");
+        assert!(answer.to_ascii_lowercase().contains("cache-control: no-store"), "{answer}");
+    }
+}
+
+/// Same door as the sockets.
+#[tokio::test]
+async fn the_airport_weather_wants_the_cookie() {
+    spawn_station(PORT_WEATHER_PASSWORD, true, true).await;
+    let without = get(PORT_WEATHER_PASSWORD, &format!("/airport-weather{PLACE}"), None).await;
+    assert!(without.starts_with("HTTP/1.1 401"), "{without}");
+}
+
+/// The client names a place and nothing else: what is not two numbers on the
+/// globe is refused before the station reaches out.
+#[tokio::test]
+async fn a_place_that_is_not_on_the_globe_is_refused_before_anything_goes_out() {
+    spawn_station(PORT_WEATHER_OPEN, false, true).await;
+    for query in [
+        "",
+        "?lat=52.31",
+        "?lon=4.76",
+        "?lat=abc&lon=4.76",
+        "?lat=91&lon=0",
+        "?lat=0&lon=181",
+        "?lat=NaN&lon=0",
+        "?lat=52.31&lon=4.76%26x%3D1",
+    ] {
+        let bad = get(PORT_WEATHER_OPEN, &format!("/airport-weather{query}"), None).await;
+        assert!(bad.starts_with("HTTP/1.1 400"), "{query}: {bad}");
+    }
 }

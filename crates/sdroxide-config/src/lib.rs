@@ -257,6 +257,14 @@ pub struct Settings {
     /// travels to remote clients in the [`sdroxide_types::StationConfig`]
     /// bundle. Off by default.
     pub cb_tx_allowed: bool,
+    /// Which band plan from the `bandplans` folder the station runs, by file
+    /// name without `.json`; `None` is the built-in IARU tables, the default.
+    ///
+    /// The station's, like `region`: it decides every band edge, the transmit
+    /// lockout and the waterfall's band strip, and travels to clients in the
+    /// [`sdroxide_types::StationConfig`] bundle. Changing it withdraws the
+    /// confirmation of every radio's band lists.
+    pub band_plan: Option<String>,
     /// Where audio recordings and raw I/Q captures are written, or `None` for
     /// the default (the user's music folder, `<Music>/sdroxide`, or the config
     /// directory's `recordings` when the platform has no music folder).
@@ -320,6 +328,7 @@ impl Default for Settings {
             region: sdroxide_types::Region::default(),
             cb_plan: sdroxide_types::CbPlan::default(),
             cb_tx_allowed: false,
+            band_plan: None,
             recordings_dir: None,
             ui: sdroxide_types::UiSettings::default(),
             remote_access: sdroxide_types::RemoteAccess::default(),
@@ -388,75 +397,6 @@ pub fn save_region(region: sdroxide_types::Region) -> Result<(), ConfigError> {
     let mut s = Settings::load();
     s.region = region;
     s.save()
-}
-
-/// The band-plan file's name in the config directory.
-pub const BAND_PLAN_FILE: &str = "bandplan.json";
-
-/// Where `bandplan.json` lives, for the settings dialog to show the operator.
-pub fn band_plan_path() -> Option<PathBuf> {
-    config_dir().ok().map(|d| d.join(BAND_PLAN_FILE))
-}
-
-/// The station's band plan, seeded from the built-in IARU tables the first
-/// time.
-///
-/// Three outcomes, and the differences matter:
-///
-/// - **No file** — write the built-in tables and return them. The operator now
-///   has a complete, valid document to edit, which is a far better starting
-///   point than an empty file and a manual page.
-/// - **A file that parses** — return it, with any per-row complaints queued as
-///   load alerts so a dropped row is visible rather than silently missing.
-/// - **A file that does not parse** — warn, alert, and use the built-in tables
-///   *for this run*, leaving the file exactly as it is.
-///
-/// That last case deliberately breaks with [`quarantine_unreadable`], which
-/// renames the offending file aside and writes a fresh one. That is right for
-/// the files sdroxide itself writes; this is a document the operator authors by
-/// hand, and renaming a half-finished edit out from under them — even to
-/// `.bak` — would be taking their work away at exactly the wrong moment. The
-/// cost of leaving it is that the same complaint repeats on every start, which
-/// is the correct amount of nagging for a file that is currently wrong.
-pub fn load_band_plan() -> sdroxide_types::BandPlan {
-    let Ok(dir) = config_dir() else { return sdroxide_types::BandPlan::default() };
-    let path = dir.join(BAND_PLAN_FILE);
-    let text = match fs::read_to_string(&path) {
-        Ok(t) => t,
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-            let seed = sdroxide_types::BandPlan::default();
-            match save_band_plan(&seed) {
-                Ok(()) => info!("wrote a starting band plan to {}", path.display()),
-                // Not fatal: the built-in tables are what it would have
-                // contained, so the program runs on exactly the right plan and
-                // only the editing convenience is lost.
-                Err(e) => warn!("could not write {}: {e}", path.display()),
-            }
-            return seed;
-        }
-        Err(e) => {
-            warn!("could not read {}: {e}; using the built-in band plan", path.display());
-            return sdroxide_types::BandPlan::default();
-        }
-    };
-    match serde_json::from_str::<sdroxide_types::BandPlan>(&text) {
-        Ok(plan) => {
-            for p in plan.problems() {
-                warn!("{BAND_PLAN_FILE}: {p}");
-                push_load_alert(format!("{BAND_PLAN_FILE}: {p}"));
-            }
-            plan
-        }
-        Err(e) => {
-            warn!("failed to parse {BAND_PLAN_FILE}: {e}; using the built-in band plan");
-            push_load_alert(format!(
-                "{BAND_PLAN_FILE} could not be read ({e}) — running on the built-in IARU band \
-                 plan. The file has been left alone; fix it and reload, or delete it to get a \
-                 fresh one."
-            ));
-            sdroxide_types::BandPlan::default()
-        }
-    }
 }
 
 pub const RTL433_FLEX_FILE: &str = "rtl433_flex.conf";
@@ -537,19 +477,16 @@ const RTL433_FLEX_SEED: &str = "\
 #}
 ";
 
-/// Write the band plan, atomically like every other config file.
-///
-/// The only file here that does not go through [`save_json`]: the band plan
-/// formats itself, because the units and the row-per-line layout are part of
-/// what makes the file editable and belong with the type rather than with the
-/// code that moves bytes. See [`sdroxide_types::BandPlan::to_json_document`].
-///
-/// Called in exactly one place — seeding a file that is not there yet — and it
-/// should stay that way. An existing `bandplan.json` is the operator's
-/// document; nothing in sdroxide rewrites it, so their spacing, their ordering
-/// and anything they added to the `readme` all survive untouched.
-pub fn save_band_plan(plan: &sdroxide_types::BandPlan) -> Result<(), ConfigError> {
-    write_atomic(&config_dir()?, BAND_PLAN_FILE, &plan.to_json_document())
+/// The operator's own receive filter presets (`filter_presets.json`), each
+/// standing in for one of a mode's built-in chips. A missing file is none.
+pub fn load_filter_presets() -> Vec<sdroxide_types::CustomFilterPreset> {
+    load_json_list("filter_presets.json")
+}
+
+pub fn save_filter_presets(
+    presets: &[sdroxide_types::CustomFilterPreset],
+) -> Result<(), ConfigError> {
+    save_json("filter_presets.json", &presets)
 }
 
 /// Load just the remote-access credentials.
@@ -639,7 +576,15 @@ pub fn save_remote_login(login: Option<&sdroxide_types::RemoteAccess>) -> Result
     }
 }
 
+mod band_plans;
 mod publicsdr;
+pub use band_plans::{
+    BAND_PLAN_MAX_BYTES, BAND_PLANS_DIR, SHIPPED as SHIPPED_BAND_PLANS, band_plan_selection,
+    band_plans_dir, delete_band_plan, export_band_plan_text, import_band_plan, is_shipped as is_shipped_band_plan,
+    list_band_plans, load_band_plan, plan_key as band_plan_key, read_band_plan,
+    restore_shipped_band_plans,
+    save_current_band_plan, select_band_plan,
+};
 pub use publicsdr::public_sdr_directory;
 
 pub mod transfer;
@@ -874,7 +819,21 @@ impl Store {
     /// selected" a state that survives a restart, which is the only way it is
     /// any use.
     pub fn load_radio_config(&self) -> sdroxide_types::RadioConfig {
+        let existed = self
+            .dir()
+            .is_ok_and(|d| matches!(read_config_text(&d, "radio.json"), FileText::Text(_)));
         let (mut cfg, quarantined) = self.load_checked::<sdroxide_types::RadioConfig>("radio.json");
+        // A radio with no file — or one that had to be reset — is a new radio:
+        // every band off. Only a file that exists and has no list is an
+        // upgrade, which the engine fills in once it knows what the radio can
+        // reach.
+        if (!existed || quarantined) && cfg.tx_band_enable.is_none() {
+            cfg.tx_band_enable = Some(Vec::new());
+        }
+        // 11 m has two locks and they are **not** tied: the operator's TX band
+        // list (11M-CB = YES, confirmed) comes first and "Allow transmit on
+        // 11 m (CB)" second. A permission without the band stays that way —
+        // nothing is ticked on the operator's behalf.
         if quarantined {
             warn!(
                 "radio.json was reset, so no interface is selected — pick one in \
@@ -2220,6 +2179,40 @@ pub fn load_hfdl_config() -> sdroxide_types::HfdlSettings {
     load_json::<sdroxide_types::HfdlSettings>("hfdl.json").sane()
 }
 
+/// Radiosonde decoder preferences: the lane's on/off and the channel it
+/// centres on (`sonde.json`).
+pub fn load_sonde_config() -> sdroxide_types::SondeSettings {
+    load_json::<sdroxide_types::SondeSettings>("sonde.json").sane()
+}
+
+/// Weather-satellite decoder preferences: the lane's on/off and the channel it
+/// centres on (`wxsat.json`).
+pub fn load_wxsat_config() -> sdroxide_types::WxsatSettings {
+    load_json::<sdroxide_types::WxsatSettings>("wxsat.json").sane()
+}
+
+pub fn save_wxsat_config(cfg: &sdroxide_types::WxsatSettings) -> Result<(), ConfigError> {
+    save_json("wxsat.json", cfg)
+}
+
+/// Meshtastic receiver preferences: on/off, region, preset, channel and keys,
+/// and where the radio was before the lane tuned it (`meshtastic.json`). Kept
+/// on the station, so every client sees the same settings and the dial comes
+/// back whichever one turned the receiver on.
+pub fn load_meshtastic_config() -> sdroxide_types::MeshtasticSettings {
+    load_json::<sdroxide_types::MeshtasticSettings>("meshtastic.json").sane()
+}
+
+pub fn save_meshtastic_config(
+    cfg: &sdroxide_types::MeshtasticSettings,
+) -> Result<(), ConfigError> {
+    save_json("meshtastic.json", cfg)
+}
+
+pub fn save_sonde_config(cfg: &sdroxide_types::SondeSettings) -> Result<(), ConfigError> {
+    save_json("sonde.json", cfg)
+}
+
 pub fn save_hfdl_config(cfg: &sdroxide_types::HfdlSettings) -> Result<(), ConfigError> {
     save_json("hfdl.json", cfg)
 }
@@ -2759,10 +2752,19 @@ fn aoki_schedule_entry(bytes: &[u8], season: &str) -> Result<Vec<u8>, String> {
             return Ok(d.clone());
         }
     }
+    // **A zip can hold the schedule and a user list, and both say "Frequency
+    // List"** in their title (`nzb25.txt` and `userlist1.txt`). The schedule is the
+    // one whose column header reads `FRE   STATION`; the user list has a different
+    // layout. Taking the first title match picked whichever came first in the zip.
+    let head_of = |d: &Vec<u8>| String::from_utf8_lossy(&d[..d.len().min(256)]).into_owned();
     if let Some((n, d)) = entries.iter().find(|(_, d)| {
-        let head: String = String::from_utf8_lossy(&d[..d.len().min(256)]).into_owned();
-        head.contains("Frequency List")
+        let head = head_of(d);
+        head.contains("Frequency List") && head.contains("STATION")
     }) {
+        info!("Aoki's zip: {n} has the schedule's column header, so it is the schedule");
+        return Ok(d.clone());
+    }
+    if let Some((n, d)) = entries.iter().find(|(_, d)| head_of(d).contains("Frequency List")) {
         info!("Aoki's zip: {n} names itself a frequency list, so it is the schedule");
         return Ok(d.clone());
     }
@@ -2947,8 +2949,9 @@ pub fn fetch_broadcast_master() -> Result<Vec<sdroxide_types::BroadcastStation>,
 
 /// Aoki's own shortwave schedule URL, **read from their index**.
 ///
-/// Picks the highest-numbered season in `pc/nc/`, because that is the newest file
-/// they have published and not necessarily the season we are in.
+/// Picks the highest-numbered season it finds on the index, whether published as
+/// `xtXX.zip` (e.g. `/binews/ut/xt/xta26.zip`) or the older `ncXX.zip` under
+/// `/pc/nc/`. The direct `xt{season}.zip` is tried first.
 fn aoki_latest(agent: &ureq::Agent) -> Result<(String, String), String> {
     let season = sdroxide_types::broadcast::season_file(now_unix());
     // **The season's own package first.** `xt{season}.zip` is what the season's
@@ -2957,23 +2960,23 @@ fn aoki_latest(agent: &ureq::Agent) -> Result<(String, String), String> {
     // lags: it still held **B24** while we were in A26, which is a file eighteen
     // months stale and a schedule of last season's transmitters.
     let url = format!("https://www1.m2.mediacat.ne.jp/binews/ut/xt/xt{season}.zip");
-    let resp = agent.get(&url).call().map_err(|e| e.to_string())?;
-    if resp.status().is_success() {
-        return Ok((url, format!("xt{season}")));
+    // ureq treats HTTP errors as errors by default; try to be permissive and
+    // also fall back if the call itself fails.
+    if let Ok(resp) = agent.get(&url).call() {
+        if resp.status().is_success() {
+            return Ok((url, format!("xt{season}")));
+        }
     }
     // Fall back to Aoki's own index: the newest **shortwave** file it lists, which
     // is not necessarily the season we are in. Better than nothing, and it names
     // itself so the cache says which file it holds.
     let mut index = agent.get(AOKI_INDEX_URL).call().map_err(|e| {
-        format!(
-            "Aoki's seasonal package 404s ({}) and its index would not load: {e}",
-            resp.status()
-        )
+        format!("Aoki's seasonal package 404s ({url}) and its index would not load: {e}")
     })?;
     if !index.status().is_success() {
         return Err(format!(
             "Aoki's seasonal package is HTTP {} and its index is HTTP {}",
-            resp.status(),
+            404,
             index.status()
         ));
     }
@@ -2993,14 +2996,25 @@ fn aoki_latest(agent: &ureq::Agent) -> Result<(String, String), String> {
             continue;
         };
         let stem = name.strip_suffix(".zip").unwrap_or(name);
-        if !href.contains("/pc/nc/") || !stem.starts_with("nc") || stem.len() < 2 {
+        let lower = stem.to_ascii_lowercase();
+
+        // Accept ncXX, xtXX or bXX style schedules from wherever Aoki publishes them
+        let (ok, year) = if lower.starts_with("nc") && lower.len() >= 4 {
+            let y = &lower[2..4];
+            (y.chars().all(|c| c.is_ascii_digit()), y.to_string())
+        } else if lower.starts_with("xt") && lower.len() >= 4 {
+            let y = &lower[2..4];
+            (y.chars().all(|c| c.is_ascii_digit()), y.to_string())
+        } else if lower.starts_with('b') && lower.len() >= 3 {
+            let y = &lower[1..3];
+            (y.chars().all(|c| c.is_ascii_digit()), y.to_string())
+        } else {
+            (false, String::new())
+        };
+        if !ok {
             continue;
         }
-        let year = &stem[stem.len() - 2..];
-        if !year.chars().all(|c| c.is_ascii_digit()) {
-            continue;
-        }
-        if best.as_ref().is_none_or(|(_, y)| year > y.as_str()) {
+        if best.as_ref().is_none_or(|(_, y)| year > *y) {
             best = Some((href.to_string(), stem.to_string()));
         }
     }
@@ -3016,18 +3030,26 @@ fn aoki_latest(agent: &ureq::Agent) -> Result<(String, String), String> {
 /// per-source line, so *"which of my schedules is actually here"* has an answer
 /// instead of being inferred from a list that happens to be short.
 pub fn cached_broadcast_sources() -> Vec<(sdroxide_types::ScheduleSource, Option<usize>)> {
+    use sdroxide_types::ScheduleSource as S;
     let season = sdroxide_types::broadcast::season_file(now_unix());
-    [
-        sdroxide_types::ScheduleSource::Eibi,
-        sdroxide_types::ScheduleSource::Aoki,
-        sdroxide_types::ScheduleSource::Hfcc,
-    ]
-    .into_iter()
-    .map(|source| {
-        let here = broadcast_cache_path_for(&season, source).map(|p| p.exists()).unwrap_or(false);
-        (source, here.then(|| cached_schedule_for(source).map(|v| v.len()).unwrap_or(0)))
-    })
-    .collect()
+    [S::Eibi, S::Aoki, S::Hfcc]
+        .into_iter()
+        .map(|source| {
+            let here = if source == S::Aoki {
+                // Aoki publishes under its own season name (e.g. xta26). Look for any
+                // cached aoki-*.txt, not just the one for the current sdroxide season.
+                !aoki_cached_seasons().is_empty()
+                    || broadcast_cache_path_for(&season, source)
+                        .map(|p| p.exists())
+                        .unwrap_or(false)
+            } else {
+                broadcast_cache_path_for(&season, source)
+                    .map(|p| p.exists())
+                    .unwrap_or(false)
+            };
+            (source, here.then(|| cached_schedule_for(source).map(|v| v.len()).unwrap_or(0)))
+        })
+        .collect()
 }
 
 /// Import a listener's own station list into `broadcast_stations.json`.
@@ -3044,7 +3066,11 @@ pub fn cached_broadcast_sources() -> Vec<(sdroxide_types::ScheduleSource, Option
 /// may carry any unit** — kHz or MHz — and where none is written the **number**
 /// decides, by the same rule the schedule files are read by.
 pub fn import_broadcast_stations(path: &std::path::Path) -> Result<usize, String> {
-    let text = fs::read_to_string(path).map_err(|e| format!("{}: {e}", path.display()))?;
+    // **Not `read_to_string`**: lists saved by Windows tools and by EiBi itself
+    // are Latin-1, and a strict UTF-8 read refused them outright.
+    let raw = fs::read(path).map_err(|e| format!("{}: {e}", path.display()))?;
+    let text = String::from_utf8(raw)
+        .unwrap_or_else(|e| sdroxide_types::broadcast::decode_latin1(e.as_bytes()));
     let mut rows: Vec<sdroxide_types::BroadcastStation> =
         serde_json::from_str::<sdroxide_types::BroadcastStations>(&text)
             .map(|f| f.stations)
@@ -3086,6 +3112,68 @@ pub fn import_broadcast_stations(path: &std::path::Path) -> Result<usize, String
     Ok(n)
 }
 
+/// Which publisher's schedule these bytes are, and the season to file it under.
+///
+/// **Told apart by what is in the file, not by what it is called.** A browser
+/// saves Aoki's `xta26.zip` and `xta26.txt` with the same stem, and an operator
+/// who renamed either should still get the right reader. `None` is "not a
+/// schedule at all", which is how [`import_any_file`] knows to read it as a
+/// listener's own list instead.
+fn sniff_schedule(
+    path: &std::path::Path,
+    bytes: &[u8],
+    ours: &str,
+) -> Option<(sdroxide_types::ScheduleSource, String)> {
+    use sdroxide_types::ScheduleSource as S;
+
+    if bytes.starts_with(b"PK\x03\x04") {
+        // HFCC's package carries its two reference tables beside the schedule;
+        // Aoki's zip never does. Told apart by the names inside, not the file's.
+        if zip_is_hfcc(bytes) {
+            return Some((S::Hfcc, ours.to_string()));
+        }
+        return Some((S::Aoki, aoki_season_from_path(path).unwrap_or_else(|| format!("xt{ours}"))));
+    }
+    let head = sdroxide_types::broadcast::decode_latin1(&bytes[..bytes.len().min(512)]);
+    // Aoki's title line says "… Frequecy List" (their spelling), and the column
+    // header under it says `FRE STATION … UTC`, which is what the parser itself
+    // looks for — so a file saved without its first line is still recognised.
+    let aoki_head = head.contains("Frequecy List")
+        || head.contains("Frequency List")
+        || (head.contains("STATION") && head.contains("UTC"));
+    if aoki_head {
+        Some((S::Aoki, aoki_season_from_path(path).unwrap_or_else(|| format!("xt{ours}"))))
+    } else if head.contains("kHz:") && head.contains(';') {
+        Some((S::Eibi, ours.to_string()))
+    } else {
+        None
+    }
+}
+
+/// What [`import_any_file`] did with the file.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ImportedFile {
+    /// A published schedule (EiBi, Aoki): cached like a download.
+    Schedule(ImportedSchedule),
+    /// A listener's own list: `n` stations now in the operator's own file.
+    List(usize),
+}
+
+/// **One import for whatever the operator has.** A published schedule goes the
+/// way a download does; anything else is read as a listener's own list. The
+/// operator should not have to know which of the two a file is — a file from
+/// EiBi handed to the "own list" reader used to be refused as unreadable, which
+/// told them nothing.
+pub fn import_any_file(path: &std::path::Path) -> Result<ImportedFile, String> {
+    let bytes = fs::read(path).map_err(|e| format!("{}: {e}", path.display()))?;
+    let ours = sdroxide_types::broadcast::season_file(now_unix());
+    if sniff_schedule(path, &bytes, &ours).is_some() {
+        import_schedule_file(path).map(ImportedFile::Schedule)
+    } else {
+        import_broadcast_stations(path).map(ImportedFile::List)
+    }
+}
+
 /// What [`import_schedule_file`] found in the file it was handed.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ImportedSchedule {
@@ -3122,33 +3210,21 @@ pub fn import_schedule_file(path: &std::path::Path) -> Result<ImportedSchedule, 
         return Err(format!("{} is empty", path.display()));
     }
     let ours = sdroxide_types::broadcast::season_file(now_unix());
-    // **Told apart by what is in the file, not by what it is called.** A browser
-    // saves Aoki's `xta26.zip` and `xta26.txt` with the same stem, and an
-    // operator who renamed either should still get the right reader.
-    let (source, season) = if bytes.starts_with(b"PK\x03\x04") {
-        (S::Aoki, aoki_season_from_path(path).unwrap_or_else(|| format!("xt{ours}")))
-    } else {
-        let head = sdroxide_types::broadcast::decode_latin1(&bytes[..bytes.len().min(512)]);
-        // Aoki's title line says "… Frequecy List" (their spelling), and the
-        // column header under it says `FRE STATION … UTC`, which is what the
-        // parser itself looks for — so a file saved without its first line is
-        // still recognised as Aoki's.
-        let aoki_head = head.contains("Frequecy List")
-            || head.contains("Frequency List")
-            || (head.contains("STATION") && head.contains("UTC"));
-        if aoki_head {
-            (S::Aoki, aoki_season_from_path(path).unwrap_or_else(|| format!("xt{ours}")))
-        } else if head.contains("kHz:") && head.contains(';') {
-            (S::Eibi, ours)
-        } else {
-            return Err(format!(
-                "{} is not a schedule this program knows: an Aoki file is the \
-                 .zip Aoki publishes or the .txt from inside it, and an EiBi file is \
-                 its sked .csv.",
-                path.display()
-            ));
-        }
-    };
+    let (source, season) = sniff_schedule(path, &bytes, &ours).ok_or_else(|| {
+        format!(
+            "{} is not a schedule this program knows: an Aoki file is the \
+             .zip Aoki publishes or the .txt from inside it, and an EiBi file is \
+             its sked .csv.",
+            path.display()
+        )
+    })?;
+
+    // **HFCC is a package, not a file**: schedule plus two tables, parsed together
+    // and cached as the zip, exactly as the download does it (`fetch_hfcc`).
+    if source == S::Hfcc {
+        let stations = fetch_hfcc(&bytes, cache_season_of(&season))?;
+        return Ok(ImportedSchedule { source, season, stations: stations.len() });
+    }
 
     // Read it exactly the way the cache is read, so a file that would not work
     // from the cache does not look fine here and fail after the restart.
@@ -3199,16 +3275,40 @@ pub fn import_schedule_file(path: &std::path::Path) -> Result<ImportedSchedule, 
 /// The season an Aoki file names itself with: `xta26` for `xta26.zip`, `b26` for
 /// `ncb26.txt`, and nothing when the name says nothing (`schedule.zip`), which
 /// leaves the caller to fall back to the season we are in.
+///
+/// A browser often appends copy numbers like `xta26 (1).zip` or `xta26 (3).zip`.
+/// Those must not be concatenated onto the year digits.
 fn aoki_season_from_path(path: &std::path::Path) -> Option<String> {
     let stem = path.file_stem()?.to_str()?;
-    let clean: String = stem
+    // A browser that downloads the same file twice appends " (1)", " (2)"; the
+    // season is everything before that. It is then kept **as published** —
+    // `xta26`, `ncb24`, `b24` — because that is the name a *download* files the
+    // same schedule under, and two spellings of one season would leave two
+    // cache files to choose between (see
+    // `importing_another_season_leaves_one_aoki_file_to_find`).
+    let name: String = stem
+        .split(" (")
+        .next()
+        .unwrap_or(stem)
         .chars()
         .filter(|c| c.is_ascii_alphanumeric())
-        .take(8)
         .collect::<String>()
         .to_ascii_lowercase();
-    let named = clean.starts_with("xt") || clean.starts_with("nc") || clean.starts_with("b2");
-    (named && clean.chars().any(|c| c.is_ascii_digit())).then_some(clean)
+    let named = name.starts_with("xt") || name.starts_with("nc") || name.starts_with('b');
+    let has_season = name.len() >= 3
+        && name.len() <= 8
+        && named
+        && name.chars().any(|c| c.is_ascii_digit());
+    has_season.then_some(name)
+}
+
+/// Is this zip an HFCC package? It holds `broadcas.txt` and `site.txt` — the
+/// tables that give the schedule's codes their names — which no Aoki zip has.
+fn zip_is_hfcc(bytes: &[u8]) -> bool {
+    zip_entries(bytes).is_ok_and(|entries| {
+        let has = |word: &str| entries.iter().any(|(n, _)| n.to_ascii_lowercase().contains(word));
+        has("broadcas") && has("site")
+    })
 }
 
 /// HFCC's cached package, unpacked and parsed.
@@ -4862,6 +4962,31 @@ mod tests {
         assert_eq!(typo.ui.smeter_style, sdroxide_types::SmeterStyle::Needle);
     }
 
+    /// What the S-meter measures (signal, power, SWR, ALC) is turned with the
+    /// arrows on the meter and written at once, like the face, so it has to come
+    /// back too; power is the stock view, and a value that is not a view must
+    /// cost the operator the view, not the table.
+    #[test]
+    fn the_smeter_view_survives_a_toml_round_trip() {
+        let mut s = Settings::default();
+        assert_eq!(s.ui.smeter_view, sdroxide_types::MeterView::Auto, "stock view");
+        s.ui.smeter_view = sdroxide_types::MeterView::Swr;
+        let text = toml::to_string_pretty(&s).unwrap();
+        let back: Settings = toml::from_str(&text).unwrap();
+        assert_eq!(back.ui.smeter_view, sdroxide_types::MeterView::Swr);
+
+        let older: Settings = toml::from_str("[ui]\ntheme = \"AmberPhosphor\"\n").unwrap();
+        assert_eq!(older.ui.smeter_view, sdroxide_types::MeterView::Auto, "a config before it");
+        let typo: Settings = toml::from_str(
+            "[ui]\n\
+             theme = \"AmberPhosphor\"\n\
+             smeter_view = \"Watts\"\n",
+        )
+        .expect("an unknown view must still parse");
+        assert_eq!(typo.ui.theme, sdroxide_types::UiTheme::AmberPhosphor, "the table survived");
+        assert_eq!(typo.ui.smeter_view, sdroxide_types::MeterView::Auto);
+    }
+
     /// The FT8/FT4 decode list's own view preferences — the sort, its
     /// direction, the grouping and the two filters — ride in `[ui]` beside the
     /// theme, so they have to survive the same trip: a chip clicked in the
@@ -4972,9 +5097,19 @@ mod tests {
         assert_eq!(Store::radio(2).load_radio_config(), cfg);
         assert_eq!(
             Store::radio(0).load_radio_config(),
-            sdroxide_types::RadioConfig::default(),
+            sdroxide_types::RadioConfig {
+                // A radio with no file is a new radio: every band off.
+                tx_band_enable: Some(Vec::new()),
+                ..sdroxide_types::RadioConfig::default()
+            },
             "radio 0 must not see radio 2's file"
         );
+        // A file written before the transmit band list existed has none, which
+        // is what tells an upgrade (carried over by the engine, unconfirmed)
+        // from a new radio.
+        std::fs::write(root.join("radio-2/radio.json"), "{}").unwrap();
+        assert_eq!(Store::radio(2).load_radio_config().tx_band_enable, None);
+        assert_eq!(Store::radio(3).load_radio_config().tx_band_enable, Some(Vec::new()));
 
         // The roster: a missing file is the one legacy radio; creating a radio
         // allocates a fresh id, seeds its scope, and disables the TCI server
@@ -5074,6 +5209,8 @@ mod tests {
         fs::write(root.join("radio.json"), "{ \"backend\": \"Sdr").unwrap();
         let reset = sdroxide_types::RadioConfig {
             backend: sdroxide_types::Backend::None,
+            // A reset file is a new radio: every transmit band off.
+            tx_band_enable: Some(Vec::new()),
             ..Default::default()
         };
         assert_eq!(Store::station().load_radio_config(), reset);
@@ -5100,79 +5237,70 @@ mod tests {
         // ── The band plan ───────────────────────────────────────────────────
         // Folded into this test rather than given its own, for the reason in
         // the doc comment above: only one test in this binary may redirect the
-        // config directory.
-        let plan_path = root.join(BAND_PLAN_FILE);
-        assert!(!plan_path.exists(), "nothing has written it yet");
+        // config directory. The library itself is tested without it, in
+        // `band_plans`; this is the part that reads `config.toml`.
+        let lib = root.join(BAND_PLANS_DIR);
+        assert!(!lib.exists(), "nothing has made the library yet");
+        assert_eq!(band_plans_dir().unwrap(), lib);
 
-        // First load seeds the file from the built-in tables, and what lands on
-        // disk has to be the plan that was returned — otherwise the operator's
-        // starting point is not what the program is running.
-        let seeded = load_band_plan();
-        assert!(seeded.is_default());
-        assert!(plan_path.exists(), "a first load must write a starting file");
-        assert!(take_load_alerts().is_empty(), "seeding is not a problem to report");
-        assert_eq!(load_band_plan(), seeded, "the second load reads the file it wrote");
-        assert_eq!(band_plan_path().unwrap(), plan_path);
+        // Nothing chosen is the built-in tables, and the first look makes the
+        // library with the shipped plans in it — and writes no `bandplan.json`.
+        assert!(load_band_plan().is_default());
+        assert!(lib.is_dir(), "the first load makes the library");
+        assert!(!root.join("bandplan.json").exists(), "the old file is no longer seeded");
+        assert!(take_load_alerts().is_empty(), "a new library is not a problem to report");
+        assert_eq!(band_plan_selection(), None);
+        assert!(list_band_plans().iter().any(|p| p.file == "bandplan-de-nrw" && p.shipped));
 
-        // The seeded file is editable: MHz, and one row per line rather than
-        // `to_string_pretty`'s five, which is the difference between a file an
-        // operator can read down and nine hundred lines of scrolling.
-        let text = fs::read_to_string(&plan_path).unwrap();
-        assert!(text.contains("\"lo_mhz\""), "the file has to be in megahertz");
-        assert!(text.contains("\"readme\""), "and has to explain itself");
-        assert!(
-            text.contains(r#"{"band": "M160", "lo_mhz": 1.81, "hi_mhz": 2.0}"#),
-            "a band should be one readable line:\n{text}"
-        );
-        assert!(text.lines().count() < 300, "{} lines is too many to edit", text.lines().count());
-        assert!(text.ends_with('\n'), "a text file ends with a newline");
-        fs::write(
-            &plan_path,
-            r#"{"region1":{"bands":[{"band":"M2","lo_mhz":144.0,"hi_mhz":144.4}]},
-                "region2":{"bands":[{"band":"M2","lo_mhz":144.0,"hi_mhz":148.0}]},
-                "region3":{"bands":[{"band":"M2","lo_mhz":144.0,"hi_mhz":148.0}]}}"#,
-        )
-        .unwrap();
-        let mine = load_band_plan();
-        assert!(!mine.is_default());
+        // Choosing a plan runs it, remembers it, and a restart finds it again.
+        let nrw = select_band_plan(Some("Bandplan DE NRW")).unwrap();
+        assert!(!nrw.is_default());
+        assert_eq!(band_plan_selection().as_deref(), Some("bandplan-de-nrw"));
+        assert_eq!(load_band_plan(), nrw);
+        assert_eq!(Settings::load().band_plan.as_deref(), Some("bandplan-de-nrw"));
+
+        // A choice that cannot be honoured leaves the choice as it was.
+        assert!(select_band_plan(Some("no-such-plan")).is_err());
+        assert_eq!(band_plan_selection().as_deref(), Some("bandplan-de-nrw"));
+        // The plan running cannot be deleted from under the station.
+        assert!(delete_band_plan("bandplan-de-nrw").unwrap_err().contains("running"));
+
+        // An imported plan is only added: it runs when it is chosen.
+        let mine = r#"{"meta":{"name":"Mine"},
+            "region1":{"bands":[{"band":"M2","lo_mhz":144.0,"hi_mhz":144.4}]},
+            "region2":{"bands":[{"band":"M2","lo_mhz":144.0,"hi_mhz":148.0}]},
+            "region3":{"bands":[{"band":"M2","lo_mhz":144.0,"hi_mhz":148.0}]}}"#;
+        assert_eq!(import_band_plan("Mine", mine).unwrap(), "mine");
+        assert_eq!(band_plan_selection().as_deref(), Some("bandplan-de-nrw"));
+        let picked = select_band_plan(Some("mine")).unwrap();
         assert_eq!(
-            mine.region(sdroxide_types::Region::R1).edges(sdroxide_types::Band::M2),
+            picked.region(sdroxide_types::Region::R1).edges(sdroxide_types::Band::M2),
             Some((144_000_000.0, 144_400_000.0))
         );
+        assert_eq!(load_band_plan(), picked);
 
-        // A row that says nothing is dropped, named, and does not take the file
-        // down with it.
-        fs::write(
-            &plan_path,
-            r#"{"region1":{"bands":[
-                    {"band":"M2","lo_mhz":148.0,"hi_mhz":144.0},
-                    {"band":"M20","lo_mhz":14.0,"hi_mhz":14.35}]},
-                "region2":{"bands":[{"band":"M20","lo_mhz":14.0,"hi_mhz":14.35}]},
-                "region3":{"bands":[{"band":"M20","lo_mhz":14.0,"hi_mhz":14.35}]}}"#,
-        )
-        .unwrap();
-        let patched = load_band_plan();
-        assert_eq!(
-            patched.region(sdroxide_types::Region::R1).edges(sdroxide_types::Band::M2),
-            None
-        );
-        let alerts = take_load_alerts();
-        assert_eq!(alerts.len(), 1, "{alerts:?}");
-        assert!(alerts[0].contains("2M"), "{}", alerts[0]);
+        // One click back to the default: nothing chosen again.
+        assert!(select_band_plan(None).unwrap().is_default());
+        assert_eq!(band_plan_selection(), None);
+        assert!(load_band_plan().is_default());
+        delete_band_plan("mine").unwrap();
 
-        // A file that will not parse is *left alone* — unlike `radio.json`,
-        // which is quarantined. This one is the operator's own document, and a
-        // half-finished edit must survive the start that failed to read it.
-        fs::write(&plan_path, "{ \"region1\": ").unwrap();
-        assert!(load_band_plan().is_default(), "a broken file falls back to the built-ins");
-        assert!(plan_path.exists(), "the operator's file must not be renamed away");
-        assert!(!root.join(format!("{BAND_PLAN_FILE}.bak")).exists());
+        // A chosen plan whose file has gone runs the built-in tables, says so,
+        // and keeps the choice — it is somebody's document, not ours to unpick.
+        select_band_plan(Some("bandplan-de-nrw")).unwrap();
+        fs::remove_file(lib.join("bandplan-de-nrw.json")).unwrap();
+        assert!(load_band_plan().is_default());
         let alerts = take_load_alerts();
         assert_eq!(alerts.len(), 1, "{alerts:?}");
         assert!(alerts[0].contains("built-in"), "{}", alerts[0]);
-        // And it says so again next time, because the file is still wrong.
+        assert_eq!(band_plan_selection().as_deref(), Some("bandplan-de-nrw"));
+
+        // And one that will not parse is left alone, as before.
+        fs::write(lib.join("bandplan-de-nrw.json"), "{ \"region1\": ").unwrap();
         assert!(load_band_plan().is_default());
+        assert_eq!(fs::read_to_string(lib.join("bandplan-de-nrw.json")).unwrap(), "{ \"region1\": ");
         assert_eq!(take_load_alerts().len(), 1);
+        select_band_plan(None).unwrap();
 
         // Recordings follow the isolation too, whatever the setting says: a
         // recording is the one file that would otherwise escape to the
@@ -5195,6 +5323,19 @@ mod tests {
         save_hfdl_channels(&[5_451, 8_843, 11_184]).unwrap();
         assert!(root.join("hfdl_channels.json").exists());
         assert_eq!(load_hfdl_channels(), vec![5_451, 8_843, 11_184]);
+
+        // Custom filter presets round-trip the same way.
+        assert!(load_filter_presets().is_empty(), "no file, no custom presets");
+        let preset = sdroxide_types::CustomFilterPreset {
+            mode: sdroxide_types::Mode::Usb,
+            slot: 1,
+            label: "Rag".into(),
+            lo: 100.0,
+            hi: 3000.0,
+        };
+        save_filter_presets(std::slice::from_ref(&preset)).unwrap();
+        assert!(root.join("filter_presets.json").exists());
+        assert_eq!(load_filter_presets(), vec![preset]);
 
         unsafe { std::env::remove_var("SDROXIDE_CONFIG_DIR") };
     }

@@ -101,7 +101,6 @@ impl WefaxController {
         rx.set_auto_start(cfg.wefax_auto_start);
         rx.set_auto_stop(cfg.wefax_auto_stop);
         rx.set_slant_ppm(cfg.wefax_slant_ppm);
-        rx.set_sensitivity(sensitivity(&cfg));
         WefaxController {
             cfg,
             rx,
@@ -238,7 +237,17 @@ impl DigiEngine for WefaxController {
         self.rx.process(tap, &mut events);
         for e in events.drain(..) {
             match e {
-                WefaxEvent::Start { ioc, .. } => {
+                WefaxEvent::Start { ioc, lpm, auto } => {
+                    // **A page's beginning is half of why a chart comes out
+                    // wrong.** A chart that starts late is a fragment and a
+                    // chart that starts early is a sliver, and neither is
+                    // visible afterwards: one line here says whether the page
+                    // was opened by a start tone or a phasing lock, and at what
+                    // geometry (reported on #444, bench 2026-11-04).
+                    tracing::info!(
+                        "wefax: page started — {lpm:?}, {ioc:?}, {}",
+                        if auto { "from the air" } else { "by the operator" }
+                    );
                     self.begin(ioc.width());
                     self.status_dirty = true;
                 }
@@ -262,7 +271,26 @@ impl DigiEngine for WefaxController {
                     self.queued.push(DigiAction::WefaxLine { image_id: self.image_id, y, gray });
                     self.status_dirty = true;
                 }
-                WefaxEvent::Complete { .. } => {
+                WefaxEvent::Complete { lines, by_tone } => {
+                    // The other half: how long the page got and what closed it.
+                    // A chart is about 1440 lines at 120 LPM; a good deal fewer
+                    // is a fragment, a good deal more is a page that ran past
+                    // its transmission.
+                    // ...and the trim in force, with the evidence behind it: a
+                    // page that leaned and a page corrected to the same tilt
+                    // look alike in the picture, and the two floors mean "it
+                    // acted" and "it never had enough phasing" differ by a
+                    // number nothing else shows (#444).
+                    let (slant_ppm, phasing_lines) = self.rx.slant_correction();
+                    tracing::info!(
+                        "wefax: page finished — {lines} lines, ended by {}, slant {slant_ppm:+.1} \
+                         ppm from {phasing_lines} phasing lines",
+                        if by_tone {
+                            "the stop tone"
+                        } else {
+                            "the operator, a fade or the length limit"
+                        }
+                    );
                     self.emit_image();
                     self.status_dirty = true;
                 }
@@ -333,7 +361,6 @@ impl DigiEngine for WefaxController {
         self.rx.set_auto_start(cfg.wefax_auto_start);
         self.rx.set_auto_stop(cfg.wefax_auto_stop);
         self.rx.set_slant_ppm(cfg.wefax_slant_ppm);
-        self.rx.set_sensitivity(sensitivity(&cfg));
         self.cfg = cfg;
         self.status_dirty = true;
     }

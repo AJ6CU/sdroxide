@@ -14,6 +14,7 @@
 //! uses the same `db_floor`/`db_ceil` state and the same limits as the DISP
 //! popup's sliders and the keyboard bindings, so the three always agree.
 
+use crate::i18n::tr;
 use eframe::egui::{self, Color32, Rect, Sense, Stroke, Ui, Vec2};
 
 use crate::view::ViewState;
@@ -118,12 +119,7 @@ pub fn show(ui: &mut Ui, area: Rect, view: &mut ViewState) -> bool {
     if resp.hovered() || resp.dragged() {
         ui.ctx().set_cursor_icon(egui::CursorIcon::ResizeVertical);
     }
-    resp.on_hover_text(format!(
-        "Waterfall level\nfloor {:.0} dB · ceiling {:.0} dB\n\n\
-         Drag or scroll to brighten or darken; shift for contrast.\n\
-         Moving it turns auto-fit (FIT) off.",
-        view.db_floor, view.db_ceil,
-    ));
+    resp.on_hover_text(tr!("levelslider-hover", floor = format!("{:.0}", view.db_floor), ceil = format!("{:.0}", view.db_ceil)));
     changed
 }
 

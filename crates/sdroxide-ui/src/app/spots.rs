@@ -5,6 +5,7 @@
 //! one list filtered by kind, by the current view span, and by a fuzzy search.
 //! Clicking one tunes the radio and pre-fills the logbook.
 
+use crate::i18n::tr;
 use eframe::egui::{self, RichText};
 use sdroxide_types::{Command, Mode, RxId, Spot, SpotKind};
 
@@ -55,7 +56,7 @@ fn spot_haystack(s: &Spot) -> String {
 /// One clickable spot row for the spots window: kind badge, call, frequency,
 /// mode, age or schedule, and the park/summit/transmitter reference or comment.
 fn spot_row(ui: &mut egui::Ui, s: &Spot, now_utc: i64, needed: bool) -> egui::Response {
-    let kind_col = crate::theme::data_ink(crate::theme::spot_color(s.kind));
+    let kind_col = crate::theme::data_ink(crate::theme::spot_color_for(s));
     let gray = crate::theme::gray(150);
     let inner = egui::Frame::new()
         .fill(crate::theme::ROW_BG())
@@ -124,7 +125,7 @@ fn spot_row(ui: &mut egui::Ui, s: &Spot, now_utc: i64, needed: bool) -> egui::Re
                         ui,
                         36.0,
                         egui::Label::new(
-                            RichText::new("NEW").size(10.0).strong().color(crate::theme::GREEN()),
+                            RichText::new(tr!("decodes-new")).size(10.0).strong().color(crate::theme::GREEN()),
                         ),
                     );
                 }
@@ -136,9 +137,17 @@ fn spot_row(ui: &mut egui::Ui, s: &Spot, now_utc: i64, needed: bool) -> egui::Re
                 ui.add(egui::Label::new(RichText::new(info).size(11.0).color(gray)).truncate());
             });
         });
-    let resp = inner.response.interact(egui::Sense::click());
+    let mut resp = inner.response.interact(egui::Sense::click());
     if resp.hovered() {
         ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+    }
+    // The QRZ card, for a spot that names a station (a broadcaster is not one).
+    if s.kind != SpotKind::Broadcast && crate::callsign_card::applies(ui.ctx(), &s.call) {
+        resp = resp.on_hover_ui(|ui| {
+            ui.set_max_width(300.0);
+            ui.label(RichText::new(&s.call).size(14.0).strong().color(crate::theme::TEXT_STRONG()));
+            crate::callsign_card::section(ui, &s.call);
+        });
     }
     resp
 }
@@ -151,9 +160,9 @@ fn spot_row(ui: &mut egui::Ui, s: &Spot, now_utc: i64, needed: bool) -> egui::Re
 /// it).
 fn opening_row(ui: &mut egui::Ui, o: &sdroxide_types::BandOpening, now: i64) {
     let (state_tag, state_col) = match o.state {
-        sdroxide_types::OpeningState::Opening => ("OPEN", crate::theme::CYAN()),
-        sdroxide_types::OpeningState::Active => ("ACTIVE", crate::theme::GREEN()),
-        sdroxide_types::OpeningState::Closing => ("CLOSING", crate::theme::gray(170)),
+        sdroxide_types::OpeningState::Opening => (tr!("rc-open"), crate::theme::CYAN()),
+        sdroxide_types::OpeningState::Active => (tr!("spots-active"), crate::theme::GREEN()),
+        sdroxide_types::OpeningState::Closing => (tr!("spots-closing"), crate::theme::gray(170)),
     };
     let gray = crate::theme::gray(140);
     let factor = o.factor.map(|f| format!("{f:.1}×")).unwrap_or_else(|| "∞×".to_string());
@@ -207,7 +216,7 @@ fn opening_row(ui: &mut egui::Ui, o: &sdroxide_types::BandOpening, now: i64) {
                     ui,
                     74.0,
                     egui::Label::new(
-                        RichText::new(format!("{} calls", o.short_calls)).size(10.5).color(gray),
+                        RichText::new(tr!("spots-n-calls", n = o.short_calls)).size(10.5).color(gray),
                     ),
                 );
                 col(
@@ -221,14 +230,13 @@ fn opening_row(ui: &mut egui::Ui, o: &sdroxide_types::BandOpening, now: i64) {
                 );
             })
             .response
-            .on_hover_text(format!(
-                "{} band path from {} to {}: the last 15-minute window surged past the \
-                 path's 3-hour baseline — recent callers: {}",
-                o.band.label(),
-                o.from_continent,
-                o.to_continent,
-                if o.sample_calls.is_empty() {
-                    "none left in the window".to_string()
+            .on_hover_text(tr!(
+                "spots-opening-hover",
+                band = o.band.label(),
+                from = &o.from_continent,
+                to = &o.to_continent,
+                calls = if o.sample_calls.is_empty() {
+                    tr!("spots-none-left-in-the-window")
                 } else {
                     o.sample_calls.join(", ")
                 },
@@ -254,8 +262,8 @@ fn spot_rows_pane(
         // held — "3 of 5" when three categories are off would look like the
         // search had lost the rest.
         let (text, colour) = match rows.len() {
-            0 => ("no match".to_string(), crate::theme::ALERT()),
-            n => (format!("{n} of {visible}"), crate::theme::YELLOW()),
+            0 => (tr!("spots-no-match"), crate::theme::ALERT()),
+            n => (tr!("spots-n-of-total", n = n, total = visible), crate::theme::YELLOW()),
         };
         ui.label(RichText::new(text).color(colour).size(10.0));
     }
@@ -274,9 +282,9 @@ fn spot_rows_pane(
         if !any {
             ui.add_space(8.0);
             let msg = if query.is_empty() {
-                "no spots — enable a feed in ⚙ SETUP"
+                tr!("spots-no-spots-enable-feed-setup")
             } else {
-                "nothing matches the search"
+                tr!("spots-nothing-matches-search")
             };
             ui.label(RichText::new(msg).color(crate::theme::gray(120)));
         }
@@ -445,6 +453,8 @@ impl SdroxideApp {
     /// Cheap enough to call every frame.
     pub(in crate::app) fn refresh_broadcast_spots(&mut self, now_utc: i64) {
         self.poll_schedule_fetch(now_utc);
+        #[cfg(target_arch = "wasm32")]
+        self.poll_broadcast_load();
         let minute = now_utc.div_euclid(60);
         if minute == self.broadcast_minute {
             return;
@@ -465,7 +475,7 @@ impl SdroxideApp {
             self.broadcast_fetch = None;
             self.broadcast_fetch_status = Some(match result {
                 Ok(stations) => {
-                    let msg = format!("{} transmissions", stations.len());
+                    let msg = tr!("spots-transmissions", stations = stations.len());
                     self.broadcast = sdroxide_types::broadcast::with_utilities(stations);
                     // Force the on-air list to be rebuilt from the new schedule
                     // rather than waiting up to a minute for the tick.
@@ -482,6 +492,43 @@ impl SdroxideApp {
             self.broadcast_checked_day = day;
             self.broadcast_fetch = crate::app::persist::spawn_schedule_fetch(false);
         }
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    fn poll_broadcast_load(&mut self) {
+        use std::sync::{Arc, Mutex};
+
+        // Take a finished result.
+        if let Some(inbox) = &self.broadcast_load {
+            let done = if let Ok(mut g) = inbox.lock() {
+                g.take()
+            } else {
+                None
+            };
+            if let Some(res) = done {
+                self.broadcast_load = None;
+                self.broadcast_load_done = true;
+                if let Ok(stations) = res {
+                    self.broadcast = sdroxide_types::broadcast::with_utilities(stations);
+                    self.broadcast_minute = -1;
+                }
+            }
+        }
+
+        if self.broadcast_load_done || self.broadcast_load.is_some() {
+            return;
+        }
+        let Some(peer) = self.ctrl.peer_url() else { return };
+        let Some(url) = Self::broadcast_url(&peer) else { return };
+        let inbox = Arc::new(Mutex::new(None));
+        let inbox2 = inbox.clone();
+        self.broadcast_load = Some(inbox);
+        wasm_bindgen_futures::spawn_local(async move {
+            let result = Self::fetch_broadcast(&url).await;
+            if let Ok(mut g) = inbox2.lock() {
+                *g = Some(result);
+            }
+        });
     }
 
     /// Download the current season's schedule now, whether or not one is cached.
@@ -506,7 +553,7 @@ impl SdroxideApp {
             self.broadcast_fetch_status = None;
         } else {
             self.broadcast_fetch_status =
-                Some(Err(format!("{source:?} could not be downloaded on this platform")));
+                Some(Err(tr!("spots-download-unsupported", source = format!("{source:?}"))));
         }
     }
 
@@ -518,10 +565,54 @@ impl SdroxideApp {
         self.broadcast_minute = -1;
     }
 
+    /// Read the schedule again after an import: from the station's file on the
+    /// desktop, from the station's server in a browser (the next frame fetches it).
+    pub(in crate::app) fn reload_broadcast_after_import(&mut self) {
+        #[cfg(target_arch = "wasm32")]
+        {
+            self.broadcast_load = None;
+            self.broadcast_load_done = false;
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.reload_broadcast_stations();
+        }
+    }
+
     /// Live network spots and the on-air broadcast stations, unfiltered.
     pub(in crate::app) fn all_spots(&self) -> impl Iterator<Item = &Spot> {
         self.spots.iter().chain(self.broadcast_spots.iter())
     }
+
+#[cfg(target_arch = "wasm32")]
+fn broadcast_url(peer_url: &str) -> Option<String> {
+    let base = crate::login::http_base(&crate::login::station_key(peer_url))?;
+    Some(format!("{base}/broadcast-schedule"))
+}
+
+#[cfg(target_arch = "wasm32")]
+async fn fetch_broadcast(url: &str) -> Result<Vec<sdroxide_types::BroadcastStation>, String> {
+    use wasm_bindgen::JsCast;
+    let window = web_sys::window().ok_or_else(|| "no window".to_string())?;
+    let init = web_sys::RequestInit::new();
+    init.set_method("GET");
+    init.set_mode(web_sys::RequestMode::SameOrigin);
+    let request = web_sys::Request::new_with_str_and_init(url, &init).map_err(|_| "request".to_string())?;
+    let resp = wasm_bindgen_futures::JsFuture::from(window.fetch_with_request(&request))
+        .await
+        .map_err(|_| "fetch".to_string())?
+        .dyn_into::<web_sys::Response>()
+        .map_err(|_| "response".to_string())?;
+    if resp.status() != 200 {
+        return Err(format!("HTTP {}", resp.status()));
+    }
+    let text = wasm_bindgen_futures::JsFuture::from(resp.text().map_err(|_| "text".to_string())?)
+        .await
+        .map_err(|_| "text".to_string())?
+        .as_string()
+        .ok_or_else(|| "text".to_string())?;
+    serde_json::from_str(&text).map_err(|e| e.to_string())
+}
 
     /// The "who heard me" reporters to draw, when the overlay is on: the
     /// [`SpotKind::HeardMe`] spots from the snapshot, cloned out. Empty when
@@ -597,7 +688,7 @@ impl SdroxideApp {
         let mut clicked: Option<Spot> = None;
         let mut open_setup = false;
         let open =
-            self.tool_window(ctx, "spots", "SPOTS", [580.0, 480.0], self.show_spots, |me, ui| {
+            self.tool_window(ctx, "spots", &tr!("spots-spots"), [580.0, 480.0], self.show_spots, |me, ui| {
                 me.spots_body(ui, &mut clicked, &mut open_setup)
             });
         self.show_spots = open;
@@ -626,10 +717,10 @@ impl SdroxideApp {
         // `spot_visible`, which always hides it from the list.
         let labels = [
             (SpotKind::DxCluster, "DX"),
-            (SpotKind::Pota, "POTA"),
-            (SpotKind::Sota, "SOTA"),
+            (SpotKind::Pota, &tr!("spots-pota")),
+            (SpotKind::Sota, &tr!("spots-sota")),
             (SpotKind::PskReporter, "PSK"),
-            (SpotKind::FreeDv, "FREEDV"),
+            (SpotKind::FreeDv, &tr!("spots-freedv")),
             (SpotKind::Broadcast, "BC"),
             (SpotKind::Rbn, "RBN"),
         ];
@@ -648,7 +739,7 @@ impl SdroxideApp {
                 }
                 let chip = crate::chrome::chip(ui, self.view.spot_kinds_shown[i], *label);
                 let chip = if *kind == SpotKind::Broadcast {
-                    chip.on_hover_text("Longwave & shortwave broadcast stations on air now")
+                    chip.on_hover_text(tr!("spots-longwave-shortwave-broadcast-stations-air"))
                 } else {
                     chip
                 };
@@ -656,16 +747,15 @@ impl SdroxideApp {
                     self.view.spot_kinds_shown[i] = !self.view.spot_kinds_shown[i];
                 }
             }
-            if crate::chrome::chip(ui, self.spot_in_view_only, "IN VIEW")
-                .on_hover_text("Only spots inside the panadapter span")
+            if crate::chrome::chip(ui, self.spot_in_view_only, tr!("spots-view"))
+                .on_hover_text(tr!("spots-only-spots-inside-panadapter-span"))
                 .clicked()
             {
                 self.spot_in_view_only = !self.spot_in_view_only;
             }
-            if crate::chrome::chip(ui, self.view.spots_openings, "OPENINGS")
+            if crate::chrome::chip(ui, self.view.spots_openings, tr!("spots-openings"))
                 .on_hover_text(
-                    "Band-opening detections: paths whose recent activity surged \
-                     past their own 3-hour baseline",
+                    tr!("spots-band-opening-detections-paths"),
                 )
                 .clicked()
             {
@@ -674,10 +764,7 @@ impl SdroxideApp {
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 if crate::chrome::chip(ui, false, "KML")
                     .on_hover_text(
-                        "Save the spots you can see as a KML file — Google Earth, and any \
-                         other mapping tool that reads it. Only the filters switched on, and \
-                         only the spots that carry a position, since a pin with no \
-                         coordinates is a pin at the wrong end of the world.",
+                        tr!("spots-save-the-spots-you-can-see-as-a"),
                     )
                     .clicked()
                 {
@@ -688,7 +775,7 @@ impl SdroxideApp {
                     let spots: Vec<Spot> =
                         self.spots.iter().filter(|s| self.spot_visible(s)).cloned().collect();
                     if spots.is_empty() {
-                        self.kml_note = Some("No spots to save — the filters are all off".into());
+                        self.kml_note = Some(tr!("spots-no-spots-to-save-the-filters-are").into());
                     } else {
                         let placed = spots.iter().filter(|s| s.loc.is_some()).count();
                         let kml = sdroxide_types::spots_to_kml(&spots);
@@ -700,17 +787,13 @@ impl SdroxideApp {
                         // Say what was dropped rather than letting a file
                         // quietly hold fewer pins than the window showed.
                         self.kml_note = (placed < spots.len()).then(|| {
-                            format!(
-                                "{placed} of {} saved — the rest carry no position and cannot \
-                                 be pinned",
-                                spots.len()
-                            )
+                            tr!("spots-kml-partial", placed = placed, total = spots.len())
                         });
                         crate::download::save(&name, kml.as_bytes());
                     }
                 }
-                if crate::chrome::chip(ui, false, "⚙ SETUP")
-                    .on_hover_text("Feeds, lookup & upload settings")
+                if crate::chrome::chip(ui, false, tr!("spots-setup"))
+                    .on_hover_text(tr!("spots-feeds-lookup-upload-settings"))
                     .clicked()
                 {
                     *open_setup = true;
@@ -745,11 +828,11 @@ impl SdroxideApp {
                 ui,
                 egui::TextEdit::singleline(&mut self.spot_search)
                     .desired_width(200.0)
-                    .hint_text("call, station, site, frequency")
+                    .hint_text(tr!("spots-call-station-site-frequency"))
                     .text_color(crate::theme::TEXT_STRONG()),
             );
             if !self.spot_search.trim().is_empty()
-                && ui.button("✕").on_hover_text("Clear the search").clicked()
+                && ui.button("✕").on_hover_text(tr!("spots-clear-search")).clicked()
             {
                 self.spot_search.clear();
             }
@@ -761,17 +844,10 @@ impl SdroxideApp {
             // out of the window.
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 let all = self.ui_settings.broadcast_labels_all;
-                let label = if all { "BC ALL" } else { "BC TUNED" };
+                let label = if all { tr!("spots-bc-all") } else { tr!("spots-bc-tuned") };
                 if crate::chrome::chip(ui, all, label)
                     .on_hover_text(
-                        "Which broadcasters the **waterfall** names.\n\n\
-                         **BC TUNED** is the default and bebepip's rule: the name on the \
-                         station you are tuned to, and nothing else — a band labelled end to \
-                         end is a wall of names over the passband you are trying to read.\n\n\
-                         **BC ALL** names every station the schedule has on air now, wherever \
-                         it sits, which is what you want while browsing a band rather than \
-                         listening to one station. It says nothing about whether the BC chip \
-                         above shows broadcasters at all.",
+                        tr!("spots-which-broadcasters-the-waterfall"),
                     )
                     .clicked()
                 {
@@ -789,7 +865,7 @@ impl SdroxideApp {
         // QSO upload, and if not, why".
         if !self.net_log.is_empty() {
             egui::CollapsingHeader::new(
-                RichText::new(format!("NET LOG ({})", self.net_log.len()))
+                RichText::new(tr!("spots-net-log", n = self.net_log.len()))
                     .size(11.0)
                     .color(crate::theme::CYAN_DIM()),
             )

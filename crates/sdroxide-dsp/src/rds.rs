@@ -283,8 +283,33 @@ impl SymbolSync {
         acc
     }
 
+    /// Back to a loop that has never seen a signal: carrier phase and frequency,
+    /// timing, matched filter and the differential detector's memory. Called
+    /// when the decoder is told its station is gone, and by the watchdog.
+    fn reset(&mut self) {
+        *self = SymbolSync::new(self.sps);
+    }
+
+    /// Whether every piece of loop state is a number. A NaN or an infinity that
+    /// ever gets in (a clipped discriminator at a retune) is never washed out by
+    /// the loop — `clamp` and the adds keep it — and the decoder would go on
+    /// producing nothing from the same station until restarted.
+    fn is_finite(&self) -> bool {
+        self.ph.is_finite()
+            && self.freq.is_finite()
+            && self.acc.is_finite()
+            && self.prev_sym.re.is_finite()
+            && self.prev_sym.im.is_finite()
+    }
+
     /// Feed one complex baseband sample; append any recovered data bits to `out`.
     fn push(&mut self, z: Complex32, out: &mut Vec<u8>) {
+        if !self.is_finite() {
+            self.reset();
+        }
+        if !(z.re.is_finite() && z.im.is_finite()) {
+            return;
+        }
         let rot = Complex32::new(self.ph.cos(), -self.ph.sin());
         let y = self.matched(z * rot);
 
@@ -339,6 +364,12 @@ impl SymbolSync {
 /// mobile flutter or a passing car, short enough that a retune does not leave the
 /// previous station's data on screen.
 const MAX_BAD_RUN: u32 = 24;
+
+/// How long without a block sync before the carrier and timing loops are
+/// started afresh, in seconds. Several times what a loop needs to acquire a
+/// clean station (a fraction of a second), so a weak station is not restarted
+/// out of an acquisition that was going to work.
+const RESYNC_AFTER_S: f64 = 4.0;
 
 /// Good blocks before sync is *reported*. Collection starts on the first offset
 /// word that matches, but a lone match happens by chance roughly once in
@@ -991,6 +1022,10 @@ const MAX_PENDING_GROUPS: usize = 256;
 /// Feed it the discriminator output — *before* de-emphasis, which is 25 dB down
 /// at 57 kHz — and poll [`RdsRx::take`] for what it has made of it.
 pub struct RdsRx {
+    channel_rate: f64,
+    /// Samples (at the work rate) since the block layer last held a confirmed
+    /// sync; see [`RESYNC_AFTER_S`].
+    unsynced: u64,
     ddc: Ddc,
     /// ±2.4 kHz around the recovered carrier — the data's own bandwidth and
     /// nothing else's. See [`DATA_BW_HZ`].
@@ -1021,6 +1056,8 @@ impl RdsRx {
         ddc.set_offset_hz(CARRIER_HZ);
         let work_rate = Ddc::rate_for(channel_rate, WORK_TARGET);
         Some(RdsRx {
+            channel_rate,
+            unsynced: 0,
             ddc,
             channel: ComplexFir::new(bandpass_taps(
                 CHANNEL_TAPS,
@@ -1043,11 +1080,26 @@ impl RdsRx {
 
     /// Forget this station: called on a retune, so the previous station's name
     /// does not sit on screen under the new one's audio.
+    ///
+    /// **Everything that learned the old station goes**, not only the block
+    /// layer and the name: the carrier and timing loops, the down-converter and
+    /// the channel filter's history. They are fitted to the previous station's
+    /// subcarrier phase and offset, and a loop that has wandered off (to a
+    /// frequency rail, or onto a half-rate lock that decodes one repeating
+    /// group) does not come back by itself on the next station — only a restart
+    /// of the decoder did, which is what a page reload was.
     pub fn reset(&mut self) {
+        let work_rate = Ddc::rate_for(self.channel_rate, WORK_TARGET);
+        self.ddc = Ddc::new(self.channel_rate, WORK_TARGET);
+        self.ddc.set_offset_hz(self.tuned_hz);
+        self.channel =
+            ComplexFir::new(bandpass_taps(CHANNEL_TAPS, -DATA_BW_HZ, DATA_BW_HZ, work_rate));
+        self.sym.reset();
         self.blocks.reset();
         self.asm.reset();
         self.asm.data.stats = Default::default();
         self.pending.clear();
+        self.unsynced = 0;
     }
 
     /// Retune the down-converter from the stereo pilot, whose third harmonic the
@@ -1072,6 +1124,22 @@ impl RdsRx {
         self.ddc.process(&self.wide, &mut self.base);
         self.filtered.clear();
         self.channel.process(&self.base, &mut self.filtered);
+
+        // The watchdog. A decoder that has not held a sync for a few seconds
+        // has either no data to find or a loop that is lost; starting the
+        // carrier and timing loops afresh costs nothing in the first case and
+        // is the only way out in the second. Block sync keeps its own count
+        // and is left alone.
+        if self.blocks.synced() {
+            self.unsynced = 0;
+        } else {
+            self.unsynced += self.filtered.len() as u64;
+            let limit = (RESYNC_AFTER_S * Ddc::rate_for(self.channel_rate, WORK_TARGET)) as u64;
+            if self.unsynced > limit {
+                self.unsynced = 0;
+                self.sym.reset();
+            }
+        }
 
         self.bits.clear();
         for &z in &self.filtered {

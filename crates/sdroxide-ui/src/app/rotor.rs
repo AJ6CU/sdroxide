@@ -16,6 +16,7 @@
 //! asked for, the entry fields — is so the compass can show the commanded
 //! bearing next to the reported one.
 
+use crate::i18n::tr;
 use eframe::egui::{self, Align2, FontId, RichText};
 
 use sdroxide_types::{Command, RotatorAuthority, all_entities, bearing_deg};
@@ -63,7 +64,7 @@ impl SdroxideApp {
             // say exactly which half is missing rather than drawing a dial that
             // moves nothing.
             ui.add_space(10.0);
-            let msg = RichText::new("No antenna rotator is configured.")
+            let msg = RichText::new(tr!("rotor-no-antenna-rotator-is-configured"))
                 .size(12.0)
                 .strong()
                 .color(theme::YELLOW());
@@ -71,9 +72,7 @@ impl SdroxideApp {
             ui.add_space(6.0);
             ui.label(
                 RichText::new(
-                    "Set one up in Settings \u{25b8} Servers \u{2014} a Hamlib rotctld daemon, or \
-                     a controller on a serial port. Then point the beam from this dial, from a \
-                     callsign, or from the map.",
+                    tr!("rotor-set-one-up-in-settings-servers-a"),
                 )
                 .size(10.5)
                 .color(theme::CYAN_DIM()),
@@ -84,11 +83,11 @@ impl SdroxideApp {
         // ── status line: is the station's rotator answering? ──
         ui.horizontal(|ui| {
             let (dot, line) = if connected {
-                (theme::GREEN(), format!("Connected \u{2014} antenna at {hw_az:.0}\u{b0}"))
+                (theme::GREEN(), tr!("rotor-connected", az = format!("{hw_az:.0}")))
             } else if let Some(e) = &err {
-                (theme::ALERT(), format!("Not connected: {e}"))
+                (theme::ALERT(), tr!("rotor-not-connected-why", e = e))
             } else {
-                (theme::CYAN_DIM(), "Not connected".to_string())
+                (theme::CYAN_DIM(), tr!("rfe-link-off"))
             };
             let (r, _) = ui.allocate_exact_size(egui::vec2(8.0, 8.0), egui::Sense::hover());
             ui.painter().circle_filled(r.center(), 3.5, dot);
@@ -102,7 +101,7 @@ impl SdroxideApp {
         ui.add_space(4.0);
         ui.horizontal(|ui| {
             ui.label(
-                RichText::new(format!("Beam {hw_az:.0}\u{b0} az  {hw_el:.0}\u{b0} el"))
+                RichText::new(tr!("rotor-beam", az = format!("{hw_az:.0}"), el = format!("{hw_el:.0}")))
                     .size(12.0)
                     .strong()
                     .color(theme::CYAN()),
@@ -110,7 +109,7 @@ impl SdroxideApp {
             if let Some((taz, tel)) = self.rotor_target {
                 crate::chrome::row_tail(ui, |ui| {
                     ui.label(
-                        RichText::new(format!("target {taz:.0}\u{b0} / {tel:.0}\u{b0}"))
+                        RichText::new(tr!("rotor-target", az = format!("{taz:.0}"), el = format!("{tel:.0}")))
                             .size(10.5)
                             .color(theme::YELLOW()),
                     );
@@ -122,29 +121,25 @@ impl SdroxideApp {
 
         // ── controls ──
         ui.horizontal_wrapped(|ui| {
-            if crate::chrome::chip(ui, false, "STOP")
-                .on_hover_text("Halt the antenna where it is")
+            if crate::chrome::chip(ui, false, tr!("windows-stop"))
+                .on_hover_text(tr!("rotor-halt-the-antenna-where-it-is"))
                 .clicked()
             {
                 cmds.push(Command::StopRotator);
                 self.rotor_target = None;
             }
             if let Some(park) = self.rot_cfg_edit.park {
-                if crate::chrome::chip(ui, false, "PARK")
-                    .on_hover_text(format!(
-                        "Swing to the park bearing ({:.0}\u{b0} / {:.0}\u{b0})",
-                        park.0, park.1
-                    ))
+                if crate::chrome::chip(ui, false, tr!("rotor-park"))
+                    .on_hover_text(tr!("rotor-park-hover", az = format!("{:.0}", park.0), el = format!("{:.0}", park.1)))
                     .clicked()
                 {
                     cmds.push(Command::PointRotator { az: park.0, el: park.1 });
                     self.rotor_target = Some(park);
                 }
             }
-            if crate::chrome::chip(ui, false, "AUTO")
+            if crate::chrome::chip(ui, false, tr!("topbar-auto"))
                 .on_hover_text(
-                    "Hand the antenna back to the satellite lock — it tracks the bird, and \
-                     parks when there is none.",
+                    tr!("rotor-hand-the-antenna-back-to-the"),
                 )
                 .clicked()
             {
@@ -176,7 +171,7 @@ impl SdroxideApp {
                     .suffix("\u{b0}")
                     .fixed_decimals(0),
             );
-            if crate::chrome::chip(ui, false, "POINT").clicked() {
+            if crate::chrome::chip(ui, false, tr!("rotor-point")).clicked() {
                 point = true;
             }
         });
@@ -275,11 +270,11 @@ impl SdroxideApp {
         let home = self.home_latlon();
 
         ui.horizontal(|ui| {
-            ui.label(RichText::new("DX country").size(11.0).color(theme::CYAN_DIM()));
+            ui.label(RichText::new(tr!("rotor-dx-country")).size(11.0).color(theme::CYAN_DIM()));
             let selected = self
                 .rotor_country
                 .clone()
-                .unwrap_or_else(|| "\u{2014} choose \u{2014}".to_string());
+                .unwrap_or_else(|| tr!("settings-amp-choose"));
             egui::ComboBox::from_id_salt("rotor-country")
                 .selected_text(selected)
                 .width(190.0)
@@ -305,7 +300,7 @@ impl SdroxideApp {
             (Some(_), None) => {
                 ui.label(
                     RichText::new(
-                        "Set your grid locator (Settings \u{25b8} General) to point at a country.",
+                        tr!("rotor-set-your-grid-locator-settings"),
                     )
                     .size(10.0)
                     .color(theme::YELLOW()),
@@ -317,7 +312,7 @@ impl SdroxideApp {
                 if let Some(e) = all_entities().iter().find(|e| e.name == name.as_str()) {
                     let az = bearing_deg(home, (e.lat, e.lon));
                     ui.label(
-                        RichText::new(format!("{} \u{2014} bearing {az:.0}\u{b0}", name))
+                        RichText::new(tr!("rotor-country-bearing", name = name, az = format!("{az:.0}")))
                             .size(10.0)
                             .color(theme::CYAN_DIM()),
                     );

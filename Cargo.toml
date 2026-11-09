@@ -40,7 +40,7 @@ ewebsock = { path = "vendor/ewebsock" }
 soapysdr = { path = "vendor/soapysdr" }
 
 [workspace.package]
-version = "2.2.0"
+version = "2.3.0"
 edition = "2024"
 # The native binary links mfsk-core (GPL-3.0-or-later) for FT8/FT4 and the
 # DeepCW model (AGPL-3.0-only) for CW, so the built binary carries both. AGPL is
@@ -89,6 +89,11 @@ opt-level = 2
 # that alone outweighs the rest of the receive chain, exactly as the ISM gate
 # does.
 [profile.dev.package.sdroxide-vdl2]
+opt-level = 2
+
+# One correlator and a 301-tap filter per audio sample; unoptimized the tests
+# that render seconds of beacon take a quarter of a minute.
+[profile.dev.package.sdroxide-vor]
 opt-level = 2
 
 # Both AIS channels get a down-converter, a burst gate and a receive filter over
@@ -165,6 +170,7 @@ sdroxide-aprs = { path = "crates/sdroxide-aprs" }
 sdroxide-adsb = { path = "crates/sdroxide-adsb" }
 sdroxide-vdl2 = { path = "crates/sdroxide-vdl2" }
 sdroxide-ais = { path = "crates/sdroxide-ais" }
+sdroxide-vor = { path = "crates/sdroxide-vor" }
 
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -195,6 +201,8 @@ rtrb = "0.4"
 # instead: `cargo fmt -p sdroxide-radio -p sdroxide-ui …`, or check with
 # `cargo fmt --all --check` and read past the `vendor/xng` lines.
 xng-mode-hfdl = { path = "vendor/xng/crates/xng-mode-hfdl" }
+# Radiosonde (Vaisala RS41) decode core, same vendored tree and same rules.
+xng-mode-sonde = { path = "vendor/xng/crates/xng-mode-sonde" }
 # Pure-Rust USB — the RTL-SDR backend's only dependency. No libusb, so it needs
 # no system library on any target and ships in every build variant.
 nusb = "0.2.7"

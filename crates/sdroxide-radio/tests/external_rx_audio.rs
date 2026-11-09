@@ -9,8 +9,9 @@
 //!   demodulated from the receiver;
 //! - the panadapter still spans the receiver's whole I/Q, so the operator gets
 //!   the wideband display the pairing exists for;
-//! - the S-meter reads the audio being heard rather than the chain measuring
-//!   the other antenna;
+//! - the S-meter is the attached receiver's, measured on its I/Q, rather than
+//!   the level of the transceiver's audio (which is only a transmitter and a
+//!   speaker here);
 //! - all of that holds with no audio output at all, where the engine has no
 //!   main receive chain (#640).
 
@@ -171,32 +172,32 @@ fn the_speaker_gets_the_transceivers_audio_and_the_display_the_receivers_iq() {
     );
 }
 
-/// The S-meter follows what is being heard. Measuring the chain instead would
-/// report the strength of a signal on the *other* radio's antenna, which is
-/// worse than reporting nothing.
+/// The S-meter is the attached receiver's, not the transceiver's audio: the
+/// transceiver is the transmitter here and its audio is an AGC'd level that
+/// says nothing about the RF. The reading is the receiver's I/Q measured like
+/// any SDR's, so it is not the level of the audio being heard.
 #[test]
-fn the_meter_reads_the_audio_that_is_heard() {
+fn the_meter_reads_the_attached_receiver_not_the_transceivers_audio() {
     let s_dbm = run(true).s_dbm.expect("a pairing must still publish an S-meter");
-    // RIG_AUDIO as a mean square, in dBFS, with the default zero calibration.
-    let want = 20.0 * RIG_AUDIO.log10();
+    let audio_dbfs = 20.0 * RIG_AUDIO.log10();
     assert!(
-        (s_dbm - want).abs() < 1.0,
-        "expected about {want:.1} dBm from the rig's audio, got {s_dbm:.1}"
+        (s_dbm - audio_dbfs).abs() > 3.0,
+        "the meter followed the transceiver's audio ({audio_dbfs:.1}) instead of the receiver: \
+         got {s_dbm:.1}"
     );
 }
 
-/// Issue #427: the S-meter calibration belongs to the attached receiver's own
-/// front end. The transceiver's audio is a different quantity on a different
-/// scale, so a non-zero calibration must not move the meter while it is what
-/// is being heard.
+/// The S-meter calibration (`cal_offset_db`) belongs to the attached receiver's
+/// own front end, which is what the meter now reads: a 30 dB calibration moves
+/// it by 30 dB.
 #[test]
-fn the_receivers_calibration_does_not_land_on_the_transceivers_audio() {
-    let s_dbm = run_calibrated(true, 30.0).s_dbm.expect("a pairing must still publish an S-meter");
-    let want = 20.0 * RIG_AUDIO.log10();
+fn the_receivers_calibration_lands_on_the_receivers_meter() {
+    let base = run(true).s_dbm.expect("a pairing must still publish an S-meter");
+    let cal = run_calibrated(true, 30.0).s_dbm.expect("a pairing must still publish an S-meter");
     assert!(
-        (s_dbm - want).abs() < 1.0,
-        "a 30 dB receiver calibration moved the transceiver-audio meter: expected about \
-         {want:.1}, got {s_dbm:.1}"
+        (cal - base - 30.0).abs() < 1.5,
+        "a 30 dB receiver calibration should move the receiver's meter by 30 dB: {base:.1} → \
+         {cal:.1}"
     );
 }
 
@@ -223,11 +224,12 @@ fn without_the_flag_the_engine_demodulates_as_usual() {
 #[test]
 fn with_no_audio_output_the_transceivers_audio_still_arrives() {
     let ran = run_with(true, 0.0, false, Some(Mode::Ft8));
-    let s_dbm = ran.s_dbm.expect("the transceiver's audio must still reach the meter");
-    let want = 20.0 * RIG_AUDIO.log10();
+    let s_dbm = ran.s_dbm.expect("the receiver's spectrum must still reach the meter");
+    let audio_dbfs = 20.0 * RIG_AUDIO.log10();
     assert!(
-        (s_dbm - want).abs() < 1.0,
-        "expected about {want:.1} dBm from the rig's audio, got {s_dbm:.1}"
+        s_dbm.is_finite() && (s_dbm - audio_dbfs).abs() > 3.0,
+        "with no main chain the meter must read the receiver's spectrum, not the rig's audio \
+         ({audio_dbfs:.1}); got {s_dbm:.1}"
     );
     assert!(
         (ran.span_hz - IQ_RATE).abs() < 1.0,

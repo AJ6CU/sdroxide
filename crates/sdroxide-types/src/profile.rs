@@ -25,7 +25,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
-use crate::{AgcMode, Mode, NrLevel, TxEqState};
+use crate::{AgcMode, CwPeak, Mode, NrLevel, TxEqState};
 
 /// The values a mode starts with, and what the operator has changed them to.
 ///
@@ -64,6 +64,9 @@ pub struct ModeProfile {
     /// LOUDNESS — main receiver only, see [`crate::RxState::loudness`].
     #[serde(skip_serializing_if = "Option::is_none")]
     pub loudness: Option<bool>,
+    /// The CW peak filter — see [`crate::RxState::cw_peak`].
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cw_peak: Option<CwPeak>,
 }
 
 /// Float equality by representation, for [`ModeProfile::trim_against`].
@@ -88,6 +91,7 @@ impl ModeProfile {
             && self.binaural.is_none()
             && self.tone.is_none()
             && self.loudness.is_none()
+            && self.cw_peak.is_none()
     }
 
     /// This profile with `base` filling in every field it does not speak to.
@@ -103,6 +107,7 @@ impl ModeProfile {
             binaural: self.binaural.or(base.binaural),
             tone: self.tone.or(base.tone),
             loudness: self.loudness.or(base.loudness),
+            cw_peak: self.cw_peak.or(base.cw_peak),
         }
     }
 
@@ -142,6 +147,9 @@ impl ModeProfile {
         if self.loudness == default.loudness {
             self.loudness = None;
         }
+        if self.cw_peak == default.cw_peak {
+            self.cw_peak = None;
+        }
     }
 
     /// Whether the live settings of `rx` all match this profile.
@@ -159,6 +167,7 @@ impl ModeProfile {
             && self.binaural.is_none_or(|v| v == rx.binaural)
             && self.tone.is_none_or(|v| v == rx.tone)
             && self.loudness.is_none_or(|v| v == rx.loudness)
+            && self.cw_peak.is_none_or(|v| v == rx.cw_peak)
     }
 
     /// Write every field this profile has an opinion about into `rx`.
@@ -196,6 +205,9 @@ impl ModeProfile {
         }
         if let Some(v) = self.loudness {
             rx.loudness = v;
+        }
+        if let Some(v) = self.cw_peak {
+            rx.cw_peak = v;
         }
     }
 }
@@ -314,6 +326,30 @@ mod tests {
         assert_eq!(json, r#"{"modes":{"Usb":{"auto_notch":true}}}"#);
         let back: ModeProfiles = serde_json::from_str(&json).unwrap();
         assert_eq!(back, profiles);
+    }
+
+    /// The CW peak filter is remembered for CW like the notch: stored only
+    /// once it differs from the mode's own, read back from the file, and
+    /// forgotten when it is put back.
+    #[test]
+    fn the_cw_peak_is_a_per_mode_setting() {
+        let default = Mode::Cw.default_profile();
+        let peak = crate::CwPeak { on: true, width_hz: 50.0, gain_db: 10.0 };
+        let mut over = ModeProfile { cw_peak: Some(peak), ..Default::default() };
+        over.trim_against(&default);
+        assert_eq!(over.cw_peak, Some(peak));
+        let mut profiles = ModeProfiles::default();
+        profiles.set(Mode::Cw, over);
+        let json = serde_json::to_string(&profiles).unwrap();
+        let back: ModeProfiles = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.effective(Mode::Cw).cw_peak, Some(peak));
+        let mut rx = crate::RxState::with_mode(Mode::Cw);
+        back.effective(Mode::Cw).apply_to(&mut rx);
+        assert_eq!(rx.cw_peak, peak);
+        let mut gone = over;
+        gone.cw_peak = default.cw_peak;
+        gone.trim_against(&default);
+        assert!(gone.is_empty());
     }
 
     #[test]

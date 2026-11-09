@@ -33,6 +33,8 @@
 //! window turned into a desktop-sized one, which carries no padlock — the lock
 //! lets go by itself, so the screen can never be left locked with no way out.
 
+use crate::i18n::tr;
+
 use eframe::egui::{
     self, Context, Event, Id, Pos2, Rect, Response, Sense, Shape, Stroke, TouchPhase, Ui,
 };
@@ -232,27 +234,24 @@ pub fn padlock(ui: &mut Ui, size: egui::Vec2) -> Response {
     }
 
     let resp = resp.on_hover_text(if s.locked {
-        "Screen locked against stray touches. Hold here for 3 seconds to unlock."
+        tr!("touchlock-locked-hover")
     } else {
-        "Lock the screen against stray touches: frequency, band, mode, filters and the \
-         waterfall stop answering a finger. Reception and audio carry on. Hold for 3 seconds \
-         to unlock. After an unlock the padlock rests for 10 seconds before a tap locks it \
-         again, so the finger that unlocked it cannot lock it straight back."
+        tr!("touchlock-unlocked-hover")
     });
 
     // The caption under the padlock while something is happening.
     let caption = if let Some(p) = s.hold_since.map(|t| hold_progress(t, now)) {
-        Some(format!("HOLD {:.0} s…", ((1.0 - p) as f64 * UNLOCK_HOLD_S).ceil().max(1.0)))
+        Some(tr!("touchlock-hold", s = format!("{:.0}", ((1.0 - p) as f64 * UNLOCK_HOLD_S).ceil().max(1.0))))
     } else if flash.is_some() || s.unlocked_at.is_some_and(|t| now - t < FLASH_S) {
-        Some("UNLOCKED".to_owned())
+        Some(tr!("touchlock-unlocked"))
     } else if s.locked && s.hint_at.is_some_and(|t| now - t < HINT_S) {
-        Some("LOCKED · hold 3 s".to_owned())
+        Some(tr!("touchlock-locked-hold"))
     } else if !s.locked
         && relock_paused(s.unlocked_at, now)
         && s.hint_at.is_some_and(|t| now - t < HINT_S)
     {
         let left = s.unlocked_at.map_or(0.0, |t| RELOCK_PAUSE_S - (now - t));
-        Some(format!("UNLOCKED · lock in {:.0} s", left.ceil().max(1.0)))
+        Some(tr!("touchlock-unlocked-relock", s = format!("{:.0}", left.ceil().max(1.0))))
     } else {
         None
     };

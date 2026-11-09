@@ -48,7 +48,7 @@ const OUT_RATE: f64 = 48_000.0;
 /// Decodes kept for the activity list.
 const ACTIVITY_CAP: usize = 200;
 /// Reassembled messages kept for the conversation view.
-const MSG_CAP: usize = 200;
+const MSG_CAP: usize = sdroxide_types::MESSAGE_LOG_MAX;
 /// Stations kept in the heard list.
 const HEARD_CAP: usize = 50;
 

@@ -22,8 +22,14 @@ use serde::{Deserialize, Serialize};
 /// distinct stations in an hour; past that the oldest are dropped.
 pub const APRS_STATION_MAX: usize = 400;
 
-/// Messages kept in the pane, both directions together.
-pub const APRS_MESSAGE_MAX: usize = 300;
+/// Messages kept in the pane, both directions together, and every message
+/// heard on the channel rather than only the ones addressed to us. The 501st
+/// drops the oldest.
+///
+/// Not [`crate::MESSAGE_LOG_MAX`]: the other modes keep 200, but APRS is the one
+/// pane that lists other stations' traffic as well as our own, and a busy
+/// channel fills 200 of that in minutes.
+pub const APRS_MESSAGE_MAX: usize = 500;
 
 /// Positions kept per station, so a moving one draws a trail behind it.
 pub const APRS_TRACK_MAX: usize = 64;

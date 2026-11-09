@@ -14,6 +14,7 @@ use eframe::egui::{self, RichText};
 use sdroxide_types::{Command, Mode, UvPacketFrame, UvPacketStatus};
 
 use crate::app::SdroxideApp;
+use crate::i18n::tr;
 use crate::theme;
 
 impl SdroxideApp {
@@ -25,7 +26,7 @@ impl SdroxideApp {
     ) {
         let st: Option<UvPacketStatus> = self.digi_status.as_ref().and_then(|s| s.uvpacket.clone());
         let Some(st) = st else {
-            ui.label(RichText::new("starting the UVPacket receiver…").weak());
+            ui.label(RichText::new(tr!("uvpacket-starting-receiver")).weak());
             return;
         };
 
@@ -68,24 +69,20 @@ impl SdroxideApp {
                     .desired_width(70.0)
                     .fill(theme::CYAN_DIM()),
             )
-            .on_hover_text("Audio in the decoder's passband.");
+            .on_hover_text(tr!("acars-audio-decoder-s-passband"));
             ui.label(
-                RichText::new(format!("{} frames", st.frames_total))
+                RichText::new(tr!("uvpacket-frames-count", n = st.frames_total))
                     .size(10.0)
                     .color(theme::CYAN_DIM()),
             )
-            .on_hover_text("Frames decoded since the receiver started.");
+            .on_hover_text(tr!("uvpacket-frames-count-hint"));
             self.clear_rx_chip(ui, cmds);
             self.save_rx_chip(ui);
         });
 
         ui.horizontal_wrapped(|ui| {
             ui.label(
-                RichText::new(
-                    "A packet mode for private VHF/UHF groups. Tune the dial to \
-                     the group's channel; the sub-mode is detected from each \
-                     frame.",
-                )
+                RichText::new(tr!("uvpacket-intro"))
                 .size(10.0)
                 .weak(),
             );
@@ -99,10 +96,7 @@ impl SdroxideApp {
             .show(ui, |ui| {
                 if st.frames.is_empty() {
                     ui.label(
-                        RichText::new(
-                            "Nothing yet. UVPacket is quiet between transmissions — \
-                             leave it on a channel and wait for a burst.",
-                        )
+                        RichText::new(tr!("uvpacket-nothing-yet"))
                         .weak(),
                     );
                     return;
@@ -121,7 +115,7 @@ impl SdroxideApp {
                             RichText::new(f.mode.label()).monospace().strong().color(theme::CYAN()),
                         );
                         ui.label(
-                            RichText::new(format!("app {} · seq {}", f.app_type, f.sequence))
+                            RichText::new(tr!("uvpacket-app-seq", app = f.app_type, seq = f.sequence))
                                 .monospace()
                                 .size(10.0),
                         );
@@ -142,7 +136,7 @@ impl SdroxideApp {
                     if resp.response.interact(egui::Sense::click()).clicked() {
                         pick = Some(i);
                     }
-                    resp.response.on_hover_text("Click to read the whole frame.");
+                    resp.response.on_hover_text(tr!("uvpacket-click-read-frame"));
                     ui.add_space(3.0);
                 }
                 if let Some(i) = pick {
@@ -155,15 +149,15 @@ impl SdroxideApp {
         let selected: Option<&UvPacketFrame> =
             self.uvpacket_open.and_then(|i| st.frames.get(i)).or_else(|| st.frames.last());
         let Some(f) = selected else {
-            ui.label(RichText::new("Nothing received yet.").weak());
+            ui.label(RichText::new(tr!("panels-nothing-received-yet")).weak());
             return;
         };
 
         ui.horizontal(|ui| {
-            ui.label(RichText::new("FRAME").strong().color(theme::CYAN()));
+            ui.label(RichText::new(tr!("drm-frame")).strong().color(theme::CYAN()));
             ui.label(RichText::new(f.mode.label()).monospace().color(theme::CYAN()));
             ui.label(
-                RichText::new(format!("{} bps net", f.mode.net_bps()))
+                RichText::new(tr!("uvpacket-bps-net", bps = f.mode.net_bps()))
                     .size(10.0)
                     .color(theme::CYAN_DIM()),
             );
@@ -174,21 +168,21 @@ impl SdroxideApp {
             .id_salt("uvpacket-reading")
             .max_height((panel_h - 50.0).max(60.0))
             .show(ui, |ui| {
-                field(ui, "Received", &format!("{hh:02}:{mi:02}:{ss:02}Z"));
-                field(ui, "Sub-mode", f.mode.label());
-                field(ui, "App type", &f.app_type.to_string());
-                field(ui, "Sequence", &f.sequence.to_string());
-                field(ui, "Blocks", &f.block_count.to_string());
-                field(ui, "Payload", &format!("{} bytes", f.payload.len()));
+                field(ui, &tr!("panels-received"), &format!("{hh:02}:{mi:02}:{ss:02}Z"));
+                field(ui, &tr!("uvpacket-sub-mode"), f.mode.label());
+                field(ui, &tr!("uvpacket-app-type"), &f.app_type.to_string());
+                field(ui, &tr!("panels-sequence"), &f.sequence.to_string());
+                field(ui, &tr!("panels-blocks"), &f.block_count.to_string());
+                field(ui, &tr!("panels-payload"), &tr!("uvpacket-payload-bytes", n = f.payload.len()));
                 field(ui, "SNR", &format!("{:+} dB", f.snr_db));
 
                 ui.add_space(4.0);
                 if let Some(text) = f.as_text() {
-                    ui.label(RichText::new("Text").size(10.0).weak());
+                    ui.label(RichText::new(tr!("panels-text")).size(10.0).weak());
                     ui.label(RichText::new(text).monospace().size(10.5));
                     ui.add_space(4.0);
                 }
-                ui.label(RichText::new("Hex").size(10.0).weak());
+                ui.label(RichText::new(tr!("panels-hex")).size(10.0).weak());
                 ui.label(RichText::new(hex_pairs(&f.payload)).monospace().size(10.5));
             });
     }

@@ -30,8 +30,7 @@ received/
 # and out of the published tree (operator's instruction, 2026-10-28): they
 # carry names, callsigns and station detail that do not belong in a public
 # repo. `git add -A` would put them back, which is why they are named here.
-/AGENTS.md
-/TODO.md
+# AGENTS.md and TODO.md are now published (previously kept local)
 /docs/internal/
 /docs/cquam-design.md
 /docs/multi-window-brainstorm.md

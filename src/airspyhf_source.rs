@@ -61,19 +61,65 @@ impl AirspyHfSource {
 }
 
 /// The fraction of the rate the HF+ Discovery's own decimation filter leaves as
-/// spectrum: about **660 kHz of 768 kSPS**, which is Airspy's own figure for
-/// that rate and what a listener measured on the waterfall (report of
-/// 2026-10-25). The filter is the same one scaled to each rate, so the fraction
-/// is taken as constant — the figure is *measured* at 768 kSPS and assumed at
-/// the others, and a rate that turns out to differ should be re-measured rather
-/// than reasoned about.
-const USABLE_FRAC: f64 = 0.86;
+/// spectrum.
+///
+/// Airspy's own figure is **660 kHz of a 768 kSPS stream**, 0.86, and a listener
+/// reading it off the waterfall confirmed that at 768 (report of 2026-10-25).
+/// The filter is the *same one scaled* to each rate, so the fraction is the same
+/// at every rate below it — which is what the first two attempts in here got
+/// wrong: 192 kSPS was taken as "the whole band" and 384 as 0.95, and the same
+/// listener then found filter skirt drawn as band at both (2026-10-30, with
+/// screenshots at 192 and 384). His 192 kSPS picture shows a flat top of about
+/// 150 kHz in a 192 kHz window, which is 0.78–0.86 — the filter shape does not
+/// get sharper as the rate drops.
+///
+/// 912 kSPS is the exception, and it is Airspy's: 660 kHz of 912 is 0.72, so
+/// that rate is a wider stream for the same filter rather than a wider filter.
+///
+/// **Which rate to re-measure first.** 768 has a published figure behind it and
+/// 192 has a listener's screenshot; **384 has neither** — it is inferred from
+/// 192 and 768 because they agree, and it is the one entry that would move first
+/// if a skirt is ever reported there.
+///
+/// Anything else is the 768 kSPS figure, which is the only one measured against
+/// a published number.
+fn usable_frac_for_rate(rate_hz: f64) -> f64 {
+    match rate_hz as u32 {
+        912_000 => 0.72,
+        _ => 0.86,
+    }
+}
+
+#[cfg(test)]
+mod usable_frac_tests {
+    use super::usable_frac_for_rate;
+
+    /// Every rate the HF+ offers keeps the same filter shape, except the one
+    /// Airspy states as a wider stream for the same 660 kHz.
+    ///
+    /// This is the assertion the first two attempts failed: 192 kSPS came out
+    /// as the whole band and 384 as 0.95, and filter skirt showed as band in the
+    /// listener's screenshots at both.
+    #[test]
+    fn every_rate_keeps_the_same_filter_shape() {
+        for rate in [192_000.0, 384_000.0, 768_000.0] {
+            assert_eq!(usable_frac_for_rate(rate), 0.86, "{rate} Hz");
+        }
+        // 660 of 912: a wider stream, not a wider filter.
+        assert_eq!(usable_frac_for_rate(912_000.0), 0.72);
+        // 768 is the one rate with a published figure behind it.
+        assert!((768_000.0 * usable_frac_for_rate(768_000.0) - 660_480.0).abs() < 1.0);
+        // A rate nobody has measured is not left at "show everything".
+        assert_eq!(usable_frac_for_rate(250_000.0), 0.86);
+    }
+}
 
 impl IqSource for AirspyHfSource {
-    /// See [`USABLE_FRAC`]: a display built on the raw rate shows the filter
-    /// skirt as band, and the operator can pan into it.
+    /// The fraction of the rate the HF+ filter leaves usable. The same filter
+    /// scaled to each rate, so it is one fraction for every rate below 912 and
+    /// Airspy's own figure at 912 — see [`usable_frac_for_rate`].
     fn usable_frac(&self) -> f64 {
-        USABLE_FRAC
+        usable_frac_for_rate(self.handle.sample_rate_hz)
     }
 
     /// The engine is transmitting and has stopped reading, or has started

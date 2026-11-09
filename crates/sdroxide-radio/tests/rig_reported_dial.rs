@@ -164,7 +164,7 @@ fn engine_shaped(
     let rig =
         Arc::new(Mutex::new(Rig { dial: DIAL, dial_reachable, cw_iq_on_vfo, ..Rig::default() }));
     let src = MockIqRig { rig: Arc::clone(&rig) };
-    let cfg = EngineConfig { tx_ham_only: false, ..Default::default() };
+    let cfg = EngineConfig { tx_bands_open: true, tx_ham_only: false, ..Default::default() };
     let h = start_engine(Box::new(src), iq_rig_caps(), cfg);
     h.cmd_tx.send(Command::SetVfo { vfo: Vfo::A, hz: DIAL }).unwrap();
     (h, rig)
@@ -320,7 +320,7 @@ fn an_sdr_still_keeps_its_window_when_the_dial_moves() {
             "mock SDR".into()
         }
     }
-    let cfg = EngineConfig { tx_ham_only: false, ..Default::default() };
+    let cfg = EngineConfig { tx_bands_open: true, tx_ham_only: false, ..Default::default() };
     let h = start_engine(Box::new(Sdr(Arc::clone(&rig))), iq_rig_caps(), cfg);
     settle(&h, |s| s.center_hz == DIAL);
     rig.lock().unwrap().commanded.clear();

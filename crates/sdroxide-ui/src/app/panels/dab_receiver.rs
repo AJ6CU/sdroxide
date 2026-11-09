@@ -15,6 +15,7 @@ use super::dab::{
     dab_service_extra, dab_station_rows, dab_status_is_for,
 };
 use crate::app::SdroxideApp;
+use crate::i18n::tr;
 use crate::theme;
 
 /// The transport bar's height, and the gap between the panel's parts.
@@ -27,9 +28,9 @@ const ROW_H: f32 = 22.0;
 /// on, said in words — "Channel received 8D 201.072".
 pub(in crate::app) fn channel_caption(channel: &str) -> String {
     match sdroxide_types::DAB_BAND_III.iter().find(|(n, _)| *n == channel) {
-        Some((n, hz)) => format!("Channel received {n} {}", dab_mhz(*hz)),
-        None if channel.is_empty() => "No channel received".to_string(),
-        None => format!("Channel received {channel}"),
+        Some((n, hz)) => tr!("dab-channel-received-mhz", channel = *n, mhz = dab_mhz(*hz).to_string()),
+        None if channel.is_empty() => tr!("dab-no-channel-received"),
+        None => tr!("dab-channel-received", channel = channel),
     }
 }
 
@@ -126,7 +127,7 @@ impl SdroxideApp {
         p.text(
             inner.left_top(),
             Align2::LEFT_TOP,
-            "SLIDESHOW",
+            &tr!("dab-slideshow"),
             FontId::proportional(10.0),
             theme::gray(140),
         );
@@ -153,7 +154,7 @@ impl SdroxideApp {
                 p.text(
                     frame.center(),
                     Align2::CENTER_CENTER,
-                    "the station has sent no picture yet",
+                    &tr!("dab-no-picture-yet"),
                     FontId::proportional(11.0),
                     theme::gray(120),
                 );
@@ -243,7 +244,7 @@ impl SdroxideApp {
             .or_else(|| live.iter().find(|s| s.service_id == self.state.dab.service_id));
         let name = svc
             .map(|s| if s.label.trim().is_empty() { s.service_id.clone() } else { s.label.clone() })
-            .unwrap_or_else(|| "no station chosen".to_string());
+            .unwrap_or_else(|| tr!("dab-no-station-chosen"));
 
         // The tile: the station's logo, else the slideshow's picture in small —
         // the logo (SPI) is not decoded, and the slide is very often the
@@ -280,7 +281,7 @@ impl SdroxideApp {
             p.text(
                 art.center_bottom() - Vec2::new(0.0, 10.0),
                 Align2::CENTER_CENTER,
-                "no logo yet",
+                &tr!("dab-no-logo-yet"),
                 FontId::proportional(9.0),
                 theme::gray(130),
             );
@@ -328,7 +329,7 @@ impl SdroxideApp {
         }
         let playing = svc.is_some_and(|s| st.playing.as_deref() == Some(s.service_id.as_str()));
         line(
-            (if playing { "▶ playing" } else { "chosen" }).to_string(),
+            if playing { tr!("dab-playing") } else { tr!("dab-chosen") },
             10.5,
             if playing { theme::CYAN_DIM() } else { theme::gray(140) },
             &mut y,
@@ -345,7 +346,7 @@ impl SdroxideApp {
         p.rect_filled(dls, 5.0, theme::INPUT_BG());
         let (text, color) = match st.dls.as_deref().filter(|t| !t.trim().is_empty()) {
             Some(t) => (format!("♫  {t}"), theme::TEXT()),
-            None => ("the station has sent no text yet".to_string(), theme::gray(120)),
+            None => (tr!("dab-no-text-yet"), theme::gray(120)),
         };
         let g = p.layout(text, FontId::proportional(11.5), color, dls.width() - 16.0);
         p.galley(dls.left_center() + Vec2::new(8.0, -g.size().y / 2.0), g, color);
@@ -402,9 +403,7 @@ impl SdroxideApp {
                         ui.horizontal(|ui| {
                             if ui
                                 .small_button("×")
-                                .on_hover_text(
-                                    "Clear this channel and its stations. SCAN finds it again.",
-                                )
+                                .on_hover_text(tr!("dab-clear-channel-hint"))
                                 .clicked()
                             {
                                 self.state.dab.forget_channel(name);
@@ -432,11 +431,8 @@ impl SdroxideApp {
                     if dab_clear_offered(self.dab_scan.is_some(), self.state.dab.found.len()) {
                         ui.separator();
                         if ui
-                            .button("× clear all channels")
-                            .on_hover_text(
-                                "Forget every channel and the stations on them. SCAN finds \
-                                 them again; the stars stay.",
-                            )
+                            .button(tr!("dab-clear-all-channels"))
+                            .on_hover_text(tr!("dab-clear-all-channels-hint"))
                             .clicked()
                         {
                             self.state.dab.found.clear();
@@ -447,7 +443,7 @@ impl SdroxideApp {
                 });
             if with_count {
                 ui.label(
-                    RichText::new(format!("{} stations", rows.len()))
+                    RichText::new(tr!("dab-n-stations", n = rows.len()))
                         .size(10.0)
                         .color(theme::gray(140)),
                 );
@@ -458,11 +454,12 @@ impl SdroxideApp {
             let at = scan.at.min(n - 1);
             ui.add(
                 egui::ProgressBar::new((at + 1) as f32 / n as f32).desired_height(10.0).text(
-                    RichText::new(format!(
-                        "scanning {} · {}/{n} · {} found",
-                        sdroxide_types::DAB_BAND_III[at].0,
-                        at + 1,
-                        scan.found.len()
+                    RichText::new(tr!(
+                        "dab-scanning-progress",
+                        channel = sdroxide_types::DAB_BAND_III[at].0,
+                        at = at + 1,
+                        n = n,
+                        found = scan.found.len()
                     ))
                     .size(9.0),
                 ),
@@ -546,10 +543,7 @@ impl SdroxideApp {
                         let c = r.right_center() - Vec2::new(10.0, 0.0);
                         let xr = Rect::from_center_size(c, Vec2::splat(16.0));
                         let x =
-                            ui.interact(xr, resp.id.with("clear"), Sense::click()).on_hover_text(
-                                "Clear this station from the list. The next SCAN brings it \
-                                 back if the ensemble still carries it.",
-                            );
+                            ui.interact(xr, resp.id.with("clear"), Sense::click()).on_hover_text(tr!("dab-clear-station-hint"));
                         p.text(
                             c,
                             Align2::CENTER_CENTER,
@@ -603,15 +597,15 @@ impl SdroxideApp {
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = 6.0;
             let mut pick: Option<usize> = None;
-            if crate::chrome::chip_sized(ui, false, label("⏮", "PREV", false), size)
-                .on_hover_text("The previous station in the list.")
+            if crate::chrome::chip_sized(ui, false, label("⏮", &tr!("dab-prev"), false), size)
+                .on_hover_text(tr!("dab-prev-hint"))
                 .clicked()
                 && !rows.is_empty()
             {
                 pick = Some(at.map_or(0, |i| (i + rows.len() - 1) % rows.len()));
             }
-            if crate::chrome::chip_sized(ui, is_preset, label("★", "PRESET", false), size)
-                .on_hover_text("Star this station, or take its star away.")
+            if crate::chrome::chip_sized(ui, is_preset, label("★", &tr!("dab-preset"), false), size)
+                .on_hover_text(tr!("dab-preset-hint"))
                 .clicked()
                 && !current.is_empty()
             {
@@ -632,15 +626,15 @@ impl SdroxideApp {
                 }
                 cmds.push(Command::SetDabConfig(self.state.dab.clone()));
             }
-            if crate::chrome::chip_sized(ui, false, label("⏭", "NEXT", true), size)
-                .on_hover_text("The next station in the list.")
+            if crate::chrome::chip_sized(ui, false, label("⏭", &tr!("dab-next"), true), size)
+                .on_hover_text(tr!("dab-next-hint"))
                 .clicked()
                 && !rows.is_empty()
             {
                 pick = Some(at.map_or(0, |i| (i + 1) % rows.len()));
             }
             if crate::chrome::chip_sized(ui, self.dab_show_pty, label("🏷", "PTY", false), size)
-                .on_hover_text("Show each station's programme type in the list.")
+                .on_hover_text(tr!("dab-pty-hint"))
                 .clicked()
             {
                 self.dab_show_pty = !self.dab_show_pty;
@@ -648,13 +642,13 @@ impl SdroxideApp {
             if crate::chrome::chip_sized(
                 ui,
                 scanning,
-                if scanning { label("⏹", "STOP", false) } else { label("⟳", "SCAN", false) },
+                if scanning { label("⏹", &tr!("windows-stop"), false) } else { label("⟳", &tr!("topbar-chip-scan"), false) },
                 size,
             )
             .on_hover_text(if scanning {
-                "Stop the sweep here. What it found so far stays."
+                tr!("dab-stop-sweep-hint")
             } else {
-                "Walk every Band III block and keep the ones that carry stations."
+                tr!("dab-scan-hint")
             })
             .clicked()
             {

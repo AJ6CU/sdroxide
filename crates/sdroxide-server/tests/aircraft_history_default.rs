@@ -78,7 +78,7 @@ async fn spawn_station(port: u16, password: bool) -> crossbeam_channel::Sender<R
         remove_radio: None,
         rename_radio: None,
         radio_power: None,
-        aircraft_online: false,
+        aircraft_online: Some(false),
     }));
     tokio::time::sleep(Duration::from_millis(400)).await;
     event_tx

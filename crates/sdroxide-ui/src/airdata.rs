@@ -33,6 +33,9 @@ use core::sync::atomic::{AtomicU8, Ordering};
 
 const NAVAIDS: &[u8] = include_bytes!("../assets/airdata/navaids.bin");
 const AIRPORTS: &[u8] = include_bytes!("../assets/airdata/airports.bin");
+const RUNWAYS: &[u8] = include_bytes!("../assets/airdata/runways.bin");
+const FREQS: &[u8] = include_bytes!("../assets/airdata/freqs.bin");
+const WIKI: &[u8] = include_bytes!("../assets/airdata/wiki.bin");
 
 /// The kind of radio navigation aid — which is also its symbol on a chart, and
 /// which bands it can be heard on.
@@ -119,6 +122,222 @@ pub struct Airport {
     pub lat: f64,
     pub lon: f64,
     pub elev_ft: i16,
+}
+
+/// What a runway is made of — the few classes a pilot or a listener cares
+/// about, mapped from OurAirports' free-text surface codes by the generator.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Surface {
+    Unknown,
+    Asphalt,
+    Concrete,
+    Grass,
+    Gravel,
+    Dirt,
+    Water,
+}
+
+impl Surface {
+    fn from_index(i: u8) -> Surface {
+        match i {
+            1 => Surface::Asphalt,
+            2 => Surface::Concrete,
+            3 => Surface::Grass,
+            4 => Surface::Gravel,
+            5 => Surface::Dirt,
+            6 => Surface::Water,
+            _ => Surface::Unknown,
+        }
+    }
+}
+
+/// One open runway: both ends' designators, e.g. `09` / `27`.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Runway {
+    pub low: String,
+    pub high: String,
+    pub length_ft: u16,
+    pub width_ft: u16,
+    pub surface: Surface,
+    pub lit: bool,
+}
+
+/// What a published frequency is for. The labels are the abbreviations a
+/// pilot reads on a chart, so they are not translated (like a mode name).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FreqKind {
+    Tower,
+    Ground,
+    Atis,
+    Approach,
+    Departure,
+    Ctaf,
+    Unicom,
+    Delivery,
+    Afis,
+}
+
+impl FreqKind {
+    fn from_index(i: u8) -> Option<FreqKind> {
+        Some(match i {
+            0 => FreqKind::Tower,
+            1 => FreqKind::Ground,
+            2 => FreqKind::Atis,
+            3 => FreqKind::Approach,
+            4 => FreqKind::Departure,
+            5 => FreqKind::Ctaf,
+            6 => FreqKind::Unicom,
+            7 => FreqKind::Delivery,
+            8 => FreqKind::Afis,
+            _ => return None,
+        })
+    }
+
+    pub fn label(self) -> &'static str {
+        match self {
+            FreqKind::Tower => "TWR",
+            FreqKind::Ground => "GND",
+            FreqKind::Atis => "ATIS",
+            FreqKind::Approach => "APP",
+            FreqKind::Departure => "DEP",
+            FreqKind::Ctaf => "CTAF",
+            FreqKind::Unicom => "UNICOM",
+            FreqKind::Delivery => "DEL",
+            FreqKind::Afis => "AFIS",
+        }
+    }
+}
+
+/// One published radio frequency of an airport.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Frequency {
+    pub kind: FreqKind,
+    pub khz: u32,
+}
+
+/// Runways and frequencies of every airport, with the day the tables were built.
+struct Extras {
+    date: u32,
+    runways: std::collections::HashMap<String, Vec<Runway>>,
+    freqs: std::collections::HashMap<String, Vec<Frequency>>,
+    /// Language and article title of the airport's Wikipedia page.
+    wiki: std::collections::HashMap<String, (String, String)>,
+}
+
+const RUNWAY_LEN: usize = 22;
+const FREQ_LEN: usize = 13;
+
+/// The shared shape of the two dated tables: magic, `u32` date, `u32` count,
+/// then fixed records. `None` when the file is not ours or is short.
+fn dated<'a>(
+    blob: &'a [u8],
+    magic: &[u8],
+    size: usize,
+    name: &str,
+) -> Option<(u32, &'a [u8], usize)> {
+    let Some(rest) = blob.strip_prefix(magic) else {
+        eprintln!("sdroxide: {name} is not the table it should be");
+        return None;
+    };
+    if rest.len() < 8 {
+        eprintln!("sdroxide: {name} is short of its own header");
+        return None;
+    }
+    let (date, count) = (u32_at(rest, 0), u32_at(rest, 4) as usize);
+    let body = &rest[8..];
+    if body.len() < count.saturating_mul(size) {
+        eprintln!("sdroxide: {name} is short of its own count");
+        return None;
+    }
+    Some((date, body, count))
+}
+
+fn parse_runways(blob: &[u8]) -> (u32, std::collections::HashMap<String, Vec<Runway>>) {
+    let mut map: std::collections::HashMap<String, Vec<Runway>> = Default::default();
+    let Some((date, body, count)) = dated(blob, b"SDXRWY01", RUNWAY_LEN, "runways.bin") else {
+        return (0, map);
+    };
+    for i in 0..count {
+        let r = &body[i * RUNWAY_LEN..(i + 1) * RUNWAY_LEN];
+        map.entry(field(&r[0..8])).or_default().push(Runway {
+            low: field(&r[8..12]),
+            high: field(&r[12..16]),
+            length_ft: u16_at(r, 16),
+            width_ft: u16_at(r, 18),
+            surface: Surface::from_index(r[20]),
+            lit: r[21] != 0,
+        });
+    }
+    (date, map)
+}
+
+fn parse_freqs(blob: &[u8]) -> (u32, std::collections::HashMap<String, Vec<Frequency>>) {
+    let mut map: std::collections::HashMap<String, Vec<Frequency>> = Default::default();
+    let Some((date, body, count)) = dated(blob, b"SDXFRQ01", FREQ_LEN, "freqs.bin") else {
+        return (0, map);
+    };
+    for i in 0..count {
+        let r = &body[i * FREQ_LEN..(i + 1) * FREQ_LEN];
+        if let Some(kind) = FreqKind::from_index(r[8]) {
+            map.entry(field(&r[0..8])).or_default().push(Frequency { kind, khz: u32_at(r, 9) });
+        }
+    }
+    (date, map)
+}
+
+/// `wiki.bin`: magic, `u32` date, `u32` count, then `{ident[8] lang[2] len title[len]}`
+/// records. A record that runs past the end ends the table there; nothing is guessed.
+fn parse_wiki(blob: &[u8]) -> std::collections::HashMap<String, (String, String)> {
+    let mut map = std::collections::HashMap::new();
+    let Some((_, mut body, count)) = dated(blob, b"SDXWIK01", 0, "wiki.bin") else {
+        return map;
+    };
+    for _ in 0..count {
+        if body.len() < 11 || body.len() < 11 + usize::from(body[10]) {
+            eprintln!("sdroxide: wiki.bin ends in the middle of a record");
+            break;
+        }
+        let len = usize::from(body[10]);
+        let (ident, lang) = (field(&body[0..8]), field(&body[8..10]));
+        let title = String::from_utf8_lossy(&body[11..11 + len]).into_owned();
+        map.insert(ident, (lang, title));
+        body = &body[11 + len..];
+    }
+    map
+}
+
+fn extras() -> &'static Extras {
+    static ONCE: std::sync::OnceLock<Extras> = std::sync::OnceLock::new();
+    ONCE.get_or_init(|| {
+        let (d1, runways) = parse_runways(RUNWAYS);
+        let (d2, freqs) = parse_freqs(FREQS);
+        Extras { date: d1.min(d2), runways, freqs, wiki: parse_wiki(WIKI) }
+    })
+}
+
+/// The open runways of an airport (by its `ident`), longest first. Empty when
+/// the source publishes none — nothing is made up.
+pub fn runways_of(ident: &str) -> &'static [Runway] {
+    extras().runways.get(ident).map_or(&[], Vec::as_slice)
+}
+
+/// The published frequencies of an airport, most useful first (tower, ground,
+/// ATIS, approach…). Empty when the source publishes none.
+pub fn frequencies_of(ident: &str) -> &'static [Frequency] {
+    extras().freqs.get(ident).map_or(&[], Vec::as_slice)
+}
+
+/// The Wikipedia page of an airport (by its `ident`) as `(language, title)`, the
+/// title with underscores and no escapes, e.g. `("en", "Amsterdam_Airport_Schiphol")`.
+/// `None` for an airport OurAirports links to no article.
+pub fn wikipedia_of(ident: &str) -> Option<(&'static str, &'static str)> {
+    extras().wiki.get(ident).map(|(l, t)| (l.as_str(), t.as_str()))
+}
+
+/// The day the runway and frequency tables were built, `yyyymmdd`; 0 when they
+/// did not load. Frequencies change, so the airport card says how old they are.
+pub fn extras_date() -> u32 {
+    extras().date
 }
 
 /// Read a NUL-padded field, losing the padding.
@@ -208,6 +427,91 @@ pub fn navaids() -> &'static [Navaid] {
 pub fn airports() -> &'static [Airport] {
     static ONCE: std::sync::OnceLock<Vec<Airport>> = std::sync::OnceLock::new();
     ONCE.get_or_init(|| parse_airports(AIRPORTS))
+}
+
+/// How close a radio aid must be to an airport to be part of it, km. A VOR
+/// on the field, or the NDB of its approach, is the airport's own; a VOR ten
+/// kilometres off is an en-route aid and stays a symbol of its own.
+pub const NAVAID_ON_FIELD_KM: f64 = 3.0;
+
+/// Which airport each navaid belongs to, and the navaids of each airport.
+struct NavLinks {
+    /// Per navaid (same index as [`navaids`]): the airport it belongs to.
+    owner: Vec<Option<u32>>,
+    /// Per airport (same index as [`airports`]): its navaids, nearest first.
+    of: Vec<Vec<u32>>,
+}
+
+/// Each navaid goes to the *nearest* airport within [`NAVAID_ON_FIELD_KM`], so
+/// an aid is never listed on two cards. Worked out once, on first use, with a
+/// one-degree grid so it is a few thousand lookups rather than 58 million.
+fn nav_links() -> &'static NavLinks {
+    static ONCE: std::sync::OnceLock<NavLinks> = std::sync::OnceLock::new();
+    ONCE.get_or_init(|| {
+        let (navs, apts) = (navaids(), airports());
+        let cell = |lat: f64, lon: f64| (lat.floor() as i32, lon.floor() as i32);
+        let mut grid: std::collections::HashMap<(i32, i32), Vec<usize>> = Default::default();
+        for (i, a) in apts.iter().enumerate() {
+            grid.entry(cell(a.lat, a.lon)).or_default().push(i);
+        }
+        let mut owner = vec![None; navs.len()];
+        let mut of: Vec<Vec<(f64, u32)>> = vec![Vec::new(); apts.len()];
+        for (ni, n) in navs.iter().enumerate() {
+            let (cl, co) = cell(n.lat, n.lon);
+            let mut best: Option<(f64, usize)> = None;
+            for dl in -1..=1 {
+                for dc in -1..=1 {
+                    // Longitude wraps at the antimeridian.
+                    let key = (cl + dl, (co + dc + 180).rem_euclid(360) - 180);
+                    for &ai in grid.get(&key).map_or(&[][..], Vec::as_slice) {
+                        let d = sdroxide_types::distance_km(
+                            (n.lat, n.lon),
+                            (apts[ai].lat, apts[ai].lon),
+                        );
+                        if d <= NAVAID_ON_FIELD_KM && best.is_none_or(|(b, _)| d < b) {
+                            best = Some((d, ai));
+                        }
+                    }
+                }
+            }
+            if let Some((d, ai)) = best {
+                owner[ni] = Some(ai as u32);
+                of[ai].push((d, ni as u32));
+            }
+        }
+        let of = of
+            .into_iter()
+            .map(|mut v| {
+                v.sort_by(|a, b| a.0.total_cmp(&b.0));
+                v.into_iter().map(|(_, i)| i).collect()
+            })
+            .collect();
+        NavLinks { owner, of }
+    })
+}
+
+/// The airport (index into [`airports`]) a navaid (index into [`navaids`])
+/// belongs to, when it stands on the field. Such an aid has no symbol of its
+/// own on the map: it is listed on the airport's card.
+pub fn navaid_airport(navaid: usize) -> Option<usize> {
+    nav_links().owner.get(navaid).copied().flatten().map(|i| i as usize)
+}
+
+/// The radio aids on an airport's field (by index into [`airports`]), nearest
+/// first, each with its distance from the airport reference point in km.
+pub fn navaids_of(airport: usize) -> Vec<(&'static Navaid, f64)> {
+    let (navs, apts) = (navaids(), airports());
+    let Some(a) = apts.get(airport) else {
+        return Vec::new();
+    };
+    nav_links().of.get(airport).map_or_else(Vec::new, |v| {
+        v.iter()
+            .map(|&i| {
+                let n = &navs[i as usize];
+                (n, sdroxide_types::distance_km((a.lat, a.lon), (n.lat, n.lon)))
+            })
+            .collect()
+    })
 }
 
 /// Whether the tables were read at all — a data file that failed its magic
@@ -328,6 +632,116 @@ mod tests {
                 a.lon
             );
         }
+    }
+
+    /// Schiphol's runways read back as the source publishes them: six, the
+    /// longest first, asphalt and lit; and its tower is on the list.
+    /// The VOR of Épinal stands on the field of Épinal-Mirecourt: it is the
+    /// airport's, not a second symbol next to it.
+    #[test]
+    fn a_vor_on_the_field_belongs_to_its_airport() {
+        let ai = airports().iter().position(|a| a.ident == "LFSG").expect("LFSG");
+        let epl =
+            navaids().iter().position(|n| n.ident == "EPL" && n.country == "FR").expect("EPL");
+        assert_eq!(navaid_airport(epl), Some(ai));
+        assert!(navaids_of(ai).iter().any(|(n, _)| n.ident == "EPL"));
+        assert!(navaids_of(ai).iter().all(|(_, km)| *km <= NAVAID_ON_FIELD_KM));
+        // The Venezuelan El Pinal shares the ident and is nowhere near.
+        let other = navaids().iter().position(|n| n.ident == "EPL" && n.country != "FR").unwrap();
+        assert_ne!(navaid_airport(other), Some(ai));
+    }
+
+    /// An aid belongs to one airport only, and the two directions agree.
+    #[test]
+    fn every_navaid_is_listed_on_at_most_one_airport() {
+        let mut seen = std::collections::HashSet::new();
+        for ai in 0..airports().len() {
+            for (n, _) in navaids_of(ai) {
+                let ni = navaids().iter().position(|x| std::ptr::eq(x, n)).unwrap();
+                assert!(seen.insert(ni), "{} listed twice", n.ident);
+                assert_eq!(navaid_airport(ni), Some(ai));
+            }
+        }
+        assert!(!seen.is_empty());
+    }
+
+    /// Every article title in the table is one the station will look up: a
+    /// title it refuses is an airport that never gets its picture.
+    #[test]
+    fn every_wikipedia_title_in_the_table_is_an_article_the_station_accepts() {
+        let refused: Vec<_> = extras()
+            .wiki
+            .iter()
+            .filter(|(_, (l, t))| sdroxide_aircraft_online::Article::new(l, t).is_none())
+            .map(|(i, (l, t))| format!("{i} {l}:{t}"))
+            .collect();
+        assert!(
+            refused.is_empty(),
+            "{} refused: {:?}",
+            refused.len(),
+            &refused[..refused.len().min(5)]
+        );
+    }
+
+    #[test]
+    fn schiphol_has_its_runways_and_a_tower_frequency() {
+        let rw = runways_of("EHAM");
+        assert!(rw.len() >= 5, "{rw:?}");
+        assert!(rw.windows(2).all(|w| w[0].length_ft >= w[1].length_ft), "not longest first");
+        let polderbaan = rw.iter().find(|r| r.low == "18R").expect("18R/36L is there");
+        assert_eq!(polderbaan.high, "36L");
+        assert_eq!(polderbaan.surface, Surface::Asphalt);
+        assert!(polderbaan.lit);
+        assert!((11_000..=12_500).contains(&polderbaan.length_ft), "{}", polderbaan.length_ft);
+        let f = frequencies_of("EHAM");
+        assert!(f.iter().any(|f| f.kind == FreqKind::Tower), "{f:?}");
+        assert!(f.iter().any(|f| f.kind == FreqKind::Atis), "{f:?}");
+        assert!(f.windows(2).all(|w| (w[0].kind as u8) <= (w[1].kind as u8)), "kinds out of order");
+    }
+
+    /// An airport the source says nothing about has no runway and no frequency,
+    /// rather than an invented one; and the build date is a real date.
+    #[test]
+    fn an_unknown_airport_has_nothing_and_the_tables_are_dated() {
+        assert!(runways_of("ZZZZ").is_empty());
+        assert!(frequencies_of("ZZZZ").is_empty());
+        let d = extras_date();
+        assert!((2026_0101..=2099_1231).contains(&d), "{d}");
+        assert!((1..=12).contains(&(d / 100 % 100)) && (1..=31).contains(&(d % 100)), "{d}");
+    }
+
+    #[test]
+    fn schiphol_has_its_wikipedia_article_and_an_unknown_airport_has_none() {
+        assert_eq!(wikipedia_of("EHAM"), Some(("en", "Amsterdam_Airport_Schiphol")));
+        assert_eq!(wikipedia_of("ZZZZ"), None);
+        // Percent-escapes are undone in the table, so the station escapes once.
+        let (lang, title) = wikipedia_of("LEMG").expect("Malaga has an article");
+        assert!(!title.contains('%') && lang.len() == 2, "{lang} {title}");
+    }
+
+    #[test]
+    fn a_foreign_or_cut_wikipedia_table_is_refused_or_ends_where_it_is_cut() {
+        assert!(parse_wiki(b"nope").is_empty());
+        let mut b = b"SDXWIK01".to_vec();
+        b.extend_from_slice(&[0; 4]);
+        b.extend_from_slice(&2u32.to_le_bytes());
+        b.extend_from_slice(b"EHAM\0\0\0\0en\x04Spam");
+        b.extend_from_slice(b"LFPG\0\0\0\0fr\x09Paris");
+        let got = parse_wiki(&b);
+        assert_eq!(got.get("EHAM"), Some(&("en".to_string(), "Spam".to_string())));
+        assert_eq!(got.len(), 1, "the cut record is dropped, not half-read");
+    }
+
+    /// Foreign or short runway/frequency files are refused, never half-read.
+    #[test]
+    fn foreign_runway_and_frequency_files_are_refused() {
+        assert!(parse_runways(b"nope").1.is_empty());
+        assert!(parse_freqs(b"nope").1.is_empty());
+        // Right magic, a count that promises more than is there.
+        let mut b = b"SDXRWY01".to_vec();
+        b.extend_from_slice(&[0; 4]);
+        b.extend_from_slice(&5u32.to_le_bytes());
+        assert!(parse_runways(&b).1.is_empty());
     }
 
     /// A file that is not one of ours is refused rather than half-read.

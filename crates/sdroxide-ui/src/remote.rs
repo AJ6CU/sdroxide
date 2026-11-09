@@ -1,6 +1,7 @@
 //! `RemoteController`: the same UI seam as `LocalController`, but over a
 //! WebSocket speaking `sdroxide-proto`. Compiles for wasm32 and native.
 
+use crate::i18n::tr;
 use std::collections::VecDeque;
 
 use ewebsock::{WsEvent, WsMessage, WsReceiver, WsSender};
@@ -627,6 +628,12 @@ impl RemoteController {
             ServerMsg::Recordings(l) => self.pending.push_back(RadioEvent::Recordings(l)),
             ServerMsg::DabSlide(s) => self.pending.push_back(RadioEvent::DabSlide(s)),
             ServerMsg::AudioLevel(l) => self.pending.push_back(RadioEvent::AudioLevel(l)),
+            ServerMsg::TxRefused(why, hz) => {
+                self.pending.push_back(RadioEvent::TxRefused(why, hz));
+            }
+            ServerMsg::ModeRefused { mode, band } => {
+                self.pending.push_back(RadioEvent::ModeRefused(mode, band));
+            }
             ServerMsg::ClientAcks(a) => self.pending.push_back(RadioEvent::ClientAcks(a)),
             // Dropped rather than decoded while another tab holds the page's
             // single output: the work saved is the point on a browser tab
@@ -666,10 +673,16 @@ impl RemoteController {
             }
             ServerMsg::Pong(_) => {}
             ServerMsg::Busy => self.pending.push_back(RadioEvent::ConnectionLost(
-                "server busy — another client is connected".into(),
+                tr!("remote-server-busy-another-client-connected").into(),
             )),
             ServerMsg::Error(e) => self.pending.push_back(RadioEvent::ConnectionLost(e)),
             ServerMsg::Notice(n) => self.pending.push_back(RadioEvent::Notice(n)),
+            ServerMsg::DyndnsAnswer { at_unix, ok, text } => self
+                .pending
+                .push_back(RadioEvent::DyndnsAnswer { at_unix, ok, text }),
+            ServerMsg::BandPlanExport { file, json } => {
+                self.pending.push_back(RadioEvent::BandPlanExport { file, json })
+            }
             ServerMsg::Ft8Decodes(d) => self.pending.push_back(RadioEvent::Ft8Decodes(d)),
             ServerMsg::WsprSpots(s) => self.pending.push_back(RadioEvent::WsprSpots(s)),
             ServerMsg::Pi4Spots(s) => self.pending.push_back(RadioEvent::Pi4Spots(s)),
@@ -699,6 +712,14 @@ impl RemoteController {
             ServerMsg::AdsbStatus(s) => self.pending.push_back(RadioEvent::AdsbStatus(s)),
             ServerMsg::Vdl2Status(s) => self.pending.push_back(RadioEvent::Vdl2Status(s)),
             ServerMsg::AisStatus(s) => self.pending.push_back(RadioEvent::AisStatus(s)),
+            ServerMsg::VorStatus(s) => self.pending.push_back(RadioEvent::VorStatus(s)),
+            ServerMsg::Qo100Status(s) => self.pending.push_back(RadioEvent::Qo100Status(s)),
+            ServerMsg::HfdlStatus(s) => self.pending.push_back(RadioEvent::HfdlStatus(s)),
+            ServerMsg::SondeStatus(s) => self.pending.push_back(RadioEvent::SondeStatus(s)),
+            ServerMsg::WxsatStatus(s) => self.pending.push_back(RadioEvent::WxsatStatus(s)),
+            ServerMsg::MeshtasticStatus(s) => {
+                self.pending.push_back(RadioEvent::MeshtasticStatus(s))
+            }
             ServerMsg::DabStatus(s) => self.pending.push_back(RadioEvent::DabStatus(s)),
             ServerMsg::RifpRows { image_id, y, w, h, rows } => {
                 self.pending.push_back(RadioEvent::RifpRows { image_id, y, w, h, rows })
@@ -900,10 +921,7 @@ impl RemoteController {
         }
         self.mic_over_reported = true;
         self.pending.push_back(RadioEvent::Notice(Some(
-            "Transmitting, but this client's microphone is producing no audio at all — \
-             nothing is being modulated. In a browser, check that the page was allowed \
-             the microphone and that no other application holds it."
-                .into(),
+            tr!("remote-transmitting-but-client-s-microphone").into(),
         )));
     }
 }
@@ -958,16 +976,19 @@ impl RadioController for RemoteController {
                 }
                 WsEvent::Message(WsMessage::Binary(bytes)) => match decode::<ServerMsg>(&bytes) {
                     Ok(msg) => self.on_server_msg(msg),
-                    Err(e) => self
-                        .pending
-                        .push_back(RadioEvent::ConnectionLost(format!("protocol error: {e}"))),
+                    Err(e) => self.pending.push_back(RadioEvent::ConnectionLost(tr!(
+                        "remote-protocol-error",
+                        error = e.to_string()
+                    ))),
                 },
                 WsEvent::Message(_) => {}
                 WsEvent::Error(e) => {
                     self.pending.push_back(RadioEvent::ConnectionLost(e));
                 }
                 WsEvent::Closed => {
-                    self.pending.push_back(RadioEvent::ConnectionLost("connection closed".into()));
+                    self.pending.push_back(RadioEvent::ConnectionLost(
+                        tr!("remote-connection-closed").into(),
+                    ));
                 }
             }
         }

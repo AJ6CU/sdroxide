@@ -110,7 +110,7 @@ fn one_over(full_duplex: bool) -> Vec<Ev> {
     let rate = 768_000.0;
     let log: Log = Arc::new(Mutex::new(Vec::new()));
     let src = Recorder { rate, log: Arc::clone(&log) };
-    let cfg = EngineConfig { tx_ham_only: false, ..Default::default() };
+    let cfg = EngineConfig { tx_bands_open: true, tx_ham_only: false, ..Default::default() };
     let mut h = start_engine(Box::new(src), caps(rate, full_duplex), cfg);
     let thread = h.thread.take();
 

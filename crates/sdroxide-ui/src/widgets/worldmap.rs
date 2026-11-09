@@ -18,6 +18,7 @@
 //! wheel and pinch zoom about the pointer, and a double-click hands the view
 //! back to the auto-fit.
 
+use crate::i18n::tr;
 use eframe::egui::{
     Align2, Color32, CursorIcon, FontId, PointerButton, Pos2, Response, Sense, Stroke, Ui, Vec2,
     pos2, vec2,
@@ -85,6 +86,16 @@ impl Default for MapView {
 }
 
 impl MapView {
+    /// Start over from the auto-fit if the view has gone non-finite. NaN
+    /// survives every clamp and ease, so one bad input event — the kind a
+    /// resume from sleep can deliver — left the map dead for good, double-click
+    /// included (upstream #656).
+    pub(crate) fn sanitize(&mut self) {
+        if !(self.clat.is_finite() && self.clon.is_finite() && self.lon_span.is_finite()) {
+            *self = MapView::default();
+        }
+    }
+
     /// The latitude window this zoom covers on a map of the given aspect
     /// (height/width) — the projection is linear in both axes.
     pub(crate) fn lat_span(&self, aspect: f64) -> f64 {
@@ -400,8 +411,24 @@ pub(crate) fn draw_base(
     lat_span: f64,
     map: &theme::MapPalette,
 ) -> f32 {
+    draw_base_cities(p, rect, clat, clon, lon_span, lat_span, map, theme::map_cities())
+}
+
+/// [`draw_base`] for a map with a cities switch of its own: `cities` instead
+/// of the shared setting.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn draw_base_cities(
+    p: &eframe::egui::Painter,
+    rect: eframe::egui::Rect,
+    clat: f64,
+    clon: f64,
+    lon_span: f64,
+    lat_span: f64,
+    map: &theme::MapPalette,
+    cities: bool,
+) -> f32 {
     let dot_r = draw_ground(p, rect, clat, clon, lon_span, lat_span, map);
-    if theme::map_cities() {
+    if cities {
         draw_cities(p, rect, clat, clon, lon_span, lat_span, dot_r, map);
     }
     dot_r
@@ -942,6 +969,11 @@ pub fn show(
     if let Some(c) = preview {
         contacts.push(c);
     }
+    for s in reporters {
+        if let Some(c) = s.loc {
+            contacts.push(c);
+        }
+    }
     let (t_clat, t_clon, t_span) = target_view(home, &contacts, aspect);
     if !view.initialized {
         view.clat = t_clat;
@@ -1107,8 +1139,22 @@ pub fn show(
                 s.call,
                 s.freq_hz / 1e6,
                 if s.mode.trim().is_empty() { String::new() } else { format!("{} · ", s.mode) },
-                s.snr_db.map(|d| format!("{d:+} dB")).unwrap_or_else(|| "no SNR".into()),
+                s.snr_db.map(|d| format!("{d:+} dB")).unwrap_or_else(|| tr!("worldmap-no-snr")),
             ));
+        }
+        // Draw the liaison (path) from home to each reporter that heard us,
+        // so the reach of the beacon is visible on the map.
+        if let Some(hll) = home {
+            for s in reporters {
+                let Some((rlat, rlon)) = s.loc else { continue };
+                if (rlat - hll.0).abs() < 1e-9 && (rlon - hll.1).abs() < 1e-9 {
+                    continue;
+                }
+                for (lat, lon) in great_circle_points(hll, (rlat, rlon), DECODE_PATH_POINTS) {
+                    let c = project(lat, lon);
+                    p.circle_filled(c, dot_r.max(1.0), alpha(ink, 90.0));
+                }
+            }
         }
     }
 
@@ -1208,7 +1254,7 @@ pub fn show(
         p.text(
             pos2(rect.right() - 5.0, rect.bottom() - 4.0),
             Align2::RIGHT_BOTTOM,
-            "DOUBLE-CLICK TO REFRAME",
+            tr!("worldmap-double-click-reframe"),
             FontId::proportional(9.0),
             map.hint,
         );

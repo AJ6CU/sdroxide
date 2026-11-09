@@ -17,7 +17,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use sdroxide_radio::{Complex32, EngineConfig, IqSource, Result, start_engine};
-use sdroxide_types::{Command, DeviceCaps, Mode, RadioEvent, RxId, Vfo, WsjtxConfig};
+use sdroxide_types::{Band, Command, DeviceCaps, Mode, RadioEvent, RxId, Vfo, WsjtxConfig};
 
 /// Point the whole process's configuration at a scratch directory, once.
 ///
@@ -310,5 +310,68 @@ fn a_qsy_empties_the_call_queue() {
         digi_settles(&h, |st| st.call_queue.is_empty()),
         "a QSY must drop the queue: its offsets belong to the dial we have left"
     );
+    shutdown(h);
+
+
+}
+
+/// **A decoder that belongs to a service does not follow the operator to
+/// another band.** ACARS lives on the airband; carried onto 70cm it leaves the
+/// operator on "70cm — ACARS" with the decoder still open and nothing to
+/// decode, and the only way back is choosing the mode by hand (#413).
+///
+/// The FT family is the control, and the reason the rule is not "digital modes
+/// fall back": an operator changing band in FT8 expects to still be in FT8.
+#[test]
+fn a_service_decoder_does_not_carry_to_another_band() {
+    let _ = isolate_config();
+    let center = Arc::new(Mutex::new(DIAL_20M));
+    let h = start_engine(Box::new(Silent { center }), caps(), config(0));
+
+    h.cmd_tx
+        .send(Command::SetMode { rx: RxId::Main, mode: Mode::Acars })
+        .expect("the engine is running");
+    settle(&h, |s| s.rx[0].mode == Mode::Acars);
+
+    // 20 m has never been visited by this engine, so there is no stack entry to
+    // restore: the band's own default is what it opens in.
+    let (_, default_mode) = Band::M20.default_entry();
+    h.cmd_tx.send(Command::SetBand(Band::M20)).expect("the engine is running");
+    settle(&h, |s| s.band == Band::M20 && s.rx[0].mode == default_mode);
+
+    // The control: the same move in FT8 keeps FT8.
+    h.cmd_tx
+        .send(Command::SetMode { rx: RxId::Main, mode: Mode::Ft8 })
+        .expect("the engine is running");
+    settle(&h, |s| s.rx[0].mode == Mode::Ft8);
+    h.cmd_tx.send(Command::SetBand(Band::M40)).expect("the engine is running");
+    settle(&h, |s| s.band == Band::M40 && s.rx[0].mode == Mode::Ft8);
+
+    shutdown(h);
+}
+
+/// **A band this receiver has never been on takes the mode already in use.**
+///
+/// The band's own default is what it opens in — AM on the broadcast bands — and
+/// the band stack only remembers bands that have been visited. A listener who
+/// works in USB was therefore dropped into AM on every band without a stack of
+/// its own and had to put the mode back, band after band. Reported by the SWL
+/// users group (2026-11-01).
+#[test]
+fn a_band_with_no_stack_takes_the_mode_in_use() {
+    let _ = isolate_config();
+    let center = Arc::new(Mutex::new(DIAL_20M));
+    let h = start_engine(Box::new(Silent { center }), caps(), config(0));
+    h.cmd_tx.send(Command::SetVfo { vfo: Vfo::A, hz: DIAL_20M }).expect("the engine is running");
+    settle(&h, |s| s.vfo_a_hz == DIAL_20M);
+    h.cmd_tx
+        .send(Command::SetMode { rx: RxId::Main, mode: Mode::Usb })
+        .expect("the engine is running");
+    settle(&h, |s| s.rx[0].mode == Mode::Usb);
+
+    // The shortwave band opens in AM and this engine has never been on it, so
+    // there is no stack entry to restore.
+    h.cmd_tx.send(Command::SetBand(Band::Sw)).expect("the engine is running");
+    settle(&h, |s| s.band == Band::Sw && s.rx[0].mode == Mode::Usb);
     shutdown(h);
 }

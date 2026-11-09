@@ -67,9 +67,9 @@ fn a_voice_over_with_no_microphone_is_reported() {
     std::fs::create_dir_all(&dir).unwrap();
     unsafe { std::env::set_var("SDROXIDE_CONFIG_DIR", &dir) };
 
-    // No microphone at all — `EngineConfig::default()` opens none, which is
+    // No microphone at all — `EngineConfig { tx_bands_open: true, ..EngineConfig::default() }` opens none, which is
     // the same silence a microphone on the wrong card delivers.
-    let mut h = start_engine(Box::new(Quiet), caps(), EngineConfig::default());
+    let mut h = start_engine(Box::new(Quiet), caps(), EngineConfig { tx_bands_open: true, ..EngineConfig::default() });
     let thread = h.thread.take();
     h.cmd_tx.send(Command::SetMode { rx: RxId::Main, mode: Mode::Usb }).unwrap();
     h.cmd_tx.send(Command::SetPtt(true)).unwrap();
@@ -112,7 +112,7 @@ fn a_tune_is_not_a_silent_over() {
     std::fs::create_dir_all(&dir).unwrap();
     unsafe { std::env::set_var("SDROXIDE_CONFIG_DIR", &dir) };
 
-    let mut h = start_engine(Box::new(Quiet), caps(), EngineConfig::default());
+    let mut h = start_engine(Box::new(Quiet), caps(), EngineConfig { tx_bands_open: true, ..EngineConfig::default() });
     let thread = h.thread.take();
     h.cmd_tx.send(Command::SetMode { rx: RxId::Main, mode: Mode::Usb }).unwrap();
     h.cmd_tx.send(Command::SetTune(true)).unwrap();

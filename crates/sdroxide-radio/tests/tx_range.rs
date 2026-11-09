@@ -69,7 +69,7 @@ fn keys_up_on(caps: DeviceCaps, hz: f64) -> bool {
 fn keys_up_on_with(caps: DeviceCaps, hz: f64, tx_ham_only: bool, cb_tx_allowed: bool) -> bool {
     let keyed = Arc::new(Mutex::new(Vec::new()));
     let src = MockRig { rate: 600_000.0, center: hz, keyed: Arc::clone(&keyed) };
-    let cfg = EngineConfig { tx_ham_only, cb_tx_allowed, ..Default::default() };
+    let cfg = EngineConfig { tx_bands_open: true, tx_ham_only, cb_tx_allowed, ..Default::default() };
     let mut h = start_engine(Box::new(src), caps, cfg);
     let thread = h.thread.take();
 

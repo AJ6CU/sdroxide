@@ -26,6 +26,25 @@
 //! pins depends on the exact count of mid-grey crossings and a band-limited copy
 //! has fewer of them. They come to under a megabyte, and the whole recording is
 //! not in the tree.
+//!
+//! # The second recording (2026-11-01)
+//!
+//! Two more pieces come from a **different, much weaker** chart — GYA Northwood
+//! on 8040 kHz, heard on an RSP1 with a 40 m EFHW, where consecutive
+//! transmissions were being drawn into one page instead of separated:
+//!
+//! * **`phasing_between_charts`** — the band where one chart ends and the next
+//!   begins. Its phasing lines have a **median brightness near 0.3** because the
+//!   noise floor lifts every black sample, while the pulse still reaches 1.00.
+//!   This is the piece that proved the old strict test could not fire off air:
+//!   "mostly black" was an absolute mean under 0.20 and 30 of these 40 lines sat
+//!   above it, so the next transmission was drawn into the picture as a black
+//!   band. The rule is a contrast now — see `PHASING_CONTRAST` in the decoder.
+//! * **`chart_after_phasing`** — the chart that follows it, which has to decode
+//!   once a page has been started.
+//!
+//! Both are 6 kHz mono, cut from the demodulated audio the program itself
+//! recorded while decoding that chart.
 
 use sdroxide_dsp::{WefaxEvent, WefaxIoc, WefaxLpm, WefaxRx};
 
@@ -175,4 +194,19 @@ fn the_real_stop_tone_still_ends_the_page() {
     // The tone runs from 10.0 s to 14.7 s into the piece; seven half-second
     // windows of it end the page.
     assert!((12.0..=15.5).contains(&at), "ended at {at:.1} s into the piece");
+}
+
+/// The weak chart that follows a phasing band still decodes: this is the piece
+/// that the page-boundary work was measured against, and a page started on it
+/// has to produce lines rather than nothing.
+#[test]
+fn the_weak_chart_after_a_phasing_band_still_decodes() {
+    let mut rx = receiver();
+    let ev = run(&mut rx, &piece("chart_after_phasing"));
+    let lines = ev.iter().filter(|(_, e)| matches!(e, WefaxEvent::Line { .. })).count();
+    assert!(
+        lines >= 40,
+        "a page started on the weak chart produced {lines} lines in {} events",
+        ev.len()
+    );
 }

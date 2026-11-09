@@ -60,6 +60,17 @@ impl DscController {
             .unwrap_or(0)
     }
 
+    /// File one sequence. The log is oldest first and keeps the newest
+    /// [`DSC_MESSAGE_MAX`]; the panel lists it newest first.
+    fn record(&mut self, heard: DscHeard) {
+        self.messages.push(heard);
+        if self.messages.len() > DSC_MESSAGE_MAX {
+            let cut = self.messages.len() - DSC_MESSAGE_MAX;
+            self.messages.drain(..cut);
+        }
+        self.status_dirty = true;
+    }
+
     fn dsc_status(&self) -> DscStatus {
         DscStatus {
             level: self.rx.level(),
@@ -132,12 +143,7 @@ impl DigiEngine for DscController {
         }
         for message in out {
             let at = Self::now_unix();
-            self.messages.push(DscHeard { message, at });
-            if self.messages.len() > DSC_MESSAGE_MAX {
-                let cut = self.messages.len() - DSC_MESSAGE_MAX;
-                self.messages.drain(..cut);
-            }
-            self.status_dirty = true;
+            self.record(DscHeard { message, at });
         }
     }
 
@@ -201,6 +207,19 @@ impl DigiEngine for DscController {
 mod tests {
     use super::*;
     use sdroxide_types::{DSC_PHASING_SYMBOL, DscFormat, DscNature, dsc_bch};
+
+    /// 201 sequences leave 200: the newest is kept, the oldest is the one lost.
+    #[test]
+    fn the_log_keeps_two_hundred_and_drops_the_oldest() {
+        let mut c = DscController::new(DigiConfig::default(), 48_000.0);
+        for at in 1..=201 {
+            c.record(DscHeard { message: sdroxide_types::DscMessage::default(), at });
+        }
+        let st = c.dsc_status();
+        assert_eq!(st.messages.len(), 200);
+        assert_eq!(st.messages.first().map(|h| h.at), Some(2), "sequence 1 was dropped");
+        assert_eq!(st.messages.last().map(|h| h.at), Some(201), "the newest is kept");
+    }
 
     fn char_bits(symbol: u8) -> Vec<bool> {
         let cw = dsc_bch::encode(symbol);

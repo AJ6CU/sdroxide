@@ -705,6 +705,53 @@ impl Mode {
         Mode::Dtmf,
     ];
 
+    /// True for the modes that **belong to a service and a frequency** rather
+    /// than to the operator's own choice of modulation.
+    ///
+    /// ACARS is on the airband, DSC and NAVTEX on the marine channels, ADSB on
+    /// 1090 MHz, DAB on Band III: choosing one of these is choosing a *service*,
+    /// and following it onto another band is meaningless — there is nothing
+    /// there to decode, and the operator is left on "70cm — ACARS" instead of
+    /// the band's own mode. Everything else here (the sideband and FM modes,
+    /// the keyboards, the FT/PSK/RTTY families) is an operator moving to another
+    /// band and expecting to carry on in the mode they were using.
+    ///
+    /// **The test to apply when this list is argued with:** if the band/mode
+    /// dock offers the mode as a chip, it carries. An operator switching band
+    /// from the dock with that mode selected is doing the ordinary thing, and a
+    /// mode that fell back there would undo their own click.
+    ///
+    /// SSTV settled it (maintainer, 2026-11-02): it sits under a chip with a
+    /// band change beneath it, so it belongs on the carrying side — which is
+    /// also why the rule is a list and not "every decoder falls back".
+    ///
+    /// Read by the band change, which keeps a mode only where this is false.
+    /// **The list is a judgement, not a law**: adding a decoder here is saying
+    /// it should not follow an operator to another band, and that is the whole
+    /// of the rule. Reported by drdatapi, 2026-11-02 (#413).
+    pub fn belongs_to_a_service(self) -> bool {
+        matches!(
+            self,
+            Mode::Wefax
+                | Mode::Navtex
+                | Mode::Dsc
+                | Mode::Acars
+                | Mode::Adsb
+                | Mode::Vdl2
+                | Mode::Ais
+                | Mode::Hfdl
+                | Mode::Dab
+                | Mode::HdRadio
+                | Mode::Drm
+                | Mode::RfPaint
+                | Mode::Pi4
+                | Mode::Ale
+                | Mode::Cis11
+                | Mode::Aprs
+                | Mode::UvPacket
+        )
+    }
+
     /// True for modes that use a dedicated decode/QSO layer over USB.
     pub fn is_digital(self) -> bool {
         matches!(
@@ -1339,6 +1386,8 @@ impl Mode {
             // off and flat in every mode until they are.
             tone: Some(crate::TxEqState::default()),
             loudness: Some(false),
+            // The CW peak filter likewise: off, at its middling width and lift.
+            cw_peak: Some(crate::CwPeak::default()),
         }
     }
 
@@ -1595,6 +1644,23 @@ impl Mode {
             // is 1700 Hz below the channel, exactly as NAVTEX's is.
             Mode::Dsc => Some(crate::DSC_TONE_HZ),
             _ => None,
+        }
+    }
+
+    /// The middle of the audio band a mode decodes **anywhere inside**, in hertz
+    /// above the dial — `None` for every mode that has its own anchor (tone
+    /// pair, picture, fixed audio centre) or none at all.
+    ///
+    /// FT8 and its slotted cousins, WSPR, Pi4 and PSK listen to the whole
+    /// 200–3000 Hz passband, so the signals are *all above the dial*. A window
+    /// centred on the dial shows half of that band at most and leaves the
+    /// other half empty; CTR has to centre the band instead. A **view** anchor
+    /// only: the logged frequency stays the dial.
+    pub fn audio_band_centre_hz(self) -> Option<f32> {
+        if self.is_slotted() || matches!(self, Mode::Wspr | Mode::Pi4 | Mode::Psk) {
+            Some(1500.0)
+        } else {
+            None
         }
     }
 
@@ -2549,9 +2615,135 @@ impl AgcMode {
     }
 }
 
+/// The operator's own version of one of a mode's filter preset chips
+/// ([`Mode::filter_presets`]): a label and two edges of their choosing in
+/// place of the built-in ones. Set from a right-click on the chip, kept in
+/// `filter_presets.json`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CustomFilterPreset {
+    pub mode: Mode,
+    /// Which built-in chip this stands in for, counted from the left. The slot
+    /// just past the built-ins ([`filter_memory_slot`]) is the operator's own
+    /// memory chip, which stands in for nothing.
+    pub slot: usize,
+    pub label: String,
+    /// Edges in Hz relative to the carrier, like the built-ins.
+    pub lo: f32,
+    pub hi: f32,
+}
+
+/// The slot of `mode`'s memory chip: the one just after its built-in presets.
+/// It starts empty and holds whatever passband the operator stores in it.
+pub fn filter_memory_slot(mode: Mode) -> usize {
+    mode.filter_presets().len()
+}
+
+/// The chips `mode` shows: its built-in presets, with any of `custom` that
+/// belong to it standing in for theirs, and the memory chip last once it holds
+/// something. An empty memory is not listed: the interface draws it as `M+`.
+pub fn filter_presets_with(mode: Mode, custom: &[CustomFilterPreset]) -> Vec<(String, f32, f32)> {
+    let mut chips: Vec<(String, f32, f32)> = mode
+        .filter_presets()
+        .iter()
+        .enumerate()
+        .map(|(slot, &(label, lo, hi))| {
+            match custom.iter().find(|c| c.mode == mode && c.slot == slot) {
+                Some(c) => (c.label.clone(), c.lo, c.hi),
+                None => (label.to_string(), lo, hi),
+            }
+        })
+        .collect();
+    let memory = filter_memory_slot(mode);
+    if let Some(c) = custom.iter().find(|c| c.mode == mode && c.slot == memory) {
+        chips.push((c.label.clone(), c.lo, c.hi));
+    }
+    chips
+}
+
+#[cfg(test)]
+mod custom_preset_tests {
+    use super::*;
+
+    #[test]
+    fn a_custom_preset_replaces_only_its_own_chip() {
+        let custom = [CustomFilterPreset {
+            mode: Mode::Usb,
+            slot: 1,
+            label: "Rag".into(),
+            lo: 100.0,
+            hi: 3000.0,
+        }];
+        let usb = filter_presets_with(Mode::Usb, &custom);
+        assert_eq!(usb.len(), Mode::Usb.filter_presets().len());
+        assert_eq!(usb[0].0, "1.8k");
+        assert_eq!(usb[1], ("Rag".to_string(), 100.0, 3000.0));
+        // LSB is its own mode with its own chips.
+        assert_eq!(filter_presets_with(Mode::Lsb, &custom)[1].0, "2.4k");
+    }
+
+    #[test]
+    fn the_memory_chip_comes_last_and_only_once_filled() {
+        let builtin = Mode::Usb.filter_presets().len();
+        assert_eq!(filter_presets_with(Mode::Usb, &[]).len(), builtin);
+        let custom = [CustomFilterPreset {
+            mode: Mode::Usb,
+            slot: filter_memory_slot(Mode::Usb),
+            label: "Mine".into(),
+            lo: 200.0,
+            hi: 2600.0,
+        }];
+        let usb = filter_presets_with(Mode::Usb, &custom);
+        assert_eq!(usb.len(), builtin + 1);
+        assert_eq!(usb[builtin], ("Mine".to_string(), 200.0, 2600.0));
+        // The built-ins are untouched, and another mode has no memory.
+        assert_eq!(usb[0].0, Mode::Usb.filter_presets()[0].0);
+        assert_eq!(filter_presets_with(Mode::Lsb, &custom).len(), Mode::Lsb.filter_presets().len());
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// **The band change keeps a mode only where it can carry**, and this is
+    /// the split it reads: a service decoder stays where the service is, and an
+    /// operator's own mode follows them (#413).
+    ///
+    /// Both halves are asserted, because either one alone is satisfied by a
+    /// predicate that answers the same thing everywhere.
+    #[test]
+    fn a_service_decoder_does_not_belong_to_the_operator_s_choice() {
+        for m in [
+            Mode::Acars,
+            Mode::Dsc,
+            Mode::Navtex,
+            Mode::Wefax,
+            Mode::Adsb,
+            Mode::Vdl2,
+            Mode::Ais,
+            Mode::Hfdl,
+            Mode::Dab,
+        ] {
+            assert!(m.belongs_to_a_service(), "{m:?} is a service, not a mode");
+        }
+        for m in [
+            Mode::Usb,
+            Mode::Lsb,
+            Mode::Am,
+            Mode::Nfm,
+            Mode::Cw,
+            Mode::Ft8,
+            Mode::Ft4,
+            Mode::Js8,
+            Mode::Psk,
+            Mode::Rtty,
+            Mode::Olivia,
+            Mode::Sstv,
+            Mode::SstvFm,
+        ] {
+            assert!(!m.belongs_to_a_service(), "{m:?} is a mode an operator carries");
+        }
+    }
 
     /// A mode whose passband is a channel about the carrier must have nothing
     /// but symmetric presets, and a mode with an asymmetric preset must not

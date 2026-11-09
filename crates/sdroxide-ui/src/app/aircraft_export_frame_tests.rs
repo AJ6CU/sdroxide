@@ -64,7 +64,7 @@ fn the_window_offers_both_formats() {
         text = texts(&out.shapes);
         out.textures_delta.clear();
     }
-    for want in ["EXPORT", "CSV", "JSON"] {
+    for want in ["Export", "CSV", "JSON"] {
         assert!(text.lines().any(|l| l == want), "no `{want}` in the window:\n{text}");
     }
 }

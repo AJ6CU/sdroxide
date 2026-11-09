@@ -81,7 +81,8 @@ pub struct PanadapterSource {
     /// own gains and antenna.
     rx: Box<dyn IqSource>,
     /// The transceiver: the dial, the mode, the filter, the transmitter, the
-    /// keyer, its S-meter — and its audio, when that is what is being heard.
+    /// keyer — and its audio, when that is what is being heard. Not its
+    /// S-meter: that one is the attached receiver's.
     ctrl: Box<dyn IqSource>,
     cfg: PanadapterConfig,
     /// The mode the transceiver is in, which picks the offset. `None` until
@@ -400,6 +401,14 @@ impl IqSource for PanadapterSource {
         self.rx.lo_offset_hz()
     }
 
+    /// The receiver's own usable part of its rate. The span the engine shows
+    /// is the receiver's stream, so the share of it the receiver's filter
+    /// really passes has to come through the pairing too, or a paired
+    /// receiver is drawn across a band it does not deliver.
+    fn usable_frac(&self) -> f64 {
+        self.rx.usable_frac()
+    }
+
     fn read(&mut self, buf: &mut [Complex32]) -> Result<usize> {
         self.pump_ctrl();
         let n = self.rx.read(buf)?;
@@ -613,8 +622,12 @@ impl IqSource for PanadapterSource {
         self.ctrl.set_rit_hz(hz);
     }
 
+    /// None: the S-meter is the *attached receiver's*, measured by the engine
+    /// on its I/Q. The transceiver here is the transmitter (often a CAT rig
+    /// whose own meter is absent or meaningless on the antenna the SDR is
+    /// watching), and its figure would hide the receiver's.
     fn rx_signal_dbm(&mut self) -> Option<f32> {
-        self.ctrl.rx_signal_dbm()
+        None
     }
 
     /// The *receiver's*, not the transceiver's: what overflows is the converter
@@ -876,13 +889,23 @@ mod tests {
         /// Samples handed over by `read`, real part only.
         audio: Vec<f32>,
         signal_dbm: Option<f32>,
+        /// What `usable_frac` answers: 1.0 for a receiver with no opinion.
+        usable: f64,
     }
 
     impl Fake {
         fn new(name: &'static str, rate: f64, center: f64) -> (Self, Arc<Mutex<Log>>) {
             let log = Arc::new(Mutex::new(Log::default()));
             (
-                Fake { name, rate, center, log: log.clone(), audio: Vec::new(), signal_dbm: None },
+                Fake {
+                    name,
+                    rate,
+                    center,
+                    log: log.clone(),
+                    audio: Vec::new(),
+                    signal_dbm: None,
+                    usable: 1.0,
+                },
                 log,
             )
         }
@@ -927,6 +950,9 @@ mod tests {
         fn rx_signal_dbm(&mut self) -> Option<f32> {
             self.signal_dbm
         }
+        fn usable_frac(&self) -> f64 {
+            self.usable
+        }
     }
 
     fn cfg() -> PanadapterConfig {
@@ -954,6 +980,18 @@ mod tests {
         assert_eq!(rx_log.lock().unwrap().centers, vec![14_200_000.0]);
         assert_eq!(src.center_hz(), 14_200_000.0);
         assert!(ctrl_log.lock().unwrap().centers.is_empty(), "a span move is not a dial move");
+    }
+
+    /// The receiver's usable share of its rate is the pairing's: the engine
+    /// draws the span from it, and a receiver whose filter passes 61 % of its
+    /// rate must not be drawn as if it passed all of it.
+    #[test]
+    fn the_receivers_usable_span_is_the_pairings() {
+        let (mut rx, _) = Fake::new("rx", 2_500_000.0, 14_100_000.0);
+        rx.usable = 0.6144;
+        let (ctrl, _) = Fake::new("rig", 48_000.0, 14_100_000.0);
+        let src = PanadapterSource::new(Box::new(rx), Box::new(ctrl), cfg(), Some(Mode::Usb));
+        assert_eq!(src.usable_frac(), 0.6144);
     }
 
     /// An I.F. tap: the receiver sits on the intermediate frequency and the
@@ -1133,15 +1171,16 @@ mod tests {
         assert!(rx_log.lock().unwrap().tx_begins.is_empty(), "the receiver never transmits");
     }
 
-    /// The S-meter is the transceiver's: it is the radio on the antenna the
-    /// operator is working.
+    /// The S-meter is the attached receiver's: the transceiver is the
+    /// transmitter, so its own figure is left out and the engine measures the
+    /// receiver's I/Q.
     #[test]
-    fn the_s_meter_is_the_transceivers() {
+    fn the_s_meter_is_the_receivers_not_the_transceivers() {
         let (rx, _) = Fake::new("rx", 2e6, 14e6);
         let (mut ctrl, _) = Fake::new("rig", 48_000.0, 14e6);
         ctrl.signal_dbm = Some(-73.0);
         let mut src = PanadapterSource::new(Box::new(rx), Box::new(ctrl), cfg(), Some(Mode::Usb));
-        assert_eq!(src.rx_signal_dbm(), Some(-73.0));
+        assert_eq!(src.rx_signal_dbm(), None);
     }
 
     /// An inverted tap is mirrored about its centre on the way in.

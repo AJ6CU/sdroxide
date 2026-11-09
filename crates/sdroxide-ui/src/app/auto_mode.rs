@@ -10,23 +10,22 @@
 //! unattended run must not depend on which pane or tab is on screen. The engine
 //! does the sequencing; this only ever starts the next contact.
 
+use crate::i18n::tr;
 use sdroxide_types::auto;
-use sdroxide_types::{Band, Command, QsoStep};
+use sdroxide_types::{Command, QsoStep};
 
 use super::SdroxideApp;
 
 impl SdroxideApp {
-    /// Whether this station may key the band the dial is on, by the same
-    /// band-level rule the engine's key-down gate applies: an amateur
-    /// allocation always, 11 m once the operator has opened it, and the
-    /// broadcast and general-coverage bands never.
+    /// Whether this station may key the band the dial is on: the one rule of
+    /// the operator's transmit band list (ticked and validated), the same the
+    /// engine's key-down gate applies.
     ///
     /// The engine still has the final say at key-down — the device's own range,
     /// the offset against the band plan — but this is the question auto mode
     /// has to answer before it offers to arm at all.
     pub(in crate::app) fn auto_tx_permitted(&self) -> bool {
-        let band = Band::containing(self.state.rx_freq_hz());
-        auto::band_may_transmit(band, !self.state.oob_tx, sdroxide_types::cb_tx_allowed())
+        self.radio_cfg.as_ref().is_some_and(|c| c.tx_dial_allowed(self.state.rx_freq_hz()))
     }
 
     /// The inactivity stop for this radio, in seconds, from its own setting,
@@ -84,14 +83,14 @@ impl SdroxideApp {
         };
         let tx_permitted = self.auto_tx_permitted();
         if let Some(reason) = auto::auto_block_reason(mode, watchdog, tx_permitted) {
-            self.stop_auto(format!("auto stopped: {reason}"), cmds);
+            self.stop_auto(tr!("auto-stopped-reason", reason = reason), cmds);
             return;
         }
         if let Some(stop_s) = self.auto_idle_stop_s()
             && now - self.auto_last_activity >= stop_s
         {
             let mins = (stop_s / 60.0).round() as u32;
-            self.stop_auto(format!("auto stopped: {mins} minutes with no operator input"), cmds);
+            self.stop_auto(tr!("auto-stopped-idle", mins = mins), cmds);
             return;
         }
         // Only start a contact from a state that is genuinely free. `Idle` is
@@ -144,7 +143,7 @@ impl SdroxideApp {
             let rec = me.auto_attempts.get(&key).copied().unwrap_or((0, 0.0));
             me.auto_attempts.insert(key, auto::after_call(rec, me.digi_cfg_edit.auto_call_retries, now_unix));
             let label = me.auto_role.map_or("auto", |r| r.label());
-            me.auto_note = format!("{label}: answering {}", t.call);
+            me.auto_note = tr!("auto-answering", role = label, call = &t.call);
             cmds.push(Command::DigiStartQso {
                 from: t.call,
                 grid: t.grid,
@@ -156,14 +155,14 @@ impl SdroxideApp {
         match auto::plan(role, &facts) {
             auto::AutoStep::AnswerCaller => match caller_target {
                 Some(t) => start(self, t, cmds),
-                None => self.auto_note = "auto: a caller went away".into(),
+                None => self.auto_note = tr!("auto-caller-went-away"),
             },
             auto::AutoStep::AnswerCq => match cq_target {
                 Some(t) => start(self, t, cmds),
-                None => self.auto_note = "auto: nobody left to answer".into(),
+                None => self.auto_note = tr!("auto-nobody-left"),
             },
             auto::AutoStep::CallCq => {
-                self.auto_note = format!("{}: calling CQ (#{})", role.label(), cq_sent + 1);
+                self.auto_note = tr!("auto-calling-cq", role = role.label(), n = cq_sent + 1);
                 cmds.push(Command::DigiCallCq);
             }
             auto::AutoStep::Listen => {
@@ -177,9 +176,9 @@ impl SdroxideApp {
                     self.auto_role = Some(auto::AutoRole::Rx);
                     self.auto_cq = auto::CqCounter::default();
                     self.auto_note =
-                        format!("auto cq: no answer after {limit} calls — listening (auto rx)");
+                        tr!("auto-cq-no-answer", limit = limit);
                 } else {
-                    self.auto_note = format!("{}: listening", role.label());
+                    self.auto_note = tr!("auto-listening", role = role.label());
                 }
             }
             auto::AutoStep::Stop(reason) => {
@@ -190,7 +189,7 @@ impl SdroxideApp {
                     }
                 };
                 let sentence = reason.sentence(limit);
-                self.stop_auto(format!("{} stopped: {sentence}", role.label()), cmds);
+                self.stop_auto(tr!("auto-role-stopped", role = role.label(), sentence = sentence), cmds);
                 return;
             }
         }
@@ -293,13 +292,51 @@ impl SdroxideApp {
         })
     }
 
+    /// Pending callers for the queue display: stations calling us that are
+    /// eligible to be worked next, in priority order (best SNR first).
+    pub(in crate::app) fn pending_callers(&self, my_call: &str) -> Vec<String> {
+        if my_call.trim().is_empty() || self.digi_decodes.is_empty() {
+            return Vec::new();
+        }
+        let mine = my_call.to_ascii_uppercase();
+        let budget = self.digi_cfg_edit.auto_call_retries;
+        let attempts = &self.auto_attempts;
+        let now = crate::time::now_unix();
+        let now_f = now as f64;
+        let decodes = &self.digi_decodes;
+        let mut callers: Vec<(String, i16, i64)> = Vec::new();
+        for d in decodes {
+            let Some(to_field) = d.to.as_deref() else { continue };
+            if !to_field.eq_ignore_ascii_case(&mine) {
+                continue;
+            }
+            let Some(from) = d.from.as_deref().filter(|c| !c.is_empty()) else { continue };
+            if from.eq_ignore_ascii_case(&mine) {
+                continue;
+            }
+            let key = from.to_ascii_uppercase();
+            if self.auto_tried.contains(&key) {
+                continue;
+            }
+            if let Some(rec) = attempts.get(&key)
+                && auto::retry_holds(*rec, budget, now_f)
+            {
+                continue;
+            }
+            if auto::looks_busy(decodes, from, &mine, now, auto::BUSY_DEFER_S as i64) {
+                continue;
+            }
+            callers.push((from.to_string(), d.snr_db, d.slot_utc));
+        }
+        // Sort by SNR descending, then by slot_utc descending (newest first)
+        callers.sort_by(|a, b| b.1.cmp(&a.1).then(b.2.cmp(&a.2)));
+        // Deduplicate by callsign (keep best SNR)
+        let mut seen = std::collections::HashSet::new();
+        callers.retain(|c| seen.insert(c.0.to_ascii_uppercase()));
+        callers.into_iter().map(|c| c.0).collect()
+    }
+
     /// Disarm auto mode, leaving `note` as the reason shown on the toggle.
-    ///
-    /// Disarming is a kill switch, not just a stop-selecting: it also tells
-    /// the engine to stop the QSO and abort any burst in flight. An unattended
-    /// run that has gone wrong must be stoppable in one click, and leaving the
-    /// contact in hand to sequence on its own is exactly the "runs wild" this
-    /// exists to end.
     pub(in crate::app) fn stop_auto(&mut self, note: String, cmds: &mut Vec<Command>) {
         if self.auto_role.is_some() {
             cmds.push(Command::DigiStopQso);
@@ -335,9 +372,9 @@ impl SdroxideApp {
         self.auto_armed_at = now;
         self.auto_attempts.clear();
         self.auto_note = match role {
-            auto::AutoRole::Rx => "auto rx: listening".into(),
-            auto::AutoRole::Cq => "auto cq: calling CQ".into(),
-            auto::AutoRole::Continuous => "auto cont: running".into(),
+            auto::AutoRole::Rx => tr!("auto-rx-listening"),
+            auto::AutoRole::Cq => tr!("auto-cq-calling"),
+            auto::AutoRole::Continuous => tr!("auto-cont-running"),
         };
         true
     }

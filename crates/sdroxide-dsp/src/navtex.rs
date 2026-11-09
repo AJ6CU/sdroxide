@@ -235,7 +235,7 @@ const LOSS_LIMIT: u32 = 24;
 /// happens. Shorter than the loss limit because it is much stronger evidence: a
 /// pair of legal codes that differ cannot both be right, and in the wrong phase
 /// it is the ordinary case rather than the exception.
-const DISAGREE_LIMIT: u32 = 6;
+const DISAGREE_LIMIT: u32 = 3;
 
 /// The state of one character slot, for the panel's quality readout.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -377,9 +377,14 @@ impl BitPhase {
 
     fn disagree_limit(&self) -> u32 {
         if self.sensitivity >= 0 {
-            ((6u32 as f64 * (1.0 + 0.1 * f64::from(self.sensitivity))).round() as u32).clamp(3, 12)
+            // Drop sync sooner after invalid characters (DK8JV #257): a
+            // transmission that stops and another that starts share no phase,
+            // and without a tighter limit the receiver stays latched on the old
+            // one. Keep the clamp floor at 2 so a single bad slot does not
+            // drop a real signal.
+            ((3u32 as f64 * (1.0 + 0.1 * f64::from(self.sensitivity))).round() as u32).clamp(2, 6)
         } else {
-            ((6u32 as f64 * self.sens_k()).round() as u32).clamp(2, 12)
+            ((3u32 as f64 * self.sens_k()).round() as u32).clamp(2, 6)
         }
     }
     /// Forget the character phase — the signal it was found in has gone.
@@ -542,6 +547,13 @@ impl NavtexRx {
     #[must_use]
     pub fn afc_offset_hz(&self) -> f32 {
         self.afc_hz
+    }
+
+    /// Restore a previously found AFC pull. Called after the receiver is
+    /// created; the loop then starts from where it left off.
+    pub fn set_afc_hz(&mut self, hz: f32) {
+        self.afc_hz = hz.clamp(-AFC_LIMIT_HZ, AFC_LIMIT_HZ);
+        self.apply_afc();
     }
 
     /// Signal level at the two tones, for a squelch or a meter.

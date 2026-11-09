@@ -68,6 +68,9 @@ async fn send(
 /// would still look plausible against `RadioConfig::default()`.
 fn far_end_dongle() -> RadioConfig {
     RadioConfig {
+        // A configured radio, not an upgrade: the engine fills a missing
+        // transmit band list in on start, which would change what is stored.
+        tx_band_enable: Some(Vec::new()),
         backend: Backend::RtlSdr,
         rtlsdr: RtlSdrConfig {
             serial: Some("00000042".into()),
@@ -153,7 +156,7 @@ async fn the_servers_interface_is_replayed_editable_and_switchable_from_a_client
         remove_radio: None,
         rename_radio: None,
         radio_power: None,
-        aircraft_online: false,
+        aircraft_online: Some(false),
     }));
     // Long enough that the engine's one startup announcement is already behind
     // us when the client arrives — which is the case the replay exists for.

@@ -14,6 +14,7 @@
 //! Reports also arrive far apart in time and want to be **kept** — the weather
 //! at a position three hours ago is what you came back for.
 
+use crate::i18n::tr;
 use eframe::egui::{self, RichText};
 
 use crate::app::SdroxideApp;
@@ -34,7 +35,7 @@ impl SdroxideApp {
             return;
         }
         let show =
-            self.tool_window(ctx, "weather", "WEATHER REPORTS", [720.0, 640.0], true, |me, ui| {
+            self.tool_window(ctx, "weather", &tr!("weather-title"), [720.0, 640.0], true, |me, ui| {
                 me.weather_body(ui);
             });
         self.weather.show = show;
@@ -42,12 +43,7 @@ impl SdroxideApp {
 
     fn weather_body(&mut self, ui: &mut egui::Ui) {
         ui.label(
-            RichText::new(
-                "Coded weather reports from ships and land stations, in RTTY on 4583, 7646 and \
-                 10100.8 kHz. SHIP goes out around 02:00 and 07:35 UTC, SYNOP around 00:35 and \
-                 12:10. A report is kept here rather than in the decode list because the figures \
-                 on their own mean nothing.",
-            )
+            RichText::new(tr!("weather-intro"))
             .size(11.0)
             .color(gray(140)),
         );
@@ -55,10 +51,7 @@ impl SdroxideApp {
 
         if self.weather_reports.is_empty() {
             ui.label(
-                RichText::new(
-                    "Nothing decoded yet. Nothing to do but leave RTTY running over one of the \
-                     times above — these are the quietest hours on the band.",
-                )
+                RichText::new(tr!("weather-nothing-decoded"))
                 .size(12.0)
                 .color(gray(120)),
             );
@@ -76,10 +69,10 @@ impl SdroxideApp {
                         // Which station, which code, and when it was observed —
                         // the three facts that make a list of figures usable.
                         let head = match (r.callsign.as_deref(), r.observed) {
-                            (Some(c), Some((d, h))) => format!("{c} — {d} at {h:02}:00 UTC"),
+                            (Some(c), Some((d, h))) => tr!("weather-head-call-day-hour", call = c, day = d, hour = format!("{h:02}")),
                             (Some(c), None) => format!("{c}"),
-                            (None, Some((d, _))) => format!("at {d:02}:00 UTC"),
-                            (None, None) => "report".to_string(),
+                            (None, Some((d, _))) => tr!("weather-head-day", day = format!("{d:02}")),
+                            (None, None) => tr!("weather-head-report"),
                         };
                         ui.horizontal(|ui| {
                             ui.label(RichText::new(head).size(13.0).strong());
@@ -120,14 +113,14 @@ impl SdroxideApp {
                                 // A slash. "Not reported" is an answer the
                                 // station gave, and showing it as missing would
                                 // read as our fault rather than theirs.
-                                None => format!("{}: not reported", f.label),
+                                None => tr!("weather-not-reported", label = f.label),
                             };
                             ui.label(RichText::new(text).size(11.5).color(gray(175)));
                         }
 
                         for remark in &r.remarks {
                             ui.label(
-                                RichText::new(format!("in their words: {remark}"))
+                                RichText::new(tr!("weather-in-their-words", remark = remark))
                                     .size(11.5)
                                     .color(gray(200)),
                             );
@@ -146,11 +139,11 @@ fn ago(unix: i64) -> String {
     let now = crate::time::now_unix();
     let mins = ((now - unix) / 60).max(0);
     match mins {
-        0 => "just now".into(),
-        1 => "a minute ago".into(),
-        m if m < 60 => format!("{m} minutes ago"),
-        h if h < 24 => format!("{h} hour{} ago", if h == 1 { "" } else { "s" }),
-        d => format!("{d} days ago"),
+        0 => tr!("weather-ago-now"),
+        1 => tr!("weather-ago-minute"),
+        m if m < 60 => tr!("weather-ago-minutes", m = m),
+        h if h < 24 => tr!("weather-ago-hours", h = h),
+        d => tr!("weather-ago-days", d = d),
     }
 }
 

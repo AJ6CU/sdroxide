@@ -26,6 +26,10 @@ tracing.workspace = true
 # operator whether their digipeater path is a reasonable one. Pure parsing with
 # no I/O and no clock, so it builds for wasm32 alongside everything else here.
 sdroxide-aprs = { path = "../sdroxide-aprs" }
+# The Meshtastic region and preset tables and the port names for its panel,
+# without the `engine` feature (no thread, no channel): pure data, builds for
+# wasm32 as well.
+sdroxide-meshtastic = { path = "../sdroxide-meshtastic" }
 serde.workspace = true
 # The relay's reply is JSON. Pure Rust, so it builds for wasm32 as well.
 serde_json.workspace = true
@@ -74,6 +78,21 @@ sdroxide-aircraft-online = { path = "../sdroxide-aircraft-online" }
 # What the station remembers of each aircraft, as it serves it
 # (`GET /aircraft-history/{icao}`): the same types, read here.
 sdroxide-aircraft-history = { path = "../sdroxide-aircraft-history" }
+
+# Translations. Fluent message files under `i18n/`, embedded in the binary
+# (`debug-embed` too, so a debug build and the browser build — which has no
+# disk to read them from — carry the same text a release does). `fl!` checks
+# every message id and argument against the English file at compile time, so a
+# typo is a build error rather than a raw id on screen.
+i18n-embed = { version = "0.16.0", features = ["fluent-system"] }
+i18n-embed-fl = "0.10.1"
+# For `FluentValue`, the type a message's arguments are passed as. The version
+# i18n-embed itself uses.
+fluent = "0.17.0"
+rust-embed = { version = "8.12.0", features = ["debug-embed", "include-exclude"] }
+# The operating system's language list — or the browser's, with `js` — for an
+# operator who has not picked one.
+sys-locale = { version = "0.3.2", features = ["js"] }
 
 [features]
 # WebSocket RemoteController for the browser (and native remote) client.
@@ -141,3 +160,6 @@ naga = { version = "30.0.1", features = ["wgsl-in"] }
 # written by an older version exactly as the app would. Already in the tree via
 # eframe, so it adds no build time either.
 ron = "0.12"
+# Parses the message files strictly in the translation tests. The version
+# i18n-embed already pulls in, so it adds no build time.
+fluent-syntax = "0.12"

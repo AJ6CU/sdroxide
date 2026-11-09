@@ -5,6 +5,7 @@ use eframe::egui::{
     self, Color32, CornerRadius, FontSelection, Mesh, Painter, Pos2, Rect, Response, RichText,
     Sense, Shape, Stroke, StrokeKind, TextStyle, Ui, WidgetText, layers::ShapeIdx, pos2, vec2,
 };
+use crate::i18n::tr;
 use sdroxide_types::ChromeStyle;
 
 use crate::theme::{self, ThemedScroll};
@@ -140,8 +141,7 @@ pub fn advisory(
         dismiss = ui
             .small_button("✕")
             .on_hover_text(
-                "Hide this message for good. Nothing about your settings changes, and the \
-                 advice is in the manual.",
+                tr!("chrome-hide-message-hover"),
             )
             .clicked();
     });
@@ -177,7 +177,7 @@ pub fn ribbon(ui: &mut egui::Ui, text: &str, colour: Color32) -> bool {
                 ui.add(egui::Label::new(egui::RichText::new(text).color(colour).size(11.0)).wrap());
                 dismissed = ui
                     .small_button("✕")
-                    .on_hover_text("Close this message. Nothing else changes.")
+                    .on_hover_text(tr!("chrome-close-message-hover"))
                     .clicked();
             });
         });
@@ -852,8 +852,12 @@ fn popup_body<R>(
 
 /// A section caption inside a menu popup — the same small cyan label the
 /// module boxes wear, so a menu reads as the box it replaced.
+///
+/// Drawn as given: a caption is written in capitals at its source. Upper-casing
+/// here would be wrong for translated text — Turkish needs `İ` for `i`, and a
+/// German `ß` has no single capital.
 pub fn menu_caption(ui: &mut Ui, text: &str) {
-    ui.label(RichText::new(text.to_uppercase()).color(theme::CYAN_DIM()).size(9.5).strong());
+    ui.label(RichText::new(text).color(theme::CYAN_DIM()).size(9.5).strong());
 }
 
 /// A captioned box around a run of related controls — the caption
@@ -1744,6 +1748,30 @@ pub fn split_handle(ui: &mut Ui, size: egui::Vec2, bg: Option<Color32>) -> Respo
     resp
 }
 
+/// A chip-shaped frame — the same fill, stroke and corner as [`chip`] — drawn
+/// around a widget of `inner` size that `add` places in it.
+///
+/// For a swatch or a small control that has to sit in a row of chips and read
+/// as one of them: a colour square on its own looked like a different kind of
+/// object next to the buttons. The frame is as tall as a chip, whatever the
+/// style, so the row keeps one height.
+pub fn chip_frame<R>(ui: &mut Ui, inner: egui::Vec2, add: impl FnOnce(&mut Ui) -> R) -> R {
+    let size = vec2(chip_frame_width(inner.x), chip_height(ui, None));
+    let frame = chip_impl(ui, false, RichText::new(""), None, Sense::hover(), Some(size));
+    let mut child = ui.new_child(
+        egui::UiBuilder::new()
+            .max_rect(Rect::from_center_size(frame.rect.center(), inner))
+            .layout(egui::Layout::left_to_right(egui::Align::Center)),
+    );
+    child.spacing_mut().interact_size = inner;
+    add(&mut child)
+}
+
+/// How wide [`chip_frame`] stands around a widget `inner_w` wide.
+pub fn chip_frame_width(inner_w: f32) -> f32 {
+    inner_w + 12.0
+}
+
 /// How wide `text` lays out in `font`.
 pub fn text_width(ui: &Ui, text: &str, font: egui::FontId) -> f32 {
     ui.painter().layout_no_wrap(text.to_owned(), font, Color32::WHITE).size().x
@@ -1908,7 +1936,7 @@ pub fn chip_power_link(ui: &mut Ui, selected: bool, size: f32) -> Response {
     let mark_w = size * 0.95;
     let space = text_width(ui, " ", font.clone()).max(1.0);
     let pad = " ".repeat((mark_w / space).ceil() as usize);
-    let label = format!("{pad}LINK");
+    let label = format!("{pad}{}", tr!("multi-link"));
     let label_w = text_width(ui, &label, font);
     let resp = chip_impl(ui, selected, RichText::new(label).size(size), None, Sense::click(), None);
     if ui.is_rect_visible(resp.rect) {

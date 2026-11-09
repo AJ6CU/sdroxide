@@ -74,7 +74,7 @@ fn engine() -> (sdroxide_radio::EngineHandles, Arc<Mutex<Log>>, Option<std::thre
 {
     let log = Arc::new(Mutex::new(Log::default()));
     let (producer, _consumer) = sdroxide_radio::rtrb::RingBuffer::<f32>::new(48_000);
-    let cfg = EngineConfig {
+    let cfg = EngineConfig { tx_bands_open: true,
         tx_ham_only: false,
         audio: Some(sdroxide_radio::AudioParams { producer, out_rate: 48_000.0 }),
         ..Default::default()

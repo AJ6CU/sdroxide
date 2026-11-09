@@ -125,7 +125,7 @@ fn engine() -> Harness {
     let h = start_engine(
         Box::new(MockRig { rig: Arc::clone(&rig) }),
         caps(),
-        EngineConfig { tx_ham_only: false, ..Default::default() },
+        EngineConfig { tx_bands_open: true, tx_ham_only: false, ..Default::default() },
     );
     h.cmd_tx.send(Command::SetVfo { vfo: sdroxide_types::Vfo::A, hz: DIAL }).unwrap();
     Harness { h, rig }

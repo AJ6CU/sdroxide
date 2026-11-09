@@ -69,6 +69,13 @@ fn no_foreign_text_in_ui_strings() {
         if name.ends_with("_tests.rs") || name == "test_support.rs" {
             continue;
         }
+        // `i18n.rs` holds the **pseudo language**, whose whole job is to turn
+        // ASCII into accented characters so a string that bypassed `tr!` stands
+        // out on screen and in a diff. Its literals are the one place in the
+        // interface where non-English text is correct.
+        if name == "i18n.rs" {
+            continue;
+        }
         let text = std::fs::read_to_string(f).unwrap();
         for (n, line) in text.lines().enumerate() {
             if line.trim() == "#[cfg(test)]" {

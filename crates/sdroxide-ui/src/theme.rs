@@ -2019,6 +2019,47 @@ pub fn spot_color(kind: SpotKind) -> (u8, u8, u8) {
     (r, g, b)
 }
 
+/// The colours the PROGRAMS window gave the broadcast labels on the waterfall:
+/// one for all of them, and some for single stations by name.
+type ProgramsColours = (Option<[u8; 3]>, std::collections::BTreeMap<String, [u8; 3]>);
+static PROGRAMS_COLOURS: std::sync::Mutex<ProgramsColours> =
+    std::sync::Mutex::new((None, std::collections::BTreeMap::new()));
+
+/// Select the process-wide PROGRAMS colours, as
+/// [`sdroxide_types::UiSettings::programs_colour_all`] and
+/// [`sdroxide_types::UiSettings::programs_colours`] hold them. Re-stored each
+/// frame like the spot tints, and copied only when they differ.
+pub fn set_programs_colours(
+    all: Option<[u8; 3]>,
+    by_station: &std::collections::BTreeMap<String, [u8; 3]>,
+) {
+    if let Ok(mut held) = PROGRAMS_COLOURS.lock()
+        && (held.0 != all || held.1 != *by_station)
+    {
+        *held = (all, by_station.clone());
+    }
+}
+
+/// The colour a scheduled station's label wears: its own, else the one chosen
+/// for all, else `None` (the stock tint of [`SpotKind::Broadcast`]).
+pub fn programs_colour(name: &str) -> Option<(u8, u8, u8)> {
+    let held = PROGRAMS_COLOURS.lock().ok()?;
+    let [r, g, b] = held.1.get(name).copied().or(held.0)?;
+    Some((r, g, b))
+}
+
+/// [`spot_color`] for one spot: a scheduled broadcast wears the colour the
+/// PROGRAMS window gave its station ([`programs_colour`]), anything else its
+/// kind's tint.
+pub fn spot_color_for(spot: &sdroxide_types::Spot) -> (u8, u8, u8) {
+    if spot.kind == SpotKind::Broadcast
+        && let Some(c) = programs_colour(&spot.call)
+    {
+        return c;
+    }
+    spot_color(spot.kind)
+}
+
 // The band-plan strip's shades, packed 0x00RRGGBB, one per `BandplanKind`.
 // `UNSET` for the same reason as the spot tints above.
 static BANDPLAN_COLORS: [AtomicU32; BandplanKind::COUNT] =
@@ -2485,14 +2526,37 @@ fn install_fonts(ctx: &egui::Context) {
             "../assets/fonts/ShareTechMono-Regular.ttf"
         ))),
     );
+    // Chinese: the GB 2312 characters of Noto Sans SC (SIL OFL, see
+    // assets/fonts/NotoSansSC-OFL.txt). Last in each stack, so it is only
+    // reached for a character the Latin fonts above do not have.
+    fonts.font_data.insert(
+        "cjk".into(),
+        Arc::new(FontData::from_static(include_bytes!(
+            "../assets/fonts/NotoSansSC-Regular-GB2312.ttf"
+        ))),
+    );
+    // Japanese: the JIS X 0208 characters and kana of Noto Sans JP (SIL OFL,
+    // see assets/fonts/NotoSansJP-OFL.txt). Behind the Chinese subset, so the
+    // shared characters keep their Chinese forms and only the Japanese-only
+    // kanji and kana fall through to it.
+    fonts.font_data.insert(
+        "jp".into(),
+        Arc::new(FontData::from_static(include_bytes!(
+            "../assets/fonts/NotoSansJP-Regular-JIS0208.otf"
+        ))),
+    );
 
     if let Some(prop) = fonts.families.get_mut(&FontFamily::Proportional) {
         prop.insert(0, "chakra".into());
+        prop.push("cjk".into());
+        prop.push("jp".into());
     }
     // Make Share Tech Mono the primary monospace (used by the decode list,
     // frequency readout, and meters).
     if let Some(mono) = fonts.families.get_mut(&FontFamily::Monospace) {
         mono.insert(0, "cyber-mono".into());
+        mono.push("cjk".into());
+        mono.push("jp".into());
     }
     fonts.families.insert(FontFamily::Name("cyber-mono".into()), vec!["cyber-mono".to_string()]);
     // Bold family for headings, falling back through the proportional stack.
@@ -3236,5 +3300,46 @@ mod tests {
         let faint = |c: Color32| contrast(c, light.panel);
         assert!(faint(mirrored(48)) < faint(mirrored(150)));
         assert!(faint(mirrored(150)) < faint(light.text));
+    }
+}
+
+#[cfg(test)]
+mod programs_colour_tests {
+    use super::*;
+    use sdroxide_types::{Spot, SpotKind};
+
+    fn spot(kind: SpotKind, call: &str) -> Spot {
+        Spot {
+            id: 0,
+            kind,
+            freq_hz: 0.0,
+            call: call.into(),
+            spotter: String::new(),
+            mode: String::new(),
+            comment: String::new(),
+            reference: None,
+            grid: None,
+            loc: None,
+            snr_db: None,
+            when_utc: 0,
+        }
+    }
+
+    /// A station's own colour beats the one for all, which beats the stock
+    /// tint — and only a scheduled broadcast wears either.
+    #[test]
+    fn a_stations_own_colour_beats_the_one_for_all_and_the_stock_tint() {
+        let mut by_station = std::collections::BTreeMap::new();
+        by_station.insert("PROGRAMS-TEST-ONE".to_string(), [1, 2, 3]);
+        set_programs_colours(Some([9, 8, 7]), &by_station);
+        assert_eq!(programs_colour("PROGRAMS-TEST-ONE"), Some((1, 2, 3)));
+        assert_eq!(programs_colour("PROGRAMS-TEST-OTHER"), Some((9, 8, 7)));
+        assert_eq!(spot_color_for(&spot(SpotKind::Broadcast, "PROGRAMS-TEST-ONE")), (1, 2, 3));
+        let pota = spot(SpotKind::Pota, "PROGRAMS-TEST-ONE");
+        assert_eq!(spot_color_for(&pota), spot_color(SpotKind::Pota), "a POTA spot is not a station");
+        set_programs_colours(None, &Default::default());
+        assert_eq!(programs_colour("PROGRAMS-TEST-ONE"), None);
+        let bc = spot(SpotKind::Broadcast, "PROGRAMS-TEST-ONE");
+        assert_eq!(spot_color_for(&bc), spot_color(SpotKind::Broadcast));
     }
 }

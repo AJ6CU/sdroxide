@@ -5,6 +5,7 @@
 //! copied, because the window republishes it every frame.
 
 // The globe's award layer is native-only, and it is the sole user here.
+use crate::i18n::tr;
 #[cfg(not(target_arch = "wasm32"))]
 use std::sync::Arc;
 
@@ -23,8 +24,14 @@ fn award_summary<K>(
     let (w, c) = sdroxide_types::counts(map);
     ui.horizontal(|ui| {
         ui.add_sized([90.0, 20.0], egui::Label::new(RichText::new(name).strong()));
-        ui.label(RichText::new(format!("{w} worked")).color(crate::theme::YELLOW()).monospace());
-        ui.label(RichText::new(format!("{c} confirmed")).color(crate::theme::GREEN()).monospace());
+        ui.label(
+            RichText::new(tr!("awards-worked", w = w)).color(crate::theme::YELLOW()).monospace(),
+        );
+        ui.label(
+            RichText::new(tr!("awards-confirmed", value = c))
+                .color(crate::theme::GREEN())
+                .monospace(),
+        );
     });
 }
 
@@ -110,7 +117,7 @@ impl SdroxideApp {
         let show = self.tool_window(
             ctx,
             "awards",
-            "AWARDS",
+            &tr!("awards-awards"),
             [540.0, 560.0],
             self.show_awards,
             |me, ui| me.awards_body(ui, &bands, &awards, &mut new_band),
@@ -133,9 +140,9 @@ impl SdroxideApp {
     ) {
         crate::chrome::window_body_bg(ui);
         ui.horizontal(|ui| {
-            ui.label(RichText::new("Band").size(11.0).color(crate::theme::gray(150)));
+            ui.label(RichText::new(tr!("awards-band")).size(11.0).color(crate::theme::gray(150)));
             for b in bands {
-                let label = if b.is_empty() { "All" } else { b };
+                let label = if b.is_empty() { tr!("awards-all") } else { b.to_string() };
                 if crate::chrome::chip(ui, self.awards_band == *b, label).clicked() {
                     *new_band = Some(b.to_string());
                 }
@@ -143,16 +150,16 @@ impl SdroxideApp {
         });
         ui.separator();
         // Summary counts.
-        award_summary(ui, "DXCC", &awards.dxcc);
+        award_summary(ui, &tr!("awards-dxcc"), &awards.dxcc);
         award_summary(ui, "WAZ", &awards.waz);
         award_summary(ui, "WAS", &awards.was);
-        award_summary(ui, "Grids", &awards.grids);
+        award_summary(ui, &tr!("awards-grids"), &awards.grids);
         ui.add_space(6.0);
 
         egui::ScrollArea::vertical().auto_shrink([false, false]).show_themed(ui, |ui| {
             // WAS state grid.
             ui.label(
-                RichText::new("Worked All States").size(12.0).strong().color(crate::theme::CYAN()),
+                RichText::new(tr!("awards-worked-all-states")).size(12.0).strong().color(crate::theme::CYAN()),
             );
             award_cell_grid(
                 ui,
@@ -164,7 +171,7 @@ impl SdroxideApp {
             ui.add_space(8.0);
             // WAZ zone grid (1..40).
             ui.label(
-                RichText::new("CQ Zones (WAZ)").size(12.0).strong().color(crate::theme::CYAN()),
+                RichText::new(tr!("awards-cq-zones-waz")).size(12.0).strong().color(crate::theme::CYAN()),
             );
             award_cell_grid(
                 ui,
@@ -175,7 +182,7 @@ impl SdroxideApp {
             ui.add_space(8.0);
             // DXCC worked list (confirmed marked).
             ui.label(
-                RichText::new("DXCC entities").size(12.0).strong().color(crate::theme::CYAN()),
+                RichText::new(tr!("awards-dxcc-entities")).size(12.0).strong().color(crate::theme::CYAN()),
             );
             for (name, st) in &awards.dxcc {
                 let col = if st.confirmed { crate::theme::GREEN() } else { crate::theme::YELLOW() };

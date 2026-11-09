@@ -5,6 +5,7 @@
 //! back is applied to the in-progress QSO and appended to the rolling log the
 //! SPOTS window shows.
 
+use crate::i18n::tr;
 use std::collections::HashMap;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
@@ -151,18 +152,23 @@ impl SdroxideApp {
     /// Merge a callsign-lookup result into the open log entry and, if none
     /// matches, into the most recent logged QSO for that call — filling only
     /// blank fields.
-    pub(in crate::app) fn apply_callsign(&mut self, info: CallsignInfo) {
-        let mut summary = info.call.clone();
-        if let Some(n) = &info.name {
-            summary.push_str(&format!(" — {n}"));
+    ///
+    /// `log` is false for a result the QRZ card asked for by itself: a pointer
+    /// passing over a list of callsigns would otherwise fill the net log.
+    pub(in crate::app) fn apply_callsign(&mut self, info: CallsignInfo, log: bool) {
+        if log {
+            let mut summary = info.call.clone();
+            if let Some(n) = &info.name {
+                summary.push_str(&format!(" — {n}"));
+            }
+            if let Some(q) = &info.qth {
+                summary.push_str(&format!(", {q}"));
+            }
+            if let Some(c) = &info.country {
+                summary.push_str(&format!(" ({c})"));
+            }
+            self.push_net_log(summary);
         }
-        if let Some(q) = &info.qth {
-            summary.push_str(&format!(", {q}"));
-        }
-        if let Some(c) = &info.country {
-            summary.push_str(&format!(" ({c})"));
-        }
-        self.push_net_log(summary);
         // Keep the whole record: the JS8 map places stations by the grid in it,
         // and that station may never have a log entry to merge into.
         self.callsign_cache.insert(info.call.to_ascii_uppercase(), info.clone());
@@ -217,7 +223,7 @@ impl SdroxideApp {
 
     /// Record an upload result and mark the QSO's sent flag on success.
     pub(in crate::app) fn on_upload_result(&mut self, r: UploadResult) {
-        let status = if r.ok { "OK" } else { "FAIL" };
+        let status = if r.ok { "OK" } else { &tr!("net-fail") };
         self.push_net_log(format!("{} → {}: {}", r.target.label(), status, r.message));
         // Keep the outcome for the panel to show beside a completed QSO: this
         // is how an operator learns a logged contact reached LOG11DX and not
@@ -250,8 +256,8 @@ impl SdroxideApp {
         if b.done {
             self.wavelog_sync_running = false;
             if let Some(e) = b.error {
-                self.wavelog_sync_status = Some(format!("stopped: {e}"));
-                self.push_net_log(format!("Wavelog download stopped: {e}"));
+                self.wavelog_sync_status = Some(tr!("net-wavelog-stopped", error = e));
+                self.push_net_log(tr!("net-wavelog-download-stopped", error = e));
             }
             return;
         }
@@ -264,7 +270,7 @@ impl SdroxideApp {
             persist_qso_log(&self.qso_log);
         }
         self.wavelog_sync_status =
-            Some(format!("{} new, {} already here", merged.added, merged.matched));
+            Some(tr!("net-wavelog-new-already-here", added = merged.added, matched = merged.matched));
     }
 
     /// The network settings as the settings page has them, for a Test button
@@ -288,7 +294,7 @@ impl SdroxideApp {
         let cfg = &self.net_cfg_edit.wavelog;
         if !cfg.is_configured() {
             self.wavelog_sync_status =
-                Some("the address and the API key have to be filled in first".into());
+                Some(tr!("net-wavelog-fill-in-first"));
             return;
         }
         let stations = if cfg.download_station_ids.is_empty() {
@@ -304,12 +310,12 @@ impl SdroxideApp {
         .collect::<Vec<_>>();
         if stations.is_empty() {
             self.wavelog_sync_status =
-                Some("no station location to download from — test the connection first".into());
+                Some(tr!("net-wavelog-no-station-location"));
             return;
         }
         let starts = self.wavelog_sync.starts(&cfg.url, &stations);
         self.wavelog_sync_running = true;
-        self.wavelog_sync_status = Some("downloading…".into());
+        self.wavelog_sync_status = Some(tr!("net-downloading"));
         cmds.push(Command::WavelogSync { stations: starts, full: false });
     }
 
@@ -341,7 +347,7 @@ impl SdroxideApp {
         let loaded = match loaded {
             Ok(loaded) => loaded,
             Err(e) => {
-                self.push_net_log(format!("ADIF import failed: {e}"));
+                self.push_net_log(tr!("net-adif-import-failed", error = e.to_string()));
                 return;
             }
         };
@@ -349,38 +355,16 @@ impl SdroxideApp {
         let parsed =
             catch_unwind(AssertUnwindSafe(|| sdroxide_types::adif_to_qso_log_counting_swl(&text)));
         let Ok((records, swl)) = parsed else {
-            self.push_net_log("ADIF import failed: the file could not be parsed".to_string());
+            self.push_net_log(tr!("net-adif-import-failed-file-could").to_string());
             return;
         };
-        // One pass to index the existing log by call and band, so the duplicate
-        // check only looks at the QSOs that could match rather than at all of
-        // them. A full logbook is tens of thousands of records and this runs
-        // inside a single frame.
-        let mut by_call_band: HashMap<(String, String), Vec<i64>> = HashMap::new();
-        for q in &self.qso_log {
-            by_call_band
-                .entry((q.call.to_ascii_uppercase(), q.band.to_ascii_uppercase()))
-                .or_default()
-                .push(q.start_utc);
-        }
+        let (fresh, skipped) = new_import_records(&self.qso_log, records);
         let mut next_id = self.next_log_id();
-        let mut added = 0usize;
-        let mut skipped = 0usize;
-        for mut r in records {
-            if r.call.trim().is_empty() {
-                continue;
-            }
-            let key = (r.call.to_ascii_uppercase(), r.band.to_ascii_uppercase());
-            let starts = by_call_band.entry(key).or_default();
-            if starts.iter().any(|&t| (t - r.start_utc).abs() < 120) {
-                skipped += 1;
-                continue;
-            }
-            starts.push(r.start_utc);
+        let added = fresh.len();
+        for mut r in fresh {
             r.id = next_id;
             next_id += 1;
             self.qso_log.push(r);
-            added += 1;
         }
         if added > 0 {
             persist_qso_log(&self.qso_log);
@@ -389,17 +373,21 @@ impl SdroxideApp {
         // name that came out as nonsense is then a code page to report, not a
         // decoder to doubt.
         let assumed = match loaded.assumed {
-            Some(enc) => format!(" (not Unicode; read as {enc})"),
+            Some(enc) => tr!("net-not-unicode-read", enc = enc),
             None => String::new(),
         };
         // A file of received reports — the decode list's own ADIF export —
         // adds nothing, and saying why beats reporting an empty import.
         let reports = match swl {
             0 => String::new(),
-            n => format!(", {n} received reports (SWL) left out"),
+            n => tr!("net-received-reports-swl-left-out", n = n),
         };
-        self.push_net_log(format!(
-            "ADIF import: {added} added, {skipped} duplicates skipped{reports}{assumed}"
+        self.push_net_log(tr!(
+            "net-adif-import-added-duplicates-skipped",
+            added = added,
+            skipped = skipped,
+            reports = reports,
+            assumed = assumed
         ));
     }
 
@@ -419,7 +407,7 @@ impl SdroxideApp {
         let loaded = match loaded {
             Ok(loaded) => loaded,
             Err(e) => {
-                self.push_net_log(format!("Channel import failed: {e}"));
+                self.push_net_log(tr!("net-channel-import-failed", error = e.to_string()));
                 return;
             }
         };
@@ -427,31 +415,33 @@ impl SdroxideApp {
         let parsed =
             catch_unwind(AssertUnwindSafe(|| sdroxide_types::chirp_csv_to_memories(&text)));
         let Ok((channels, skipped)) = parsed else {
-            self.push_net_log("Channel import failed: the file could not be read".to_string());
+            self.push_net_log(tr!("net-channel-import-failed-file-could").to_string());
             return;
         };
         if channels.is_empty() {
             // The commonest way to get here is a file that is not a CHIRP
             // export at all, so say what was expected rather than "0 imported".
-            self.push_net_log(
-                "Channel import: nothing to read — a CHIRP CSV file starts with a header                  row naming its columns, one of which must be Frequency"
-                    .to_string(),
-            );
+            self.push_net_log(tr!("net-channel-import-nothing-read-chirp").to_string());
             return;
         }
         let n = channels.len();
         cmds.push(Command::ImportMemories(channels));
         let skipped = match skipped {
             0 => String::new(),
-            n => format!(", {n} line(s) skipped"),
+            n => tr!("net-line-s-skipped", n = n),
         };
         let assumed = match loaded.assumed {
-            Some(enc) => format!(" (not Unicode; read as {enc})"),
+            Some(enc) => tr!("net-not-unicode-read-2", enc = enc),
             None => String::new(),
         };
         // "read", not "added": the engine drops the channels already stored,
         // and the memory list itself is what shows the result.
-        self.push_net_log(format!("Channel import: {n} channel(s) read{skipped}{assumed}"));
+        self.push_net_log(tr!(
+            "net-channel-import-channel-s-read",
+            n = n,
+            skipped = skipped,
+            assumed = assumed
+        ));
     }
 }
 
@@ -482,6 +472,55 @@ fn record_upload_outcome(
 mod tests {
     use super::*;
 
+    fn qso(call: &str, band: &str, start_utc: i64) -> sdroxide_types::QsoRecord {
+        sdroxide_types::QsoRecord {
+            call: call.into(),
+            band: band.into(),
+            mode: "FT8".into(),
+            start_utc,
+            ..Default::default()
+        }
+    }
+
+    /// **A contact already in the log is not imported a second time, and the
+    /// band is not part of how that is decided.**
+    ///
+    /// The sequencer logs a QSO with the frequency and an empty band; the same
+    /// contact re-imported from an ADIF carries the ADIF's band. Keying on both
+    /// let a whole file back in as duplicates of itself — 65 pairs of the same
+    /// call at the same second, one row with a band and one without (reported
+    /// from the bench, 2026-11-02).
+    #[test]
+    fn an_import_does_not_readd_what_the_log_already_has() {
+        let existing = vec![qso("13WF01", "", 1_789_281_763)];
+        let parsed = vec![
+            // The same contact, as the ADIF spells it: a band, not an empty one.
+            qso("13WF01", "11m", 1_789_281_763),
+            // A different station, and the same station five minutes later: both
+            // are contacts the log does not have.
+            qso("19AT168", "11m", 1_789_281_763),
+            qso("13WF01", "11m", 1_789_281_763 + 300),
+        ];
+        let (fresh, skipped) = new_import_records(&existing, parsed);
+        assert_eq!(skipped, 1, "the bandless copy in the log is the same contact");
+        let calls: Vec<&str> = fresh.iter().map(|q| q.call.as_str()).collect();
+        assert_eq!(calls, vec!["19AT168", "13WF01"]);
+    }
+
+    /// The same file twice in a row adds nothing the second time — the bug above
+    /// is the import disagreeing with *itself*, so this is the plain case.
+    #[test]
+    fn importing_the_same_file_twice_adds_nothing() {
+        let file = vec![qso("19JV75", "11m", 1_789_279_546), qso("13WF01", "11m", 1_789_281_763)];
+        let (first, skipped) = new_import_records(&[], file);
+        assert_eq!((first.len(), skipped), (2, 0));
+        let (second, skipped) = new_import_records(&first, vec![
+            qso("19JV75", "11m", 1_789_279_546),
+            qso("13WF01", "11m", 1_789_281_763),
+        ]);
+        assert_eq!((second.len(), skipped), (0, 2));
+    }
+
     /// A retry's outcome replaces the first, and each target is tracked on its
     /// own — so a QSO that reached LOG11DX but failed eQSL reads as exactly
     /// that, not as one blended "uploaded".
@@ -495,4 +534,44 @@ mod tests {
         record_upload_outcome(&mut status, 7, UploadTarget::Log11Dx, true);
         assert_eq!(status[&7], vec![(UploadTarget::Log11Dx, true), (UploadTarget::Eqsl, true)]);
     }
+}
+
+/// Which of an imported ADIF's contacts this log does not already have, and how
+/// many it does.
+///
+/// **The match is call and time, never band.** The log is not consistent about
+/// band: a contact logged by a digital sequencer carries the frequency and an
+/// empty band, while the same contact re-imported from an ADIF carries the
+/// ADIF's own band — so keying on band let a whole file back in as duplicates
+/// of itself, and the operator was left with 65 pairs of the same call at the
+/// same second, one row with a band and one without (reported 2026-11-02).
+///
+/// Two minutes is the window, and it is call-only because nothing is worked
+/// twice on two different bands inside two minutes. The existing log is indexed
+/// once by call so the check stays linear: this runs inside a single frame and a
+/// full logbook is tens of thousands of records.
+fn new_import_records(
+    existing: &[sdroxide_types::QsoRecord],
+    parsed: Vec<sdroxide_types::QsoRecord>,
+) -> (Vec<sdroxide_types::QsoRecord>, usize) {
+    let mut starts_by_call: HashMap<String, Vec<i64>> = HashMap::new();
+    for q in existing {
+        starts_by_call.entry(q.call.trim().to_ascii_uppercase()).or_default().push(q.start_utc);
+    }
+    let mut fresh = Vec::with_capacity(parsed.len());
+    let mut skipped = 0usize;
+    for r in parsed {
+        let call = r.call.trim().to_ascii_uppercase();
+        if call.is_empty() {
+            continue;
+        }
+        let starts = starts_by_call.entry(call).or_default();
+        if starts.iter().any(|&t| (t - r.start_utc).abs() < 120) {
+            skipped += 1;
+            continue;
+        }
+        starts.push(r.start_utc);
+        fresh.push(r);
+    }
+    (fresh, skipped)
 }

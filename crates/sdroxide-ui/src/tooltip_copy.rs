@@ -18,6 +18,7 @@
 //! A short "copied" note is shown by the pointer, so a press is never silent.
 //! With no tooltip on screen Ctrl+C is left alone and does what it always did.
 
+use crate::i18n::tr;
 use eframe::egui::{self, Context, Event, Id, Key, Order, Shape};
 
 /// How long the "copied" note stays by the pointer.
@@ -108,7 +109,7 @@ pub fn tick(ctx: &Context) {
                 .interactable(false)
                 .show(ctx, |ui| {
                     egui::Frame::popup(ui.style()).show(ui, |ui| {
-                        ui.label("✔ Copied");
+                        ui.label(tr!("tooltipcopy-copied"));
                     });
                 });
             crate::repaint::after_ms(ctx, 200);

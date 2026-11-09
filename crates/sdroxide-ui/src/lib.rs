@@ -7,6 +7,7 @@
 //! its own, so the shared egui pass never sees them and the module runs on both
 //! targets.
 
+mod adsb_icons;
 mod adsb_map;
 mod airdata;
 mod ais_map;
@@ -16,6 +17,8 @@ mod aprs_map;
 /// The world the flat maps are drawn from — the globe's own land raster,
 /// sampled on the CPU, plus the border and river geometry and the city table.
 mod basemap;
+/// The QRZ card shown where the pointer rests on a callsign.
+mod callsign_card;
 pub mod chrome;
 pub mod colormap;
 mod digi_map;
@@ -28,6 +31,9 @@ mod fuzzy;
 mod hell;
 mod help;
 mod hfdl_map;
+mod sonde_map;
+mod sonde_online;
+mod i18n;
 mod input;
 /// Which layout the window wears — desktop strip, tablet menus, or the compact
 /// phone strip — and the metrics that follow from it.
@@ -38,13 +44,10 @@ mod login_globe;
 /// browser client drives a single (remote) radio.
 mod multi;
 mod prop_map;
+/// The PUBLIC SDRS window's map view: the receivers where they stand.
+mod publicsdr_map;
 #[cfg(feature = "remote")]
 mod remote;
-/// Test-only helpers shared across the crate — see [`test_support::run_frame`]
-/// for the one that matters: a frame's texture deltas have to be taken, or
-/// `epaint` asserts in `Drop` and takes the whole test binary with it.
-#[cfg(test)]
-mod test_support;
 /// Asking egui for the next frame at the rate actually asked for.
 pub mod repaint;
 mod rf_paint;
@@ -60,6 +63,11 @@ mod sstv;
 mod sstv_composer;
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod test_raster;
+/// Test-only helpers shared across the crate — see [`test_support::run_frame`]
+/// for the one that matters: a frame's texture deltas have to be taken, or
+/// `epaint` asserts in `Drop` and takes the whole test binary with it.
+#[cfg(test)]
+mod test_support;
 pub mod theme;
 mod time;
 mod tooltip_copy;
@@ -573,8 +581,13 @@ mod v3dv_tests {
 /// `FLAVOR`, not upstream's hard-coded name: **the version in the title is
 /// exactly what tells two sdroxide installs apart**, and a title that said
 /// "sdroxide" while carrying upstream's spelling would defeat the whole point.
+///
+/// `VERSION`, not `CARGO_PKG_VERSION`: the crate version is `2.2.0` for every
+/// build of this line, so a title carrying it names no build at all — and would
+/// disagree with Settings → General, which shows the release the operator
+/// actually installed (#354).
 pub fn window_title(detail: &str) -> String {
-    let base = format!("{} {}", sdroxide_version::FLAVOR, env!("CARGO_PKG_VERSION"));
+    let base = format!("{} {}", sdroxide_version::FLAVOR, sdroxide_version::VERSION);
     if detail.is_empty() { base } else { format!("{base} — {detail}") }
 }
 

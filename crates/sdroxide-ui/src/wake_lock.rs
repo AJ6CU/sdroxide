@@ -16,6 +16,8 @@
 //! The installed desktop program has no equivalent here: its screen follows
 //! the system's own power settings, and [`status`] says that too.
 
+use crate::i18n::tr;
+
 /// Where the lock stands, for the settings row to say.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 // Each target builds a different subset: the browser never says `Native`,
@@ -38,16 +40,14 @@ pub enum WakeStatus {
 
 impl WakeStatus {
     /// The few words shown beside the setting.
-    pub fn label(self) -> &'static str {
+    pub fn label(self) -> String {
         match self {
-            Self::Off => "",
-            Self::Held => "screen kept on",
-            Self::Asking => "asking the browser…",
-            Self::Unsupported => "not available here — needs a browser with it and an https page",
-            Self::Refused => "refused by the browser (power saving?)",
-            Self::Native => {
-                "browser only — the installed program follows the system's power settings"
-            }
+            Self::Off => String::new(),
+            Self::Held => tr!("wake-held"),
+            Self::Asking => tr!("wake-asking"),
+            Self::Unsupported => tr!("wake-unsupported"),
+            Self::Refused => tr!("wake-refused"),
+            Self::Native => tr!("wake-native"),
         }
     }
 

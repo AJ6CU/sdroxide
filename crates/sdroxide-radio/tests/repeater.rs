@@ -134,7 +134,7 @@ fn the_shift_moves_the_transmitter_and_leaves_the_receiver() {
     let mut h = start_engine(
         Box::new(Rig { center: RPT_HZ, heard: Arc::clone(&heard) }),
         caps(),
-        EngineConfig { remember_session: false, tx_ham_only: false, ..Default::default() },
+        EngineConfig { tx_bands_open: true, remember_session: false, tx_ham_only: false, ..Default::default() },
     );
     let thread = h.thread.take();
     let send = |c: Command| h.cmd_tx.send(c).unwrap();
@@ -181,7 +181,7 @@ fn auto_follows_the_band_plan_and_stays_simplex_outside_it() {
     let mut h = start_engine(
         Box::new(Rig { center: RPT_HZ, heard }),
         caps(),
-        EngineConfig { remember_session: false, tx_ham_only: false, ..Default::default() },
+        EngineConfig { tx_bands_open: true, remember_session: false, tx_ham_only: false, ..Default::default() },
     );
     let thread = h.thread.take();
     let send = |c: Command| h.cmd_tx.send(c).unwrap();
@@ -215,7 +215,7 @@ fn the_transmitted_over_carries_its_ctcss_tone() {
     let mut h = start_engine(
         Box::new(Rig { center: RPT_HZ, heard: Arc::clone(&heard) }),
         caps(),
-        EngineConfig { remember_session: false, tx_ham_only: false, ..Default::default() },
+        EngineConfig { tx_bands_open: true, remember_session: false, tx_ham_only: false, ..Default::default() },
     );
     let thread = h.thread.take();
     let send = |c: Command| h.cmd_tx.send(c).unwrap();
@@ -282,7 +282,7 @@ fn a_burst_fired_from_receive_keys_sends_and_unkeys() {
     let mut h = start_engine(
         Box::new(Rig { center: SIMPLEX_HZ, heard: Arc::clone(&heard) }),
         caps(),
-        EngineConfig { remember_session: false, tx_ham_only: false, ..Default::default() },
+        EngineConfig { tx_bands_open: true, remember_session: false, tx_ham_only: false, ..Default::default() },
     );
     let thread = h.thread.take();
     let send = |c: Command| h.cmd_tx.send(c).unwrap();

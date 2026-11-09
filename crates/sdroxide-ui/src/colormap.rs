@@ -17,6 +17,29 @@ pub const NAMES: [&str; 14] = [
     "Lauds",
 ];
 
+/// The palette's name in the interface language (`NAMES` keeps the English
+/// identity). Draw palette names with this.
+pub fn name_tr(index: usize) -> String {
+    use crate::i18n::tr;
+    match index {
+        0 => tr!("colormap-classic"),
+        1 => tr!("colormap-viridis"),
+        2 => tr!("colormap-gray"),
+        3 => tr!("colormap-icom"),
+        4 => tr!("colormap-neon"),
+        5 => tr!("colormap-synthwave"),
+        6 => tr!("colormap-matrix"),
+        7 => tr!("colormap-tron"),
+        8 => tr!("colormap-amber"),
+        9 => tr!("colormap-rainbow"),
+        10 => tr!("colormap-blue"),
+        11 => tr!("colormap-calmer"),
+        12 => tr!("colormap-compline"),
+        13 => tr!("colormap-lauds"),
+        _ => NAMES[NAMES.len() - 1].to_string(),
+    }
+}
+
 /// Piecewise-linear gradient through (position, RGB) anchor points.
 /// Anchors must start at 0.0 and end at 1.0.
 fn gradient(anchors: &[(f32, [u8; 3])]) -> [u8; 256 * 4] {
@@ -295,6 +318,7 @@ pub fn band_color(band: sdroxide_types::Band) -> [u8; 3] {
         Band::Fm => [116, 132, 108],  // sage
         Band::Air => [92, 124, 150],  // dusty blue, the same quiet family
         Band::Mil => [132, 112, 132], // dusty mauve, likewise
+        Band::Ism868 => [128, 120, 96], // olive grey: licence-free, not amateur
         // Not a band: nothing is ever binned here.
         Band::Gen => [128, 128, 128],
     }

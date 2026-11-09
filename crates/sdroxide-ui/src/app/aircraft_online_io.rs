@@ -20,6 +20,7 @@
 
 use std::sync::mpsc::{Receiver, Sender, channel};
 
+use crate::i18n::tr;
 use eframe::egui;
 
 use super::aircraft_export::ExportStore;
@@ -40,32 +41,82 @@ const MAX_HISTORY_BYTES: u64 = 256 * 1024;
 const MAX_EXPORT_BYTES: u64 = 8 * 1024 * 1024;
 /// The most bytes read of the operator's watch list: a hundred short entries.
 const MAX_WATCH_BYTES: u64 = 16 * 1024;
+/// The PROGRAMS state the station keeps: every station of the schedules starred.
+const MAX_PROGRAMS_BYTES: u64 = 1024 * 1024 + 4096;
 /// The most bytes read of the station's list of everything it kept: up to 4000
 /// aircraft, a few hundred bytes each.
 const MAX_STATS_BYTES: u64 = 4 * 1024 * 1024;
 /// The most bytes read of the answer to the relay switch: two booleans.
 const MAX_SWITCH_BYTES: u64 = 1024;
+/// The station's weather answer is a few dozen bytes.
+const MAX_WEATHER_BYTES: u64 = 1024;
 /// The most bytes read of a thumbnail. They are a few tens of kilobytes.
 const MAX_THUMB_BYTES: u64 = 2 * 1024 * 1024;
 /// Widest or tallest a thumbnail may decode to.
 const MAX_THUMB_SIDE: u32 = 2048;
-/// Thumbnails kept at once: the open card's and no other. The station holds
-/// one picture too, and both let it go when the card is closed.
+/// Thumbnails kept at once of each kind (aircraft, airport): the open card's and no other. The station holds a
+/// few for half a minute; this one lets its own go when the card is closed.
 const KEEP_THUMBS: usize = 1;
+
+/// What names an airport's thumbnail in [`OnlineClient`]: the article, not an address.
+pub(in crate::app) fn airport_thumb_key(lang: &str, title: &str) -> String {
+    format!("wikipedia:{lang}:{title}")
+}
 
 enum Msg {
     Info { icao: u32, status: Option<u16>, body: String },
     History { icao: u32, status: Option<u16>, body: String },
     Export { status: Option<u16>, body: String },
     Watch { status: Option<u16>, body: String },
+    Programs { status: Option<u16>, body: String },
     Stats { status: Option<u16>, body: String },
     Switch { status: Option<u16>, body: String },
-    Thumb { url: String, bytes: Option<Vec<u8>> },
+    Weather { airport: usize, status: Option<u16>, body: String },
+    Thumb { url: String, bytes: Option<Vec<u8>>, missing: bool },
+}
+
+/// What a held thumbnail is of, which says where it is fetched from and let go.
+#[derive(Clone, PartialEq)]
+enum ThumbOf {
+    /// An aircraft's, by address. Natively fetched from Planespotters' own host.
+    Aircraft(u32),
+    /// An airport's Wikipedia picture, by language and article title. Always
+    /// through the station, which is the only one that knows where Wikipedia is.
+    Airport { lang: String, title: String },
+}
+
+impl ThumbOf {
+    fn same_kind(&self, other: &ThumbOf) -> bool {
+        matches!(
+            (self, other),
+            (ThumbOf::Aircraft(_), ThumbOf::Aircraft(_))
+                | (ThumbOf::Airport { .. }, ThumbOf::Airport { .. })
+        )
+    }
+
+    /// The station's address for the picture, or `None` without a station.
+    fn fetch_url(&self, peer: Option<&str>) -> Option<String> {
+        match self {
+            ThumbOf::Aircraft(icao) => peer.and_then(|p| aircraft_online::photo_url(p, *icao)),
+            ThumbOf::Airport { lang, title } => {
+                peer.and_then(|p| aircraft_online::airport_photo_url(p, lang, title))
+            }
+        }
+    }
 }
 
 struct Thumb {
+    /// An aircraft's: Planespotters' address of the picture. An airport's:
+    /// [`airport_thumb_key`].
     url: String,
+    of: ThumbOf,
+    /// The pass in which a card last asked for it: a card that is open asks in
+    /// every pass it is drawn, and one that is closed stops.
+    wanted: u64,
     status: ThumbStatus,
+    /// Times it was asked for, and when it last failed (egui seconds).
+    tries: u8,
+    failed_at: f64,
     texture: Option<egui::TextureHandle>,
 }
 
@@ -80,17 +131,24 @@ pub(in crate::app) struct OnlineClient {
     pub watch: WatchStore,
     /// The station's list of every aircraft it kept, for the statistics view.
     pub stats: StatsStore,
+    /// What the station answered about the PROGRAMS state, not yet taken by
+    /// [`SdroxideApp::programs_sync_tick`].
+    pub programs_inbox: Vec<(Option<u16>, String)>,
     /// A request to switch the station's online relay, waiting to be sent.
     switch_wanted: Option<bool>,
     /// A request is out and its answer not yet in.
     pub switch_asking: bool,
+    /// What the last request asked for, to tell an answer that did not follow it.
+    switch_asked: Option<bool>,
+    /// What the station last said the relay is, once the switch has been used.
+    switch_state: Option<bool>,
     /// Why the last request to switch did not work, if it did not.
-    pub switch_note: Option<&'static str>,
+    pub switch_note: Option<String>,
     tx: Sender<Msg>,
     rx: Receiver<Msg>,
     thumbs: Vec<Thumb>,
-    /// The frame in which a card last asked for its thumbnail.
-    thumb_wanted: Option<u64>,
+    /// The local time and temperature of the airport whose box is open.
+    weather: aircraft_online::WeatherStore,
 }
 
 impl Default for OnlineClient {
@@ -102,13 +160,16 @@ impl Default for OnlineClient {
             export: ExportStore::default(),
             watch: WatchStore::default(),
             stats: StatsStore::default(),
+            programs_inbox: Vec::new(),
             switch_wanted: None,
             switch_asking: false,
+            switch_asked: None,
+            switch_state: None,
             switch_note: None,
             tx,
             rx,
             thumbs: Vec::new(),
-            thumb_wanted: None,
+            weather: aircraft_online::WeatherStore::default(),
         }
     }
 }
@@ -150,23 +211,43 @@ impl OnlineClient {
                 Msg::Watch { status, body } => {
                     self.watch.deliver(aircraft_watch::classify(status, &body), now);
                 }
+                Msg::Programs { status, body } => {
+                    self.programs_inbox.push((status, body));
+                }
                 Msg::Switch { status, body } => {
                     self.switch_asking = false;
-                    match aircraft_online::classify_switch(status, &body) {
+                    let answer = aircraft_online::classify_switch(status, &body);
+                    let held = self
+                        .switch_asked
+                        .take()
+                        .and_then(|asked| aircraft_online::held_note(asked, &answer));
+                    match answer {
                         aircraft_online::SwitchAnswer::On => {
-                            self.switch_note = None;
+                            self.switch_state = Some(true);
                             self.store.unblock();
                         }
-                        aircraft_online::SwitchAnswer::Off => self.switch_note = None,
+                        aircraft_online::SwitchAnswer::Off => self.switch_state = Some(false),
                         aircraft_online::SwitchAnswer::Refused(why) => {
                             self.switch_note = Some(why);
+                            continue;
                         }
                     }
+                    self.switch_note = held;
                 }
                 Msg::Stats { status, body } => {
                     self.stats.deliver(aircraft_stats::classify(status, &body), now);
                 }
-                Msg::Thumb { url, bytes } => {
+                Msg::Weather { airport, status, body } => {
+                    let at = ctx.input(|i| i.time);
+                    self.weather.deliver(
+                        airport,
+                        aircraft_online::classify_weather(status, &body),
+                        at,
+                    );
+                }
+                // `missing`: the station answered 404 — the page has no picture,
+                // which asking again will not change.
+                Msg::Thumb { url, bytes, missing } => {
                     let image = bytes.as_deref().and_then(decode_thumb);
                     if let Some(t) = self.thumbs.iter_mut().find(|t| t.url == url) {
                         match image {
@@ -178,7 +259,14 @@ impl OnlineClient {
                                 ));
                                 t.status = ThumbStatus::Ready;
                             }
-                            None => t.status = ThumbStatus::Failed,
+                            None => {
+                                t.status = ThumbStatus::Failed;
+                                t.failed_at = ctx.input(|i| i.time);
+                                if missing {
+                                    // No picture to wait for: no "…" and no retries.
+                                    t.tries = aircraft_online::THUMB_TRIES;
+                                }
+                            }
                         }
                     }
                 }
@@ -249,6 +337,25 @@ impl OnlineClient {
         send_info(url, station, Kind::Watch, post, self.tx.clone(), ctx.clone());
     }
 
+    /// Send the PROGRAMS state request: a read, or the state as the body of a
+    /// write. Without a station nothing is sent.
+    pub(in crate::app) fn ask_programs(
+        &mut self,
+        ctx: &egui::Context,
+        peer: Option<&str>,
+        post: Option<String>,
+    ) {
+        let Some(url) = peer.and_then(super::programs_sync::programs_url) else { return };
+        let station = peer.map(crate::login::station_key).unwrap_or_default();
+        send_info(url, station, Kind::Programs, post, self.tx.clone(), ctx.clone());
+    }
+
+    /// Whether the relay is on, as far as this client knows: on until the
+    /// station has said otherwise, which is its default.
+    pub(in crate::app) fn relay_on(&self) -> bool {
+        !self.store.relay_off() && self.switch_state != Some(false)
+    }
+
     /// Ask to switch the station's online relay on or off; the request goes
     /// out on the next [`Self::ask_switch`].
     pub(in crate::app) fn want_switch(&mut self, on: bool) {
@@ -261,11 +368,12 @@ impl OnlineClient {
     pub(in crate::app) fn ask_switch(&mut self, ctx: &egui::Context, peer: Option<&str>) {
         let Some(on) = self.switch_wanted.take() else { return };
         let Some(url) = peer.and_then(|p| aircraft_online::switch_url(p, on)) else {
-            self.switch_note = Some("there is no station to switch");
+            self.switch_note = Some(tr!("aircraft-switch-no-station"));
             return;
         };
         let station = peer.map(crate::login::station_key).unwrap_or_default();
         self.switch_asking = true;
+        self.switch_asked = Some(on);
         send_info(url, station, Kind::Switch, Some(String::new()), self.tx.clone(), ctx.clone());
     }
 
@@ -308,6 +416,78 @@ impl OnlineClient {
         self.thumbs.iter().find(|t| t.url == url).and_then(|t| t.texture.as_ref())
     }
 
+    /// What the open airport box shows above its text this frame, and the page
+    /// its credit points to. Asking here, every frame the box is drawn, is what
+    /// keeps the picture; an airport without an article, or no station to ask,
+    /// is a box of text alone.
+    pub(in crate::app) fn airport_card_photo(
+        &mut self,
+        ctx: &egui::Context,
+        peer: Option<&str>,
+        ident: &str,
+    ) -> Option<(crate::adsb_map::CardPhoto, String)> {
+        let (lang, title) = crate::airdata::wikipedia_of(ident)?;
+        peer?;
+        self.want_airport_thumb(ctx, peer, lang, title);
+        let key = airport_thumb_key(lang, title);
+        let photo = match self.thumb_texture(&key) {
+            Some(t) => crate::adsb_map::CardPhoto::Ready { texture: t.id(), size: t.size_vec2() },
+            None if self.thumb_pending(&key) => crate::adsb_map::CardPhoto::Pending,
+            None => crate::adsb_map::CardPhoto::None,
+        };
+        Some((photo, aircraft_online::airport_page_url(lang, title)))
+    }
+
+    /// What the open airport box says about its airport's clock and air this
+    /// frame. Asking here, every frame the box is drawn, is what keeps the
+    /// answer; with no station, or the relay off, nothing is asked and the box
+    /// shows UTC alone, never an invented local time.
+    pub(in crate::app) fn airport_clock(
+        &mut self,
+        ctx: &egui::Context,
+        peer: Option<&str>,
+        airport: usize,
+        place: (f64, f64),
+    ) -> aircraft_online::Clock {
+        let Some(peer) = peer.filter(|_| self.relay_on()) else {
+            self.weather.clear();
+            return aircraft_online::Clock::Offline;
+        };
+        let pass = ctx.cumulative_pass_nr();
+        let now = ctx.input(|i| i.time);
+        if self.weather.step(airport, pass, now) {
+            match aircraft_online::airport_weather_url(peer, place.0, place.1) {
+                Some(url) => {
+                    let station = crate::login::station_key(peer);
+                    send_info(
+                        url,
+                        station,
+                        Kind::Weather(airport),
+                        None,
+                        self.tx.clone(),
+                        ctx.clone(),
+                    );
+                }
+                None => self.weather.deliver(airport, aircraft_online::Reading::Gone, now),
+            }
+        }
+        let clock = self.weather.clock(airport);
+        if self.weather.needs_a_later_look() || matches!(clock, aircraft_online::Clock::Known(_)) {
+            // The pause before a repeat, the refresh, and the minute hand.
+            ctx.request_repaint_after(std::time::Duration::from_secs(5));
+        }
+        clock
+    }
+
+    /// Whether a thumbnail is on its way or will be asked again: its card keeps
+    /// the room for it. False once it has come, or has failed for good.
+    pub(in crate::app) fn thumb_pending(&self, url: &str) -> bool {
+        self.thumbs.iter().find(|t| t.url == url).is_some_and(|t| {
+            t.status == ThumbStatus::Loading
+                || (t.status == ThumbStatus::Failed && t.tries < aircraft_online::THUMB_TRIES)
+        })
+    }
+
     /// Start loading this thumbnail if it has not been tried and is an address
     /// Planespotters hands out.
     ///
@@ -326,38 +506,83 @@ impl OnlineClient {
         if !thumb_fetchable(url) {
             return;
         }
-        self.thumb_wanted = Some(ctx.cumulative_pass_nr());
-        if self.thumbs.iter().any(|t| t.url == url) {
-            return;
-        }
-        // Only one at a time: the card that is open is the only one.
-        while self.thumbs.len() >= KEEP_THUMBS {
-            self.thumbs.remove(0);
-        }
-        self.thumbs.push(Thumb {
-            url: url.to_string(),
-            status: ThumbStatus::Loading,
-            texture: None,
-        });
-        let via = peer.and_then(|p| aircraft_online::photo_url(p, icao));
-        send_thumb(url.to_string(), via, self.tx.clone(), ctx.clone());
+        self.want(ctx, peer, ThumbOf::Aircraft(icao), url);
     }
 
-    /// Once a frame: when no card has asked for the thumbnail for two frames,
-    /// the card is closed — destroy the picture here and tell the station to
-    /// drop its own. A station that never hears (tab closed, line cut) drops it
-    /// itself after a minute.
+    /// The same for an airport's Wikipedia picture, by the article the table
+    /// names. Always through the station; without one nothing is asked.
+    pub(in crate::app) fn want_airport_thumb(
+        &mut self,
+        ctx: &egui::Context,
+        peer: Option<&str>,
+        lang: &str,
+        title: &str,
+    ) {
+        if peer.is_none() {
+            return;
+        }
+        let of = ThumbOf::Airport { lang: lang.to_string(), title: title.to_string() };
+        self.want(ctx, peer, of, &airport_thumb_key(lang, title));
+    }
+
+    fn want(&mut self, ctx: &egui::Context, peer: Option<&str>, of: ThumbOf, key: &str) {
+        let pass = ctx.cumulative_pass_nr();
+        let now = ctx.input(|i| i.time);
+        if let Some(t) = self.thumbs.iter_mut().find(|t| t.url == key) {
+            t.wanted = pass;
+            // A busy station or a slow host mends itself: ask again, a few times.
+            let retry = t.status == ThumbStatus::Failed
+                && t.tries < aircraft_online::THUMB_TRIES
+                && now - t.failed_at >= aircraft_online::THUMB_RETRY_S;
+            if !retry {
+                if t.status == ThumbStatus::Failed && t.tries < aircraft_online::THUMB_TRIES {
+                    ctx.request_repaint_after(std::time::Duration::from_secs(1));
+                }
+                return;
+            }
+            t.status = ThumbStatus::Loading;
+            t.tries += 1;
+            send_thumb(key.to_string(), &of, peer, self.tx.clone(), ctx.clone());
+            return;
+        }
+        // Only one at a time of each kind: the card that is open is the only one.
+        while self.thumbs.iter().filter(|t| t.of.same_kind(&of)).count() >= KEEP_THUMBS {
+            if let Some(i) = self.thumbs.iter().position(|t| t.of.same_kind(&of)) {
+                self.thumbs.remove(i);
+            }
+        }
+        self.thumbs.push(Thumb {
+            url: key.to_string(),
+            of: of.clone(),
+            wanted: pass,
+            status: ThumbStatus::Loading,
+            tries: 1,
+            failed_at: 0.0,
+            texture: None,
+        });
+        send_thumb(key.to_string(), &of, peer, self.tx.clone(), ctx.clone());
+    }
+
+    /// Once a frame: a thumbnail no card has asked for in the pass before this
+    /// one or the one before that belongs to a card that is closed — destroy the
+    /// picture here and tell the station to drop its own. A station that never
+    /// hears (tab closed, line cut) drops it itself after half a minute.
     pub(in crate::app) fn release_thumbs(&mut self, ctx: &egui::Context, peer: Option<&str>) {
+        self.weather.release(ctx.cumulative_pass_nr());
         if self.thumbs.is_empty() {
             return;
         }
-        if aircraft_online::thumb_unwanted(self.thumb_wanted, ctx.cumulative_pass_nr()) {
-            self.thumbs.clear();
-            self.thumb_wanted = None;
-            if let Some(url) = peer.and_then(aircraft_online::photo_release_url) {
-                send_release(url);
+        let pass = ctx.cumulative_pass_nr();
+        let (closed, open): (Vec<Thumb>, Vec<Thumb>) = std::mem::take(&mut self.thumbs)
+            .into_iter()
+            .partition(|t| aircraft_online::thumb_unwanted(Some(t.wanted), pass));
+        self.thumbs = open;
+        for t in closed {
+            if let Some(url) = t.of.fetch_url(peer) {
+                send_release(url, &t.of, peer);
             }
-        } else {
+        }
+        if !self.thumbs.is_empty() {
             // A closed card draws nothing more, so something must look again.
             ctx.request_repaint_after(std::time::Duration::from_millis(250));
         }
@@ -388,8 +613,10 @@ enum Kind {
     History(u32),
     Export,
     Watch,
+    Programs,
     Stats,
     Switch,
+    Weather(usize),
 }
 
 impl Kind {
@@ -399,8 +626,10 @@ impl Kind {
             Kind::History(_) => MAX_HISTORY_BYTES,
             Kind::Export => MAX_EXPORT_BYTES,
             Kind::Watch => MAX_WATCH_BYTES,
+            Kind::Programs => MAX_PROGRAMS_BYTES,
             Kind::Stats => MAX_STATS_BYTES,
             Kind::Switch => MAX_SWITCH_BYTES,
+            Kind::Weather(_) => MAX_WEATHER_BYTES,
         }
     }
 
@@ -410,8 +639,10 @@ impl Kind {
             Kind::History(icao) => Msg::History { icao, status, body },
             Kind::Export => Msg::Export { status, body },
             Kind::Watch => Msg::Watch { status, body },
+            Kind::Programs => Msg::Programs { status, body },
             Kind::Stats => Msg::Stats { status, body },
             Kind::Switch => Msg::Switch { status, body },
+            Kind::Weather(airport) => Msg::Weather { airport, status, body },
         }
     }
 }
@@ -498,19 +729,82 @@ fn send_info(
     });
 }
 
-/// The native program fetches the picture itself (no CORS to meet), so there is
-/// nothing held at the station to let go.
+/// Let the station's picture go. The native program fetches an aircraft's
+/// picture from its own host (no CORS to meet), so nothing is held at the
+/// station for it; an airport's is only ever the station's, so it is let go.
 #[cfg(not(target_arch = "wasm32"))]
-fn send_release(_url: String) {}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn send_thumb(url: String, _via: Option<String>, tx: Sender<Msg>, ctx: egui::Context) {
+fn send_release(url: String, of: &ThumbOf, peer: Option<&str>) {
+    if matches!(of, ThumbOf::Aircraft(_)) {
+        return;
+    }
+    let station = peer.map(crate::login::station_key).unwrap_or_default();
     std::thread::spawn(move || {
-        let bytes =
-            agent().get(&url).call().ok().filter(|r| r.status().as_u16() == 200).and_then(
-                |mut r| r.body_mut().with_config().limit(MAX_THUMB_BYTES).read_to_vec().ok(),
-            );
-        let _ = tx.send(Msg::Thumb { url, bytes });
+        let agent = agent();
+        let release = |cookie: Option<&str>| {
+            let mut req = agent.delete(&url).header("x-sdroxide", "1");
+            if let Some(c) = cookie {
+                req = req.header("Cookie", c);
+            }
+            req.call().ok().map(|r| r.status().as_u16())
+        };
+        let cookie = COOKIES.lock().unwrap_or_else(|e| e.into_inner()).get(&station).cloned();
+        if release(cookie.as_deref()) == Some(401) {
+            if let Some(c) = sign_in(&agent, &station) {
+                COOKIES.lock().unwrap_or_else(|e| e.into_inner()).insert(station, c.clone());
+                release(Some(&c));
+            }
+        }
+    });
+}
+
+/// `GET` of a picture from the station, with its cookie: the status and the
+/// bytes, or `None` for no answer at all.
+#[cfg(not(target_arch = "wasm32"))]
+fn get_bytes(agent: &ureq::Agent, url: &str, cookie: Option<&str>) -> Option<(u16, Vec<u8>)> {
+    let mut req = agent.get(url);
+    if let Some(c) = cookie {
+        req = req.header("Cookie", c);
+    }
+    let mut resp = req.call().ok()?;
+    let status = resp.status().as_u16();
+    let body =
+        resp.body_mut().with_config().limit(MAX_THUMB_BYTES).read_to_vec().unwrap_or_default();
+    Some((status, body))
+}
+
+/// An aircraft's picture is fetched from its host; an airport's from the
+/// station, signing in the way the other questions do.
+#[cfg(not(target_arch = "wasm32"))]
+fn send_thumb(key: String, of: &ThumbOf, peer: Option<&str>, tx: Sender<Msg>, ctx: egui::Context) {
+    let via = of.fetch_url(peer);
+    let direct = matches!(of, ThumbOf::Aircraft(_));
+    let station = peer.map(crate::login::station_key).unwrap_or_default();
+    std::thread::spawn(move || {
+        let agent = agent();
+        let mut missing = false;
+        let bytes = if direct {
+            agent.get(&key).call().ok().filter(|r| r.status().as_u16() == 200).and_then(|mut r| {
+                r.body_mut().with_config().limit(MAX_THUMB_BYTES).read_to_vec().ok()
+            })
+        } else {
+            via.and_then(|url| {
+                let cookie =
+                    COOKIES.lock().unwrap_or_else(|e| e.into_inner()).get(&station).cloned();
+                let mut got = get_bytes(&agent, &url, cookie.as_deref());
+                if got.as_ref().is_some_and(|(s, _)| *s == 401) {
+                    if let Some(c) = sign_in(&agent, &station) {
+                        COOKIES
+                            .lock()
+                            .unwrap_or_else(|e| e.into_inner())
+                            .insert(station, c.clone());
+                        got = get_bytes(&agent, &url, Some(&c));
+                    }
+                }
+                missing = got.as_ref().is_some_and(|(s, _)| *s == 404);
+                got.filter(|(s, _)| *s == 200).map(|(_, b)| b)
+            })
+        };
+        let _ = tx.send(Msg::Thumb { url: key, bytes, missing });
         ctx.request_repaint();
     });
 }
@@ -580,7 +874,7 @@ fn send_info(
 /// Let the station's picture go. `keepalive` lets it finish even if the page is
 /// going away; the answer is not read.
 #[cfg(target_arch = "wasm32")]
-fn send_release(url: String) {
+fn send_release(url: String, _of: &ThumbOf, _peer: Option<&str>) {
     wasm_bindgen_futures::spawn_local(async move {
         let Some(window) = web_sys::window() else { return };
         let init = web_sys::RequestInit::new();
@@ -599,11 +893,14 @@ fn send_release(url: String) {
 /// The browser asks the station for the picture, same-origin with its cookie:
 /// Planespotters' own host would not let the page read it. No station, no picture.
 #[cfg(target_arch = "wasm32")]
-fn send_thumb(url: String, via: Option<String>, tx: Sender<Msg>, ctx: egui::Context) {
+fn send_thumb(url: String, of: &ThumbOf, peer: Option<&str>, tx: Sender<Msg>, ctx: egui::Context) {
+    let via = of.fetch_url(peer);
     wasm_bindgen_futures::spawn_local(async move {
+        let mut missing = false;
         let bytes = async {
             let r = fetch(via.as_deref()?, true, None).await?;
             if r.status() != 200 {
+                missing = r.status() == 404;
                 return None;
             }
             let buf = wasm_bindgen_futures::JsFuture::from(r.array_buffer().ok()?).await.ok()?;
@@ -611,7 +908,7 @@ fn send_thumb(url: String, via: Option<String>, tx: Sender<Msg>, ctx: egui::Cont
             (bytes.len() as u64 <= MAX_THUMB_BYTES).then_some(bytes)
         }
         .await;
-        let _ = tx.send(Msg::Thumb { url, bytes });
+        let _ = tx.send(Msg::Thumb { url, bytes, missing });
         ctx.request_repaint();
     });
 }
@@ -649,12 +946,40 @@ mod tests {
         let url = "https://t.plnspttrs.net/a_t.jpg";
         c.want_thumb(&ctx, None, 7, url);
         assert_eq!(c.thumb_status(url), ThumbStatus::Loading);
-        c.tx.send(Msg::Thumb { url: url.into(), bytes: Some(b"nope".to_vec()) }).unwrap();
+        c.tx.send(Msg::Thumb { url: url.into(), bytes: Some(b"nope".to_vec()), missing: false })
+            .unwrap();
         c.poll(&ctx, 0);
         assert_eq!(c.thumb_status(url), ThumbStatus::Failed);
         c.want_thumb(&ctx, None, 7, url);
-        assert_eq!(c.thumb_status(url), ThumbStatus::Failed, "not retried");
+        assert_eq!(c.thumb_status(url), ThumbStatus::Failed, "not retried at once");
         assert!(c.thumb_texture(url).is_none());
+    }
+
+    #[test]
+    fn a_failed_thumbnail_is_asked_again_a_few_times_while_the_card_stays_open() {
+        let ctx = egui::Context::default();
+        let mut c = OnlineClient::default();
+        let url = "https://t.plnspttrs.net/a_t.jpg";
+        let at = |ctx: &egui::Context, t: f64| {
+            ctx.begin_pass(egui::RawInput { time: Some(t), ..Default::default() });
+            ctx.end_pass().drop_without_applying_deltas();
+        };
+        at(&ctx, 0.0);
+        c.want_thumb(&ctx, None, 7, url);
+        for (i, t) in [1.0, 6.0, 12.0].into_iter().enumerate() {
+            at(&ctx, t);
+            c.tx.send(Msg::Thumb { url: url.into(), bytes: None, missing: false }).unwrap();
+            c.poll(&ctx, 0);
+            assert_eq!(c.thumb_status(url), ThumbStatus::Failed, "try {}", i + 1);
+            at(&ctx, t + 1.0);
+            c.want_thumb(&ctx, None, 7, url);
+            assert_eq!(c.thumb_status(url), ThumbStatus::Failed, "too soon after try {}", i + 1);
+            at(&ctx, t + 5.0);
+            c.want_thumb(&ctx, None, 7, url);
+            let again = i + 1 < usize::from(aircraft_online::THUMB_TRIES);
+            let want = if again { ThumbStatus::Loading } else { ThumbStatus::Failed };
+            assert_eq!(c.thumb_status(url), want, "after try {}", i + 1);
+        }
     }
 
     fn frame(ctx: &egui::Context) {
@@ -669,7 +994,7 @@ mod tests {
         let url = "https://t.plnspttrs.net/a_t.jpg";
         frame(&ctx);
         c.want_thumb(&ctx, None, 7, url);
-        c.tx.send(Msg::Thumb { url: url.into(), bytes: Some(png(4, 3)) }).unwrap();
+        c.tx.send(Msg::Thumb { url: url.into(), bytes: Some(png(4, 3)), missing: false }).unwrap();
         c.poll(&ctx, 0);
         assert!(c.thumb_texture(url).is_some());
         // The card is open: it asks every frame, and the picture stays.
@@ -700,6 +1025,233 @@ mod tests {
         assert_eq!(c.thumb_status(b), ThumbStatus::Loading);
     }
 
+    /// A station that is not there: a request to it fails at once. Wait for that
+    /// answer, so it cannot land on top of what a test hands in.
+    const NO_STATION: &str = "ws://127.0.0.1:1/ws";
+
+    fn settled(c: &mut OnlineClient, ctx: &egui::Context, key: &str) {
+        let t = std::time::Instant::now();
+        while c.thumb_status(key) == ThumbStatus::Loading && t.elapsed().as_secs() < 5 {
+            c.poll(ctx, 0);
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+    }
+
+    fn schiphol_key() -> String {
+        airport_thumb_key("en", "Amsterdam_Airport_Schiphol")
+    }
+
+    #[test]
+    fn an_airport_picture_is_asked_of_the_station_by_article_and_not_at_all_without_one() {
+        let ctx = egui::Context::default();
+        let mut c = OnlineClient::default();
+        c.want_airport_thumb(&ctx, None, "en", "Amsterdam_Airport_Schiphol");
+        assert_eq!(c.thumb_status(&schiphol_key()), ThumbStatus::NotTried, "no station, no ask");
+        c.want_airport_thumb(&ctx, Some(NO_STATION), "en", "Amsterdam_Airport_Schiphol");
+        assert_eq!(c.thumb_status(&schiphol_key()), ThumbStatus::Loading);
+        assert!(c.thumb_pending(&schiphol_key()));
+    }
+
+    #[test]
+    fn an_airport_card_gets_its_picture_as_pixels_and_the_room_kept_until_then() {
+        let ctx = egui::Context::default();
+        let mut c = OnlineClient::default();
+        let ident = "EHAM";
+        frame(&ctx);
+        let (photo, page) =
+            c.airport_card_photo(&ctx, Some(NO_STATION), ident).expect("an article");
+        assert_eq!(photo, crate::adsb_map::CardPhoto::Pending, "room is kept while it loads");
+        assert_eq!(page, "https://en.wikipedia.org/wiki/Amsterdam_Airport_Schiphol");
+        settled(&mut c, &ctx, &schiphol_key());
+        c.tx.send(Msg::Thumb { url: schiphol_key(), bytes: Some(png(4, 3)), missing: false })
+            .unwrap();
+        c.poll(&ctx, 0);
+        match c.airport_card_photo(&ctx, Some(NO_STATION), ident).unwrap().0 {
+            crate::adsb_map::CardPhoto::Ready { size, .. } => {
+                assert_eq!(size, egui::vec2(4.0, 3.0))
+            }
+            other => panic!("{other:?}"),
+        }
+    }
+
+    #[test]
+    fn an_airport_without_an_article_or_without_a_station_has_no_picture_to_ask_for() {
+        let ctx = egui::Context::default();
+        let mut c = OnlineClient::default();
+        assert!(c.airport_card_photo(&ctx, Some(NO_STATION), "ZZZZ").is_none(), "no article");
+        assert!(c.airport_card_photo(&ctx, None, "EHAM").is_none(), "no station");
+        assert_eq!(c.thumb_status(&schiphol_key()), ThumbStatus::NotTried);
+    }
+
+    #[test]
+    fn a_picture_that_never_came_leaves_the_card_as_text_once_the_tries_are_spent() {
+        let ctx = egui::Context::default();
+        let mut c = OnlineClient::default();
+        let at = |ctx: &egui::Context, t: f64| {
+            ctx.begin_pass(egui::RawInput { time: Some(t), ..Default::default() });
+            ctx.end_pass().drop_without_applying_deltas();
+        };
+        at(&ctx, 0.0);
+        c.want_airport_thumb(&ctx, Some(NO_STATION), "en", "Amsterdam_Airport_Schiphol");
+        let key = schiphol_key();
+        for (i, t) in [1.0, 6.0, 12.0].into_iter().enumerate() {
+            at(&ctx, t);
+            settled(&mut c, &ctx, &key);
+            c.tx.send(Msg::Thumb { url: key.clone(), bytes: None, missing: false }).unwrap();
+            c.poll(&ctx, 0);
+            assert_eq!(c.thumb_status(&key), ThumbStatus::Failed, "try {}", i + 1);
+            let more = i + 1 < usize::from(aircraft_online::THUMB_TRIES);
+            assert_eq!(c.thumb_pending(&key), more, "room kept while tries remain: {}", i + 1);
+            at(&ctx, t + 5.0);
+            c.want_airport_thumb(&ctx, Some(NO_STATION), "en", "Amsterdam_Airport_Schiphol");
+        }
+        assert!(!c.thumb_pending(&key));
+    }
+
+    /// A 404 from the station says the page has no picture: the card goes back
+    /// to text at once, with no "…" and none of the three retries a busy
+    /// station gets.
+    #[test]
+    fn an_airport_page_without_a_picture_is_settled_at_the_first_answer() {
+        let ctx = egui::Context::default();
+        let mut c = OnlineClient::default();
+        ctx.begin_pass(egui::RawInput { time: Some(0.0), ..Default::default() });
+        ctx.end_pass().drop_without_applying_deltas();
+        c.want_airport_thumb(&ctx, Some(NO_STATION), "en", "Amsterdam_Airport_Schiphol");
+        let key = schiphol_key();
+        settled(&mut c, &ctx, &key);
+        c.tx.send(Msg::Thumb { url: key.clone(), bytes: None, missing: true }).unwrap();
+        c.poll(&ctx, 0);
+        assert!(!c.thumb_pending(&key), "no waiting frame for a picture that does not exist");
+        assert_eq!(c.thumb_status(&key), ThumbStatus::Failed);
+    }
+
+    const BOX: usize = 3;
+    const PLACE: (f64, f64) = (52.31, 4.76);
+
+    fn clock(
+        c: &mut OnlineClient,
+        ctx: &egui::Context,
+        peer: Option<&str>,
+    ) -> aircraft_online::Clock {
+        frame(ctx);
+        c.airport_clock(ctx, peer, BOX, PLACE)
+    }
+
+    /// Wait for the question that went out to nobody to come back as a failure.
+    fn weather_settled(c: &mut OnlineClient, ctx: &egui::Context) {
+        let t = std::time::Instant::now();
+        while !c.weather.needs_a_later_look() && t.elapsed().as_secs() < 5 {
+            c.poll(ctx, 0);
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+    }
+
+    fn answer(c: &mut OnlineClient, ctx: &egui::Context, body: &str) {
+        let status = Some(200);
+        c.tx.send(Msg::Weather { airport: BOX, status, body: body.into() }).unwrap();
+        c.poll(ctx, 0);
+    }
+
+    const SUNNY: &str = r#"{"v":1,"utc_offset_s":3600,"temp_c":11.6}"#;
+
+    #[test]
+    fn an_airport_clock_is_not_asked_without_a_station_or_with_the_relay_off() {
+        let ctx = egui::Context::default();
+        let mut c = OnlineClient::default();
+        assert_eq!(clock(&mut c, &ctx, None), aircraft_online::Clock::Offline);
+        assert!(!c.weather.needs_a_later_look(), "nothing was asked");
+        c.switch_state = Some(false);
+        assert_eq!(clock(&mut c, &ctx, Some(NO_STATION)), aircraft_online::Clock::Offline);
+        assert!(!c.weather.needs_a_later_look(), "the relay is off: nothing was asked");
+    }
+
+    #[test]
+    fn an_open_box_asks_the_station_for_its_airports_place_and_reads_the_answer() {
+        let ctx = egui::Context::default();
+        let mut c = OnlineClient::default();
+        assert_eq!(clock(&mut c, &ctx, Some(NO_STATION)), aircraft_online::Clock::Asking);
+        weather_settled(&mut c, &ctx); // nobody answers at that address: a failure, and a repeat is due
+        assert_eq!(clock(&mut c, &ctx, Some(NO_STATION)), aircraft_online::Clock::Asking);
+        answer(&mut c, &ctx, SUNNY);
+        match clock(&mut c, &ctx, Some(NO_STATION)) {
+            aircraft_online::Clock::Known(w) => {
+                assert_eq!(w.utc_offset_s, 3600);
+                assert!((w.temp_c.unwrap() - 11.6).abs() < 0.01);
+            }
+            other => panic!("{other:?}"),
+        }
+    }
+
+    #[test]
+    fn an_answer_that_is_not_a_forecast_leaves_the_box_on_utc() {
+        let ctx = egui::Context::default();
+        let mut c = OnlineClient::default();
+        clock(&mut c, &ctx, Some(NO_STATION));
+        weather_settled(&mut c, &ctx);
+        answer(&mut c, &ctx, "<html>");
+        assert_eq!(clock(&mut c, &ctx, Some(NO_STATION)), aircraft_online::Clock::Offline);
+    }
+
+    #[test]
+    fn closing_the_box_lets_the_clock_go_and_the_next_box_starts_clean() {
+        let ctx = egui::Context::default();
+        let mut c = OnlineClient::default();
+        clock(&mut c, &ctx, Some(NO_STATION));
+        weather_settled(&mut c, &ctx);
+        answer(&mut c, &ctx, SUNNY);
+        assert!(matches!(c.weather.clock(BOX), aircraft_online::Clock::Known(_)));
+        // Two frames in which no box asks.
+        for _ in 0..3 {
+            frame(&ctx);
+            c.release_thumbs(&ctx, Some(NO_STATION));
+        }
+        assert_eq!(c.weather.clock(BOX), aircraft_online::Clock::Offline, "nothing kept");
+    }
+
+    #[test]
+    fn an_airport_and_an_aircraft_picture_live_side_by_side_and_each_goes_with_its_own_card() {
+        let ctx = egui::Context::default();
+        let mut c = OnlineClient::default();
+        let plane = "https://t.plnspttrs.net/a_t.jpg";
+        let key = schiphol_key();
+        frame(&ctx);
+        c.want_thumb(&ctx, None, 7, plane);
+        c.want_airport_thumb(&ctx, Some(NO_STATION), "en", "Amsterdam_Airport_Schiphol");
+        assert_eq!(c.thumb_status(plane), ThumbStatus::Loading, "the airport did not evict it");
+        assert_eq!(c.thumb_status(&key), ThumbStatus::Loading);
+        settled(&mut c, &ctx, &key);
+        c.tx.send(Msg::Thumb { url: plane.into(), bytes: Some(png(4, 3)), missing: false })
+            .unwrap();
+        c.tx.send(Msg::Thumb { url: key.clone(), bytes: Some(png(4, 3)), missing: false }).unwrap();
+        c.poll(&ctx, 0);
+        // The aircraft card is closed; the airport box stays open.
+        for _ in 0..3 {
+            frame(&ctx);
+            c.want_airport_thumb(&ctx, Some(NO_STATION), "en", "Amsterdam_Airport_Schiphol");
+            c.release_thumbs(&ctx, Some(NO_STATION));
+        }
+        assert!(c.thumb_texture(plane).is_none(), "the closed card's picture is destroyed");
+        assert!(c.thumb_texture(&key).is_some(), "the open box keeps its own");
+        // Now the box closes too.
+        for _ in 0..3 {
+            frame(&ctx);
+            c.release_thumbs(&ctx, Some(NO_STATION));
+        }
+        assert!(c.thumb_texture(&key).is_none(), "the picture is destroyed with its box");
+        assert_eq!(c.thumb_status(&key), ThumbStatus::NotTried);
+    }
+
+    #[test]
+    fn only_one_airport_picture_is_kept_and_the_next_replaces_it() {
+        let ctx = egui::Context::default();
+        let mut c = OnlineClient::default();
+        c.want_airport_thumb(&ctx, Some(NO_STATION), "en", "Amsterdam_Airport_Schiphol");
+        c.want_airport_thumb(&ctx, Some(NO_STATION), "fr", "Orly");
+        assert_eq!(c.thumb_status(&schiphol_key()), ThumbStatus::NotTried, "the first is gone");
+        assert_eq!(c.thumb_status(&airport_thumb_key("fr", "Orly")), ThumbStatus::Loading);
+    }
+
     #[test]
     fn a_thumbnail_address_that_is_not_planespotters_is_never_requested() {
         let ctx = egui::Context::default();
@@ -726,6 +1278,69 @@ mod tests {
                 super::super::aircraft_online::Reason::Disabled
             )
         );
+    }
+
+    #[test]
+    fn the_switch_reads_on_by_default_and_follows_what_the_station_answers() {
+        let ctx = egui::Context::default();
+        let mut c = OnlineClient::default();
+        assert!(c.relay_on(), "on by default, before anything was asked");
+        let reply = |c: &mut OnlineClient, on: bool| {
+            c.tx.send(Msg::Switch {
+                status: Some(200),
+                body: format!(r#"{{"enabled":{on},"forced":false}}"#),
+            })
+            .unwrap();
+            c.poll(&ctx, 1);
+        };
+        c.switch_asked = Some(false);
+        reply(&mut c, false);
+        assert!(!c.relay_on(), "the operator turned it off");
+        assert_eq!(c.switch_note, None);
+        c.switch_asked = Some(true);
+        reply(&mut c, true);
+        assert!(c.relay_on(), "turned on again");
+    }
+
+    #[test]
+    fn turning_the_relay_on_again_lets_the_cards_ask_after_it_was_off() {
+        let ctx = egui::Context::default();
+        let mut c = OnlineClient::default();
+        let w = Want { icao: 7, callsign: None, registration: None };
+        assert!(c.store.next_request(Some(&w), true, 0).is_some());
+        c.store.deliver(
+            7,
+            super::super::aircraft_online::Answer::Unavailable(
+                super::super::aircraft_online::Reason::Disabled,
+            ),
+            1,
+        );
+        assert!(!c.relay_on(), "a card was refused: the relay is off");
+        assert!(c.store.next_request(Some(&w), true, 2).is_none());
+        c.switch_asked = Some(true);
+        c.tx.send(Msg::Switch {
+            status: Some(200),
+            body: r#"{"enabled":true,"forced":false}"#.into(),
+        })
+        .unwrap();
+        c.poll(&ctx, 3);
+        assert!(c.relay_on());
+        assert!(c.store.next_request(Some(&w), true, 4).is_some(), "the lock is lifted");
+    }
+
+    #[test]
+    fn a_relay_the_environment_holds_says_so_instead_of_pretending() {
+        let ctx = egui::Context::default();
+        let mut c = OnlineClient::default();
+        c.switch_asked = Some(true);
+        c.tx.send(Msg::Switch {
+            status: Some(200),
+            body: r#"{"enabled":false,"forced":true}"#.into(),
+        })
+        .unwrap();
+        c.poll(&ctx, 1);
+        assert!(!c.relay_on(), "what the station says, not what was asked");
+        assert!(c.switch_note.as_deref().is_some_and(|n| n.contains("SDROXIDE_AIRCRAFT_ONLINE")));
     }
 
     /// **This test cannot catch a regression of the `peer.is_some()` guard.**

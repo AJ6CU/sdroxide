@@ -11,6 +11,7 @@
 //! The files are the station's, not the window's: on a browser this lists the
 //! server's recordings folder and the engine opens them there.
 
+use crate::i18n::tr;
 use eframe::egui::{self, RichText};
 use sdroxide_types::{Command, PlaybackCommand, PlaybackStatus, RecordingFile, RecordingListing};
 
@@ -86,7 +87,7 @@ fn describe(file: &RecordingFile) -> (String, String) {
                 "{:.4} MHz · {}{}",
                 st.freq_hz / 1e6,
                 st.mode.map_or("?", |m| m.label()),
-                if st.radio > 0 { format!(" · radio {}", st.radio + 1) } else { String::new() }
+                if st.radio > 0 { tr!("playback-radio-n", n = st.radio + 1) } else { String::new() }
             );
             (format!("{when}Z"), what)
         }
@@ -99,7 +100,7 @@ fn describe(file: &RecordingFile) -> (String, String) {
             } else {
                 String::new()
             },
-            "no stamp in the name — plays in the mode you are in".into(),
+            tr!("playback-no-stamp"),
         ),
     }
 }
@@ -132,7 +133,7 @@ impl super::SdroxideApp {
         let show = self.tool_window(
             ctx,
             "playback",
-            "PLAYBACK — recorded audio",
+            &tr!("playback-title"),
             [640.0, 520.0],
             true,
             |me, ui| me.playback_body(ui, &mut out),
@@ -144,12 +145,7 @@ impl super::SdroxideApp {
     fn playback_body(&mut self, ui: &mut egui::Ui, cmds: &mut Vec<Command>) {
         crate::chrome::window_body_bg(ui);
         ui.label(
-            RichText::new(
-                "Play a recording back into the decoders — SSTV, CW, RTTY, PSK, FT8 and every \
-                 other mode that decodes from audio. The radio stands down while it plays, the \
-                 dial and mode go to what the recording was made on, and STOP puts the radio \
-                 back. Change the mode while it plays to try another decoder.",
-            )
+            RichText::new(tr!("playback-intro"))
             .size(11.0)
             .color(crate::theme::gray(160)),
         );
@@ -159,27 +155,27 @@ impl super::SdroxideApp {
             ui.add_space(4.0);
         }
         ui.horizontal(|ui| {
-            ui.label(RichText::new("Find").size(11.0).color(crate::theme::gray(150)));
+            ui.label(RichText::new(tr!("signalid-find")).size(11.0).color(crate::theme::gray(150)));
             crate::chrome::field(
                 ui,
                 egui::TextEdit::singleline(&mut self.playback.find)
                     .desired_width(200.0)
-                    .hint_text("mode, MHz, date, name…"),
+                    .hint_text(tr!("playback-find-hint")),
             );
-            if crate::chrome::chip(ui, false, "REFRESH")
-                .on_hover_text("Read the recordings folder again")
+            if crate::chrome::chip(ui, false, tr!("knowncalls-refresh"))
+                .on_hover_text(tr!("playback-refresh-hint"))
                 .clicked()
             {
                 self.playback.asked = false;
             }
         });
         let Some(listing) = self.playback.listing.clone() else {
-            ui.label(RichText::new("Asking the station for its recordings…").size(11.0));
+            ui.label(RichText::new(tr!("playback-asking")).size(11.0));
             return;
         };
         if !listing.dir.is_empty() {
             ui.label(
-                RichText::new(format!("Folder: {}", listing.dir))
+                RichText::new(tr!("playback-folder", dir = listing.dir))
                     .size(10.0)
                     .color(crate::theme::gray(140)),
             );
@@ -196,10 +192,7 @@ impl super::SdroxideApp {
             |ui| {
                 if listing.files.is_empty() {
                     ui.label(
-                        RichText::new(
-                            "No recordings yet. Press REC → MP3 or WAV while something is on the \
-                             air; the file appears here, named with its time, frequency and mode.",
-                        )
+                        RichText::new(tr!("playback-none"))
                         .color(crate::theme::gray(150)),
                     );
                 }
@@ -214,23 +207,21 @@ impl super::SdroxideApp {
                                 crate::chrome::chip(
                                     ui,
                                     current,
-                                    if current { "▶ ON" } else { "▶ PLAY" },
+                                    if current { tr!("playback-on") } else { tr!("playback-play") },
                                 )
                             })
                             .inner
                             .on_hover_text(if file.iq {
-                                "An I/Q capture, not audio. Playback takes the audio the recorder \
-                                 writes; an I/Q capture is played with --file."
+                                tr!("playback-iq-hint")
                             } else if transmitting {
-                                "Not while transmitting"
+                                tr!("playback-not-while-tx")
                             } else {
-                                "Play this recording into the decoders from the start"
+                                tr!("playback-play-hint")
                             })
                             .on_disabled_hover_text(if file.iq {
-                                "An I/Q capture, not audio. Playback takes the audio the recorder \
-                                 writes; an I/Q capture is played with --file."
+                                tr!("playback-iq-hint")
                             } else {
-                                "Not while transmitting"
+                                tr!("playback-not-while-tx")
                             });
                         if chip.clicked() {
                             cmds.push(Command::Playback(PlaybackCommand::Open {
@@ -241,9 +232,9 @@ impl super::SdroxideApp {
                         // under the player or the recorder; the chip says so
                         // rather than doing nothing.
                         let busy = if current {
-                            Some("Playing back — stop it before deleting it")
+                            Some(tr!("playback-busy-playing"))
                         } else if writing.iter().any(|w| w.as_deref() == Some(file.name.as_str())) {
-                            Some("Still being recorded — stop REC before deleting it")
+                            Some(tr!("playback-busy-recording"))
                         } else {
                             None
                         };
@@ -254,16 +245,16 @@ impl super::SdroxideApp {
                                 crate::chrome::chip_accent(
                                     ui,
                                     armed,
-                                    if armed { "DELETE?" } else { "CLEAR" },
+                                    if armed { tr!("playback-delete-ask") } else { tr!("decodes-clear") },
                                     crate::theme::ALERT(),
                                     egui::Color32::WHITE,
                                 )
                             })
                             .inner
                             .on_hover_text(if armed {
-                                "Press again to delete this file for good. It cannot be undone."
+                                tr!("playback-delete-hint-armed")
                             } else {
-                                "Delete this recording from the folder (asks once more first)"
+                                tr!("playback-delete-hint")
                             })
                             .on_disabled_hover_text(busy.unwrap_or_default());
                         if clear.clicked() {
@@ -319,16 +310,16 @@ impl super::SdroxideApp {
         full: bool,
     ) {
         ui.horizontal_wrapped(|ui| {
-            ui.label(RichText::new("▶ PLAYBACK").strong().color(crate::theme::ALERT()));
+            ui.label(RichText::new(tr!("playback-strip-label")).strong().color(crate::theme::ALERT()));
             ui.label(
-                RichText::new("not live — the radio is standing down")
+                RichText::new(tr!("playback-not-live"))
                     .size(11.0)
                     .color(crate::theme::gray(170)),
             );
             let (label, hover) = if st.paused || st.ended {
-                ("▶ PLAY", "Carry on playing")
+                (tr!("playback-play"), tr!("playback-carry-on"))
             } else {
-                ("⏸ PAUSE", "Pause — the decoders hear silence until you carry on")
+                (tr!("playback-pause"), tr!("playback-pause-hint"))
             };
             if crate::chrome::chip(ui, false, label).on_hover_text(hover).clicked() {
                 if st.ended {
@@ -338,15 +329,15 @@ impl super::SdroxideApp {
                     cmds.push(Command::Playback(PlaybackCommand::Pause(!st.paused)));
                 }
             }
-            if crate::chrome::chip(ui, false, "↺ AGAIN")
-                .on_hover_text("Back to the start — another try at a picture or a decode")
+            if crate::chrome::chip(ui, false, tr!("playback-again"))
+                .on_hover_text(tr!("playback-again-hint"))
                 .clicked()
             {
                 cmds.push(Command::Playback(PlaybackCommand::Seek(0.0)));
                 cmds.push(Command::Playback(PlaybackCommand::Pause(false)));
             }
-            if crate::chrome::chip(ui, st.looping, "LOOP")
-                .on_hover_text("Start again from the top when the file ends")
+            if crate::chrome::chip(ui, st.looping, tr!("playback-loop"))
+                .on_hover_text(tr!("playback-loop-hint"))
                 .clicked()
             {
                 cmds.push(Command::Playback(PlaybackCommand::Loop(!st.looping)));
@@ -354,16 +345,16 @@ impl super::SdroxideApp {
             if crate::chrome::chip_accent(
                 ui,
                 true,
-                "■ STOP",
+                tr!("playback-stop"),
                 crate::theme::ALERT(),
                 egui::Color32::WHITE,
             )
-            .on_hover_text("End the playback and put the radio back where it was")
+            .on_hover_text(tr!("playback-stop-hint"))
             .clicked()
             {
                 cmds.push(Command::Playback(PlaybackCommand::Stop));
             }
-            if !full && crate::chrome::chip(ui, self.playback.show, "FILES").clicked() {
+            if !full && crate::chrome::chip(ui, self.playback.show, tr!("playback-files")).clicked() {
                 if self.playback.show {
                     self.playback.show = false;
                 } else {
@@ -397,40 +388,37 @@ impl super::SdroxideApp {
                 }
             }
             if st.ended {
-                ui.label(RichText::new("end of file").size(11.0).color(crate::theme::gray(160)));
+                ui.label(RichText::new(tr!("playback-end-of-file")).size(11.0).color(crate::theme::gray(160)));
             } else if st.paused {
-                ui.label(RichText::new("paused").size(11.0).color(crate::theme::gray(160)));
+                ui.label(RichText::new(tr!("playback-paused")).size(11.0).color(crate::theme::gray(160)));
             }
         });
         let mut line = st.name.clone();
         if full {
             match st.stamp {
                 Some(stamp) => {
-                    line = format!(
-                        "{line}\nRecorded on {:.4} MHz{} — the dial and mode were set from the \
-                         file's name.",
-                        stamp.freq_hz / 1e6,
-                        stamp.mode.map_or(String::new(), |m| format!(" in {}", m.label())),
-                    );
+                    let mhz = format!("{:.4}", stamp.freq_hz / 1e6);
+                    let text = match stamp.mode {
+                        Some(m) => tr!("playback-recorded-on-mode", mhz = mhz, mode = m.label()),
+                        None => tr!("playback-recorded-on", mhz = mhz),
+                    };
+                    line = format!("{line}\n{text}");
                 }
                 None => {
-                    line = format!(
-                        "{line}\nThe name records no dial or mode, so it plays in the mode you \
-                         are in — pick the decoder from the mode menu."
-                    );
+                    line = format!("{line}\n{}", tr!("playback-no-dial-mode"));
                 }
             }
-            line.push_str(&format!(
-                "\n{} Hz, {} — the {} is played.",
-                st.rate_hz,
-                if st.channels >= 2 { "stereo" } else { "mono" },
-                if st.channels >= 2 { "left (receive) channel" } else { "one channel" }
-            ));
+            line.push('\n');
+            line.push_str(&if st.channels >= 2 {
+                tr!("playback-format-stereo", rate = st.rate_hz)
+            } else {
+                tr!("playback-format-mono", rate = st.rate_hz)
+            });
         }
         ui.label(RichText::new(line).size(10.5).color(crate::theme::CYAN_DIM()));
         if let Some(f) = &st.fault {
             ui.label(
-                RichText::new(format!("Stopped: {f}")).size(11.0).color(crate::theme::ALERT()),
+                RichText::new(tr!("playback-stopped", fault = f)).size(11.0).color(crate::theme::ALERT()),
             );
         }
     }

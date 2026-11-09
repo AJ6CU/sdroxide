@@ -18,12 +18,15 @@
 mod aircraft;
 mod auth;
 mod history;
-mod watchlist;
 mod probe;
 mod session;
 mod session_cookie;
 mod signin;
 mod solar;
+mod sonde_online;
+mod broadcast_schedule;
+mod programs_state;
+mod watchlist;
 
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -65,7 +68,7 @@ pub enum ServerError {
 /// empty, leaves the server open to anyone who can reach the port.
 pub type AccessFn = Box<dyn Fn() -> sdroxide_types::RemoteAccess + Send + Sync>;
 
-pub use aircraft::{ENV_SWITCH as AIRCRAFT_ONLINE_ENV, enabled_by as aircraft_online_enabled_by};
+pub use aircraft::{ENV_SWITCH as AIRCRAFT_ONLINE_ENV, forced_by as aircraft_online_forced_by};
 pub use probe::ProbeFn;
 
 /// How this station puts another radio in its roster: create the radio's
@@ -169,11 +172,23 @@ pub struct ServerParams {
     pub radio_power: Option<RadioPowerFn>,
     /// Whether this station answers `/aircraft-info` — the AIRCRAFT window's
     /// online type, operator, route and photo credit, got from adsbdb and
-    /// Planespotters on the clients' behalf. Off unless the operator says so
-    /// (see [`aircraft_online_enabled_by`]): it makes this machine reach the
-    /// internet for whoever is connected.
-    pub aircraft_online: bool,
+    /// Planespotters on the clients' behalf. `None` is the default: on, with the
+    /// operator's "En ligne" switch in the AIRCRAFT window able to turn it off
+    /// and the choice kept across restarts. `Some(true)` / `Some(false)` hold it
+    /// on / off whatever the window says (see [`aircraft_online_forced_by`]).
+    pub aircraft_online: Option<bool>,
 }
+
+/// How many receive-audio packets (20 ms each) the audio lane holds before the
+/// pump starts dropping the newest.
+///
+/// 8 was 160 ms: one large spectrum frame still being written to a slow link
+/// was enough to overflow it, and every packet dropped there is a hole in the
+/// audio that a digital-mode decoder cannot get back. 16 is 320 ms -- more than
+/// the client's own playout ceiling covers (it plays only the newest 250 ms of
+/// a backlog, see `fresh_tail` in `sdroxide-ui`), so a longer stall is shed by
+/// the client rather than heard as old audio.
+pub(crate) const AUDIO_LANE_DEPTH: usize = 16;
 
 pub(crate) struct SessionTx {
     pub reliable: mpsc::Sender<ServerMsg>,
@@ -271,6 +286,20 @@ pub(crate) struct Latest {
     /// every three minutes, so a client that attached without the table would
     /// show an empty sea for minutes in front of a working decoder.
     pub ais_status: Option<Box<sdroxide_types::AisStatus>>,
+    /// The VOR read-out. Replayed on connect: a beacon's lock and ident are a
+    /// standing condition, and a client that attached without them would show
+    /// the puce empty in front of a working lane for up to half a second, or
+    /// for ever when the lane only speaks on a change.
+    pub vor_status: Option<Box<sdroxide_types::VorStatus>>,
+    /// The QO-100 tracker, the HFDL log and the radiosonde tracks: standing
+    /// conditions like the VOR read-out, replayed on connect so a client that
+    /// attached late is not blank until the decoder next speaks.
+    pub qo100_status: Option<sdroxide_types::Qo100Status>,
+    pub hfdl_status: Option<sdroxide_types::HfdlStatus>,
+    pub sonde_status: Option<Box<sdroxide_types::SondeStatus>>,
+    /// The Meshtastic receiver's nodes and packet log: a whole snapshot, kept
+    /// and replayed on connect like the sonde tracks.
+    pub meshtastic_status: Option<Box<sdroxide_types::MeshtasticStatus>>,
     /// What the DRM decoder has made of the broadcast currently tuned. Replayed
     /// on connect for the same reason as `rds`: a station's label and the
     /// transmission's parameters are standing conditions, and a client that
@@ -305,6 +334,8 @@ pub(crate) struct Station {
     pub auth: Arc<auth::AuthGate>,
     /// The relay behind `/aircraft-info`, switched on or off for the life of the process.
     pub aircraft: Arc<aircraft::AircraftHub>,
+    /// The relay behind `/sonde-online`: SondeHub's list, asked once for all clients.
+    pub(crate) sonde: Arc<sonde_online::SondeRelay>,
     /// What the station remembers of each aircraft for a day, fed by every
     /// radio and served on `/aircraft-history`. Off unless the operator
     /// switched it on.
@@ -312,6 +343,8 @@ pub(crate) struct Station {
     /// The aircraft the operator asked to be told about, served on
     /// `/aircraft-watch`. The same from every screen that connects.
     pub watch: Arc<watchlist::WatchHub>,
+    /// `/programs-state`: the PROGRAMS window as the station keeps it.
+    pub programs: Arc<programs_state::ProgramsHub>,
     /// The one probe worker, kept here so a radio added later shares it rather
     /// than starting a second thread that would scan the same bus.
     probes: Arc<probe::ProbeHub>,
@@ -659,8 +692,10 @@ pub async fn serve(params: ServerParams) -> Result<(), ServerError> {
         solar: Arc::new(solar::SolarHub::default()),
         auth: Arc::new(auth::AuthGate::new(params.access)),
         aircraft: Arc::new(aircraft::AircraftHub::start(params.aircraft_online)),
+        sonde: Arc::new(sonde_online::SondeRelay::default()),
         history: Arc::new(history::HistoryHub::start()),
         watch: Arc::new(watchlist::WatchHub::start()),
+        programs: Arc::new(programs_state::ProgramsHub::start()),
         probes: Arc::new(probe::ProbeHub::start(params.probe)),
         add: params.add_radio,
         remove: params.remove_radio,
@@ -707,14 +742,29 @@ pub async fn serve(params: ServerParams) -> Result<(), ServerError> {
         .route("/ws/{id}", get(session::ws_route_for))
         .route("/radios", get(radios_route))
         .route("/solar-ws", get(solar::ws_route))
+        .route("/sonde-online", get(sonde_online::route))
         .route("/aircraft-info/{icao}", get(aircraft::info_route))
-        .route("/aircraft-photo/{icao}", get(aircraft::photo_route))
         .route("/aircraft-photo", axum::routing::delete(aircraft::photo_release))
+        .route(
+            "/aircraft-photo/{icao}",
+            get(aircraft::photo_route).delete(aircraft::photo_release_one),
+        )
+        .route(
+            "/airport-photo",
+            get(aircraft::airport_photo_route).delete(aircraft::airport_photo_release),
+        )
+        .route("/airport-weather", get(aircraft::weather_route))
         .route("/aircraft-online", get(aircraft::switch_get).post(aircraft::switch_post))
         .route("/aircraft-history", get(history::list_route))
         .route("/aircraft-history/{icao}", get(history::one_route))
         .route("/aircraft-export", get(history::export_route))
         .route("/aircraft-watch", get(watchlist::get_route).post(watchlist::post_route))
+        .route("/programs-state", get(programs_state::get_route).post(programs_state::post_route))
+.route(
+    "/broadcast-schedule",
+    get(broadcast_schedule::get_route).post(broadcast_schedule::post_import_route)
+        .layer(axum::extract::DefaultBodyLimit::max(broadcast_schedule::MAX_BODY_BYTES)),
+)
         // Where a browser trades its password for a signed cookie, and gives
         // it back. Both are plain HTTP because a cookie is a response header
         // and the socket handshake's headers are spent before the sign-in
@@ -731,7 +781,20 @@ pub async fn serve(params: ServerParams) -> Result<(), ServerError> {
     let addr: SocketAddr = format!("{}:{}", params.bind, params.port)
         .parse()
         .unwrap_or_else(|_| SocketAddr::from(([0, 0, 0, 0], params.port)));
-    let listener = tokio::net::TcpListener::bind(addr).await?;
+    // TCP_NODELAY on every accepted connection. The sockets carry a steady
+    // stream of small WebSocket messages (a 20 ms audio packet, meters, a
+    // spectrum row), each flushed on its own; with Nagle's algorithm on, a
+    // small write waits for the ACK of the previous one, and against a
+    // browser's delayed ACK that is up to 40 ms (200 ms on Windows) of
+    // stall followed by a burst. The client sees exactly what a lossy link
+    // looks like -- audio gaps, a waterfall that stutters -- on a network
+    // that is perfectly healthy.
+    use axum::serve::ListenerExt as _;
+    let listener = tokio::net::TcpListener::bind(addr).await?.tap_io(|tcp| {
+        if let Err(e) = tcp.set_nodelay(true) {
+            warn!("could not set TCP_NODELAY on a client connection: {e}");
+        }
+    });
     info!("server listening on http://{addr}/");
     axum::serve(listener, axum::ServiceExt::<axum::extract::Request>::into_make_service(app))
         .await?;
@@ -888,6 +951,11 @@ fn pump(
     let mut mono = Vec::<f32>::new();
     let mut opus_enc: Option<opus::Encoder> = None;
     let mut audio_seq = 0u32;
+    // Packets the audio lane refused, and when that was last reported. Dropping
+    // is the backpressure policy, but a silent one made "choppy audio on a good
+    // network" impossible to tell from a client-side fault.
+    let mut audio_dropped = 0u32;
+    let mut audio_dropped_at = std::time::Instant::now();
 
     loop {
         // Taken out of the roster: let go of the radio, so that the engine
@@ -972,11 +1040,23 @@ fn pump(
                     audio_seq = audio_seq.wrapping_add(1);
                     if let Some(s) = shared.session.lock().unwrap().as_ref() {
                         // Bounded lane: dropping is the backpressure policy.
-                        let _ = s.audio.try_send(ServerMsg::RxAudio { seq: audio_seq, payload });
+                        if s.audio.try_send(ServerMsg::RxAudio { seq: audio_seq, payload }).is_err()
+                        {
+                            audio_dropped += 1;
+                        }
                     }
                     mono.drain(..960);
                 }
             }
+        }
+        if audio_dropped > 0 && audio_dropped_at.elapsed() >= Duration::from_secs(5) {
+            warn!(
+                radio = shared.id,
+                dropped = audio_dropped,
+                "audio lane full: the client is not draining its socket fast enough"
+            );
+            audio_dropped = 0;
+            audio_dropped_at = std::time::Instant::now();
         }
         // Bound the accumulator against pathological stalls.
         if mono.len() > 48_000 {
@@ -1127,6 +1207,16 @@ fn handle_event(shared: &Shared, ev: RadioEvent) {
                 latest.notice = n.clone();
                 Some(ServerMsg::Notice(n))
             }
+            // The provider's word about the station's own name, which the
+            // screen shows; the address it was sent to stays in the engine.
+            RadioEvent::DyndnsAnswer { at_unix, ok, text } => {
+                Some(ServerMsg::DyndnsAnswer { at_unix, ok, text })
+            }
+            // A plan's file for the screen that asked to save it: broadcast, the
+            // asking screen is the one that keeps it.
+            RadioEvent::BandPlanExport { file, json } => {
+                Some(ServerMsg::BandPlanExport { file, json })
+            }
             RadioEvent::Ft8Decodes(d) => Some(ServerMsg::Ft8Decodes(d)),
             RadioEvent::Ft8Status(s) => {
                 latest.digi = Some(s.clone());
@@ -1178,13 +1268,30 @@ fn handle_event(shared: &Shared, ev: RadioEvent) {
                 Some(ServerMsg::AisStatus(st))
             }
             RadioEvent::DabStatus(st) => Some(ServerMsg::DabStatus(st)),
-            // Native-only for now: every station this shipped for runs its
-            // own hardware locally, so there is no `ServerMsg` variant for
-            // this yet — see `RadioEvent::Qo100Status`'s own doc.
-            RadioEvent::Qo100Status(_) => None,
-            // Native-only for the same reason as QO-100 above — the live HFDL
-            // decode log is engine-internal, bridged nowhere yet.
-            RadioEvent::HfdlStatus(_) => None,
+            RadioEvent::Qo100Status(st) => {
+                latest.qo100_status = Some(st.clone());
+                Some(ServerMsg::Qo100Status(st))
+            }
+            RadioEvent::HfdlStatus(st) => {
+                latest.hfdl_status = Some(st.clone());
+                Some(ServerMsg::HfdlStatus(st))
+            }
+            RadioEvent::SondeStatus(st) => {
+                latest.sonde_status = Some(st.clone());
+                Some(ServerMsg::SondeStatus(st))
+            }
+            RadioEvent::MeshtasticStatus(st) => {
+                latest.meshtastic_status = Some(st.clone());
+                Some(ServerMsg::MeshtasticStatus(st))
+            }
+            // Not kept for replay: each carries only the lines new since the
+            // last, so a client that attaches late picks the picture up from
+            // the next ones.
+            RadioEvent::WxsatStatus(st) => Some(ServerMsg::WxsatStatus(st)),
+            RadioEvent::VorStatus(st) => {
+                latest.vor_status = Some(st.clone());
+                Some(ServerMsg::VorStatus(st))
+            }
             RadioEvent::SstvLine { image_id, y, rgb } => {
                 Some(ServerMsg::SstvLine { image_id, y, rgb })
             }
@@ -1307,7 +1414,7 @@ fn handle_event(shared: &Shared, ev: RadioEvent) {
             // whichever screen, but only the station connects, so a remote
             // screen has no other way to learn whether they work.
             RadioEvent::PictureUpload(st) => Some(ServerMsg::PictureUpload(st)),
-            // Native-only, like `Qo100Status`: the ATS Mini's memory table is
+            // Native-only: the ATS Mini's memory table is
             // answered on the machine the radio is attached to and is not on
             // the wire.
             RadioEvent::AtsMiniMemories(_) => None,
@@ -1335,6 +1442,8 @@ fn handle_event(shared: &Shared, ev: RadioEvent) {
             // The speaker feed's level: the station's audio, so a remote screen
             // has no other way to draw a meter that follows it.
             RadioEvent::AudioLevel(l) => Some(ServerMsg::AudioLevel(l)),
+            RadioEvent::TxRefused(why, hz) => Some(ServerMsg::TxRefused(why, hz)),
+            RadioEvent::ModeRefused(mode, band) => Some(ServerMsg::ModeRefused { mode, band }),
             // Found where the sound reaches the speakers, so a remote client
             // finds its own from the audio it is sent.
             RadioEvent::HeardFrame(_) => None,
@@ -1468,6 +1577,11 @@ fn cache_policy_for(path: &str) -> &'static str {
     let name = path.rsplit('/').next().unwrap_or(path);
     if name.ends_with(".wasm") || (name.starts_with("sdroxide-web-") && name.ends_with(".js")) {
         "max-age=31536000, immutable"
+    } else if name.ends_with(".ftl") {
+        // A translation the browser fetches for itself. Fixed name, so never
+        // trusted without asking; but the answer is a 304 when it has not
+        // changed, so a language of ~700 KB is not sent again every session.
+        "no-cache"
     } else {
         "no-store"
     }
@@ -1686,6 +1800,10 @@ mod cache_policy_tests {
         assert_eq!(cache_policy_for("/ws_arraybuffer.js"), "no-store");
         assert_eq!(cache_policy_for("/manifest.json"), "no-store");
         assert_eq!(cache_policy_for("/sdroxide-brown-192.png"), "no-store");
+        // The translations the browser fetches: revalidated, not stored blind,
+        // not kept forever (an update changes the ids the new client asks for).
+        assert_eq!(cache_policy_for("/i18n/fr/sdroxide.ftl"), "no-cache");
+        assert_eq!(cache_policy_for("/sdroxide/i18n/pt-BR/sdroxide.ftl"), "no-cache");
         assert_eq!(
             cache_policy_for("/sdroxide-web-9a78ba26f0438e5a_bg.wasm"),
             "max-age=31536000, immutable"

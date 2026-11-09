@@ -13,6 +13,7 @@
 //! numbering ahead of the amateur table, and the flag machinery is the same one
 //! the decode rows already draw.
 
+use crate::i18n::tr;
 use eframe::egui::{self, RichText};
 use sdroxide_types::resolve_callsign;
 
@@ -63,16 +64,14 @@ impl KnownCallsState {
     /// Why the list is empty, in the operator's terms. Every branch names which
     /// half is missing rather than saying "no results", so the window never
     /// reads as a fault when it is only a mode that does not keep a table.
-    fn empty_reason(&self) -> &'static str {
+    fn empty_reason(&self) -> String {
         if self.no_answer {
-            return "This mode keeps no callsign table. It is an FT8/FT4 decoder \
-                    that hashes callsigns — anything else has nothing here to show.";
+            return tr!("knowncalls-no-table");
         }
         if !self.asked {
-            return "Not asked yet — press REFRESH.";
+            return tr!("knowncalls-not-asked");
         }
-        "Nobody yet. A station is added the moment it is heard spelling its call \
-         out — a CQ, a report with both calls in the clear, or a bare 11 m call."
+        tr!("knowncalls-nobody")
     }
 }
 
@@ -96,7 +95,7 @@ impl super::SdroxideApp {
         let show = self.tool_window(
             ctx,
             "known-calls",
-            "KNOWN STATIONS",
+            &tr!("knowncalls-title"),
             [560.0, 520.0],
             true,
             |me, ui| {
@@ -112,28 +111,24 @@ impl super::SdroxideApp {
 
     fn known_calls_body(&mut self, ui: &mut egui::Ui) {
         ui.label(
-            RichText::new(
-                "Every callsign a hashed <...> on this receiver can currently name. A hash \
-                 cannot be read backwards — a station appears here only once it has been heard \
-                 spelling its call out, which is what a bare 11 m call is for.",
-            )
+            RichText::new(tr!("knowncalls-intro"))
             .size(11.0)
             .color(crate::theme::gray(160)),
         );
         ui.add_space(6.0);
 
         ui.horizontal(|ui| {
-            ui.label(RichText::new("Find").size(11.0).color(crate::theme::gray(150)));
+            ui.label(RichText::new(tr!("signalid-find")).size(11.0).color(crate::theme::gray(150)));
             crate::chrome::field(
                 ui,
                 egui::TextEdit::singleline(&mut self.known_calls.query)
                     .desired_width(200.0)
-                    .hint_text("callsign, country, prefix…"),
+                    .hint_text(tr!("knowncalls-find-hint")),
             );
-            if crate::chrome::chip(ui, false, "CLEAR").clicked() {
+            if crate::chrome::chip(ui, false, tr!("decodes-clear")).clicked() {
                 self.known_calls.query.clear();
             }
-            if crate::chrome::chip(ui, false, "REFRESH").clicked() {
+            if crate::chrome::chip(ui, false, tr!("knowncalls-refresh")).clicked() {
                 self.known_calls.request();
             }
         });
@@ -146,12 +141,9 @@ impl super::SdroxideApp {
         let capped = shown < self.known_calls.total;
         ui.label(
             RichText::new(if capped {
-                format!(
-                    "newest {shown} of {} — REFRESH to re-ask, the list is a snapshot",
-                    self.known_calls.total
-                )
+tr!("knowncalls-capped", shown = shown, total = self.known_calls.total)
             } else {
-                format!("{shown} known")
+                tr!("knowncalls-known", shown = shown)
             })
             .size(10.5)
             .color(crate::theme::gray(150)),
@@ -181,7 +173,7 @@ impl super::SdroxideApp {
 
         if !query.is_empty() {
             ui.label(
-                RichText::new(format!("{} match", rows.len()))
+                RichText::new(tr!("knowncalls-matches", n = rows.len()))
                     .size(10.5)
                     .color(crate::theme::gray(150)),
             );
@@ -193,7 +185,7 @@ impl super::SdroxideApp {
                 if rows.is_empty() {
                     ui.add_space(6.0);
                     let reason = if !self.known_calls.query.trim().is_empty() {
-                        "No known station matches that."
+                        tr!("knowncalls-no-match")
                     } else {
                         self.known_calls.empty_reason()
                     };
@@ -233,7 +225,7 @@ fn known_row(ui: &mut egui::Ui, call: &str, info: Option<&sdroxide_types::Entity
                     }
                     None => {
                         ui.label(
-                            RichText::new("no country — not a callsign this table knows")
+                            RichText::new(tr!("knowncalls-no-country"))
                                 .size(10.5)
                                 .color(crate::theme::gray(170)),
                         );

@@ -12,6 +12,7 @@ use eframe::egui::{self, Color32, RichText};
 use sdroxide_types::{Command, JttyStatus};
 
 use crate::app::{SdroxideApp, tx_gated};
+use crate::i18n::tr;
 use crate::theme;
 
 impl SdroxideApp {
@@ -31,7 +32,7 @@ impl SdroxideApp {
         if let Some(st) = &st {
             self.jtty_log(ui, st);
         } else {
-            ui.label(RichText::new("starting the JTTY receiver…").weak());
+            ui.label(RichText::new(tr!("jtty-starting-receiver")).weak());
         }
         self.jtty_tx_row(ui, cmds);
     }
@@ -52,7 +53,7 @@ impl SdroxideApp {
                         .desired_width(70.0)
                         .fill(theme::CYAN_DIM()),
                 )
-                .on_hover_text("Receive audio level");
+                .on_hover_text(tr!("jtty-receive-audio-level"));
             }
             self.digi_freq_chip(ui, cmds);
             crate::chrome::row_tail(ui, |ui| {
@@ -76,10 +77,7 @@ impl SdroxideApp {
 
         if st.messages.is_empty() {
             ui.label(
-                RichText::new(
-                    "Listening. JTTY transmissions start at any time — a message \
-                     appears here a moment after it is heard.",
-                )
+                RichText::new(tr!("jtty-listening-note"))
                 .size(10.0)
                 .weak(),
             );
@@ -137,12 +135,12 @@ impl SdroxideApp {
             if field.changed() {
                 cmds.push(Command::DigiTxText(self.text_tx.clone()));
             }
-            let label = if tx_on { " SENDING " } else { "   TX   " };
+            let label = if tx_on { tr!("jtty-sending") } else { tr!("panels-tx-2") };
             if tx_gated(ui, tx_ok, |ui| {
                 crate::chrome::chip_accent(
                     ui,
                     tx_on,
-                    RichText::new(label).size(13.0).strong(),
+                    RichText::new(&label).size(13.0).strong(),
                     theme::ALERT(),
                     Color32::WHITE,
                 )
@@ -156,7 +154,7 @@ impl SdroxideApp {
                 crate::chrome::chip_accent(
                     ui,
                     false,
-                    RichText::new(" CALL CQ ").size(12.0).strong(),
+                    RichText::new(tr!("panels-call-cq")).size(12.0).strong(),
                     theme::GREEN(),
                     theme::INK_ON_CYAN(),
                 )
@@ -176,10 +174,7 @@ impl SdroxideApp {
             }
         });
         ui.label(
-            RichText::new(
-                "The message is sent once when you press TX — JTTY is asynchronous, \
-                 so there is no period to wait for and nothing repeats.",
-            )
+            RichText::new(tr!("jtty-sent-once-note"))
             .size(9.5)
             .color(theme::CYAN_DIM()),
         );

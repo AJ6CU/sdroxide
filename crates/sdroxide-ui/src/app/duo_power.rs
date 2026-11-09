@@ -4,25 +4,23 @@
 //! default and what the HR500 needs: at 5 W the DUO cannot drive the amplifier
 //! to full output on most bands.
 
+use crate::i18n::tr;
+
 /// The buttons: label, menu 34 setting as `TP`'s parameter, and what the
 /// radio's step is called.
 pub(in crate::app) const PRESETS: [(&str, u8); 4] = [("1W", 2), ("3W", 6), ("5W", 8), ("MAX", 9)];
 
 /// The hover for the button that sets `code`.
 pub(in crate::app) fn hover(code: u8) -> String {
-    let base = "Sets the FDM-DUO's own power setting (menu 34 TX POWER). Drive and Tune then \
-                set the power within it, and SDRoxide sends the setting again each time it \
-                connects.";
+    let base = tr!("duopower-sets-fdm-duo-s-own");
     match code {
-        9 => format!(
-            "MAX: the FDM-DUO's full output, about 8 W. The setting to use with the HR500 in \
-             line.\n\n{base}"
+        9 => tr!("duopower-max-fdm-duo-s-full", base = base),
+        8 => tr!("duopower-t-5-w-hr500-line-will", base = base),
+        _ => tr!(
+            "duopower-w-running-barefoot-qrp",
+            code = format!("{:.0}", step_w(code)),
+            base = base
         ),
-        8 => format!(
-            "5 W. With the HR500 in line it will not reach full output on most bands at this \
-             setting: use MAX, and Drive to bring it down.\n\n{base}"
-        ),
-        _ => format!("{:.0} W, for running barefoot or QRP.\n\n{base}", step_w(code)),
     }
 }
 

@@ -13,6 +13,7 @@
 use sdroxide_aircraft_history::{AircraftReply, FORMAT_VERSION, Journal, RETENTION_S, Status};
 
 use super::aircraft_card::icao_hex;
+use crate::i18n::tr;
 use super::aircraft_online::{Badge, Row};
 use super::util::fmt_age;
 use crate::adsb_map::TrailSeg;
@@ -42,13 +43,13 @@ pub(in crate::app) enum Reason {
 
 impl Reason {
     /// What to tell the person.
-    pub(in crate::app) fn note(self) -> &'static str {
+    pub(in crate::app) fn note(self) -> String {
         match self {
-            Reason::Disabled => "the station has not switched its history on",
-            Reason::Unauthorized => "the station wants a sign-in",
-            Reason::Offline => "the station did not answer",
-            Reason::NoStation => "history is kept by the station you are connected to",
-            Reason::Unknown => "the station's answer was not understood",
+            Reason::Disabled => tr!("aircraft-history-reason-disabled"),
+            Reason::Unauthorized => tr!("aircraft-history-reason-unauthorized"),
+            Reason::Offline => tr!("aircraft-switch-no-answer"),
+            Reason::NoStation => tr!("aircraft-history-reason-no-station"),
+            Reason::Unknown => tr!("aircraft-history-reason-unknown"),
         }
     }
 
@@ -209,11 +210,11 @@ pub(in crate::app) enum HistoryOffer {
 }
 
 impl HistoryOffer {
-    pub(in crate::app) fn label(self) -> &'static str {
+    pub(in crate::app) fn label(self) -> String {
         match self {
-            HistoryOffer::Hidden => "",
-            HistoryOffer::Show => "Show history",
-            HistoryOffer::On => "Hide history",
+            HistoryOffer::Hidden => String::new(),
+            HistoryOffer::Show => tr!("aircraft-history-show"),
+            HistoryOffer::On => tr!("aircraft-history-hide"),
         }
     }
 }
@@ -277,36 +278,36 @@ pub(in crate::app) fn rows(j: &Journal, now: i64) -> Vec<Row> {
             label: "History",
             value: "—".to_string(),
             badge: Badge::Missing,
-            note: "nothing kept for this aircraft yet".to_string(),
+            note: tr!("aircraft-history-nothing-kept"),
         }];
     }
-    let by_station = "by this station";
+    let by_station = tr!("aircraft-history-by-station");
     let mut out = Vec::new();
     if j.first_seen > 0 {
-        out.push(line("First heard", fmt_age(now - j.first_seen), by_station));
+        out.push(line("First heard", fmt_age(now - j.first_seen), by_station.clone()));
     }
     if j.last_seen > 0 {
         out.push(line("Last heard", fmt_age(now - j.last_seen), by_station));
     }
-    out.push(line("Track points", j.points.len().to_string(), "kept for the last 24 h"));
+    out.push(line("Track points", j.points.len().to_string(), tr!("aircraft-history-kept-24h")));
     if let Some(top) = j.points.iter().filter_map(|p| p.altitude_ft()).max() {
         out.push(line(
             "Highest",
             sdroxide_types::AirUnits::current().altitude(top),
-            "of the kept points",
+            tr!("aircraft-history-of-kept"),
         ));
     }
     let joined = |list: &[sdroxide_aircraft_history::Seen]| {
         list.iter().map(|s| s.text.as_str()).collect::<Vec<_>>().join(", ")
     };
     if !j.callsigns.is_empty() {
-        out.push(line("Callsigns", joined(&j.callsigns), "used in the last 24 h"));
+        out.push(line("Callsigns", joined(&j.callsigns), tr!("aircraft-history-used-24h")));
     }
     if !j.registrations.is_empty() {
-        out.push(line("Registrations", joined(&j.registrations), "seen in the last 24 h"));
+        out.push(line("Registrations", joined(&j.registrations), tr!("aircraft-history-seen-24h")));
     }
     if let Some(c) = &j.card {
-        let note = format!("looked up {} ago", fmt_age(now - c.at));
+        let note = tr!("aircraft-history-looked-up", age = fmt_age(now - c.at));
         let kind: Vec<&str> =
             [c.manufacturer.as_deref(), c.type_name.as_deref()].into_iter().flatten().collect();
         if !kind.is_empty() {

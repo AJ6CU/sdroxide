@@ -25,6 +25,7 @@
 //! platforms have no equivalent. The keyer itself is portable and lives in the
 //! DSP crate; this is only the part that touches a device.
 
+use crate::i18n::tr;
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::Read;
@@ -172,7 +173,7 @@ impl CwKeySource {
         let thread = std::thread::Builder::new()
             .name("cw-key".into())
             .spawn(move || run(paths, setup, &shared2, &stop2))
-            .map_err(|e| format!("could not start the CW key thread: {e}"))?;
+            .map_err(|e| tr!("cwkey-thread-failed", error = e.to_string()))?;
         Ok(CwKeySource { shared, stop, thread: Some(thread) })
     }
 
@@ -251,9 +252,7 @@ fn run(paths: Vec<PathBuf>, setup: KeySetup, shared: &Shared, stop: &AtomicBool)
         // clicks. Say so instead of pretending the grab worked.
         set_error(
             shared,
-            "could not take the paddle exclusively — its contacts may also click \
-             in other windows (is another program using it?)"
-                .into(),
+            tr!("cwkey-grab-failed"),
         );
     }
     for fd in &fds {

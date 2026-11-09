@@ -12,6 +12,7 @@
 //! alerts use; the browser build gets the reference and the drill without a
 //! speaker.
 
+use crate::i18n::tr;
 use eframe::egui::{self, RichText};
 use sdroxide_types::{Answer, MorseProgress};
 
@@ -40,12 +41,12 @@ enum Tab {
 }
 
 impl Tab {
-    fn label(self) -> &'static str {
+    fn label(self) -> String {
         match self {
-            Tab::Translate => "TRANSLATE",
-            Tab::Practice => "PRACTICE",
-            Tab::Learn => "LEARN",
-            Tab::Send => "SEND",
+            Tab::Translate => tr!("morse-translate"),
+            Tab::Practice => tr!("morse-practice"),
+            Tab::Learn => tr!("morse-learn"),
+            Tab::Send => tr!("topbar-send"),
         }
     }
 }
@@ -223,7 +224,7 @@ impl MorseState {
             }
         }
         let Some(path) = self.key_devices.get(self.key_pick).cloned() else {
-            self.key_error = Some("no paddle found — connect one, then reopen this pane".into());
+            self.key_error = Some(tr!("morse-no-paddle-found-connect-one-then").into());
             return;
         };
         let setup =
@@ -298,7 +299,7 @@ impl MorseSink {
         let thread = std::thread::Builder::new()
             .name("morse-trainer".into())
             .spawn(move || worker(rx, &stop2, &error2))
-            .map_err(|e| format!("could not start the Morse audio thread: {e}"))?;
+            .map_err(|e| tr!("morse-could-not-start-morse-audio", error = e.to_string()))?;
         Ok(MorseSink { tx: Some(tx), stop, thread: Some(thread), error })
     }
 
@@ -329,7 +330,7 @@ fn worker(rx: Receiver<Job>, stop: &AtomicBool, error: &std::sync::Mutex<Option<
     let (out, mut ring) = match start_output(None, 48_000, sdroxide_types::AudioRouting::Both) {
         Ok(v) => v,
         Err(e) => {
-            *error.lock().unwrap() = Some(format!("no audio output: {e}"));
+            *error.lock().unwrap() = Some(tr!("morse-no-audio-output", error = e.to_string()));
             // Drain so a send does not block forever.
             while let Ok(job) = rx.recv() {
                 if matches!(job, Job::Quit) {
@@ -423,7 +424,7 @@ impl super::SdroxideApp {
         if !self.morse.show {
             return;
         }
-        let show = self.tool_window(ctx, "morse", "MORSE", [520.0, 430.0], true, |me, ui| {
+        let show = self.tool_window(ctx, "morse", &tr!("morse-morse"), [520.0, 430.0], true, |me, ui| {
             me.morse_body(ui);
         });
         self.morse.show = show;
@@ -480,7 +481,7 @@ impl super::SdroxideApp {
     #[cfg(all(not(target_arch = "wasm32"), target_os = "linux"))]
     fn morse_send(&mut self, ui: &mut egui::Ui) {
         ui.label(
-            RichText::new("Send with a paddle — played here, never on the air")
+            RichText::new(tr!("morse-send-with-a-paddle-played-here"))
                 .size(11.0)
                 .color(crate::theme::gray(170)),
         );
@@ -491,7 +492,7 @@ impl super::SdroxideApp {
             ui.add_space(4.0);
             ui.label(
                 RichText::new(
-                    "No paddle found in /dev/input/by-id. Connect one and reopen this pane.                      A keyer box that reports its two contacts (often as a mouse's buttons)                      works; one that does its own iambic keying and sends touches does not.",
+                    tr!("morse-no-paddle-found-in-dev-input-by-id"),
                 )
                 .size(10.0)
                 .weak(),
@@ -521,8 +522,8 @@ impl super::SdroxideApp {
                         }
                     }
                 });
-            if crate::chrome::chip(ui, self.morse.key_reverse, "REVERSE").on_hover_text(
-                "Swap dit and dah. The switch on many paddles does this on the key itself;                  this is for when it is in the other position.",
+            if crate::chrome::chip(ui, self.morse.key_reverse, tr!("morse-reverse")).on_hover_text(
+                tr!("morse-swap-dit-and-dah-the-switch-on"),
             ).clicked()
             {
                 self.morse.key_reverse = !self.morse.key_reverse;
@@ -533,7 +534,7 @@ impl super::SdroxideApp {
         ui.add_space(4.0);
         let running = self.morse.key_source.is_some();
         ui.horizontal_wrapped(|ui| {
-            if crate::chrome::chip(ui, running, if running { "STOP KEY" } else { "START KEY" })
+            if crate::chrome::chip(ui, running, if running { tr!("morse-stop-key") } else { tr!("morse-start-key") })
                 .clicked()
             {
                 if running {
@@ -564,12 +565,12 @@ impl super::SdroxideApp {
             self.morse.send_target = Some(self.morse.next_target());
         }
         ui.horizontal_wrapped(|ui| {
-            if crate::chrome::chip(ui, false, "NEW").clicked() {
+            if crate::chrome::chip(ui, false, tr!("decodes-new")).clicked() {
                 self.morse.send_target = Some(self.morse.next_target());
                 self.morse.send_feedback = None;
                 self.morse.send_last.clear();
             }
-            if crate::chrome::chip(ui, self.morse.reveal, "REVEAL").clicked() {
+            if crate::chrome::chip(ui, self.morse.reveal, tr!("morse-reveal")).clicked() {
                 self.morse.reveal = !self.morse.reveal;
             }
             if let Some(c) = self.morse.send_target.filter(|_| self.morse.reveal) {
@@ -577,29 +578,29 @@ impl super::SdroxideApp {
             }
             if let Some((ok, want, got)) = self.morse.send_feedback {
                 let (text, color) = if ok {
-                    (format!("correct: {want}"), crate::theme::GREEN())
+                    (tr!("morse-send-correct", want = want), crate::theme::GREEN())
                 } else {
-                    (format!("heard {got}, wanted {want}"), crate::theme::ALERT())
+                    (tr!("morse-send-heard", got = got, want = want), crate::theme::ALERT())
                 };
                 ui.label(RichText::new(text).size(12.0).color(color));
             }
         });
         ui.label(
             RichText::new(
-                "Key the character above. The keyer makes the dits and dahs clean — you                  choose which paddle and how long to pause. A tap is one element; hold to                  repeat.",
+                tr!("morse-key-the-character-above-the-keyer"),
             )
             .size(10.0)
             .weak(),
         );
         if !self.morse.send_last.is_empty() {
-            ui.label(RichText::new(format!("received: {}", self.morse.send_last)).size(12.0));
+            ui.label(RichText::new(tr!("morse-send-received", text = &self.morse.send_last)).size(12.0));
         }
     }
 
     #[cfg(not(all(not(target_arch = "wasm32"), target_os = "linux")))]
     fn morse_send(&mut self, ui: &mut egui::Ui) {
         ui.label(
-            RichText::new("The sending drill needs a Linux desktop and a paddle.")
+            RichText::new(tr!("morse-the-sending-drill-needs-a-linux"))
                 .size(11.0)
                 .weak(),
         );
@@ -607,13 +608,13 @@ impl super::SdroxideApp {
 
     #[cfg(not(target_arch = "wasm32"))]
     fn morse_translate(&mut self, ui: &mut egui::Ui) {
-        ui.label(RichText::new("Text → Morse").size(11.0).color(crate::theme::gray(170)));
+        ui.label(RichText::new(tr!("morse-text-morse")).size(11.0).color(crate::theme::gray(170)));
         crate::chrome::field(ui, egui::TextEdit::multiline(&mut self.morse.text).desired_rows(3));
         let morse = to_morse(&self.morse.text);
         ui.add_space(2.0);
         ui.label(RichText::new(morse).monospace().size(14.0).color(crate::theme::CYAN()));
         ui.add_space(10.0);
-        ui.label(RichText::new("Morse → Text").size(11.0).color(crate::theme::gray(170)));
+        ui.label(RichText::new(tr!("morse-morse-text")).size(11.0).color(crate::theme::gray(170)));
         crate::chrome::field(
             ui,
             egui::TextEdit::multiline(&mut self.morse.code)
@@ -623,19 +624,14 @@ impl super::SdroxideApp {
         ui.label(RichText::new(from_morse(&self.morse.code)).size(14.0));
         ui.add_space(6.0);
         ui.label(
-            RichText::new(
-                "`.` and `-` per character, a space between characters, ` / ` between words. \
-                 The ITU alphabet, digits, punctuation and the common prosigns.",
-            )
-            .size(9.5)
-            .weak(),
+            RichText::new(tr!("morse-per-character-space-between-characters")).size(9.5).weak(),
         );
     }
 
     #[cfg(target_arch = "wasm32")]
     fn morse_translate(&mut self, ui: &mut egui::Ui) {
         ui.label(
-            RichText::new("The reference translator is available in the desktop build.")
+            RichText::new(tr!("morse-reference-translator-available-desktop-build"))
                 .size(11.0)
                 .weak(),
         );
@@ -643,7 +639,7 @@ impl super::SdroxideApp {
 
     fn morse_practice(&mut self, ui: &mut egui::Ui) {
         ui.label(
-            RichText::new("Play what you type, to your own speakers")
+            RichText::new(tr!("morse-play-what-you-type-your"))
                 .size(11.0)
                 .color(crate::theme::gray(170)),
         );
@@ -654,21 +650,24 @@ impl super::SdroxideApp {
         self.morse_tone_controls(ui);
         ui.add_space(4.0);
         ui.horizontal_wrapped(|ui| {
-            if crate::chrome::chip(ui, true, "PLAY").clicked() {
+            if crate::chrome::chip(ui, true, tr!("morse-play")).clicked() {
                 let text = self.morse.play_text.clone();
                 self.morse.play(&text);
             }
-            if crate::chrome::chip(ui, false, "STOP").clicked() {
+            if crate::chrome::chip(ui, false, tr!("morse-stop")).clicked() {
                 self.morse.stop();
             }
             #[cfg(not(target_arch = "wasm32"))]
             ui.label(
-                RichText::new(format!(
-                    "about {:.0} s",
-                    text_duration_s(
-                        &self.morse.play_text,
-                        self.morse.wpm,
-                        self.morse.farnsworth_wpm
+                RichText::new(tr!(
+                    "morse-about-s",
+                    farnsworth_wpm = format!(
+                        "{:.0}",
+                        text_duration_s(
+                            &self.morse.play_text,
+                            self.morse.wpm,
+                            self.morse.farnsworth_wpm
+                        )
                     )
                 ))
                 .size(10.0)
@@ -685,36 +684,39 @@ impl super::SdroxideApp {
             let p = &self.morse.progress;
             (p.correct, p.total, p.streak, p.complete())
         };
-        ui.label(RichText::new(format!("Characters in play: {set}")).size(11.0));
+        ui.label(RichText::new(tr!("morse-characters-play", set = set)).size(11.0));
         ui.label(
-            RichText::new(format!(
-                "Score: {correct} / {total}. Run: {} of {}.",
-                streak.min(sdroxide_types::ADVANCE_RUN),
-                sdroxide_types::ADVANCE_RUN
+            RichText::new(tr!(
+                "morse-score-run",
+                correct = correct,
+                total = total,
+                streak = streak.min(sdroxide_types::ADVANCE_RUN),
+                value = sdroxide_types::ADVANCE_RUN
             ))
             .size(11.0)
             .color(crate::theme::CYAN_DIM()),
         );
         if complete {
             ui.label(
-                RichText::new("Every character learned — well done.").color(crate::theme::GREEN()),
+                RichText::new(tr!("morse-every-character-learned-well-done"))
+                    .color(crate::theme::GREEN()),
             );
         }
         ui.add_space(4.0);
         self.morse_tone_controls(ui);
         ui.add_space(4.0);
         ui.horizontal_wrapped(|ui| {
-            if crate::chrome::chip(ui, false, "NEW").clicked() {
+            if crate::chrome::chip(ui, false, tr!("decodes-new")).clicked() {
                 let c = self.morse.next_target();
                 self.morse.target = Some(c);
                 self.morse.answer.clear();
                 self.morse.feedback = None;
                 self.morse.play_letter(c);
             }
-            if crate::chrome::chip(ui, self.morse.reveal, "REVEAL").clicked() {
+            if crate::chrome::chip(ui, self.morse.reveal, tr!("morse-reveal")).clicked() {
                 self.morse.reveal = !self.morse.reveal;
             }
-            if crate::chrome::chip(ui, false, "RESET").clicked() {
+            if crate::chrome::chip(ui, false, tr!("morse-reset")).clicked() {
                 self.morse.progress.reset();
                 self.morse.target = None;
                 self.morse.answer.clear();
@@ -725,7 +727,7 @@ impl super::SdroxideApp {
                 if self.morse.reveal {
                     ui.label(RichText::new(c.to_string()).size(16.0).strong());
                 }
-                if crate::chrome::chip(ui, false, "REPLAY").clicked() {
+                if crate::chrome::chip(ui, false, tr!("morse-replay")).clicked() {
                     self.morse.play_letter(c);
                 }
             }
@@ -734,7 +736,7 @@ impl super::SdroxideApp {
         let target = self.morse.target;
         if let Some(want) = target {
             ui.horizontal(|ui| {
-                ui.label("What did you hear?");
+                ui.label(tr!("morse-what-did-you-hear"));
                 let resp = crate::chrome::field(
                     ui,
                     egui::TextEdit::singleline(&mut self.morse.answer)
@@ -742,7 +744,7 @@ impl super::SdroxideApp {
                         .hint_text("?"),
                 );
                 let submitted = resp.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
-                if crate::chrome::chip(ui, false, "CHECK").clicked() || submitted {
+                if crate::chrome::chip(ui, false, tr!("morse-check")).clicked() || submitted {
                     let got = self.morse.answer.clone();
                     let before = self.morse.progress.unlocked;
                     let verdict = self.morse.progress.answer(want, &got);
@@ -757,28 +759,28 @@ impl super::SdroxideApp {
             });
             if let Some((ok, c)) = self.morse.feedback {
                 let (ink, text) = if ok {
-                    (crate::theme::GREEN(), format!("correct — {c}"))
+                    (crate::theme::GREEN(), tr!("morse-correct", value = c))
                 } else {
-                    (crate::theme::ALERT(), format!("that was {c}"))
+                    (crate::theme::ALERT(), tr!("morse-was", value = c))
                 };
                 ui.label(RichText::new(text).color(ink));
             }
         } else {
-            ui.label(RichText::new("Press NEW to hear a character.").weak());
+            ui.label(RichText::new(tr!("morse-press-new-hear-character")).weak());
         }
         self.morse_audio_note(ui);
     }
 
     fn morse_tone_controls(&mut self, ui: &mut egui::Ui) {
         ui.horizontal_wrapped(|ui| {
-            ui.label("Tone");
+            ui.label(tr!("morse-tone"));
             ui.add(
                 egui::DragValue::new(&mut self.morse.pitch_hz)
                     .speed(5.0)
                     .range(300.0..=1200.0)
                     .suffix(" Hz"),
             );
-            ui.label("Speed");
+            ui.label(tr!("morse-speed"));
             ui.add(
                 egui::DragValue::new(&mut self.morse.wpm)
                     .speed(0.5)
@@ -789,17 +791,14 @@ impl super::SdroxideApp {
             // Never above the character speed, which is what "no Farnsworth"
             // means to the keyer.
             self.morse.farnsworth_wpm = self.morse.farnsworth_wpm.min(self.morse.wpm);
-            ui.label("Spacing");
+            ui.label(tr!("morse-spacing"));
             ui.add(
                 egui::DragValue::new(&mut self.morse.farnsworth_wpm)
                     .speed(0.5)
                     .range(5.0..=self.morse.wpm)
                     .suffix(" wpm"),
             )
-            .on_hover_text(
-                "Characters go out at the speed above; this is the speed the *gaps* are sent at, \
-                 so a beginner hears the letter as a whole before they can send it that fast.",
-            );
+            .on_hover_text(tr!("morse-characters-go-out-speed-above"));
         });
     }
 
@@ -809,7 +808,7 @@ impl super::SdroxideApp {
             ui.label(RichText::new(e).size(10.0).color(crate::theme::ALERT()));
         }
         #[cfg(target_arch = "wasm32")]
-        ui.label(RichText::new("Playback is available in the desktop build.").size(10.0).weak());
+        ui.label(RichText::new(tr!("morse-playback-available-desktop-build")).size(10.0).weak());
     }
 }
 

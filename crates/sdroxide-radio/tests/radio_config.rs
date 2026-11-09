@@ -109,7 +109,17 @@ fn the_interface_configuration_is_announced_and_can_be_written_through_the_engin
     // on defaults and writes them back over the operator's the moment anything
     // is touched.
     let announced = next_radio_config(&h.event_rx).expect("no config announced at startup");
-    assert_eq!(announced, stored, "the startup announcement did not carry the stored config");
+    // One field is the engine's own doing: a `radio.json` written before the
+    // per-band transmit list existed carries none, and the engine hands the
+    // amateur bands over **unconfirmed** rather than leaving a radio that
+    // cannot transmit at all (#358). Everything else has to come back exactly
+    // as it was stored.
+    assert!(announced.tx_band_enable.is_some(), "the amateur bands are carried over");
+    assert!(!announced.tx_bands_confirmed, "and none of them is confirmed by that");
+    let mut same = announced.clone();
+    same.tx_band_enable = stored.tx_band_enable.clone();
+    same.tx_bands_confirmed = stored.tx_bands_confirmed;
+    assert_eq!(same, stored, "the startup announcement did not carry the stored config");
     // The settings with no `DeviceCaps` entry, which are the ones a remote
     // operator could not reach at all before this lane existed.
     assert_eq!(announced.rtlsdr.agc, RtlSdrAgc::Manual);

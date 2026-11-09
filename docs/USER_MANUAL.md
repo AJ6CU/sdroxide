@@ -652,7 +652,8 @@ mode. What is in the box never changes; only where the two rows are cut does.
   refusing it. The sub receiver still has to live inside the span, so if it was
   parked outside the new one it is moved back in.
 - **BW** — the receive filter as a number. The chip reads the passband width
-  the receiver is running (`BW 2.7k`, `BW 500`), and clicking it opens the
+  the receiver is running (`BW 2.7k`, `BW 500`) — or, when the passband is one
+  of the mode's preset chips, that chip's name (`BW 3.0k`) — and clicking it opens the
   width, the two edges and the mode's standard filters as fields you can type
   into. The panadapter's grips are the quick way to place a passband by eye
   against what is on the band; this is where an exact figure — 2200, 2700,
@@ -702,6 +703,16 @@ mode. What is in the box never changes; only where the two rows are cut does.
   **SAM**, **WFM** or **DRM**: on broadcast audio the sustained notes of the
   programme are exactly what it cancels, so it took the station away with the
   whistle (issue #434).
+- **APF** (CW only) — the CW peak filter: a narrow peak centred on the CW
+  pitch, which lifts the signal you are copying above the noise and the stations
+  beside it. It follows the pitch, so moving the pitch moves the peak. Click the
+  chip for its switch, its **width** (20–200 Hz) and its **lift** (1–20 dB); it
+  sits ahead of the AGC, so a large lift is levelled rather than played louder,
+  and the decoders still hear the signal as it arrived. Remembered for CW like
+  the other per-mode settings. To take it out of the audio, untick it — nothing
+  else changes. Greyed on a radio whose own audio you hear (a rig on a sound
+  card, or a transceiver beside a panadapter receiver): the filter works on the
+  audio demodulated here, so there it could not act.
 - **NR** — noise reduction on the audio, with five selectable engines. The button
   always reads just `NR` and lights when noise reduction is in circuit — that is
   all it tells you, and it never changes width under the buttons beside it. Click
@@ -924,6 +935,24 @@ own bandwidth control does. The presets are taken as written except in **CW**,
 where they are re-centred on your own sidetone pitch, so a 250 Hz filter is
 250 Hz about the note you copy at rather than about somebody else's 700.
 
+Any preset can be made your own. **Right-click** its chip and an editor opens
+under the chips: a **label** of up to eight characters, the **Lo** and **Hi**
+edges in hertz from the carrier, and **Use current** to take the edges of the
+filter you have now. **Save** puts your preset in place of the built-in one and
+selects it; **Reset** brings the built-in back. Each mode keeps its own, so
+changing a USB chip leaves LSB's alone. They are kept per machine in
+`filter_presets.json`.
+
+After the presets comes a fifth chip, **M+**, your own memory for that mode.
+While it is empty a click stores the passband you have now in it (labelled with
+its width) and a right-click opens the editor to type one; once filled it is a
+chip like the others — click to recall, right-click to edit, **Reset** to empty
+it. The **BW** chip carries the name of whichever chip matches the filter in
+force, so you can tell which setting is applied; on a passband that matches
+none it reads the width. Resting the pointer on the **BW** chip raises a large
+reminder of all this for ten seconds; a click on the chip puts it away until
+the next time the pointer comes back.
+
 In **AM, SAM, DSB, ISB and the FM modes** the two edges move together: the passband
 is a channel carved out about the carrier, both halves carry the same signal,
 and narrowing one alone would throw away half the audio while letting the
@@ -1010,7 +1039,7 @@ mode: a little noise reduction helps a weak SSB voice and only gets in the way
 of an FT8 decoder, and a slow AGC is kinder to a signal sitting in the noise
 than the fast one that sounds right on a strong local. So each mode carries a
 set of starting values for **AGC**, **Man**, **SQL**, **NR**, **ANC**, **BIN**,
-WFM's **ST**, and the receive **tone** and **LOUDNESS** of the **EQ** popup, and
+CW's **APF**, WFM's **ST**, and the receive **tone** and **LOUDNESS** of the **EQ** popup, and
 selecting a mode — here, or on a CAT rig's own controls — lays its own on the
 receiver. The tone and LOUDNESS are **off in every mode** until you switch them
 on, so ticking LOUDNESS for a broadcast in AM leaves your SSB and FT8 exactly as
@@ -1432,6 +1461,16 @@ away rather than shown beside the warning because it is no longer a
 measurement — a clipped carrier reads *lower* than it really is, so the number
 would be arguing with the warning next to it. Turn the RF gain down, or switch
 in an attenuator, until it goes.
+
+**Troubleshooting: the S-meter moves when you move the mouse.** On a CAT rig
+(USB audio, no IQ front end) the S-meter shows the *audio level*, not a real
+signal-strength measurement — the rig has no S-meter that SDRoxide can read.
+A wireless mouse radiates RF into the receiver (notably the CRT SS9900v and
+similar rigs) and that noise is picked up as audio, so both the number and the
+needle jump. This is a **hardware** problem, not a software bug. Fixes: use a
+wired mouse, move the mouse away from the rig and antenna, use a different USB
+port, or put a ferrite choke on the mouse cable. On an SDR with a real IQ front
+end the S-meter reads actual signal strength and is not affected.
 
 It is worth taking seriously even when nothing sounds wrong, because on FM
 almost nothing will: the audio stays clean well past the point where the data
@@ -1861,6 +1900,10 @@ or to keep as a backup. Not everything survives the trip: CHIRP's format has no
 place for a folder, an RTTY modem setup or an antenna socket, and its `Mode`
 column is the *modulation*, so a channel stored in a digital mode exports as the
 sideband it rides on. The frequency, the name, the shift and the tone all do.
+
+**CLEAR** deletes every channel at once, for a list imported by the hundred. It
+asks first: the chip turns into **SURE?**, and only a second click there clears
+the list. Folders stay.
 
 The **Sort** row above the list says what order it is drawn in — **Stored** (as
 stored, the historic order), **Name** (ignoring case), **Freq**, or **Band**
@@ -3671,13 +3714,19 @@ The colours are the theme's. The VU and the bars need the station to be version
 An antenna design calculator and solver for CB/SWL work: **EXTRAS → ANTENNA**
 opens a window with a frequency in and the cutting lengths out — dipole,
 inverted-V, vertical, ground plane, delta loop and Yagi, each with its nominal
-feed impedance and SWR.
+feed impedance and SWR. The feedline/system impedance (Z₀, default 50 Ω) is
+user-configurable for the SWR readout, and the antenna height above ground
+(AGL) feeds the solver.
 
-- **Solve impedance and gain** runs the method-of-moments engine on the presets
-  and shows the real feed impedance, SWR and gain (the calculator's figures are
-  nominal). A Yagi stack selector (1×/2×/4×) adds the stacked array's combined
-  gain.
-- **Azimuth pattern** draws the solved far-field cut as a polar plot.
+- **Apply** runs the method-of-moments engine on the presets and shows the real
+  feed impedance, SWR and gain (the calculator's figures are nominal). A Yagi
+  stack selector (1×/2×/4×) adds the stacked array's combined gain.
+- **Radiation Pattern** draws the solved far-field cut as a polar plot; the
+  **View** selector switches between Top (azimuth), Front and Side (elevation)
+  cuts, and the 3D view follows.
+- **3D view** shows the normalised radiation surface with an opaque ground
+  plane (radiation below the horizon is clipped), the antenna drawn in red, and
+  the ground plane tracking the AGL height. Drag to rotate.
 - **Optimize Yagi** tunes the Yagi's element lengths and gaps against SWR, gain,
   F/B or jX (a local search, on a background thread).
 - **Obstacles (approximate)** — a stand of trees (ITU-R P.833) or a ridge
@@ -6132,8 +6181,40 @@ aid transmits, and an aid parked on a dial still in a lane mode would be silence
 and then a retune. The same rule holds for every mode whose frequency is fixed:
 a click that tunes goes to the dial that mode is not using.
 
-**An airport cannot be tuned** — no frequency is published for one. What is
-tunable is the aid beside it.
+**An airport cannot be tuned** — its frequencies are listed, not wired to the
+dial. What is tunable is the aid beside it.
+
+**Click an airport to open its card.** Hovering gives the short card (codes,
+name, field height, distance, traffic). Clicking pins the full one: up to four
+**runways** (both ends, length, surface, lit or not; `+N more` for the rest) and
+up to six **frequencies** (tower, ground, ATIS, approach, departure, CTAF,
+UNICOM, delivery, AFIS; `+N more`), with the date of the data at the bottom.
+They come from the OurAirports tables inside the program, so they work offline —
+and because frequencies change, check the date and the chart before you rely on
+one. An airport the source says nothing about shows no runway or frequency line.
+Lengths follow the units chip (feet; metres in **Metric**). "Aircraft within" now
+counts out to 100 km (62 mi).
+
+**The pinned airport card shows the airport's Wikipedia picture** when the
+airport has an article and the station's **Online** switch is on (it is by
+default). The picture is asked of your station, which fetches it from Wikipedia
+for you, keeps it in memory for the open card only and drops it the moment you
+close the card (it never touches a disk). Click **Photo: Wikipedia** under it to
+open the article, where the picture's author and licence are. Without a station,
+with the switch off, or for an airport without an article, the card is text alone.
+
+**The pinned airport card also gives the airport's local time and temperature**,
+when your station can reach the internet and the **Online** switch is on. They
+come from Open-Meteo (free, no key; the card says so), asked by your station:
+the only thing sent is the airport's position, rounded to about a kilometre —
+never yours. The time is your clock moved by the airport's zone, summer time
+included, so it stays right as the minutes pass; the card asks again after ten
+minutes while it stays open and forgets everything when you close it (nothing is
+written to a disk). Time and temperature follow the units chip: **Aviation** and
+**Metric** show 24 h and °C, **Imperial** shows 12 h (AM/PM) and °F. Without a
+station, with the switch off or if the service does not answer, the card shows
+**UTC hh:mm (local time: offline)** — never a local time it could not know — and
+no temperature line.
 
 **A target with a stale position is not drawn at all.** Past the timeout it
 comes off the map — square, dots and block together — while staying on the list,
@@ -6149,16 +6230,19 @@ The card never asks the internet anything: an aircraft you have not opened or
 looked up simply has no online lines.
 
 A **click** on an aircraft pins its card beside it. The pin stays while you pan
-and zoom, and a click on empty map does not close it; a click on another
-aircraft moves it, **✕** or **Esc** closes it, and it closes by itself when the
+and zoom; a click on another aircraft moves it, a click on empty map, **✕** or
+**Esc** closes it, and it closes by itself when the
 aircraft drops off the map. In the pinned card the **Planespotters** link opens
 the photo's page, and the picture is shown if it has already been loaded.
 
-**Look up online** is the one thing that asks, and only when you press it. It
-appears when you are connected to a station and the aircraft has not been asked
-about, and asks that station's relay for that aircraft alone, one lookup at a
-time. If the station's operator has not switched the relay on, or you are not
-signed in, the card says so instead of offering the button.
+**Online.** The **Online** switch at the top right of the AIRCRAFT window is on
+by default. While it is on, the card you open asks the station's relay for that
+aircraft alone, one lookup at a time, and shows its type, operator, route and
+photo with no click. Switch it off and nothing leaves the station; the station keeps
+your choice across restarts. If you are not signed in, or the operator holds the
+relay with `SDROXIDE_AIRCRAFT_ONLINE` (`=0` holds it off, `=1` on; unset leaves it to
+the switch), the card or a short note says so. With no station to connect to there is
+no switch.
 
 **Searching.** The **search** box above the table, in the AIRCRAFT window's
 **Cards** list and above the map is one and the same box: type there and the
@@ -6179,6 +6263,45 @@ only for aircraft whose card has been looked up; when a word begins `type:` or
 `op:` the box says how many aircraft that leaves out (*3 of 20 aircraft without
 online data — open their card*). The search is not saved: closing the program
 clears it.
+
+**Radiosondes.** The **SONDE** button in the AIRCRAFT window's column decodes Vaisala
+RS41 weather-balloon sondes (400–406 MHz). It is a view like *Cards*, not a radio mode:
+pressing it switches the decoder on and tunes the radio to the sonde channel (403.000 MHz
+at first; change it in the *Channel* box, 400–406.1 MHz), so the channel lies inside the
+sample window. Each sonde heard is drawn on the map with the track it has flown — a ring
+while it climbs, a triangle once it falls under its parachute, a cross when it has been
+silent for a minute — and a table under the map gives its serial, altitude, climb rate,
+speed, channel, battery, air temperature, humidity and pressure (when the model sends them) and when it was last heard. An RS41 gives temperature and humidity only after it has sent its calibration table, up to a minute after it is first heard; an iMet-4 gives all three at once. Hover a mark for the position and the
+distance from your station. *Export flight* under the table saves the selected sonde's
+flight (the newest if none is selected) as a **KML** track for Google Earth or a **CSV**
+table for a spreadsheet (with the air temperature, humidity and pressure heard at each point, empty when the sonde sent none). The *Online (SondeHub)* box, off until you tick it, also
+shows the sondes other stations have heard within 400 km (hollow blue diamonds): it only
+reads SondeHub's public list, sending your locator rounded to 0.1° and the radius, and
+uploads nothing; it needs the locator set in the digital-mode setup. The *Scan* box looks across the whole sample window for sonde
+carriers instead of listening on one channel, and decodes up to four sondes at once, one
+lane per carrier (a lane is dropped two minutes after its carrier goes; what it heard
+stays listed). The window has to cover the sondes: centre the radio with the *Channel*
+box, and note that a 2.4 MS/s receiver sees about 2.4 MHz of the 5.85 MHz band. The decoder needs a wideband source (a receiver that sends
+I/Q); it is off for a rig that only hands over audio. The setting is kept in `sonde.json`.
+
+**Weather satellites.** The **WXSAT** chip in EXTRAS opens the WEATHER SATELLITES window:
+the picture a weather satellite sends on 137 MHz, drawn as it comes in. The *Signal* choice
+picks the kind. **APT** is the analogue signal of NOAA-15, 18 and 19: channel A on the left
+and channel B on the right, line by line. **LRPT** is the digital signal of Meteor-M2-3
+(137.900 MHz) and Meteor-M2-4 (137.100 MHz): QPSK at 72 ksym/s, picture rows of 1568 pixels,
+one separate picture for each channel the satellite sends (*Channel 1* to *Channel 6*, the
+visible and infrared bands), shown one at a time. Like SONDE it is not a radio mode: pick the
+satellite, then *Tune here* switches the decoder on and brings the dial to its channel (the
+lane works off the sample window, so the window has to hold the whole signal, about 40 kHz
+for APT and 115 kHz for LRPT; a note says so when it does not). Start it when the satellite
+rises; a pass lasts about ten minutes. The status line shows the level, the sync (line sync
+for APT, frame sync for LRPT) and the lines, or the good frames and rows, so far. LRPT needs
+a signal about 8 dB above the noise to lock; the receiver follows the Doppler and the drift of
+the sample clock by itself. *Flip* turns the picture over (a satellite flying south is drawn
+upside down), *Clear* empties it and *Save PNG* writes it out (the channel shown, for LRPT).
+The decoder needs a wideband source (a receiver that sends I/Q); it is off for a rig that only
+hands over audio. The setting is kept in `wxsat.json`. A window opened in the middle of a
+pass starts the picture where it joined.
 
 **Export.** The **CSV** and **JSON** buttons under *Export* in the AIRCRAFT window
 save the tracked aircraft as a table you can open in a spreadsheet or feed to a
@@ -7415,7 +7538,7 @@ window holds none of its own sub-bands stands down completely and costs nothing
 until you tune back onto one — so an SDR parked on the broadcast FM band, the air
 band or any other non-amateur allocation is not running a neural CW decoder over
 it. Which frequencies count is the band plan's to say
-([`bandplan.json`](#the-band-plan-file)), and it ships with the HF allocations
+([the band plan](#the-band-plan-file)), and it ships with the HF allocations
 only. The skimmer-decoded text is a coarse best-effort copy; switch to the mode (click a box) for a clean
 decode — the CW skimmer runs the same decoder as the CW panel, but over hundreds
 of signals at once and re-reading each one only twice a second, so a signal you
@@ -8080,7 +8203,7 @@ decides every band plan sdroxide draws and enforces:
   27.700 SSTV calling channel aside). They tune by hand like anything else —
   the widened band edges reach them — and a licence that does cover part of
   that range (the UK's second CB block starts at 27.60125) goes in
-  `bandplan.json` and in your own saved frequencies.
+  a band plan and in your own saved frequencies.
 
   **11M/CB** — which channel plan the dial reads in, set on the General tab
   beside the IARU region and in the band/mode menu. Two licence-free services
@@ -8113,6 +8236,15 @@ decides every band plan sdroxide draws and enforces:
   per screen. It opens 11 m and nothing else. A station setting
   (`cb_tx_allowed` in `config.toml`), so it travels to every client along with
   the CB plan.
+
+  **11 m has two locks, in this order.** First the radio's own TX band list
+  ([6.2](#62-radio-choosing-and-configuring-the-rig)): **11M-CB** must be **YES**
+  and the list confirmed. Only then can the box above be ticked — it is greyed
+  until the band is listed, with a hover text that says so — and it does nothing
+  on its own. Both are needed to transmit on 11 m; with the band listed and the
+  box off, PTT is refused with a red notice that names the box. Ticking the band
+  does not tick the box, and ticking the box does not tick the band. Taking
+  **11M-CB** off the list also clears the box.
 - **Longwave, medium wave, shortwave and FM broadcast** — `LW`, `MW`, `SW` and
   `FM` are on the bar for the listener the way 11 m is for the CB operator.
   None is an amateur allocation, so with `tx_ham_only` set (the default) the
@@ -8165,23 +8297,130 @@ happen to be sitting. It takes effect immediately — no APPLY, no restart.
 
 #### The band plan file
 
-The numbers behind all of that live in **`bandplan.json`** in the config
-directory ([§13](#13-configuration-files)), and they are yours to change. On
-first start sdroxide writes the built-in IARU tables there; from then on that
-file is the authority for every band edge, sub-segment and skimmer window in the
-program.
+The numbers behind all of that live in **band plan files** in the **`bandplans`**
+folder of the config directory ([§13](#13-configuration-files)) on the machine
+the radio is attached to, and they are yours to change. The built-in IARU tables
+are the default and stay so until you choose another plan; the station runs
+exactly one plan at a time, and that plan is the authority for every band edge,
+sub-segment and skimmer window in the program.
 
-The General tab shows the path and a **RELOAD BAND PLAN** button, which re-reads
-the file on the machine the radio is attached to and applies it without a
-restart — so the loop is: edit, save, click, done.
+The **General** tab lists the plans the station holds and works the same on a
+native screen, a remote one and in a browser — nothing is read from or written
+to the screen's own disk, because the plans are kept **on the station**:
 
-The file is one row per line, in **megahertz**, and it explains itself in a
+- **The list** chooses the plan the station runs. It is remembered (`band_plan`
+  in `config.toml`) and survives a restart.
+- **IMPORT BAND PLAN** sends a plan file to the station, which checks it and
+  adds it to the list. Adding a plan does not run it. A file that does not pass
+  the check (not a plan, a band with its edges the wrong way round, a region with
+  no bands, far too big) is refused with a notice and nothing is written. A plan
+  with a name already in the list replaces it, and the old file is kept **once**
+  as `<name>.json.bak` — one backup, overwritten by the next replacement.
+- A file that is **a plain list of bands** — a name, a type and a start and an end in
+  *hertz* for each row, as many national band lists are published — is converted by the
+  station on the way in, and then held to the same check. The conversion is described
+  in *A list of bands* below.
+- **BACK TO BUILT-IN IARU** is the one click back to the default. It appears
+  whenever the station is running another plan.
+- **RELOAD BAND PLAN** re-reads the chosen plan's file on the machine the radio is
+  attached to and applies it without a restart — so the loop for a hand edit is
+  still: edit the file in the `bandplans` folder, save, click, done.
+
+Below them, **Band plan manager** lists every plan the station holds — name,
+country, author, date and size, with the one running marked and the ones that came
+with the program tagged *shipped* — and works the same on a native screen, a remote
+one and in a browser:
+
+- **RUN** runs that plan (the same change as choosing it in the list, with the same
+  consequence for the band confirmations).
+- **DOWNLOAD** saves that plan's file on the computer you are sitting at — a browser
+  downloads it like any other file. Nothing else leaves the station.
+- **DELETE** removes the plan from the station after a second click. The plan that is
+  running can be neither run again nor deleted: choose another first.
+- **SAVE CURRENT PLAN AS** keeps the plan running now under the name you type —
+  the way the built-in IARU tables, or a plan you have reloaded after editing, become
+  a file you can choose, download and share. A plan with that name is replaced and its
+  old file kept once as `<name>.json.bak`. It does not change what runs.
+- **RESTORE SHIPPED PLANS** puts back the plans that came with the program: one that was
+  deleted, or that a later version added, is written again; one that was edited is
+  replaced (your version kept once as `.bak`). If the plan that runs is one of them, it is re-read at once — and if it
+  differs, that is a change of plan like any other.
+
+**A plan for one radio.** At a station with several radios each radio can run a plan
+of its own while the others follow the station's — a national plan on the HF radio,
+the built-in tables on the VHF one. On the General tab of a radio, **This radio**
+chooses its plan (*Follows the station* is the default, and what every radio did
+before), and **THIS RADIO ONLY** in the manager runs a plan on that radio alone. The
+choice is kept in that radio's own `radio.json` (`band_plan`), so it survives a
+restart, and nothing one radio does reaches another: its band edges, its transmit
+lockout, its waterfall strip and its skimmer windows follow its own plan, and a
+split view of two radios draws each with its own.
+
+The band confirmations follow the radio, not the station. Choosing or leaving a plan
+for **this radio** withdraws the TX and RX confirmation of **this radio only** (and
+only if the plan it *runs* changes — leaving its own plan for a station plan that is
+identical changes nothing). A change of the **station's** plan withdraws the
+confirmations of the radios that follow it and leaves alone the ones running a plan of
+their own. A plan that a radio runs cannot be deleted; if its file goes missing the
+radio runs the station's plan and says so, and keeps the name.
+
+**A list of bands.** A list of this kind says who uses what — broadcasters, the sea,
+the air, mobile phones and, among them, the amateur bands. It does not say what *you* may
+transmit, so a converted plan changes what the waterfall strip draws and names and
+**never the transmit lockout**: the allocations stay the built-in IARU ones. The rows
+become sub-segments, each named after its row, in the region of the list's country (a
+list for the whole world, or for a country sdroxide does not know, goes into all three
+regions; the other regions keep the built-in tables). Amateur rows are drawn as CW, data,
+phone, beacon or all-modes when their name says so; CB, PMR 446, pagers and the like, which
+such lists often file under *amateur*, are drawn as what they are named and are never a
+band. Rows that overlap are cut so that none does, amateur rows first. A row that is not a
+range — ending before it starts, or not a number — is left out, and the notice bar says
+which and why; if nothing is left the file is refused. The converted plan has no author:
+the list says nothing the station can vouch for.
+
+**Changing the plan means checking the band lists again.** The TX and the RX band
+lists ([§6.2](#62-radio-choosing-and-configuring-the-rig)) were confirmed against one plan, and a different plan
+can put a band edge somewhere else or take a band away. So whenever the station
+starts running a plan other than the one it was running — choosing one, going
+back to the built-in tables, reloading a file you edited so that it differs — the
+confirmation of **every radio's** TX list and RX list is withdrawn, as if you had
+never confirmed them: the lists stay ticked as they were, but the radio does not
+tune or transmit until you have looked at them and confirmed them again, and the
+notice bar says why. Choosing the plan that is already running changes nothing.
+The same holds across a restart: if the plan the station runs at start-up is not
+the one the lists were confirmed against, they start unconfirmed.
+
+**Plans that come with the program.** The first time the station makes its library it
+copies in twenty-one plans, which never replace a file of yours afterwards and can be
+deleted like any other: **Germany (NRW)** and **Germany (bandplan)** — two German
+plans of our own format with their own allocations — and national band lists for
+Australia, Austria, Belgium, Brazil, Canada, China (Mainland), France, Indonesia, Ireland,
+Italy, the Netherlands, the Republic of Korea, Russia, Slovakia, Turkey, the United
+Kingdom and the United States, plus a **Worldwide** list and **QO-100**. The national
+lists are converted band lists (*A list of bands*, above): they change what the waterfall
+strip draws and names and **never the transmit lockout**, which stays the built-in IARU
+one — narrow it in a plan of your own, with your licence in front of you. A few
+numbers that were plainly wrong in the lists as published (a digit too many, a row
+ending before it starts) were corrected by hand or left out. The program's own plans
+are not licence limits: the regional allocation is not your licence.
+
+A plan named in `config.toml` whose file has gone, or that will not parse as JSON,
+runs the built-in tables for that session and says so; the name and the file are
+left alone. A station that had a `bandplan.json` before the library existed has it
+carried into the folder once, as the plan `own`, and keeps running it; the old
+file is not touched.
+
+A plan file may say who it is for in an optional `meta` block (`name`, `country`,
+`author`), which is what the list shows; a file without one is listed under its
+file name.
+
+A plan file is one row per line, in **megahertz**, and it explains itself in a
 `readme` field at the top (JSON has no comments). Each region has four lists:
 
 | List | What it sets |
 | --- | --- |
 | `bands` | The allocations. `band` is one of `Lw` `Mw` `M160` `M80` `M60` `M40` `M30` `M20` `M17` `M15` `M12` `M10` `M11` `M6` `M4` `Fm` `M2` `M125` `M70` `Cm33` `Cm23` `Cm13` `Cm9` `Cm6` `Cm3` — metres up to 2 m, then the band's own name, `Cm` from 33 cm up because `M6` was already 6 m, and `Lw`, `Mw`, `Sw`, `Fm` for the broadcast services (see the bullet above for what `Sw` deliberately overlapping the amateur bands does). Leave a band out and the region does not have it — with one exception, below. |
-| `segments` | The CW / data / phone / beacon / all-modes blocks on the waterfall strip. `kind` is `Cw`, `Digi`, `Phone`, `Beacon` or `All`. |
+| `segments` | The CW / data / phone / beacon / all-modes blocks on the waterfall strip. `kind` is `Cw`, `Digi`, `Phone`, `Beacon` or `All`; an optional `label` (`"label": "CONTEST"`) names the block on the strip instead of the kind, which still sets its colour. |
 | `psk_windows` | Where the PSK31 skimmer listens. |
 | `rtty_windows` | Where the RTTY skimmer listens. |
 
@@ -8199,7 +8438,7 @@ band buttons, the waterfall strip and the frequency displays all follow.
 **On a slotted digital mode the lockout vets what actually radiates**, not the
 dial. FT8, FT4, FT2, JS8 and WSPR transmit at the dial *plus* an audio offset,
 so the check is dial + offset + the mode's occupied bandwidth, and it is made
-against the **sub-segments** rather than the band edges — `bandplan.json` holds
+against the **sub-segments** rather than the band edges — a band plan file holds
 one range per band, and a licence like the UK's 60 m needs eleven. Narrow the
 segments there and the lockout narrows with them; nothing about this is
 UK-specific. An emission may cross from one sub-segment into a touching one — a
@@ -8226,8 +8465,8 @@ file is used, and the notice bar says which one and why. If the file will not
 parse as JSON at all, sdroxide runs on the built-in tables for that session and
 tells you so; **your file is left exactly as it is**, unlike the files sdroxide
 writes for itself, because a half-finished edit should survive the start that
-could not read it. Delete the file to get a fresh copy of the defaults — one is
-written on the next reload or start.
+could not read it. Going back to the built-in tables loses nothing: every plan
+you added is still in the folder.
 
 > This is the *regional* allocation, which is the widest set of edges the
 > region's amateurs share. Your own licence may grant less (and occasionally
@@ -8295,6 +8534,8 @@ URL is used exactly as typed and leaves those two boxes greyed out. See
 [§ 8.2 Connect a native remote client](#82-connect-a-native-remote-client).
 
 ### 6.2 Radio: choosing and configuring the rig
+
+**Band plan of each radio (TX and RX).** Radio settings holds, for every radio on its own, a table with one **TX** menu and one **RX** menu per band (there is no *Other* row: **outside the listed bands nothing can be transmitted**, ever, and reception outside the bands — ADS-B at 1090 MHz, DAB, AIS — needs no row, a confirmed RX list covers it). The two lists are independent: 160 m can be TX **NO** and RX **YES**. A radio never tunes to a band that is **NO** in its RX list, and does not tune at all until the RX list is confirmed; a banner asks for that check at launch, once per radio, exactly like the TX list. A band the hardware's published range does not reach is greyed and stays **NO**. A new radio starts with RX **YES** on every band its hardware reaches, still to be confirmed. The band buttons follow the RX list, and while the dial sits on a band that is **NO** (or the list is not confirmed yet) the radio is silent and nothing is recorded; the decoders keep running.
 
 In the native application the very top of the tab carries the **radio
 roster** — one button per radio, with the same TX / warning / mute markers as
@@ -9721,6 +9962,26 @@ involved:
   jack makes no power at all, and the relay is deliberately held in receive so
   the antenna connector stays on the receiver. Ignored on boards other than a
   Hermes Lite.
+- **Second aerial on ADC 2 (diversity)** — streams the board's two ADCs as one
+  synced pair: the first aerial on ADC 1, a second one on ADC 2, both on the
+  same frequency and the same instant. **Protocol 2 only, on DDC 1, and only on
+  a board whose firmware offers Diversity** — the TRX-DUO from firmware v0.7.0
+  (the Red Pitaya clone with two 16-bit ADCs), piHPSDR and Thetis use the same
+  request. DDC 2 is then the second aerial and cannot be a radio of its own.
+  Takes effect on **Apply**, because the board is told how to stream when the
+  DDC is attached. Asked for on any other board, the radio opens without it
+  and the log says why.
+
+  **Diversity taps** sets the length of the adaptive filter (one tap is a gain
+  and a phase; each further tap equalises one sample period of the difference
+  between the two aerials). The main window's **DIV** strip then appears with
+  **Cancel** (null a local noise source such as a switched-mode supply or a
+  neighbour's inverter — the second aerial wants to hear the noise and as little
+  of the band as possible) or **Combine** (add the two in the phase that makes
+  them reinforce, filling in HF fades), the adaptation rate, hold and restart,
+  as on a LimeSDR or an RSPduo
+  ([§6.2.17](#6217-limesdr-family--limerfe-limesuite)). Set the two aerials to
+  about the same noise floor. *Not yet verified on a real TRX-DUO.*
 - **Invert spectrum (Swap I/Q)** — mirrors the board's spectrum about the tuned
   frequency, on transmit as well as receive. **On by default**, because a
   Hermes Lite 2 needs it. Turn it *off* only if signals appear on the wrong side
@@ -13013,7 +13274,7 @@ spoken announcements below them under `[speech]`:
   the band-plan strip along the bottom of the waterfall: **Ham**, **CW**,
   **Digital**, **Voice**, **Beacon**, **Broadcast**, **AM / LW / MW** and
   **CB**. Same picker and same **Reset** as the spot colours above, and the same
-  standing — the plan itself comes from the station's `bandplan.json`, but what
+  standing — the plan itself comes from the station's band plan, but what
   colour a block is drawn in is whatever the operator looking at it can read.
   Bear in mind that the blocks are drawn semi-transparent over the waterfall, so
   a colour lands a good deal darker there than in the swatch: the stock burnt
@@ -13851,11 +14112,26 @@ fails on 4532, the usual cause is a real `rigctld` already running.
 
 Supported: frequency, mode and passband, PTT, VFO A/B and split (including split
 frequency and mode), RIT and XIT, the `RFPOWER` / `AF` / `MICGAIN` / `STRENGTH`
-levels, the `NB` / `NR` / `ANF` / `MUTE` functions, the `XCHG` / `CPY` /
-`TOGGLE` / `BAND_UP` / `BAND_DOWN` / `TUNE` VFO operations, and the voice keyer
+/ `RF` / `SQL` / `AGC` / `NR` / `APF` levels, the `NB` / `NR` / `ANF` / `MUTE` / `APF` functions, the
+`XCHG` / `CPY` / `TOGGLE` / `BAND_UP` / `BAND_DOWN` / `TUNE` VFO operations, and
+the voice keyer
 (`send_voice_mem 1`…`10`, `stop_voice_mem` — see
 [2.11](#211-voice-keyer)). The voice keyer obeys **Allow clients to transmit**
 like PTT does.
+
+`RF` is the receiver's front-end gain — the stage the top bar's **Gain** slider
+moves — as 0 to 1 across that stage's range, landing on its own steps. A radio
+with no RX gain the software can set has no `RF` level and does not advertise
+one. On a PlutoSDR whose own AGC is running, the part ignores the setting, as
+it ignores the slider. `SQL` is the squelch threshold, 0 open to 1 closed. `AGC` is Hamlib's
+`RIG_AGC_*` number: 0 off, 2 fast, 5 medium, 3 slow. The `NR` level is the
+strength (a third, two thirds, 1 for low, medium, high) of the engine chosen in
+the NR panel, which it leaves alone; `U NR 1` brings back the engine and
+strength last on. `APF` is the **APF** chip's CW peak filter: the function is
+its switch, and the level its width — 0 the widest bell (200 Hz), 1 the
+narrowest (20 Hz), linear between; the lift stays the one set in the popup.
+Both are refused outside CW, and a rig that hands over its own demodulated
+audio has neither.
 
 Setting up clients:
 
@@ -13996,6 +14272,25 @@ For the modes no logger speaks — RTTY, PSK, Olivia, THOR, MFSK, DominoEX, Hell
 CW and WSPR — there is a plainer feed beside these two: see
 [§6.8.4](#684-decoded-text-over-udp).
 
+**Decoded CW over UDP**, also on this page with its own switch, sends the CW
+panel's copy ([2.14](#214-cw-decoding-and-keyboard-sending)) as plain UTF-8
+text, a datagram at a time as it settles — for a station controller, a
+logger's CW window or a script. There is no protocol: a listener appends what
+arrives, and `nc -ul 9998` shows it as it comes. Only settled text goes out,
+never the last word or two the neural decoder is still revising, so nothing
+sent is ever taken back. Each radio has its own switch and sends only its own
+copy; two radios sending to one port arrive interleaved. It is not the JSON
+feed of [§6.8.4](#684-decoded-text-over-udp), which sends a keyboard mode's
+lines only once they are complete, and the CW copy has no line ends.
+
+- **Send to** — `127.0.0.1` for this machine; a LAN address, or this subnet's
+  broadcast address, for others.
+- **Port** — 9998. Not 9999, which the JSON feed's box suggests: a listener
+  waiting for one would otherwise be handed the other's datagrams.
+
+It sends only while the radio is in CW with the panel decoding; the skimmer's
+spots are not part of it.
+
 #### 6.8.4 Decoded text over UDP
 
 The WSJT-X broadcast above speaks a logger's protocol, and it has a message only
@@ -14014,7 +14309,7 @@ pipe-based consumer can read it as lines:
 - **time** and **unix** — UTC, and the same instant in seconds. For a slotted
   mode this is the start of the slot the message was decoded from.
 - **kind** — `decode` (a slotted mode's message), `text` (a keyboard mode's
-  line) or `wspr`.
+  line), `wspr`, or `vdl2` (a message from the VDL2 window's log).
 - **mode** — the mode in force, as the program names it.
 - **dial_hz** — the receive frequency the decode was heard on; **freq_hz** —
   the signal itself, which is the dial plus **audio_hz** where an audio offset
@@ -14023,7 +14318,20 @@ pipe-based consumer can read it as lines:
 - **snr_db** and **dt** — present where the decoder measures them (the FT8
   family and WSPR).
 - **text** — the message, or the decoded line with its trailing newline
-  removed. Only **complete** lines are sent: a half-decoded word waits.
+  removed. Only **complete** lines are sent: a half-decoded word waits. A
+  `vdl2` line carries the message as its window shows it.
+  The ACARS, DSC and HFDL windows feed it too, as `decode` lines whose **mode**
+  is `ACARS`, `DSC` or `HFDL`: ACARS gives the aircraft address, label and text
+  (a frame whose block check failed is not sent), DSC the summary the window
+  shows (format, sender MMSI, target or distress nature), HFDL the event kind
+  and ground station, with the burst's own **freq_hz** and **snr_db**. ACARS and
+  DSC carry the dial as **freq_hz**.
+
+A `vdl2` line, and an HFDL one, has a **freq_hz** that is not the dial plus an
+audio offset: an aircraft's burst is on a fixed channel whatever this receiver is
+tuned to, so the channel is reported on its own and no `audio_hz` is sent. HFDL
+does the same. For all of them only messages that arrive after the feed is
+switched on are sent, never the log that was decoded before it.
 
 A quick check from a shell on the same machine:
 
@@ -14032,8 +14340,8 @@ A quick check from a shell on the same machine:
 Everything is **output only** — nothing is read from this socket, so no program
 on it can tune or key the radio — and an address that cannot be resolved is said
 so in the log and leaves the feed off rather than failing silently. The wideband
-decoders (ACARS, VDL2, HFDL, DSC, NAVTEX, AIS, APRS) keep their own windows and
-are not part of this feed yet.
+decoders NAVTEX, AIS and APRS keep their own windows and are not part of this
+feed yet; VDL2, ACARS, DSC and HFDL are.
 
 ### 6.10 TLE: satellites and their frequencies
 
@@ -17067,7 +17375,7 @@ and not the station's.
 | `memories.json` | JSON | Saved memory channels. |
 | `bandstacks.json` | JSON | Per-band memory of your last frequency/mode/filter (up to three per band). |
 | `profiles.json` | JSON | The saved station setups from Settings → Profiles ([6.12](#612-profiles-saved-station-setups)): each one's name, the remembered radio state (the same fields as `session.json`), the digital-mode settings and the band stacks. Shared by every radio of the station. |
-| `bandplan.json` | JSON | The band plan itself, per IARU region: band edges, the CW/data/phone/beacon/all-modes sub-segments, and the PSK and RTTY skimmer windows — all in MHz. Written from the built-in IARU tables on first start and meant to be edited; narrow a band here and the transmit lockout narrows with it. Which region applies is `region` in `config.toml`. **RELOAD BAND PLAN** on the General tab applies an edit without a restart, and deleting the file restores the defaults. See [§6.1](#61-general-station-audio-and-remote-access). |
+| `bandplans/` | folder of JSON | The station's library of band plans, one `<name>.json` per plan: band edges per IARU region, the CW/data/phone/beacon/all-modes sub-segments and the PSK and RTTY skimmer windows — all in MHz — and an optional `meta` block (name, country, author). Created with the plans that come with the program the first time; a plan added from a screen (**IMPORT BAND PLAN**) is written here by the station, and a replaced one is kept once as `<name>.json.bak`. Which plan the station runs is `band_plan` in `config.toml`; nothing chosen is the built-in IARU tables. Narrow a band in a plan and the transmit lockout narrows with it. **RELOAD BAND PLAN** on the General tab applies an edit without a restart, and **BACK TO BUILT-IN IARU** restores the defaults. A `bandplan.json` from before the library is carried into the folder once, as `own`. See [§6.1](#61-general-station-audio-and-remote-access). |
 | `digi_presets.json` | JSON | The frequencies you have added to the digital modes' own lists yourself, as `mode` / `dial_hz` / `note` — written by the **＋ Save** button in the **⇵** picker ([§3.1](#31-general-considerations)) and readable and editable by hand, which is where a `note` comes from. Belongs to the station, so every radio and every remote client offers the same list. Absent until you save one. |
 | `session.json` | JSON | Where you left the radio: both VFO dials and which of the two was selected, the mode, the RX/TX antenna ports, the AF volume, RX gain, AGC mode, squelch and noise reduction, the TX drive/tune drive/mic gain, and the front end's own gain stages (the sliders on the Radio tab's device panel), restored the next time you start. Written by the engine as you tune, so `--freq`, `--mode`, `--antenna` and `--tx-antenna` override it for a run without changing it. Gain stages are remembered by name: one your current front end does not have is kept, not thrown away, so switching back to the radio it belongs to brings it back, and a figure past what this device offers is clamped to its range. |
 | `qso_log.json` | JSON | The logbook (digital and manual QSOs, with contest/QSL fields). |
@@ -17084,7 +17392,7 @@ and not the station's.
 | `ais.json` | JSON | AIS decoder ([§3.16](#316-ais-ships-on-162-mhz)): which of the two channels to listen on, the slot threshold in dB, the two timeouts, how many minutes of trail to keep, how far ahead the vectors reach, and the ceiling on the vessel table. Restored at startup, and — like `adsb.json` — a receiver that cannot feed the decoder forces it off without disturbing what you picked. |
 | `dab.json` | JSON | DAB receiver: the channels a SCAN found, the stations heard on each, your ★ presets, the channel and station chosen, and the volume. Written whenever the panel changes it and restored at startup, so a scan is not lost to a restart. Delete it to start the list from nothing. |
 | `ism.json` | JSON | ISM decoder: whether it runs, which device families it listens for, the burst threshold in dB, and whether the rtl_433 decoders are on, which band they watch and how wide a window they get. Restored at startup, and — like `skimmer.json` — a narrowband (audio-mode) radio forces it off without disturbing what you picked. |
-| `rtl433_flex.conf` | text | Your own ISM decoders, in rtl_433's "flex" syntax ([§5.5](#55-adding-your-own-decoders-flex-specs)). Written with a commented example the first time the ISM decoder runs, and never rewritten afterwards — like `bandplan.json`, it is yours to edit. A specification that does not pass its check is listed in the ISM window and skipped; the rest still load. **RELOAD DECODERS** in the ISM window applies an edit without a restart. |
+| `rtl433_flex.conf` | text | Your own ISM decoders, in rtl_433's "flex" syntax ([§5.5](#55-adding-your-own-decoders-flex-specs)). Written with a commented example the first time the ISM decoder runs, and never rewritten afterwards — like a band plan file, it is yours to edit. A specification that does not pass its check is listed in the ISM window and skipped; the rest still load. **RELOAD DECODERS** in the ISM window applies an edit without a restart. |
 | `input.json` | JSON | Control inputs: keyboard bindings, panadapter mouse behaviour, mouse-button bindings, and the MIDI controller mapping. Belongs to the machine running the user interface, not the engine. |
 | `remote_login.json` | JSON | A sign-in to *somebody else's* server that you asked this client to remember ([§8.3](#83-sign-in-who-may-operate-the-station)). Written only when the **Remember on this device** box is ticked, holds the password in plaintext, and deleted when you untick it or the server refuses it. Belongs to the user interface, like `input.json`; the browser client keeps the same thing in local storage instead. |
 | `satellites.json` | JSON | Satellite additions for the 3D tracker: subscribed element-set listings, element sets pasted in by hand, and frequency entries that override the built-in table. Belongs to the engine, like `net.json`: the listings are fetched and cached where the radio is, so remote and browser clients track the same satellites. |
@@ -17092,6 +17400,7 @@ and not the station's.
 | `broadcast_stations.json` | JSON | *Your own* broadcast stations and corrections, merged over the downloaded schedule ([§10.6](#106-broadcast-stations-on-longwave-and-shortwave)). Never written by sdroxide, and absent until you create it. |
 | `broadcast/` | CSV | The broadcasting season's schedule as downloaded from eibispace.de, one file per season. Managed by sdroxide: refetched when the season changes, and safe to delete. |
 | `sstv_messages.json` | JSON | The overlay message stored for each of the five SSTV transmit slots. |
+| `filter_presets.json` | JSON | Your own receive filter presets: for each one, the mode, which built-in chip it replaces, its label and its two edges in Hz. |
 | `voice_names.json` | JSON | The label given to each of the ten voice-keyer slots. |
 | `voice/` | dir | The voice-keyer recordings (`slot1.wav`…`slot10.wav`), 48 kHz mono. Drop your own WAV in to replace a message. |
 | `speech_voices/` | dir | Extra voices for the spoken announcements: a Piper `.onnx` model and its `.onnx.json` config, side by side. Absent until you create it — the shipped voice lives with the program, not here. Note this is *not* `voice/`, which is the voice keyer. |
@@ -18285,24 +18594,26 @@ whether it covers the frequency you are on; the search box matches on the
 name, the place, the antenna and the band, so `40m denmark` or `7000` both
 work. Hovering a row shows its address, its hardware and its antenna.
 
-Each row offers two things. **USE** points the radio you are on at that
-receiver, keeping everything else about it — converter offset, audio devices,
-the lot. **+ TAB** opens it as another radio in a tab of its own, leaving the
-one you were on alone.
+Each row offers **ADD AS RADIO**: the receiver becomes a radio of its own, in a
+tab named after its directory entry (padding trimmed, cut at a word at 32
+characters; a placeholder such as "anonymous" gives way to the place, else to
+the device and host). The radio you are on is left exactly as it was, so
+nothing needs confirming, and the window closes: the new radio is where you
+listen now.
 
-**USE** replaces a radio, so on a tab that already has an interface it asks
-first, across the top of the list: which radio is about to become which
-receiver, and **REPLACE** / **+ TAB INSTEAD** / **CANCEL**. Going ahead also
-**renames the tab** after the receiver — a tab still calling itself "IC-9700"
-while it is really a dongle in another country, refusing your 2 m calling
-frequency as out of range, is a puzzle nobody should have to solve.
-
-Nothing is lost by taking a receiver in a tab you had set up. Every interface
-keeps its own settings, and the tuning ranges you stated go with the interface
-they were stated for ([6.2](#62-radio-choosing-and-configuring-the-rig)),
-so switching **Radio interface** back in Settings → Radio brings the transceiver
-back as it was — its address, its sound cards and its ranges. What it does not
-bring back is the tab's name; type it again in the **Name** box on that page.
+**LIST** and **MAP** at the head of the window are two views of the same
+receivers: every one the buttons and the search let through, as a dot on the
+world map where the directory gives a position (KiwiSDR cyan, SpyServer in the
+map's station colour, sdr-list green, grey where it cannot be taken). The map
+fits itself to what is shown, so typing a country or a callsign flies there;
+drag, wheel and a double-click work as on the other maps, and **NAMES** and
+**CITIES** switch the labels. A click picks every receiver under the pointer
+(up to six: sites with several KiwiSDRs share a coordinate), and each appears
+under the map as the list's own row with **ADD AS RADIO**, headed by a check
+of whether it answers right now: **ONLINE** or **SILENT**, asked half a second
+after the click by the machine the radio is attached to (a KiwiSDR's status
+page, a SpyServer's greeting, a TCP connect; three seconds each, no channel
+taken). The map fills its window; resize the window to make it larger.
 
 The lists are fetched by the machine the radio is attached to, not by the
 screen you are sitting at — so this works the same in the browser client, and

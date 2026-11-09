@@ -1,6 +1,8 @@
 //! Save a file from the UI. Native pops a "Save As" dialog; wasm triggers a
 //! browser download via a Blob + anchor click.
 
+use crate::i18n::tr;
+
 /// The MIME type a browser download is labelled with. Native ignores it — the
 /// name and the bytes are all a filesystem needs — but a browser hands the file
 /// to whatever the type says, so a picture saved as `text/plain` opens in a text
@@ -51,11 +53,18 @@ pub struct Loaded {
     /// not say and was not UTF-8. `None` when nothing was guessed. Worth showing
     /// the operator: it is the one part of the read that could be wrong.
     pub assumed: Option<&'static str>,
+    /// The file's name as the picker gave it, extension included, when it is
+    /// known — what a plan imported from it is called by default.
+    pub name: Option<String>,
 }
 
 /// Where a [`load_text`] pick is delivered: the file it read, or why it could
 /// not be read. Stays `None` when the operator cancels the dialog.
 pub type LoadInbox = std::sync::Arc<std::sync::Mutex<Option<Result<Loaded, String>>>>;
+
+/// Where a [`load_bytes`] pick is delivered.
+#[cfg(target_arch = "wasm32")]
+pub type BytesInbox = std::sync::Arc<std::sync::Mutex<Option<Result<Vec<u8>, String>>>>;
 
 /// Open a text file via a native "Open" dialog (off the UI thread) and store
 /// its contents into `inbox` for the UI to pick up next frame. Native opens a
@@ -79,8 +88,15 @@ pub fn load_text(filter_name: &str, exts: &[&str], inbox: LoadInbox) {
             // import — every callsign, date and band in it, all of them plain
             // ASCII — over a code page in one name field.
             let outcome = match std::fs::read(&path) {
-                Ok(bytes) => Ok(decode_text(&bytes)),
-                Err(e) => Err(format!("reading {}: {e}", path.display())),
+                Ok(bytes) => Ok(Loaded {
+                    name: path.file_name().map(|n| n.to_string_lossy().into_owned()),
+                    ..decode_text(&bytes)
+                }),
+                Err(e) => Err(tr!(
+                    "download-reading",
+                    path = path.display().to_string(),
+                    error = e.to_string()
+                )),
             };
             if let Ok(mut g) = inbox.lock() {
                 *g = Some(outcome);
@@ -106,7 +122,7 @@ pub fn load_text(filter_name: &str, exts: &[&str], inbox: LoadInbox) {
 /// Both platforms run the same chain: a native pick reads bytes off disk, a
 /// browser pick reads the same bytes off a `FileReader`.
 pub fn decode_text(bytes: &[u8]) -> Loaded {
-    let unicode = |text: String| Loaded { text, assumed: None };
+    let unicode = |text: String| Loaded { text, assumed: None, name: None };
     if let Some(rest) = bytes.strip_prefix(&[0xef, 0xbb, 0xbf]) {
         return unicode(String::from_utf8_lossy(rest).into_owned());
     }
@@ -124,7 +140,7 @@ pub fn decode_text(bytes: &[u8]) -> Loaded {
     } else {
         ("Windows-1252", sdroxide_types::text::cp1252_char)
     };
-    Loaded { text: bytes.iter().map(|&b| table(b)).collect(), assumed: Some(name) }
+    Loaded { text: bytes.iter().map(|&b| table(b)).collect(), assumed: Some(name), name: None }
 }
 
 /// UTF-16 code units in the order `pair` reads them, surrogates paired up. A
@@ -227,6 +243,7 @@ pub fn load_text(_filter_name: &str, exts: &[&str], inbox: LoadInbox) {
     let for_change = input.clone();
     let on_change = Closure::<dyn FnMut()>::new(move || {
         let Some(file) = for_change.files().and_then(|list| list.get(0)) else { return };
+        let file_name = file.name();
         let Ok(reader) = web_sys::FileReader::new() else { return };
         let read_here = reader.clone();
         let ok_inbox = inbox.clone();
@@ -235,19 +252,19 @@ pub fn load_text(_filter_name: &str, exts: &[&str], inbox: LoadInbox) {
                 // An ArrayBuffer, read as its bytes and decoded exactly as the
                 // native arm decodes bytes off disk.
                 let bytes = js_sys::Uint8Array::new(&v).to_vec();
-                decode_text(&bytes)
+                Loaded { name: Some(file_name.clone()), ..decode_text(&bytes) }
             });
             if let Ok(mut g) = ok_inbox.lock() {
                 *g = Some(match loaded {
                     Some(l) => Ok(l),
-                    None => Err("the browser could not read that file".into()),
+                    None => Err(tr!("download-browser-could-not-read-file").into()),
                 });
             }
         });
         let err_inbox = inbox.clone();
         let on_error = Closure::<dyn FnMut()>::new(move || {
             if let Ok(mut g) = err_inbox.lock() {
-                *g = Some(Err("the browser could not read that file".into()));
+                *g = Some(Err(tr!("download-browser-could-not-read-file").into()));
             }
         });
         reader.set_onload(Some(on_load.as_ref().unchecked_ref()));
@@ -265,6 +282,89 @@ pub fn load_text(_filter_name: &str, exts: &[&str], inbox: LoadInbox) {
 
     // Re-armed rather than accumulated: the handler from the previous pick is
     // unhooked by this and dropped with the slot's old value.
+    input.set_onchange(Some(on_change.as_ref().unchecked_ref()));
+    ON_CHANGE.with(|slot| *slot.borrow_mut() = Some(on_change));
+    let _ = input.click();
+}
+
+#[cfg(target_arch = "wasm32")]
+pub fn load_bytes(_filter_name: &str, exts: &[&str], inbox: BytesInbox) {
+    use wasm_bindgen::JsCast;
+    use wasm_bindgen::closure::Closure;
+
+    thread_local! {
+        static PICKER: std::cell::RefCell<Option<web_sys::HtmlInputElement>> =
+            const { std::cell::RefCell::new(None) };
+        static ON_CHANGE: std::cell::RefCell<Option<Closure<dyn FnMut()>>> =
+            const { std::cell::RefCell::new(None) };
+        static READING: std::cell::RefCell<Option<(web_sys::FileReader, Closure<dyn FnMut()>, Closure<dyn FnMut()>)>> =
+            const { std::cell::RefCell::new(None) };
+    }
+
+    let Some(window) = web_sys::window() else { return };
+    let Some(doc) = window.document() else { return };
+    let Some(body) = doc.body() else { return };
+
+    let input = {
+        let ready = PICKER.with(|slot| slot.borrow().clone());
+        match ready {
+            Some(el) => el,
+            None => {
+                let Ok(el) = doc
+                    .create_element("input")
+                    .map(|e| e.unchecked_into::<web_sys::HtmlInputElement>())
+                else {
+                    return;
+                };
+                let _ = el.set_attribute("type", "file");
+                let _ = el.set_attribute("style", "display: none;");
+                let _ = body.append_child(el.as_ref());
+                PICKER.with(|slot| *slot.borrow_mut() = Some(el.clone()));
+                el
+            }
+        }
+    };
+
+    let accept: Vec<String> = exts.iter().map(|e| format!(".{e}")).collect();
+    input.set_accept(&accept.join(","));
+    input.set_value("");
+
+    let for_change = input.clone();
+    let inbox_change = inbox.clone();
+    let on_change = Closure::<dyn FnMut()>::new(move || {
+        let Some(file) = for_change.files().and_then(|list| list.get(0)) else { return };
+        let Ok(reader) = web_sys::FileReader::new() else { return };
+        let read_here = reader.clone();
+        let ok_inbox = inbox_change.clone();
+        let on_load = Closure::<dyn FnMut()>::new(move || {
+            let loaded = read_here.result().ok().map(|v| {
+                let bytes = js_sys::Uint8Array::new(&v).to_vec();
+                bytes
+            });
+            if let Ok(mut g) = ok_inbox.lock() {
+                *g = Some(match loaded {
+                    Some(b) => Ok(b),
+                    None => Err("read failed".to_string()),
+                });
+            }
+        });
+        let err_inbox = inbox_change.clone();
+        let on_error = Closure::<dyn FnMut()>::new(move || {
+            if let Ok(mut g) = err_inbox.lock() {
+                *g = Some(Err("read failed".to_string()));
+            }
+        });
+        reader.set_onload(Some(on_load.as_ref().unchecked_ref()));
+        reader.set_onerror(Some(on_error.as_ref().unchecked_ref()));
+        let _ = reader.read_as_array_buffer(&file);
+        let previous = READING.with(|slot| slot.borrow_mut().replace((reader, on_load, on_error)));
+        if let Some((old, _, _)) = previous {
+            old.set_onload(None);
+            old.set_onerror(None);
+            old.abort();
+        }
+    });
+
     input.set_onchange(Some(on_change.as_ref().unchecked_ref()));
     ON_CHANGE.with(|slot| *slot.borrow_mut() = Some(on_change));
     let _ = input.click();
@@ -457,10 +557,14 @@ pub fn open_external(url: &str) -> bool {
     }
     #[cfg(all(not(target_arch = "wasm32"), not(target_os = "linux"), not(target_os = "macos")))]
     {
-        // Windows: `start` is a `cmd` builtin, and the empty pair of quotes is
-        // the *window title* — without it a quoted URL becomes the title and
-        // nothing opens.
-        std::process::Command::new("cmd").args(["/c", "start", ""]).arg(url).spawn().is_ok()
+        // Windows: straight to the shell's URL handler, no `cmd`. Through
+        // `cmd /c start` an `&` in the address (SondeHub's `#!f=..&q=..`) is read
+        // as a command separator, so the page was cut or never opened.
+        std::process::Command::new("rundll32")
+            .args(["url.dll,FileProtocolHandler"])
+            .arg(url)
+            .spawn()
+            .is_ok()
     }
 }
 

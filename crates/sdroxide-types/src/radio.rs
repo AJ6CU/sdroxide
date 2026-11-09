@@ -1965,6 +1965,30 @@ pub struct HpsdrConfig {
     /// asserts nothing, which is what a fresh table is made of.
     #[serde(default)]
     pub oc_table: Vec<HpsdrOcRow>,
+    // ── Diversity: the board's second ADC as a second aerial ──────────────
+    /// Use the second ADC as a second aerial — null a local noise source, or
+    /// combine the pair for diversity reception. **Protocol 2 only, and DDC 1
+    /// only** (this radio's DDC, in the operator's counting): the board has to
+    /// stream the two ADCs as one synced DDC pair, which the TRX-DUO firmware
+    /// (v0.7.0) and piHPSDR / Thetis call Diversity. DDC 2 is then the second
+    /// aerial and cannot be a radio of its own.
+    ///
+    /// Off by default. Takes effect on Apply, because the board is told how to
+    /// stream when the DDC is attached.
+    #[serde(default)]
+    pub diversity: bool,
+    /// What to do with the second aerial. See [`DiversityMode`].
+    #[serde(default)]
+    pub div_mode: DiversityMode,
+    /// How many taps the adaptive filter has, 1 to [`DIVERSITY_MAX_TAPS`].
+    #[serde(default = "HpsdrConfig::default_div_taps")]
+    pub div_taps: u8,
+    /// How fast the filter adapts, 0 to 1.
+    #[serde(default = "HpsdrConfig::default_div_rate")]
+    pub div_rate: f32,
+    /// Hold the filter where it is.
+    #[serde(default)]
+    pub div_frozen: bool,
 }
 
 impl Default for HpsdrConfig {
@@ -1992,6 +2016,11 @@ impl Default for HpsdrConfig {
             auto_gain_min_db: Self::default_auto_gain_min_db(),
             auto_gain_max_db: Self::default_auto_gain_max_db(),
             oc_table: Vec::new(),
+            diversity: false,
+            div_mode: DiversityMode::default(),
+            div_taps: Self::default_div_taps(),
+            div_rate: Self::default_div_rate(),
+            div_frozen: false,
         }
     }
 }
@@ -2077,6 +2106,17 @@ impl HpsdrConfig {
     /// See [`Self::auto_gain_max_db`]. The board's own ceiling.
     pub fn default_auto_gain_max_db() -> f64 {
         Self::LNA_GAIN_MAX_DB
+    }
+
+    /// See [`Self::div_taps`]: the figure the other diversity-capable
+    /// backends start at.
+    pub fn default_div_taps() -> u8 {
+        8
+    }
+
+    /// See [`Self::div_rate`].
+    pub fn default_div_rate() -> f32 {
+        0.7
     }
 
     /// The loop's bounds, in the order the gain register takes them and with
@@ -6742,6 +6782,36 @@ impl BandDriveTrim {
     }
 }
 
+/// The most power this radio's station puts out on one band, in watts, as the
+/// operator states it. See [`RadioConfig::tx_band_power_w`].
+///
+/// A radio with no power sensor cannot say what it is radiating, and the
+/// S-meter has nothing to show during a transmission but the drive setting as
+/// a percentage. With this figure the same setting can be shown as watts: it is
+/// the power the station makes on `band` with Drive at its top, amplifier
+/// included, and the engine scales it by the drive actually in force.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct BandPower {
+    /// The band this row states, matched against the transmit frequency on the
+    /// dial through [`Band::containing`], like [`BandDriveTrim::band`].
+    pub band: Band,
+    /// Watts at full drive. Not `> 0` and finite means "unknown", exactly as if
+    /// the row were absent; see [`BandPower::watts`].
+    pub watts: f32,
+}
+
+impl BandPower {
+    /// The largest figure a row accepts, in watts. A kilowatt-plus station is
+    /// real; past this a typo is likelier than a transmitter.
+    pub const MAX_W: f32 = 5000.0;
+
+    /// The figure, or `None` when it is zero, negative, NaN or infinite — what a
+    /// hand-edited `radio.json` is held to before anything is computed from it.
+    pub fn watts(&self) -> Option<f32> {
+        (self.watts.is_finite() && self.watts > 0.0).then(|| self.watts.min(Self::MAX_W))
+    }
+}
+
 #[cfg(test)]
 mod oc_table_tests {
     use super::*;
@@ -6879,6 +6949,76 @@ mod drive_trim_tests {
         // No trim is exactly no change, not a rounding of one.
         assert_eq!(BandDriveTrim::factor_for(0.0, false), 1.0);
         assert_eq!(BandDriveTrim::factor_for(0.0, true), 1.0);
+    }
+}
+
+#[cfg(test)]
+mod band_power_tests {
+    use super::*;
+
+    /// A row answers for its own band and for nothing else, and a dial outside
+    /// every band falls on the "Other" row if there is one.
+    #[test]
+    fn the_power_follows_the_transmit_band() {
+        let cfg = RadioConfig {
+            tx_band_power_w: vec![
+                BandPower { band: Band::M40, watts: 100.0 },
+                BandPower { band: Band::M10, watts: 50.0 },
+                BandPower { band: Band::Gen, watts: 4.0 },
+            ],
+            ..RadioConfig::default()
+        };
+        assert_eq!(cfg.tx_band_watts(7_074_000.0), Some(100.0));
+        assert_eq!(cfg.tx_band_watts(28_074_000.0), Some(50.0));
+        assert_eq!(cfg.tx_band_watts(14_074_000.0), None, "a band with no row is unknown");
+        assert_eq!(cfg.tx_band_watts(2_100_000.0), Some(4.0), "outside every band: Other");
+        // The station that never opened the table: nothing is looked up.
+        assert_eq!(RadioConfig::default().tx_band_watts(7_074_000.0), None);
+    }
+
+    /// A hand-edited `radio.json` cannot make a zero, a negative or a NaN into
+    /// a power, and an absurd figure is held to the cap.
+    #[test]
+    fn an_impossible_row_reads_as_unknown_or_is_capped() {
+        for w in [0.0, -5.0, f32::NAN, f32::INFINITY] {
+            assert_eq!(BandPower { band: Band::M20, watts: w }.watts(), None, "{w}");
+        }
+        assert_eq!(BandPower { band: Band::M20, watts: 1e9 }.watts(), Some(BandPower::MAX_W));
+        assert_eq!(BandPower { band: Band::M20, watts: 100.0 }.watts(), Some(100.0));
+    }
+
+    /// One row per band, and clearing a band leaves no row behind.
+    #[test]
+    fn setting_a_band_replaces_its_row_and_clearing_removes_it() {
+        let mut cfg = RadioConfig::default();
+        cfg.set_tx_band_watts(Band::M20, Some(100.0));
+        cfg.set_tx_band_watts(Band::M20, Some(75.0));
+        cfg.set_tx_band_watts(Band::M40, Some(10.0));
+        assert_eq!(cfg.tx_band_power_w.len(), 2);
+        assert_eq!(cfg.tx_band_watts(14_074_000.0), Some(75.0));
+        cfg.set_tx_band_watts(Band::M20, None);
+        assert_eq!(cfg.tx_band_watts(14_074_000.0), None);
+        assert_eq!(cfg.tx_band_power_w.len(), 1);
+        cfg.set_tx_band_watts(Band::M40, Some(f32::NAN));
+        assert!(cfg.tx_band_power_w.is_empty(), "an unusable figure clears the row");
+    }
+
+    /// The table survives `radio.json`, and a `radio.json` written before the
+    /// field existed loads with it empty rather than failing.
+    #[test]
+    fn the_table_round_trips_and_an_old_file_loads_empty() {
+        let cfg = RadioConfig {
+            tx_band_power_w: vec![BandPower { band: Band::M20, watts: 100.0 }],
+            ..RadioConfig::default()
+        };
+        let json = serde_json::to_string(&cfg).unwrap();
+        let back: RadioConfig = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.tx_band_power_w, cfg.tx_band_power_w);
+
+        let mut v: serde_json::Value = serde_json::from_str(&json).unwrap();
+        v.as_object_mut().unwrap().remove("tx_band_power_w").expect("the field is written");
+        let old: RadioConfig = serde_json::from_value(v).unwrap();
+        assert!(old.tx_band_power_w.is_empty());
     }
 }
 
@@ -7485,6 +7625,13 @@ pub struct RadioConfig {
     pub radio_audio_in: Option<String>,
     /// Sound-card device (cpal name) carrying the TX audio PC → radio.
     pub radio_audio_out: Option<String>,
+    /// ALSA mixer playback level (0..=100) applied to `radio_audio_out` when it
+    /// is opened, so a USB radio interface (SS9900v) is loud enough to trigger
+    /// its VOX. `None` = 80. Linux/ALSA only; ignored elsewhere.
+    pub radio_audio_out_level: Option<u8>,
+    /// ALSA mixer capture level (0..=100) applied to `radio_audio_in` when it
+    /// is opened. `None` = 80.
+    pub radio_audio_in_level: Option<u8>,
     /// A fixed gain, in dB, on everything this radio sends to the speakers.
     ///
     /// The AF volume rail's top is unity: it can turn a radio down and never
@@ -7726,6 +7873,102 @@ pub struct RadioConfig {
     /// property of the hardware. Appended last, as the wire requires.
     #[serde(default)]
     pub swap_iq: bool,
+    /// The bands this radio may transmit on, as the operator chose them. The
+    /// first gate on every transmit route, ahead of every other rail: a band
+    /// that is not listed here is never keyed, whatever else would allow it.
+    ///
+    /// `Some(vec![])` is a radio that was never configured — every band off —
+    /// and `None` is a `radio.json` written before this existed, which the
+    /// engine fills from the amateur bands the radio can reach and leaves
+    /// unconfirmed (see [`Self::tx_bands_confirmed`]). Checked on the *real*
+    /// dial frequency through [`Band::containing`], so the ALL selector is not
+    /// a permission: a dial outside every band falls on [`Band::Gen`], the
+    /// "Autre" row, which is off until the operator turns it on.
+    ///
+    /// Per radio, on the server with the rest of `radio.json`. Appended last,
+    /// as the wire requires.
+    #[serde(default)]
+    pub tx_band_enable: Option<Vec<Band>>,
+    /// The operator has looked at [`Self::tx_band_enable`] and confirmed it.
+    /// Until then the radio does not transmit at all — an upgrade carries the
+    /// old bands over, but a list nobody has checked is not a licence to key.
+    /// Appended last, as the wire requires.
+    #[serde(default)]
+    pub tx_bands_confirmed: bool,
+    /// The most power the station makes on each band, in watts, as the operator
+    /// states it — see [`BandPower`]. Empty, the default and what every
+    /// `radio.json` written before this existed loads as, means unknown on every
+    /// band, and nothing changes: the S-meter keeps showing the drive as a
+    /// percentage. A band with no row is unknown on its own.
+    ///
+    /// Per radio, on the server with the rest of `radio.json`. Appended last, as
+    /// the wire requires.
+    #[serde(default)]
+    pub tx_band_power_w: Vec<BandPower>,
+    /// The bands this radio may *receive* on, as the operator chose them: the
+    /// mirror of [`Self::tx_band_enable`], with the same rules and its own list,
+    /// independent of the transmit one (160 m can be TX off and RX on).
+    ///
+    /// `None` is a `radio.json` written before this existed, which the engine
+    /// fills from the bands the hardware publishes it can reach, "Other"
+    /// included, and leaves unconfirmed (see [`Self::rx_bands_confirmed`]).
+    /// Checked on the real dial frequency through [`Band::containing`].
+    ///
+    /// Per radio, on the server with the rest of `radio.json`, even when two
+    /// radios are coupled. Appended last, as the wire requires.
+    #[serde(default)]
+    pub rx_band_enable: Option<Vec<Band>>,
+    /// The operator has looked at [`Self::rx_band_enable`] and confirmed it.
+    /// Until then the radio does not tune (see [`Self::rx_block_reason`]).
+    /// Appended last, as the wire requires.
+    #[serde(default)]
+    pub rx_bands_confirmed: bool,
+    /// [`crate::BandPlan::fingerprint`] of the band plan the two lists above
+    /// were confirmed against, or 0 when neither is confirmed (or the radio
+    /// was confirmed before this was recorded).
+    ///
+    /// Written by the engine when the operator confirms, never by the screen.
+    /// A different plan at the next start means the plan moved while the
+    /// program was off, and the engine withdraws both confirmations exactly as
+    /// it does when the plan changes while it runs. Appended last, as the wire
+    /// requires.
+    #[serde(default)]
+    pub band_plan_fp: u64,
+    /// The band plan this radio runs on its own, by its name in the station's
+    /// `bandplans` folder; `None` follows the station's plan, which is the
+    /// default and what every radio did before.
+    ///
+    /// Per radio, in this radio's `radio.json`: one radio on a national plan and
+    /// another on the built-in tables is an ordinary station. Choosing or
+    /// leaving a plan of its own changes the plan this radio runs, so it
+    /// withdraws the confirmation of **this radio's** TX and RX band lists, and
+    /// no other radio's. A plan whose file has gone runs the station's, with an
+    /// alert, and the name stays. Appended last, as the wire requires.
+    #[serde(default)]
+    pub band_plan: Option<String>,
+}
+
+/// Why [`RadioConfig::rx_block_reason`] refuses a frequency.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize, Deserialize)]
+pub enum RxBlock {
+    /// The operator has not validated the receive band list yet.
+    Unconfirmed,
+    /// The frequency is in this band, which is not ticked for reception.
+    BandOff(Band),
+}
+
+/// Why [`RadioConfig::tx_block_reason`] refuses a frequency. Also what the
+/// engine reports when it refuses a key-down (`RadioEvent::TxRefused`), so the
+/// screen can say it in the operator's language.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize, Deserialize)]
+pub enum TxBlock {
+    /// The operator has not validated the transmit band list yet.
+    Unconfirmed,
+    /// The frequency is in this band, which is not ticked.
+    BandOff(Band),
+    /// 11 m (CB) is ticked and confirmed, but "Allow transmit on 11 m (CB)" is
+    /// off. The band list comes first; this is the second lock.
+    CbOff,
 }
 
 /// The lowest S-meter calibration offered, in S-units.
@@ -7736,6 +7979,193 @@ pub const SMETER_CAL_MAX: i8 = 5;
 pub const DB_PER_S_UNIT: f32 = 6.0;
 
 impl RadioConfig {
+    /// Whether this radio may transmit on `band`: validated, and listed.
+    ///
+    /// [`Band::Gen`] ("Other", everywhere outside the bands) is never a
+    /// transmit band, whatever the list says.
+    ///
+    /// 11 m (CB) needs a second lock on top of the list: the station's "Allow
+    /// transmit on 11 m (CB)" ([`crate::cb_tx_allowed`]).
+    pub fn tx_band_allowed(&self, band: Band) -> bool {
+        self.tx_band_allowed_with(band, crate::cb_tx_allowed())
+    }
+
+    /// [`Self::tx_band_allowed`] with the CB permission given, not read.
+    pub fn tx_band_allowed_with(&self, band: Band, cb_allowed: bool) -> bool {
+        band != Band::Gen
+            && (band != Band::M11 || cb_allowed)
+            && self.tx_bands_confirmed
+            && self.tx_band_enable.as_ref().is_some_and(|bands| bands.contains(&band))
+    }
+
+    /// Whether this radio may transmit at `dial_hz`. The band is the one the
+    /// frequency is in, never the selector the operator last clicked.
+    pub fn tx_dial_allowed(&self, dial_hz: f64) -> bool {
+        self.tx_block_reason(dial_hz).is_none()
+    }
+
+    /// Why this radio may not transmit at `dial_hz`, or `None` when it may.
+    ///
+    /// The single rule, for the interface and the engine alike: transmit is
+    /// allowed on the bands that are ticked in the list *and* validated, and
+    /// refused everywhere else — listening bands, broadcast, "Other" included.
+    pub fn tx_block_reason(&self, dial_hz: f64) -> Option<TxBlock> {
+        self.tx_block_reason_with(dial_hz, crate::cb_tx_allowed())
+    }
+
+    /// [`Self::tx_block_reason`] with the CB permission given, not read. The
+    /// locks come in this order: the list confirmed, the band ticked, and for
+    /// 11 m the station's CB permission last.
+    pub fn tx_block_reason_with(&self, dial_hz: f64, cb_allowed: bool) -> Option<TxBlock> {
+        if !self.tx_bands_confirmed {
+            return Some(TxBlock::Unconfirmed);
+        }
+        let band = Band::containing(dial_hz);
+        if band == Band::Gen || !self.tx_band_enable.as_ref().is_some_and(|b| b.contains(&band)) {
+            return Some(TxBlock::BandOff(band));
+        }
+        if band == Band::M11 && !cb_allowed {
+            return Some(TxBlock::CbOff);
+        }
+        None
+    }
+
+    /// Tick or untick one band of the transmit list.
+    ///
+    /// **A change to the list withdraws the confirmation.** That flag is the
+    /// operator saying they have checked every band on it, and a list they have
+    /// not seen cannot carry that: without this, ticking a band after confirming
+    /// granted transmit on it with no acknowledgement at all — and the settings
+    /// row then showed "confirmed" for a list nobody had checked.
+    /// (Bench report, 2026-11-01: the confirmation could only ever be given
+    /// once, so there was no way to change the list and check it again.)
+    pub fn set_tx_band(&mut self, band: Band, on: bool) {
+        if band == Band::Gen {
+            return;
+        }
+        let bands = self.tx_band_enable.get_or_insert_with(Vec::new);
+        let had = bands.contains(&band);
+        bands.retain(|b| *b != band);
+        if on {
+            bands.push(band);
+        }
+        if had != on {
+            self.tx_bands_confirmed = false;
+        }
+    }
+
+    /// Take the "Other" row out of both band lists. It had a row once; now it
+    /// has none, so an old file or a client that still sends it is cleaned. The
+    /// confirmations are left alone: the row never granted anything the rest of
+    /// the list shows. Returns whether anything changed.
+    pub fn drop_other_band(&mut self) -> bool {
+        let mut changed = false;
+        for list in [&mut self.tx_band_enable, &mut self.rx_band_enable].into_iter().flatten() {
+            let n = list.len();
+            list.retain(|b| *b != Band::Gen);
+            changed |= list.len() != n;
+        }
+        changed
+    }
+
+    /// Fill in [`Self::tx_band_enable`] for a `radio.json` that predates it:
+    /// every amateur band `may_tx` says the radio can reach, left unconfirmed.
+    /// Returns whether anything changed. A list that exists is never touched.
+    pub fn migrate_tx_bands(&mut self, may_tx: impl Fn(f64) -> bool) -> bool {
+        if self.tx_band_enable.is_some() {
+            return false;
+        }
+        let bands = Band::ALL
+            .into_iter()
+            .filter(|b| b.is_amateur())
+            .filter(|b| b.edges().is_some_and(|(lo, hi)| may_tx(lo) || may_tx(hi)))
+            .collect();
+        self.tx_band_enable = Some(bands);
+        self.tx_bands_confirmed = false;
+        true
+    }
+
+    /// Whether this radio may receive on `band`: validated, and listed.
+    ///
+    /// [`Band::Gen`] (outside every band: ADS-B, DAB, AIS...) has no row of its
+    /// own and is covered by a confirmed list.
+    pub fn rx_band_allowed(&self, band: Band) -> bool {
+        !self.rx_lock_active()
+            || band.is_listen_service()
+            || (self.rx_bands_confirmed
+                && (band == Band::Gen
+                    || self.rx_band_enable.as_ref().is_some_and(|bands| bands.contains(&band))))
+    }
+
+    /// Whether the receive band lock applies to this radio at all.
+    ///
+    /// A radio in SWL mode ([`Self::hide_tx`], "hide everything but listening")
+    /// is a listener's set: it has no receive lock, whatever the list says.
+    pub fn rx_lock_active(&self) -> bool {
+        !self.hide_tx
+    }
+
+    /// Whether this radio may be tuned to `dial_hz`. The band is the one the
+    /// frequency is in, never the selector the operator last clicked.
+    pub fn rx_dial_allowed(&self, dial_hz: f64) -> bool {
+        self.rx_band_allowed(Band::containing(dial_hz))
+    }
+
+    /// Why this radio may not receive at `dial_hz`, or `None` when it may.
+    /// The same rule as [`Self::tx_block_reason`], on the receive list.
+    ///
+    /// Never in SWL mode, and never on a listening band (LW, MW, SW, FM, AIR,
+    /// MIL): those are always open for reception. Frequencies outside every band
+    /// (the gaps between them) are open once the list is confirmed.
+    pub fn rx_block_reason(&self, dial_hz: f64) -> Option<RxBlock> {
+        let band = Band::containing(dial_hz);
+        if !self.rx_lock_active() || band.is_listen_service() {
+            return None;
+        }
+        if !self.rx_bands_confirmed {
+            return Some(RxBlock::Unconfirmed);
+        }
+        if band == Band::Gen || self.rx_band_enable.as_ref().is_some_and(|b| b.contains(&band)) {
+            None
+        } else {
+            Some(RxBlock::BandOff(band))
+        }
+    }
+
+    /// Tick or untick one band of the receive list. A change withdraws the
+    /// confirmation, exactly as [`Self::set_tx_band`] does for transmit.
+    pub fn set_rx_band(&mut self, band: Band, on: bool) {
+        if band == Band::Gen {
+            return;
+        }
+        let bands = self.rx_band_enable.get_or_insert_with(Vec::new);
+        let had = bands.contains(&band);
+        bands.retain(|b| *b != band);
+        if on {
+            bands.push(band);
+        }
+        if had != on {
+            self.rx_bands_confirmed = false;
+        }
+    }
+
+    /// Fill in [`Self::rx_band_enable`] for a `radio.json` that predates it:
+    /// every band `may_rx` says the hardware reaches (its published range), left
+    /// unconfirmed. "Other" ([`Band::Gen`]) has no row and is never listed.
+    /// Returns whether anything changed. A list that exists is never touched.
+    pub fn migrate_rx_bands(&mut self, may_rx: impl Fn(f64) -> bool) -> bool {
+        if self.rx_band_enable.is_some() {
+            return false;
+        }
+        let bands: Vec<Band> = Band::ALL
+            .into_iter()
+            .filter(|b| b.edges().is_some_and(|(lo, hi)| may_rx(lo) || may_rx(hi)))
+            .collect();
+        self.rx_band_enable = Some(bands);
+        self.rx_bands_confirmed = false;
+        true
+    }
+
     /// Whether the engine is to conjugate this radio's I/Q.
     ///
     /// [`Self::swap_iq`] is the per-radio switch for a receiver whose I and Q
@@ -7829,6 +8259,30 @@ impl RadioConfig {
         self.tx_drive_max.filter(|c| c.is_finite() && *c > 0.0).map(|c| c.min(1.0))
     }
 
+    /// The power the operator states for the band `tx_dial_hz` falls in, in
+    /// watts at full drive, or `None` where they have stated none.
+    ///
+    /// The *dial* transmit frequency, for the reason [`Self::drive_trim_db`]
+    /// takes it: behind a transverter the band that radiates is the converted
+    /// one. A frequency in no band falls on [`Band::Gen`], the "Other" row. A
+    /// band with more than one row takes the first, as the trim table does.
+    pub fn tx_band_watts(&self, tx_dial_hz: f64) -> Option<f32> {
+        if self.tx_band_power_w.is_empty() {
+            return None;
+        }
+        let band = Band::containing(tx_dial_hz);
+        self.tx_band_power_w.iter().find(|p| p.band == band).and_then(BandPower::watts)
+    }
+
+    /// Set (or, with `None`, clear) the stated power for `band`, keeping one row
+    /// per band and no row for an unknown one.
+    pub fn set_tx_band_watts(&mut self, band: Band, watts: Option<f32>) {
+        self.tx_band_power_w.retain(|p| p.band != band);
+        if let Some(w) = watts.filter(|w| w.is_finite() && *w > 0.0) {
+            self.tx_band_power_w.push(BandPower { band, watts: w.min(BandPower::MAX_W) });
+        }
+    }
+
     /// The converter offset in force at `dial_hz`, read-only.
     pub fn converter_offset_at(&self, dial_hz: f64) -> f64 {
         self.transverters
@@ -7914,6 +8368,28 @@ impl RadioConfig {
 
 #[cfg(test)]
 mod tests {
+    /// **A change to the transmit band list withdraws the confirmation.**
+    ///
+    /// The flag means "I have looked at every band on this list". Ticking a
+    /// band after confirming used to leave it set, so transmit was granted on a
+    /// band nobody had acknowledged — and the settings row went on saying
+    /// "confirmed" — while the control that would have said otherwise stayed
+    /// hidden for the life of the radio. (Bench report, 2026-11-01.)
+    #[test]
+    fn changing_the_transmit_band_list_withdraws_the_confirmation() {
+        let mut cfg = RadioConfig { tx_band_enable: Some(vec![Band::M20]), ..Default::default() };
+        cfg.tx_bands_confirmed = true;
+        cfg.set_tx_band(Band::M11, true);
+        assert!(cfg.tx_band_enable.as_ref().unwrap().contains(&Band::M11));
+        assert!(!cfg.tx_bands_confirmed, "a band the operator has not seen cannot be confirmed");
+
+        // Re-setting what is already there is not a change, so a row that
+        // redraws every frame cannot withdraw the confirmation on its own.
+        cfg.tx_bands_confirmed = true;
+        cfg.set_tx_band(Band::M11, true);
+        assert!(cfg.tx_bands_confirmed, "an unchanged list keeps its confirmation");
+    }
+
     use super::*;
 
     /// The SoapySDR block's defaults must mean "change nothing", because it
@@ -9275,5 +9751,222 @@ mod tests {
         assert_eq!(cal(-5), -30.0);
         assert_eq!(cal(40), 30.0, "a hand-edited file cannot go past +5");
         assert_eq!(cal(-40), -30.0, "nor past -5");
+    }
+
+    fn tx_list(bands: &[Band], confirmed: bool) -> RadioConfig {
+        RadioConfig {
+            tx_band_enable: Some(bands.to_vec()),
+            tx_bands_confirmed: confirmed,
+            ..RadioConfig::default()
+        }
+    }
+
+    /// One rule: ticked and validated = allowed, refused everywhere else.
+    #[test]
+    fn tx_is_allowed_only_on_ticked_and_validated_bands() {
+        let sw41 = 7_205_000.0; // broadcast "SW 41m"
+        let sw75 = 3_912_000.0; // broadcast "SW 75m"
+        // 11 m alone: CB only.
+        let cb = tx_list(&[Band::M11], true);
+        assert_eq!(cb.tx_block_reason_with(27_185_000.0, true), None);
+        assert_eq!(cb.tx_block_reason(7_074_000.0), Some(TxBlock::BandOff(Band::M40)));
+        assert!(cb.tx_block_reason(sw41).is_some() && cb.tx_block_reason(sw75).is_some());
+        // 11 m + 40 m: those two, nothing else.
+        let two = tx_list(&[Band::M11, Band::M40], true);
+        assert_eq!(two.tx_block_reason_with(27_185_000.0, true), None);
+        assert_eq!(two.tx_block_reason(7_074_000.0), None);
+        assert!(two.tx_block_reason(14_074_000.0).is_some());
+        // 11 m unticked: no CB.
+        let no_cb = tx_list(&[Band::M40], true);
+        assert!(no_cb.tx_block_reason(27_185_000.0).is_some());
+        // Unvalidated list: nothing at all.
+        let unvalidated = tx_list(&[Band::M11, Band::M40], false);
+        assert_eq!(unvalidated.tx_block_reason(7_074_000.0), Some(TxBlock::Unconfirmed));
+        assert_eq!(RadioConfig::default().tx_block_reason(7_074_000.0), Some(TxBlock::Unconfirmed));
+        // A listening band is a band like another: ticked and validated, the
+        // radio may transmit there; otherwise never.
+        let sw = tx_list(&[Band::Sw], true);
+        assert_eq!(sw.tx_block_reason(sw41), None);
+        // And the same answer as `tx_dial_allowed`.
+        for hz in [sw41, sw75, 7_074_000.0, 27_185_000.0, 35_000_000.0] {
+            for c in [&cb, &two, &no_cb, &unvalidated, &sw] {
+                assert_eq!(c.tx_block_reason(hz).is_none(), c.tx_dial_allowed(hz));
+            }
+        }
+    }
+
+    #[test]
+    fn set_tx_band_ticks_and_unticks() {
+        let mut c = RadioConfig::default();
+        c.set_tx_band(Band::M11, true);
+        c.set_tx_band(Band::M11, true);
+        assert_eq!(c.tx_band_enable, Some(vec![Band::M11]));
+        c.set_tx_band(Band::M11, false);
+        assert_eq!(c.tx_band_enable, Some(vec![]));
+    }
+
+    fn rx_list(bands: &[Band], confirmed: bool) -> RadioConfig {
+        RadioConfig {
+            rx_band_enable: Some(bands.to_vec()),
+            rx_bands_confirmed: confirmed,
+            ..RadioConfig::default()
+        }
+    }
+
+    #[test]
+    fn swl_mode_has_no_rx_lock() {
+        let mut c = rx_list(&[], false);
+        assert!(c.rx_block_reason(7_074_000.0).is_some());
+        c.hide_tx = true;
+        for hz in [150_000.0, 1_000_000.0, 7_074_000.0, 14_200_000.0, 45_000_000.0, 1_090_000_000.0] {
+            assert_eq!(c.rx_block_reason(hz), None, "{hz}");
+        }
+        assert!(c.rx_band_allowed(Band::M40));
+        assert!(!c.rx_lock_active());
+    }
+
+    #[test]
+    fn listening_bands_are_always_open_for_rx() {
+        // Unconfirmed, and explicitly off: LW/MW/SW/FM/AIR/MIL still listen.
+        let c = rx_list(&[], false);
+        for band in [Band::Lw, Band::Mw, Band::Sw, Band::Fm, Band::Air, Band::Mil] {
+            assert!(c.rx_band_allowed(band), "{band:?}");
+        }
+        assert_eq!(c.rx_block_reason(1_000_000.0), None, "MW");
+        assert_eq!(c.rx_block_reason(9_650_000.0), None, "SW");
+        assert_eq!(c.rx_block_reason(98_000_000.0), None, "FM");
+    }
+
+    #[test]
+    fn rx_has_no_hole_between_0_and_50_mhz_except_bands_set_to_no() {
+        // Confirmed list with every amateur/CB band off: only the bands the
+        // operator set to NO are refused; the gaps and listening bands are open.
+        let c = rx_list(&[], true);
+        let mut hz = 10_000.0;
+        while hz <= 50_000_000.0 {
+            let band = Band::containing(hz);
+            let refused = c.rx_block_reason(hz).is_some();
+            let expect = band != Band::Gen && !band.is_listen_service();
+            assert_eq!(refused, expect, "{hz} Hz ({band:?})");
+            hz += 10_000.0;
+        }
+        // A band set to YES is open, a band set to NO stays closed.
+        let c = rx_list(&[Band::M40], true);
+        assert_eq!(c.rx_block_reason(7_100_000.0), None);
+        assert!(c.rx_block_reason(14_200_000.0).is_some());
+    }
+
+    #[test]
+    fn rx_is_allowed_only_on_ticked_and_validated_bands() {
+        let adsb = 1_090_000_000.0;
+        let c = rx_list(&[Band::M160, Band::Gen], true);
+        assert_eq!(c.rx_block_reason(1_850_000.0), None);
+        assert_eq!(c.rx_block_reason(adsb), None, "ADS-B falls on Other");
+        assert_eq!(c.rx_block_reason(7_074_000.0), Some(RxBlock::BandOff(Band::M40)));
+        // "Other" has no row: a confirmed list covers it, listed or not.
+        let no_other = rx_list(&[Band::M160], true);
+        assert_eq!(no_other.rx_block_reason(adsb), None, "ADS-B needs no Other row");
+        assert_eq!(rx_list(&[], false).rx_block_reason(adsb), Some(RxBlock::Unconfirmed));
+        let unvalidated = rx_list(&[Band::M160], false);
+        assert_eq!(unvalidated.rx_block_reason(1_850_000.0), Some(RxBlock::Unconfirmed));
+        assert_eq!(RadioConfig::default().rx_block_reason(1_850_000.0), Some(RxBlock::Unconfirmed));
+        for hz in [1_850_000.0, 7_074_000.0, adsb] {
+            for c in [&c, &no_other, &unvalidated] {
+                assert_eq!(c.rx_block_reason(hz).is_none(), c.rx_dial_allowed(hz));
+            }
+        }
+    }
+
+    /// TX and RX lists are independent: 160 m TX off, RX on.
+    /// Two locks on 11 m, in order: the list (confirmed, ticked), then the
+    /// station's CB permission. Neither opens anything alone.
+    #[test]
+    fn eleven_metres_needs_the_list_first_and_the_cb_permission_second() {
+        let cb = 27_185_000.0;
+        let listed = tx_list(&[Band::M11, Band::M40], true);
+        assert_eq!(listed.tx_block_reason_with(cb, true), None);
+        assert_eq!(listed.tx_block_reason_with(cb, false), Some(TxBlock::CbOff));
+        assert_eq!(listed.tx_block_reason_with(7_074_000.0, false), None, "40 m is not CB");
+        assert!(!listed.tx_band_allowed_with(Band::M11, false));
+        // Permission without the band: the list's own refusal comes first.
+        let unlisted = tx_list(&[Band::M40], true);
+        assert_eq!(unlisted.tx_block_reason_with(cb, true), Some(TxBlock::BandOff(Band::M11)));
+        assert_eq!(unlisted.tx_block_reason_with(cb, false), Some(TxBlock::BandOff(Band::M11)));
+        // An unconfirmed list says so before anything about CB.
+        let unconfirmed = tx_list(&[Band::M11], false);
+        assert_eq!(unconfirmed.tx_block_reason_with(cb, false), Some(TxBlock::Unconfirmed));
+    }
+
+    #[test]
+    fn other_is_never_a_transmit_band() {
+        let hz = 35_000_000.0;
+        assert_eq!(Band::containing(hz), Band::Gen);
+        let mut c = tx_list(&[Band::M40, Band::Gen], true);
+        assert_eq!(c.tx_block_reason(hz), Some(TxBlock::BandOff(Band::Gen)));
+        assert!(!c.tx_dial_allowed(hz));
+        assert!(!c.tx_band_allowed(Band::Gen));
+        c.set_tx_band(Band::Gen, true);
+        assert!(c.tx_bands_confirmed, "the row cannot be ticked, so nothing was changed");
+        assert!(c.drop_other_band());
+        assert_eq!(c.tx_band_enable, Some(vec![Band::M40]));
+        assert!(!c.drop_other_band(), "nothing left to drop");
+    }
+
+    #[test]
+    fn rx_and_tx_lists_are_independent() {
+        let c = RadioConfig {
+            tx_band_enable: Some(vec![Band::M20]),
+            tx_bands_confirmed: true,
+            rx_band_enable: Some(vec![Band::M160]),
+            rx_bands_confirmed: true,
+            ..RadioConfig::default()
+        };
+        assert!(c.tx_block_reason(1_850_000.0).is_some());
+        assert_eq!(c.rx_block_reason(1_850_000.0), None);
+        assert_eq!(c.tx_block_reason(14_074_000.0), None);
+        assert!(c.rx_block_reason(14_074_000.0).is_some());
+    }
+
+    #[test]
+    fn set_rx_band_withdraws_confirmation_only_on_change() {
+        let mut c = rx_list(&[Band::M20], true);
+        c.set_rx_band(Band::M20, true);
+        assert!(c.rx_bands_confirmed, "unchanged list keeps its confirmation");
+        c.set_rx_band(Band::M40, true);
+        assert!(!c.rx_bands_confirmed, "a band added after the check");
+        c.rx_bands_confirmed = true;
+        c.set_rx_band(Band::M40, false);
+        assert!(!c.rx_bands_confirmed, "a band removed after the check");
+        assert_eq!(c.rx_band_enable, Some(vec![Band::M20]));
+    }
+
+    #[test]
+    fn migrate_rx_bands_reads_the_published_range() {
+        // A Pluto-like range: 70 MHz and up.
+        let mut pluto = RadioConfig::default();
+        assert!(pluto.migrate_rx_bands(|hz| hz >= 70e6));
+        let bands = pluto.rx_band_enable.clone().unwrap();
+        assert!(!bands.contains(&Band::M80) && !bands.contains(&Band::M20));
+        assert!(bands.contains(&Band::M2) && !bands.contains(&Band::Gen));
+        assert!(!pluto.rx_bands_confirmed, "carried over, never confirmed");
+        assert!(!pluto.migrate_rx_bands(|_| true), "an existing list is left alone");
+        // An HF radio.
+        let mut hf = RadioConfig::default();
+        hf.migrate_rx_bands(|hz| hz < 30e6);
+        let bands = hf.rx_band_enable.unwrap();
+        assert!(bands.contains(&Band::M160) && !bands.contains(&Band::Gen));
+        assert!(!bands.contains(&Band::M2));
+        // Reaches nothing: nothing ticked.
+        let mut none = RadioConfig::default();
+        none.migrate_rx_bands(|_| false);
+        assert_eq!(none.rx_band_enable, Some(vec![]));
+    }
+
+    /// A `radio.json` that predates the RX list loads, with no list.
+    #[test]
+    fn old_radio_json_has_no_rx_list() {
+        let c: RadioConfig = serde_json::from_str("{}").expect("loads");
+        assert_eq!(c.rx_band_enable, None);
+        assert!(!c.rx_bands_confirmed);
     }
 }

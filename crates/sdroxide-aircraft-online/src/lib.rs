@@ -24,6 +24,8 @@ mod cache;
 mod model;
 mod parse;
 mod relay;
+mod weather;
+mod wikipedia;
 
 #[cfg(feature = "fetch")]
 pub mod fetch;
@@ -34,4 +36,6 @@ pub use model::{
     clean_callsign, clean_registration, image_ok, thumb_url_ok, user_agent,
 };
 pub use parse::{parse_adsbdb, parse_photo, reply_for};
-pub use relay::{FORMAT_VERSION, Info, Relay, Status, Upstream};
+pub use relay::{FORMAT_VERSION, Info, Outlook, Relay, Status, Upstream};
+pub use weather::{Spot, WEATHER_VERSION, Weather, parse_forecast};
+pub use wikipedia::{Article, image_url_ok, parse_summary};

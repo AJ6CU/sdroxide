@@ -5,6 +5,7 @@
 //! tested. Nothing here reads the network: a field nobody has heard is shown as
 //! "—" with the reason, so an empty line is never a silent one.
 
+use crate::i18n::tr;
 use super::aircraft_registry::{AircraftCard, AircraftRegistry, FallbackKey, Source, Stamped};
 
 /// Which card is meant: an ICAO address, or an HFDL aircraft that never gave one.
@@ -47,6 +48,44 @@ pub(in crate::app) fn source_label(s: Source) -> &'static str {
     }
 }
 
+/// A line's label as drawn. The label itself stays the English key the rows
+/// are matched by; only what is shown is translated.
+pub(in crate::app) fn field_label(label: &str) -> String {
+    match label {
+        "Flight" => tr!("aircraft-label-flight"),
+        "Registration" => tr!("aircraft-label-registration"),
+        "Position" => tr!("aircraft-label-position"),
+        "Altitude" => tr!("aircraft-label-altitude"),
+        "Speed" => tr!("aircraft-label-speed"),
+        "Track" => tr!("aircraft-label-track"),
+        "Last message" => tr!("aircraft-label-last-message"),
+        "Type" => tr!("aircraft-label-type"),
+        "Operator" => tr!("aircraft-label-operator"),
+        "Origin" => tr!("aircraft-label-origin"),
+        "Destination" => tr!("aircraft-label-destination"),
+        "Online" => tr!("aircraft-label-online"),
+        "Range" => tr!("aircraft-label-range"),
+        "Vertical" => tr!("aircraft-label-vertical"),
+        "Emergency" => tr!("aircraft-label-emergency"),
+        "History" => tr!("aircraft-label-history"),
+        "First heard" => tr!("aircraft-label-first-heard"),
+        "Last heard" => tr!("aircraft-label-last-heard"),
+        "Track points" => tr!("aircraft-label-track-points"),
+        "Highest" => tr!("aircraft-label-highest"),
+        "Callsigns" => tr!("aircraft-label-callsigns"),
+        "Registrations" => tr!("aircraft-label-registrations"),
+        "Selected altitude" => tr!("aircraft-label-selected-altitude"),
+        "Selected heading" => tr!("aircraft-label-selected-heading"),
+        "QNH" => tr!("aircraft-label-qnh"),
+        "Airspeed" => tr!("aircraft-label-airspeed"),
+        "Heading" => tr!("aircraft-label-heading"),
+        "Autopilot" => tr!("aircraft-label-autopilot"),
+        "ADS-B version" => tr!("aircraft-label-adsb-version"),
+        "Accuracy" => tr!("aircraft-label-accuracy"),
+        other => other.to_string(),
+    }
+}
+
 pub(in crate::app) fn fmt_position(lat: f64, lon: f64) -> String {
     let ns = if lat < 0.0 { 'S' } else { 'N' };
     let ew = if lon < 0.0 { 'W' } else { 'E' };
@@ -63,7 +102,7 @@ pub(in crate::app) fn title(key: &CardKey, card: &AircraftCard) -> String {
     }
     match key {
         CardKey::Icao(icao) => format!("ICAO {}", icao_hex(*icao)),
-        CardKey::Fallback(FallbackKey::AircraftId(id)) => format!("HFDL aircraft {id}"),
+        CardKey::Fallback(FallbackKey::AircraftId(id)) => tr!("aircraft-hfdl-aircraft", id = id),
         CardKey::Fallback(FallbackKey::Flight(f)) => f.clone(),
     }
 }
@@ -79,7 +118,7 @@ pub(in crate::app) fn detail(key: &CardKey, card: &AircraftCard) -> String {
                 _ => hex,
             }
         }
-        CardKey::Fallback(_) => "no ICAO address (HFDL)".to_string(),
+        CardKey::Fallback(_) => tr!("aircraft-no-icao"),
     }
 }
 
@@ -130,7 +169,11 @@ pub(in crate::app) fn lookup<'a>(
 
 /// `"ADS-B, 12s ago"`.
 fn provenance<T>(s: &Stamped<T>, now: i64) -> String {
-    format!("{}, {} ago", source_label(s.source), super::util::fmt_age(now - s.at))
+    tr!(
+        "aircraft-provenance",
+        source = source_label(s.source),
+        age = super::util::fmt_age(now - s.at)
+    )
 }
 
 fn line<T>(
@@ -146,51 +189,115 @@ fn line<T>(
     }
 }
 
-/// The fixed set of lines for a card, a missing field included.
+/// A line that exists only once the aircraft has said it: most aircraft say
+/// none of these, so a permanent "—" on every card would only be noise.
+fn heard<T>(
+    label: &'static str,
+    field: &Option<Stamped<T>>,
+    now: i64,
+    show: impl Fn(&T) -> String,
+) -> Option<Line> {
+    field.as_ref().map(|s| Line {
+        label,
+        value: show(&s.value),
+        note: provenance(s, now),
+        present: true,
+    })
+}
+
+/// `"IAS 250 kt · TAS 375 kt"`: whichever of the two the aircraft sent.
+fn fmt_airspeed(&(ias, tas): &(Option<f32>, Option<f32>)) -> String {
+    let units = sdroxide_types::AirUnits::current();
+    [("IAS", ias), ("TAS", tas)]
+        .into_iter()
+        .filter_map(|(name, kt)| kt.map(|kt| format!("{name} {}", units.speed(kt))))
+        .collect::<Vec<_>>()
+        .join(" · ")
+}
+
+/// The autopilot modes engaged, as the acronyms a pilot uses; "none" when the
+/// aircraft says it has none engaged.
+fn fmt_nav_modes(bits: &u8) -> String {
+    let names = sdroxide_types::nav_mode_names(*bits);
+    if names.is_empty() { tr!("aircraft-autopilot-off") } else { names.join(" · ") }
+}
+
+/// `"NACp 10 · NACv 2 · SIL 3"`: the categories the aircraft claimed.
+fn fmt_accuracy(&(nac_p, nac_v, sil): &(Option<u8>, Option<u8>, Option<u8>)) -> String {
+    [("NACp", nac_p), ("NACv", nac_v), ("SIL", sil)]
+        .into_iter()
+        .filter_map(|(name, v)| v.map(|v| format!("{name} {v}")))
+        .collect::<Vec<_>>()
+        .join(" · ")
+}
+
+/// The lines for a card: the fixed set, a missing field included, then what
+/// the aircraft has said about its own flight, only if it has said it.
 pub(in crate::app) fn lines(card: &AircraftCard, now: i64) -> Vec<Line> {
+    let units = sdroxide_types::AirUnits::current();
+    let mut out = fixed_lines(card, now);
+    out.extend(
+        [
+            heard("Selected altitude", &card.selected_altitude_ft, now, |v| units.altitude(*v)),
+            heard("Selected heading", &card.selected_heading_deg, now, |v| format!("{v:.0}°")),
+            heard("QNH", &card.qnh_hpa, now, |v| format!("{v:.1} hPa")),
+            heard("Airspeed", &card.airspeed, now, fmt_airspeed),
+            heard("Heading", &card.heading_deg, now, |v| format!("{v:.0}°")),
+            heard("Autopilot", &card.nav_modes, now, fmt_nav_modes),
+            heard("ADS-B version", &card.adsb_version, now, |v| v.to_string()),
+            heard("Accuracy", &card.accuracy, now, fmt_accuracy),
+        ]
+        .into_iter()
+        .flatten(),
+    );
+    out
+}
+
+/// The fixed set of lines for a card, a missing field included.
+fn fixed_lines(card: &AircraftCard, now: i64) -> Vec<Line> {
     vec![
-        line("Flight", &card.flight, now, |v| v.clone(), "not heard yet — ADS-B or VDL2 carry it"),
+        line("Flight", &card.flight, now, |v| v.clone(), &tr!("aircraft-missing-flight")),
         line(
             "Registration",
             &card.registration,
             now,
             |v| v.clone(),
-            "not heard yet — only VDL2 carries it",
+            &tr!("aircraft-missing-registration"),
         ),
         line(
             "Position",
             &card.position,
             now,
             |&(lat, lon)| fmt_position(lat, lon),
-            "not heard yet — ADS-B, or a VDL2 or HFDL position report",
+            &tr!("aircraft-missing-position"),
         ),
         line(
             "Altitude",
             &card.altitude_ft,
             now,
             |v| sdroxide_types::AirUnits::current().altitude(*v),
-            "not heard yet — ADS-B carries it",
+            &tr!("aircraft-missing-adsb"),
         ),
         line(
             "Speed",
             &card.ground_speed_kt,
             now,
             |v| sdroxide_types::AirUnits::current().speed(*v),
-            "not heard yet — ADS-B carries it",
+            &tr!("aircraft-missing-adsb"),
         ),
         line(
             "Track",
             &card.track_deg,
             now,
             |v| format!("{v:.0}°"),
-            "not heard yet — ADS-B carries it",
+            &tr!("aircraft-missing-adsb"),
         ),
         line(
             "Last message",
             &card.last_message,
             now,
             |v| v.clone(),
-            "none yet — VDL2, or ACARS audio once VDL2 has named the aircraft",
+            &tr!("aircraft-missing-message"),
         ),
     ]
 }
@@ -385,6 +492,51 @@ mod tests {
             ["Flight", "Registration", "Position", "Altitude", "Speed", "Track", "Last message"]
         );
         assert!(ls.iter().all(|l| l.value == "—" && !l.note.is_empty()));
+    }
+
+    /// What the aircraft says about its own flight is worded for a reader and
+    /// names its source, and the lines only exist once it has said it.
+    #[test]
+    fn what_an_aircraft_says_about_its_own_flight_gets_its_own_lines() {
+        let mut a = adsb(0xA05629, "DLH123", 1_000);
+        a.selected_altitude_ft = Some(16_992);
+        a.selected_heading_deg = Some(66.8);
+        a.qnh_hpa = Some(1012.8);
+        a.ias_kt = Some(250.0);
+        a.tas_kt = Some(375.0);
+        a.heading_deg = Some(243.98);
+        a.nav_modes = Some(sdroxide_types::NAV_AUTOPILOT | sdroxide_types::NAV_LNAV);
+        a.adsb_version = Some(2);
+        a.nac_p = Some(10);
+        a.sil = Some(3);
+        let mut r = AircraftRegistry::default();
+        r.ingest_adsb(&a);
+        let ls = lines(r.card(0xA05629).unwrap(), 1_002);
+        assert_eq!(line(&ls, "Selected heading").value, "67°");
+        assert_eq!(line(&ls, "QNH").value, "1012.8 hPa");
+        assert_eq!(line(&ls, "Heading").value, "244°");
+        assert_eq!(line(&ls, "Autopilot").value, "AP · LNAV");
+        assert_eq!(line(&ls, "ADS-B version").value, "2");
+        assert_eq!(line(&ls, "Accuracy").value, "NACp 10 · SIL 3", "a category not heard is left out");
+        let speed = line(&ls, "Airspeed").value.clone();
+        assert!(speed.starts_with("IAS ") && speed.contains(" · TAS "), "{speed}");
+        assert!(line(&ls, "Selected altitude").value.contains("16"), "{:?}", line(&ls, "Selected altitude"));
+        for label in ["QNH", "Autopilot", "Accuracy"] {
+            assert_eq!(line(&ls, label).note, "ADS-B, 2s ago");
+            assert!(line(&ls, label).present);
+        }
+    }
+
+    /// No modes engaged is something the aircraft said; it is not a gap.
+    #[test]
+    fn an_autopilot_with_nothing_engaged_says_so() {
+        let mut a = adsb(0xA05629, "DLH123", 1_000);
+        a.nav_modes = Some(0);
+        let mut r = AircraftRegistry::default();
+        r.ingest_adsb(&a);
+        let ls = lines(r.card(0xA05629).unwrap(), 1_000);
+        let l = line(&ls, "Autopilot");
+        assert!(l.present && l.value == tr!("aircraft-autopilot-off"), "{l:?}");
     }
 
     #[test]

@@ -12,6 +12,7 @@
 
 use std::collections::HashSet;
 
+use crate::i18n::tr;
 use eframe::egui::{self, RichText};
 use sdroxide_types::AdsbAircraft;
 
@@ -182,13 +183,13 @@ pub(in crate::app) fn online_hint(q: &Query, all: &[Haystack]) -> Option<String>
     }
     let missing = all.iter().filter(|h| !h.online).count();
     (missing > 0).then(|| {
-        format!("{missing} of {} aircraft without online data — open their card", all.len())
+        tr!("aircraft-search-missing-online", missing = missing, total = all.len())
     })
 }
 
 /// `"12 of 47"`.
 pub(in crate::app) fn shown_label(shown: usize, total: usize) -> String {
-    format!("{shown} of {total}")
+    tr!("aircraft-search-shown-of", shown = shown, total = total)
 }
 
 /// What a search over the ADS-B list found.
@@ -285,11 +286,9 @@ pub(in crate::app) fn open_card(
 }
 
 /// What the box accepts, for its hover text.
-const HELP: &str = "Search the aircraft already heard: the address (ICAO), callsign, registration, \
-type, operator or category. Several words must all match. Limit a word to one field with \
-icao: call: reg: type: op: — for example  reg:PH op:KLM.\n\
-Type and operator come from the station's online lookup, so they are found only for aircraft \
-whose card has been looked up. The search asks for nothing.";
+fn help() -> String {
+    tr!("aircraft-search-help")
+}
 
 /// The search box: the field, a button to clear it, how many aircraft it leaves,
 /// and the note when the query names a field only the online lookup gives.
@@ -301,9 +300,9 @@ pub(in crate::app) fn search_box(
     hint: Option<&str>,
 ) {
     ui.horizontal(|ui| {
-        ui.add(egui::TextEdit::singleline(text).hint_text("search").desired_width(width))
-            .on_hover_text(HELP);
-        if !text.is_empty() && ui.small_button("✕").on_hover_text("Clear the search").clicked() {
+        ui.add(egui::TextEdit::singleline(text).hint_text(tr!("aircraft-search-hint")).desired_width(width))
+            .on_hover_text(help());
+        if !text.is_empty() && ui.small_button("✕").on_hover_text(tr!("aircraft-search-clear")).clicked() {
             text.clear();
         }
         if let Some((shown, total)) = counts {

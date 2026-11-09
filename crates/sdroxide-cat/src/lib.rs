@@ -1657,13 +1657,13 @@ impl CatHandle {
         let _ = self.cmd_tx.send(CatCmd::SplitOn);
     }
 
-    /// Switch the rig's split off.
     /// Make the rig work on `vfo` (its own A/B), where the family has a command
     /// for it.
     pub fn select_vfo(&self, vfo: Vfo) {
         let _ = self.cmd_tx.send(CatCmd::SelectVfo(vfo));
     }
 
+    /// Switch the rig's split off.
     pub fn split_off(&self) {
         let _ = self.cmd_tx.send(CatCmd::SplitOff);
     }

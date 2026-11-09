@@ -10,6 +10,7 @@
 //! window and no transmit half — the two controls are which tone sense the
 //! receiver reads and whether to show the loose text below the message list.
 
+use crate::i18n::tr;
 use eframe::egui::{self, RichText};
 use sdroxide_types::{Command, NavtexMessage, NavtexStatus, Vfo};
 
@@ -45,90 +46,33 @@ pub(super) fn navtex_list_header(
 ) -> bool {
     let mut flip = false;
     ui.horizontal_wrapped(|ui| {
-        ui.label(RichText::new("MESSAGES").strong().color(theme::CYAN()));
+        ui.label(RichText::new(tr!("navtex-messages")).strong().color(theme::CYAN()));
         ui.label(RichText::new(format!("{}", st.messages.len())).weak());
         // The mode's own carrier detect: a constant-ratio code either
         // frames or it does not, and there is no in-between to show.
         if st.in_sync {
-            ui.label(RichText::new("SYNC").strong().color(theme::GREEN()))
-                .on_hover_text("The character phase is locked — a signal is being read.");
+            ui.label(RichText::new(tr!("navtex-sync")).strong().color(theme::GREEN()))
+                .on_hover_text(tr!("navtex-character-phase-locked-signal-being"));
         } else {
-            ui.label(RichText::new("hunting").weak()).on_hover_text(
-                "Nothing is being read yet.\n\n\
-                 It is almost always the tuning. Do NOT type the advertised number (518) \
-                 into the frequency box: NAVTEX is quoted as a channel, and this program \
-                 listens just below it. Click the 518 button above instead — it sets the \
-                 right dial for you (516.300).\n\n\
-                 If there is clearly a strong signal but the text is still nonsense, press \
-                 REV: it is arriving the other way round.\n\n\
-                 Also remember NAVTEX is a timetable, not a conversation: a coast station \
-                 sends for ten minutes every four hours, so silence is normal most of the \
-                 time. You have to be listening when your station is due. And 518 kHz only \
-                 comes alive at night — a quiet daytime band is not a broken decoder.",
-            );
+            ui.label(RichText::new(tr!("navtex-hunting")).weak())
+                .on_hover_text(tr!("navtex-hunting-hint"));
         }
         // What the time diversity actually did, which is the only quality
-        // figure a mode with no checksum has.
-        if st.repaired > 0 || st.lost > 0 {
-            ui.label(
-                RichText::new(format!("{} repaired · {} lost", st.repaired, st.lost))
-                    .size(10.0)
-                    .color(if st.lost > 0 { theme::YELLOW() } else { theme::CYAN_DIM() }),
-            )
-            .on_hover_text(
-                "Characters whose first copy was corrupt and were taken from the repeat five \
-                 slots later, and those where both were bad. A NAVTEX character is sent \
-                 twice; that is the whole of its error correction.",
-            );
-        }
-        // Receive sensitivity. NAVTEX is FSK, so signal strength does not change
-        // the alphabet — this moves the detection thresholds instead (signal
-        // presence, phase lock, AFC tracking). 0 is the reference behaviour.
-        ui.label(RichText::new("Sensitivity").size(10.0).weak());
-        {
-            let mut v = cfg.navtex_rx_sensitivity;
-            let resp =
-                crate::chrome::slider(ui, egui::Slider::new(&mut v, -5..=5).fixed_decimals(0))
-                    .on_hover_text(
-                        "Sensitivity — how readily the decoder locks onto and keeps a signal.\n\n\
-                     Auto uses the reference thresholds (0), which is the behaviour as shipped.\n\n\
-                     + accepts a weaker or noisier signal; − waits for a cleaner one before \
-                     declaring sync, which is what stops noise being read as characters.\n\n\
-                     Not volume: NAVTEX is FSK, so the greys come from the tones, not from how \
-                     strong the signal is.",
-                    );
-            if resp.changed() {
-                cfg.navtex_rx_sensitivity = v;
-                cfg.navtex_rx_auto = v == 0;
-                if seeded {
-                    cmds.push(Command::SetDigiConfig(cfg.clone()));
-                }
-            }
-        }
-        if crate::chrome::chip(ui, cfg.navtex_rx_auto, "Auto")
-            .on_hover_text("Returns to the reference thresholds (0). Highlighted while active.")
-            .clicked()
-        {
-            cfg.navtex_rx_auto = true;
-            cfg.navtex_rx_sensitivity = 0;
-            if seeded {
-                cmds.push(Command::SetDigiConfig(cfg.clone()));
-            }
-        }
-        crate::chrome::row_tail(ui, |ui| {
-            super::clear_rx_chip_at(ui, cmds, !st.messages.is_empty() || st.live.is_some());
-            super::save_rx_chip_for(ui, status);
-            if crate::chrome::chip(ui, rev, RichText::new("REV").size(10.5))
-                .on_hover_text(
-                    "Swap the mark and space tones, for a signal received on the other \
-                     sideband. Off is upper sideband on the channel frequency, which is what \
-                     every published tuning instruction for the service says.",
-                )
-                .clicked()
-            {
-                flip = true;
-            }
-        });
+        // figure a mode with no checksum has. All three counts, always: the
+        // good ones are the number an operator judges the band by, and a
+        // figure that only appears once something has gone wrong reads as a
+        // broken counter rather than as a clean copy (F4NRM, #481).
+        ui.label(
+            RichText::new(tr!(
+                "navtex-copies",
+                direct = st.direct,
+                repaired = st.repaired,
+                lost = st.lost
+            ))
+            .size(10.0)
+            .color(if st.lost > 0 { theme::YELLOW() } else { theme::CYAN_DIM() }),
+        )
+        .on_hover_text(tr!("navtex-characters-whose-first-copy-was"));
     });
     flip
 }
@@ -142,7 +86,7 @@ impl SdroxideApp {
     ) {
         let st: Option<NavtexStatus> = self.digi_status.as_ref().and_then(|s| s.navtex.clone());
         let Some(st) = st else {
-            ui.label(RichText::new("starting the NAVTEX receiver…").weak());
+            ui.label(RichText::new(tr!("navtex-starting-navtex-receiver")).weak());
             return;
         };
         // A NAVTEX receiver driven into overload hears a wall of noise, not
@@ -167,16 +111,14 @@ impl SdroxideApp {
                     is_active,
                     RichText::new(format!("{label} kHz")).size(10.0),
                 )
-                .on_hover_text("Tune the dial here (USB, 1.710 kHz below the channel).")
+                .on_hover_text(tr!("navtex-tune-dial-usb-below-channel"))
                 .clicked()
                 {
                     cmds.push(Command::SetVfo { vfo: Vfo::A, hz: vfo_hz });
                 }
             }
-        });
-
-        ui.horizontal_wrapped(|ui| {
-            ui.label(RichText::new("CHANNEL").size(10.0).weak());
+            ui.add_space(8.0);
+            ui.label(RichText::new(tr!("aprs-channel")).size(10.0).weak());
             for (hz, label) in CHANNELS {
                 let active_vfo_hz = match self.state.active_vfo {
                     Vfo::A => self.state.vfo_a_hz,
@@ -184,17 +126,62 @@ impl SdroxideApp {
                 };
                 let is_active = (active_vfo_hz - *hz).abs() < 1.0;
                 if crate::chrome::chip(ui, is_active, RichText::new(*label).size(10.0))
-                    .on_hover_text("Tune the dial here.")
+                    .on_hover_text(tr!("acars-tune-dial-here"))
                     .clicked()
                 {
                     cmds.push(Command::SetVfo { vfo: Vfo::A, hz: *hz });
                 }
             }
+            ui.add_space(8.0);
+            if crate::chrome::chip(ui, self.digi_cfg_edit.navtex_reverse, RichText::new("REV").size(10.5))
+                .on_hover_text(tr!("navtex-swap-mark-space-tones-signal"))
+                .clicked()
+            {
+                self.digi_cfg_edit.navtex_reverse = !self.digi_cfg_edit.navtex_reverse;
+                if self.digi_cfg_seeded { cmds.push(Command::SetDigiConfig(self.digi_cfg_edit.clone())); }
+            }
         });
 
-        ui.horizontal(|ui| {
+        // REV / save / clear RX on the next line
+        ui.horizontal_wrapped(|ui| {
+            crate::chrome::row_tail(ui, |ui| {
+                crate::app::panels::clear_rx_chip_at(ui, cmds, !st.messages.is_empty() || st.live.is_some());
+                crate::app::panels::save_rx_chip_for(ui, self.digi_status.as_ref());
+            });
+        });
+
+        // Sliders stacked vertically in a sidebar, so the message area gets
+        // the full remaining height.
+        let h = ui.available_height();
+        ui.allocate_ui(egui::vec2(ui.available_width(), h), |ui| {
+            ui.set_min_height(h);
+            ui.horizontal(|ui| {
+            ui.vertical(|ui| {
+                ui.set_width(160.0);
+                ui.set_min_height(h);
+
+                ui.label(RichText::new(tr!("panels-sensitivity")).size(10.0).weak());
+                let mut v = self.digi_cfg_edit.navtex_rx_sensitivity;
+                let resp = crate::chrome::slider(ui, egui::Slider::new(&mut v, -5..=5).fixed_decimals(0))
+                    .on_hover_text(tr!("navtex-sensitivity-hint"));
+                if resp.changed() {
+                    self.digi_cfg_edit.navtex_rx_sensitivity = v;
+                    self.digi_cfg_edit.navtex_rx_auto = v == 0;
+                    if self.digi_cfg_seeded { cmds.push(Command::SetDigiConfig(self.digi_cfg_edit.clone())); }
+                }
+                if crate::chrome::chip(ui, self.digi_cfg_edit.navtex_rx_auto, tr!("sstv-auto"))
+                    .on_hover_text(tr!("navtex-auto-hint"))
+                    .clicked()
+                {
+                    self.digi_cfg_edit.navtex_rx_auto = true;
+                    self.digi_cfg_edit.navtex_rx_sensitivity = 0;
+                    if self.digi_cfg_seeded { cmds.push(Command::SetDigiConfig(self.digi_cfg_edit.clone())); }
+                }
+            });
+            ui.separator();
             if pane.is_none_or(|p| p == 0) {
                 ui.vertical(|ui| {
+                    ui.set_min_height(h);
                     if pane.is_none() {
                         ui.set_width(ui.available_width() * 0.46);
                     }
@@ -206,9 +193,11 @@ impl SdroxideApp {
             }
             if pane.is_none_or(|p| p == 1) {
                 ui.vertical(|ui| {
+                    ui.set_min_height(h);
                     self.navtex_reading(ui, &st, panel_h);
                 });
             }
+        });
         });
     }
 
@@ -238,15 +227,10 @@ impl SdroxideApp {
 
         egui::ScrollArea::vertical()
             .id_salt("navtex-list")
-            .max_height((panel_h - 40.0).max(60.0))
+            .max_height(ui.available_height().max(60.0))
             .show(ui, |ui| {
                 if st.messages.is_empty() && st.live.is_none() {
-                    ui.label(
-                        RichText::new(
-                            "nothing yet — a station transmits for ten minutes every four hours",
-                        )
-                        .weak(),
-                    );
+                    ui.label(RichText::new(tr!("navtex-nothing-yet-station-transmits-ten")).weak());
                 }
                 for (i, m) in st.messages.iter().enumerate().rev() {
                     let on = self.navtex_open == Some(i);
@@ -276,10 +260,10 @@ impl SdroxideApp {
                     if !m.complete || m.lost > 0 {
                         let mut why = Vec::new();
                         if !m.complete {
-                            why.push("cut short".to_string());
+                            why.push(tr!("navtex-cut-short").to_string());
                         }
                         if m.lost > 0 {
-                            why.push(format!("{} characters lost", m.lost));
+                            why.push(tr!("navtex-characters-lost", lost = m.lost));
                         }
                         ui.label(
                             RichText::new(format!("      {}", why.join(", ")))
@@ -297,7 +281,7 @@ impl SdroxideApp {
             self.navtex_open.and_then(|i| st.messages.get(i)).or(st.live.as_ref());
         ui.horizontal(|ui| match selected {
             Some(m) if self.navtex_open.is_some() => {
-                ui.label(RichText::new("MESSAGE").strong().color(theme::CYAN()));
+                ui.label(RichText::new(tr!("navtex-message")).strong().color(theme::CYAN()));
                 ui.label(
                     RichText::new(format!("{}{}{:02}", m.station, m.kind, m.serial))
                         .monospace()
@@ -310,20 +294,22 @@ impl SdroxideApp {
                 // Display only — the system clock is never set from it.
                 if let Some((h, min)) = m.body_time_utc() {
                     ui.label(
-                        RichText::new(format!("{h:02}{min:02} UTC"))
+                        RichText::new(format!("{h:02}{value:02} UTC", h = h, value = min))
                             .monospace()
                             .size(10.5)
                             .color(theme::GREEN()),
                     )
-                    .on_hover_text("Time of day stated in the message (UTC): display only");
+                    .on_hover_text(tr!("navtex-time-day-stated-message-utc"));
                 }
             }
             Some(_) => {
-                ui.label(RichText::new("RECEIVING").strong().color(theme::ALERT()));
+                ui.label(RichText::new(tr!("navtex-receiving")).strong().color(theme::ALERT()));
             }
             None => {
-                ui.label(RichText::new("MONITOR").strong().color(theme::CYAN()));
-                ui.label(RichText::new("everything decoded, message or not").size(10.5).weak());
+                ui.label(RichText::new(tr!("navtex-monitor")).strong().color(theme::CYAN()));
+                ui.label(
+                    RichText::new(tr!("navtex-everything-decoded-message-not")).size(10.5).weak(),
+                );
             }
         });
 
@@ -341,7 +327,7 @@ impl SdroxideApp {
         };
         egui::ScrollArea::vertical()
             .id_salt("navtex-body")
-            .max_height((panel_h - 40.0).max(60.0))
+            .max_height(ui.available_height().max(60.0))
             .stick_to_bottom(selected.is_none() || self.navtex_open.is_none())
             .show(ui, |ui| {
                 if body.trim().is_empty() {

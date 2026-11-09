@@ -95,7 +95,7 @@ fn the_drive_that_reaches_the_rig_follows_the_bands_calibration() {
     let mut h = start_engine(
         Box::new(MockRig { center: 7_074_000.0, drive: Arc::clone(&drive) }),
         caps(),
-        EngineConfig::default(),
+        EngineConfig { tx_bands_open: true, ..EngineConfig::default() },
     );
     let thread = h.thread.take();
     std::thread::sleep(Duration::from_millis(200));
@@ -221,7 +221,7 @@ fn the_samples_a_lime_transmits_follow_the_bands_calibration() {
     let mut h = start_engine(
         Box::new(MockIqTx { center: 145_500_000.0, peak: Arc::clone(&peak) }),
         caps,
-        EngineConfig { tx_ham_only: false, ..EngineConfig::default() },
+        EngineConfig { tx_bands_open: true, tx_ham_only: false, ..EngineConfig::default() },
     );
     let thread = h.thread.take();
     std::thread::sleep(Duration::from_millis(200));
@@ -284,7 +284,7 @@ fn a_drive_ceiling_holds_the_transmitted_samples_down() {
     let mut h = start_engine(
         Box::new(MockIqTx { center: 14_074_000.0, peak: Arc::clone(&peak) }),
         caps(),
-        EngineConfig { tx_ham_only: false, ..EngineConfig::default() },
+        EngineConfig { tx_bands_open: true, tx_ham_only: false, ..EngineConfig::default() },
     );
     let thread = h.thread.take();
     std::thread::sleep(Duration::from_millis(200));
@@ -369,7 +369,7 @@ fn a_drive_ceiling_binds_a_rig_that_commands_its_own_power() {
     let mut h = start_engine(
         Box::new(MockRig { center: 14_074_000.0, drive: Arc::clone(&drive) }),
         caps(),
-        EngineConfig::default(),
+        EngineConfig { tx_bands_open: true, ..EngineConfig::default() },
     );
     let thread = h.thread.take();
     std::thread::sleep(Duration::from_millis(200));

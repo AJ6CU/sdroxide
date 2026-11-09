@@ -72,7 +72,7 @@ pub fn dipole(freq_hz: f64) -> Design {
     Design::new("Half-wave dipole", "centre-fed, horizontal, thin wire well above ground")
         .dim("total length", total)
         .dim("each leg", total / 2.0)
-        .z(73.0, 42.5)
+        .z(73.0, 0.0)
 }
 
 /// An inverted-V: a dipole with the legs sloped down from a centre support.
@@ -274,6 +274,27 @@ mod tests {
         assert!((swr_50(25.0, 0.0) - 2.0).abs() < 1e-9);
         // A reactance alone still reflects: 0 + j50 on 50 is not 1:1.
         assert!(swr_50(0.0, 50.0) > 1.0);
+    }
+
+    /// The nominal antenna feed impedances and their SWR against 50 Ω, as
+    /// validated against the reference table (purely resistive loads).
+    #[test]
+    fn nominal_feed_impedances_and_swr() {
+        let cases: &[(&str, f64, f64, f64)] = &[
+            ("Half-wave dipole", 73.0, 0.0, 1.46),
+            ("Inverted-V", 50.0, 0.0, 1.00),
+            ("Quarter-wave vertical", 36.0, 0.0, 1.39),
+            ("5/8-wave vertical", 50.0, 0.0, 1.00),
+            ("Ground plane", 36.0, 0.0, 1.39),
+            ("Full-wave delta loop", 110.0, 0.0, 2.20),
+        ];
+        for (name, r, x, swr_exp) in cases {
+            let got = swr((*r, *x), 50.0);
+            assert!((got - swr_exp).abs() < 0.01, "{name}: SWR {got:.2} vs {swr_exp:.2}");
+        }
+        // Spot-check the actual Design feed_z values for the dipole and the loop.
+        assert_eq!(dipole(27_265_000.0).feed_z, Some((73.0, 0.0)));
+        assert_eq!(delta_loop(28_500_000.0).feed_z, Some((110.0, 0.0)));
     }
 
     /// A blank frequency must not produce a NaN or an infinity.

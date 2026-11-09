@@ -124,6 +124,55 @@ pub struct RxState {
     /// main receiver only, like [`Self::tone`]; off until the operator ticks it.
     #[serde(default)]
     pub loudness: bool,
+    /// The CW peak filter (APF): a narrow audio peak centred on the CW pitch,
+    /// lifting the signal being copied above the noise and its neighbours.
+    /// CW only, per receiver and per mode like the notch; off until the
+    /// operator switches it on.
+    #[serde(default)]
+    pub cw_peak: CwPeak,
+}
+
+/// The CW peak filter's setting — see [`RxState::cw_peak`].
+///
+/// A peaking bell on the demodulated audio, centred on the middle of the CW
+/// passband, which is the sidetone pitch (the engine keeps the passband there),
+/// so it follows the pitch without a frequency of its own.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct CwPeak {
+    pub on: bool,
+    /// The bell's width in Hz (its bandwidth, pitch ÷ Q).
+    pub width_hz: f32,
+    /// How far the bell lifts the pitch, in dB.
+    pub gain_db: f32,
+}
+
+impl Default for CwPeak {
+    fn default() -> Self {
+        CwPeak { on: false, width_hz: 100.0, gain_db: 6.0 }
+    }
+}
+
+impl CwPeak {
+    /// The widths offered, in Hz: narrow enough to pick one signal out of a
+    /// pile-up, wide enough to keep a drifting one.
+    pub const WIDTH_HZ_RANGE: std::ops::RangeInclusive<f32> = 20.0..=200.0;
+    /// The lift offered, in dB. Ahead of the AGC, so a large lift is levelled
+    /// rather than played louder.
+    pub const GAIN_DB_RANGE: std::ops::RangeInclusive<f32> = 1.0..=20.0;
+
+    /// This setting with its width and gain kept inside the ranges offered —
+    /// a client's value is stored in `modeprofiles.json` and laid on the
+    /// filter again at every mode change.
+    pub fn clamped(self) -> Self {
+        let clamp = |v: f32, r: std::ops::RangeInclusive<f32>| {
+            if v.is_finite() { v.clamp(*r.start(), *r.end()) } else { *r.start() }
+        };
+        CwPeak {
+            on: self.on,
+            width_hz: clamp(self.width_hz, Self::WIDTH_HZ_RANGE),
+            gain_db: clamp(self.gain_db, Self::GAIN_DB_RANGE),
+        }
+    }
 }
 
 impl RxState {
@@ -146,6 +195,7 @@ impl RxState {
             binaural: false,
             tone: TxEqState::default(),
             loudness: false,
+            cw_peak: CwPeak::default(),
         }
     }
 }
@@ -651,6 +701,23 @@ pub struct RadioState {
     /// engine has decimated, because its decimator is the sharper filter.
     #[serde(default)]
     pub usable_hz: f64,
+    /// The radiosonde decoder (RS41): whether it runs and which channel it
+    /// listens on. Live status (level, sondes heard) is
+    /// [`crate::SondeStatus`], sent separately like [`crate::HfdlStatus`].
+    /// Appended last: postcard numbers fields by position.
+    #[serde(default)]
+    pub sonde: crate::SondeSettings,
+    /// The weather-satellite (NOAA APT) decoder: whether it runs and which
+    /// channel it listens on. The picture is [`crate::WxsatStatus`], sent
+    /// separately. Appended last: postcard numbers fields by position.
+    #[serde(default)]
+    pub wxsat: crate::WxsatSettings,
+    /// The Meshtastic receiver: whether it runs, the channel, the preset and
+    /// the keys, and where the radio was before the lane tuned it. Live status
+    /// is [`crate::MeshtasticStatus`], sent separately. Appended last: postcard
+    /// numbers fields by position.
+    #[serde(default)]
+    pub meshtastic: crate::MeshtasticSettings,
 }
 
 impl Default for RadioState {
@@ -666,6 +733,9 @@ impl Default for RadioState {
             // "No opinion": a default state has no front end behind it, and a
             // display that guessed a fraction here would be inventing one.
             usable_hz: 0.0,
+            sonde: crate::SondeSettings::default(),
+            wxsat: crate::WxsatSettings::default(),
+            meshtastic: crate::MeshtasticSettings::default(),
             decimation: no_decimation(),
             rx: [RxState::with_mode(mode), RxState::with_mode(mode)],
             sub_rx_enabled: false,

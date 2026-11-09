@@ -250,6 +250,11 @@ async fn run_session(
         adsb_status,
         vdl2_status,
         ais_status,
+        vor_status,
+        qo100_status,
+        hfdl_status,
+        sonde_status,
+        meshtastic_status,
         drm,
         hd,
         relay,
@@ -276,6 +281,11 @@ async fn run_session(
             latest.adsb_status.clone(),
             latest.vdl2_status.clone(),
             latest.ais_status.clone(),
+            latest.vor_status.clone(),
+            latest.qo100_status.clone(),
+            latest.hfdl_status.clone(),
+            latest.sonde_status.clone(),
+            latest.meshtastic_status.clone(),
             latest.drm.clone(),
             latest.hd.clone(),
             latest.relay.clone(),
@@ -410,6 +420,23 @@ async fn run_session(
     if let Some(st) = ais_status {
         let _ = socket.send(msg(&ServerMsg::AisStatus(st))).await;
     }
+    // ...and the VOR read-out, so the view is not blank until the next one.
+    if let Some(st) = vor_status {
+        let _ = socket.send(msg(&ServerMsg::VorStatus(st))).await;
+    }
+    // ...and the QO-100, HFDL and radiosonde read-outs, likewise.
+    if let Some(st) = qo100_status {
+        let _ = socket.send(msg(&ServerMsg::Qo100Status(st))).await;
+    }
+    if let Some(st) = hfdl_status {
+        let _ = socket.send(msg(&ServerMsg::HfdlStatus(st))).await;
+    }
+    if let Some(st) = sonde_status {
+        let _ = socket.send(msg(&ServerMsg::SondeStatus(st))).await;
+    }
+    if let Some(st) = meshtastic_status {
+        let _ = socket.send(msg(&ServerMsg::MeshtasticStatus(st))).await;
+    }
     // And the transmit-image presets, for the same reason. The received
     // galleries are not replayed: a panel lists its store when it opens, which
     // is both authoritative and the only view that can be paged.
@@ -452,12 +479,18 @@ async fn run_session(
 
     // --- register lanes -----------------------------------------------
     let (rel_tx, mut rel_rx) = mpsc::channel::<ServerMsg>(256);
-    let (aud_tx, mut aud_rx) = mpsc::channel::<ServerMsg>(8);
+    let (aud_tx, mut aud_rx) = mpsc::channel::<ServerMsg>(crate::AUDIO_LANE_DEPTH);
     *shared.session.lock().unwrap() = Some(SessionTx { reliable: rel_tx, audio: aud_tx, rx_codec });
 
     let (mut ws_tx, mut ws_rx) = futures_util::StreamExt::split(socket);
 
-    // Sender: reliable first, then audio, then latest spectrum.
+    // Sender: audio first, then reliable, then latest spectrum.
+    //
+    // Audio leads because it is the only lane that cannot wait: it is 50
+    // small packets a second at most, so it cannot starve the others, while a
+    // burst on the reliable lane (up to 256 queued messages on connect or after
+    // a decode run) used to be written out ahead of it and overflowed the
+    // audio lane meanwhile -- holes in the sound with nothing wrong on the wire.
     let mut spectrum_rx = shared.spectrum_rx.clone();
     let mut wide_rx = shared.wide_spectrum_rx.clone();
     let sender = async {
@@ -466,11 +499,11 @@ async fn run_session(
         loop {
             tokio::select! {
                 biased;
-                m = rel_rx.recv() => {
+                m = aud_rx.recv() => {
                     let Some(m) = m else { break };
                     if ws_tx.send(msg(&m)).await.is_err() { break; }
                 }
-                m = aud_rx.recv() => {
+                m = rel_rx.recv() => {
                     let Some(m) = m else { break };
                     if ws_tx.send(msg(&m)).await.is_err() { break; }
                 }

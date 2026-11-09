@@ -8,6 +8,7 @@
 //! wants each where it belongs — but the control is one thing, so it lives here
 //! rather than twice over.
 
+use crate::i18n::tr;
 use eframe::egui::{self, RichText};
 use sdroxide_types::{Command, CwMacro};
 
@@ -60,9 +61,9 @@ pub(in crate::app) fn macro_row(
         // nothing for a chip on the panel to send.
         for (i, m) in macros.iter().enumerate().filter(|(_, m)| !m.text.trim().is_empty()) {
             let hint = if i < 9 {
-                format!("F{}: sends “{}”", i + 1, m.text.trim())
+                tr!("macros-f-sends", i = i + 1, text = m.text.trim())
             } else {
-                format!("Sends “{}”", m.text.trim())
+                tr!("macros-sends", text = m.text.trim())
             };
             if tx_gated(ui, tx_ok, |ui| {
                 crate::chrome::chip(ui, false, m.chip_label()).on_hover_text(&hint)
@@ -74,8 +75,8 @@ pub(in crate::app) fn macro_row(
         }
     });
     if let Some(m) = fire.and_then(|i| macros.get(i)) {
-        let call = if my_call.is_empty() { "NOCALL" } else { my_call };
-        let text = m.expand(call, my_grid);
+        let call = if my_call.is_empty() { tr!("macros-nocall") } else { String::from(my_call) };
+        let text = m.expand(&call, my_grid);
         if !text.trim().is_empty() {
             cmds.push(Command::DigiAbortTx);
             *text_tx = text.clone();
@@ -123,10 +124,7 @@ pub(in crate::app) fn macro_window(
             // without this is the paragraph below.
             ui.set_min_width(crate::layout::window_w(ctx, 520.0));
             ui.label(
-                RichText::new(
-                    "Each button sends its whole text in one go. F1–F9 press the first \
-                     nine, so long as nothing on screen has the keyboard.",
-                )
+                RichText::new(tr!("macros-buttons-note"))
                 .size(10.5)
                 .color(crate::theme::gray(150)),
             );
@@ -134,9 +132,9 @@ pub(in crate::app) fn macro_window(
             egui::Grid::new(format!("{id}-grid")).num_columns(4).spacing([6.0, 4.0]).show(
                 ui,
                 |ui| {
-                    ui.label(RichText::new("key").size(10.0).color(crate::theme::gray(140)));
-                    ui.label(RichText::new("button").size(10.0).color(crate::theme::gray(140)));
-                    ui.label(RichText::new("sends").size(10.0).color(crate::theme::gray(140)));
+                    ui.label(RichText::new(tr!("macros-column-key")).size(10.0).color(crate::theme::gray(140)));
+                    ui.label(RichText::new(tr!("macros-column-button")).size(10.0).color(crate::theme::gray(140)));
+                    ui.label(RichText::new(tr!("macros-column-sends")).size(10.0).color(crate::theme::gray(140)));
                     ui.label("");
                     ui.end_row();
                     for (i, m) in macros.iter_mut().enumerate() {
@@ -156,7 +154,7 @@ pub(in crate::app) fn macro_window(
                         changed |= crate::chrome::field_sized(
                             ui,
                             [80.0, 22.0],
-                            egui::TextEdit::singleline(&mut m.label).hint_text("label"),
+                            egui::TextEdit::singleline(&mut m.label).hint_text(tr!("macros-label-hint")),
                         )
                         .changed();
                         changed |= crate::chrome::field_sized(
@@ -167,7 +165,7 @@ pub(in crate::app) fn macro_window(
                         )
                         .changed();
                         if crate::chrome::chip(ui, false, "×")
-                            .on_hover_text("Remove this button")
+                            .on_hover_text(tr!("macros-remove-button"))
                             .clicked()
                         {
                             remove = Some(i);
@@ -180,15 +178,15 @@ pub(in crate::app) fn macro_window(
             ui.horizontal(|ui| {
                 let full = macros.len() >= CwMacro::MAX;
                 if ui
-                    .add_enabled(!full, egui::Button::new("ADD"))
-                    .on_disabled_hover_text(format!("{} is the most", CwMacro::MAX))
+                    .add_enabled(!full, egui::Button::new(tr!("macros-add")))
+                    .on_disabled_hover_text(tr!("macros-most", value = CwMacro::MAX))
                     .clicked()
                 {
                     macros.push(CwMacro::default());
                     changed = true;
                 }
                 ui.label(
-                    RichText::new("{MYCALL} and {MYGRID} are filled in as the message goes out.")
+                    RichText::new(tr!("macros-note-placeholders", mycall = "{MYCALL}", mygrid = "{MYGRID}"))
                         .size(10.5)
                         .color(crate::theme::gray(140)),
                 );

@@ -11,20 +11,9 @@
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Obstacle {
     /// A stand of trees `depth_m` deep at `distance_m`, blocking `width_deg`.
-    Vegetation {
-        az_deg: f64,
-        width_deg: f64,
-        distance_m: f64,
-        depth_m: f64,
-        in_leaf: bool,
-    },
+    Vegetation { az_deg: f64, width_deg: f64, distance_m: f64, depth_m: f64, in_leaf: bool },
     /// A knife-edge (ridge) `height_m` above the line of sight, at `distance_m`.
-    KnifeEdge {
-        az_deg: f64,
-        width_deg: f64,
-        distance_m: f64,
-        height_m: f64,
-    },
+    KnifeEdge { az_deg: f64, width_deg: f64, distance_m: f64, height_m: f64 },
 }
 
 impl Obstacle {
@@ -63,11 +52,7 @@ pub fn vegetation_db(freq_hz: f64, depth_m: f64, in_leaf: bool) -> f64 {
 /// the wavelength. A far-field target is at infinity, so only `d1` enters `v`.
 pub fn knife_edge_db(height_m: f64, distance_m: f64, lambda: f64) -> f64 {
     let v = height_m * (2.0 / (lambda * distance_m)).sqrt();
-    if v <= -0.7 {
-        0.0
-    } else {
-        6.9 + 20.0 * (((v - 0.1).powi(2) + 1.0).sqrt() + v - 0.1).log10()
-    }
+    if v <= -0.7 { 0.0 } else { 6.9 + 20.0 * (((v - 0.1).powi(2) + 1.0).sqrt() + v - 0.1).log10() }
 }
 
 /// Whether a ray at `az` falls inside an obstacle at `az_o` of `width` degrees
@@ -109,7 +94,10 @@ mod tests {
         let f = 27e6;
         let shallow = vegetation_db(f, 2.0, true);
         let deeper = vegetation_db(f, 10.0, true);
-        assert!(deeper > shallow, "COST-235: deeper trees must lose more: {shallow:.1} vs {deeper:.1}");
+        assert!(
+            deeper > shallow,
+            "COST-235: deeper trees must lose more: {shallow:.1} vs {deeper:.1}"
+        );
         let deep = vegetation_db(f, 50.0, true);
         let deeper_still = vegetation_db(f, 200.0, true);
         assert!(

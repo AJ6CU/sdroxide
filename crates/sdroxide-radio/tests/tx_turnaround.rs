@@ -249,7 +249,7 @@ fn one_over(audio_mode: bool, cat_delay: Duration, rx_block: usize) -> Turnaroun
     let log: Log = Arc::new(Mutex::new(Vec::new()));
     let src =
         TimedSource { center: 144_800_000.0, rate, log: Arc::clone(&log), cat_delay, rx_block };
-    let cfg = EngineConfig { tx_ham_only: false, ..Default::default() };
+    let cfg = EngineConfig { tx_bands_open: true, tx_ham_only: false, ..Default::default() };
     let mut h = start_engine(Box::new(src), caps(rate, audio_mode), cfg);
     let thread = h.thread.take();
 

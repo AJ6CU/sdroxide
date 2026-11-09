@@ -140,7 +140,7 @@ fn peak_of(cmds: Vec<Command>) -> f32 {
     isolate_config();
     let heard = Arc::new(Mutex::new(Heard::default()));
     let src = SoundCardRig { heard: Arc::clone(&heard) };
-    let cfg = EngineConfig { tx_ham_only: false, ..Default::default() };
+    let cfg = EngineConfig { tx_bands_open: true, tx_ham_only: false, ..Default::default() };
     let mut h = start_engine(Box::new(src), caps(), cfg);
     let thread = h.thread.take();
     std::thread::sleep(Duration::from_millis(200));
@@ -419,7 +419,7 @@ fn iq_peak_of(cmds: Vec<Command>) -> f32 {
     isolate_config();
     let heard = Arc::new(Mutex::new(Heard::default()));
     let src = IqRadio { heard: Arc::clone(&heard) };
-    let cfg = EngineConfig { tx_ham_only: false, ..Default::default() };
+    let cfg = EngineConfig { tx_bands_open: true, tx_ham_only: false, ..Default::default() };
     let mut h = start_engine(Box::new(src), DeviceCaps { tx_audio: false, ..caps() }, cfg);
     let thread = h.thread.take();
     std::thread::sleep(Duration::from_millis(200));

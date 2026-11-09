@@ -167,6 +167,56 @@ pub struct AdsbAircraft {
     /// The last accepted frame as hex, for identifying something the decoder
     /// only half understands.
     pub raw_hex: String,
+    // ── What the aircraft says about its own flight. Each field below is
+    // `None` until a message that carries it has been heard, and stays at the
+    // last value after that: not every aircraft sends any of them. They were
+    // appended together (PROTO_VERSION 268), after everything above.
+    /// The altitude set on the autopilot (or in the flight computer), feet.
+    pub selected_altitude_ft: Option<i32>,
+    /// The heading set on the autopilot, degrees.
+    pub selected_heading_deg: Option<f32>,
+    /// The barometric setting the crew has dialled in, hectopascals.
+    pub qnh_hpa: Option<f32>,
+    /// Indicated airspeed, knots, from the airspeed message (type 19, subtypes
+    /// 3 and 4). Rare: most aircraft broadcast ground speed instead.
+    pub ias_kt: Option<f32>,
+    /// True airspeed, knots, from the same message.
+    pub tas_kt: Option<f32>,
+    /// Heading, degrees, from the same message (magnetic, as broadcast).
+    pub heading_deg: Option<f32>,
+    /// The autopilot modes engaged, as the `NAV_*` bits.
+    pub nav_modes: Option<u8>,
+    /// The ADS-B version the transmitter says it follows (0, 1 or 2).
+    pub adsb_version: Option<u8>,
+    /// Position accuracy category, 1–11; `None` is "unknown".
+    pub nac_p: Option<u8>,
+    /// Velocity accuracy category, 1–4; `None` is "unknown".
+    pub nac_v: Option<u8>,
+    /// Source integrity level, 1–3; `None` is "unknown".
+    pub sil: Option<u8>,
+}
+
+/// Bits of [`AdsbAircraft::nav_modes`].
+pub const NAV_AUTOPILOT: u8 = 1;
+pub const NAV_VNAV: u8 = 1 << 1;
+pub const NAV_ALT_HOLD: u8 = 1 << 2;
+pub const NAV_APPROACH: u8 = 1 << 3;
+pub const NAV_LNAV: u8 = 1 << 4;
+
+/// The names of the modes set in `bits`, in a fixed order. They are the
+/// acronyms a pilot uses, so they are the same in every language.
+pub fn nav_mode_names(bits: u8) -> Vec<&'static str> {
+    [
+        (NAV_AUTOPILOT, "AP"),
+        (NAV_VNAV, "VNAV"),
+        (NAV_LNAV, "LNAV"),
+        (NAV_ALT_HOLD, "ALT HOLD"),
+        (NAV_APPROACH, "APP"),
+    ]
+    .into_iter()
+    .filter(|(bit, _)| bits & bit != 0)
+    .map(|(_, name)| name)
+    .collect()
 }
 
 impl AdsbAircraft {
@@ -195,6 +245,17 @@ impl AdsbAircraft {
             last_at: now,
             last_pos_at: 0,
             raw_hex: String::new(),
+            selected_altitude_ft: None,
+            selected_heading_deg: None,
+            qnh_hpa: None,
+            ias_kt: None,
+            tas_kt: None,
+            heading_deg: None,
+            nav_modes: None,
+            adsb_version: None,
+            nac_p: None,
+            nac_v: None,
+            sil: None,
         }
     }
 
@@ -570,6 +631,68 @@ impl AirUnits {
         }
     }
 
+    /// A time of day, from the seconds since local midnight: `14:05` in the
+    /// aviation and metric sets, `2:05 PM` in the imperial one.
+    pub fn clock(self, secs_of_day: u32) -> String {
+        let (h, m) = ((secs_of_day / 3600) % 24, (secs_of_day / 60) % 60);
+        match self {
+            AirUnits::Imperial => {
+                let (h12, half) = match h {
+                    0 => (12, "AM"),
+                    1..=11 => (h, "AM"),
+                    12 => (12, "PM"),
+                    _ => (h - 12, "PM"),
+                };
+                format!("{h12}:{m:02} {half}")
+            }
+            _ => format!("{h:02}:{m:02}"),
+        }
+    }
+
+    /// An air temperature given in °C: `12 °C` in the aviation and metric sets
+    /// (the weather codes an airport publishes are in Celsius), `54 °F` in the
+    /// imperial one.
+    pub fn temperature(self, celsius: f32) -> String {
+        let c = f64::from(celsius);
+        match self {
+            AirUnits::Imperial => format!("{} °F", (c * 9.0 / 5.0 + 32.0).round() as i32),
+            _ => format!("{} °C", c.round() as i32),
+        }
+    }
+
+    /// A height in both systems at once, the chosen set first: `1230 ft / 375 m`
+    /// in the aviation and imperial sets, `375 m / 1230 ft` in the metric one.
+    /// For the airport card, which shows the conversion beside the value.
+    pub fn altitude_dual(self, ft: i32) -> String {
+        let (feet, metres) =
+            (format!("{ft} ft"), format!("{} m", (f64::from(ft) * FT_M).round() as i32));
+        match self {
+            AirUnits::Metric => format!("{metres} / {feet}"),
+            _ => format!("{feet} / {metres}"),
+        }
+    }
+
+    /// A distance in both systems at once, the chosen set first:
+    /// `24 km / 15 mi`, or `15 mi / 24 km` in the imperial set.
+    pub fn distance_dual(self, km: f64) -> String {
+        let (k, mi) = (format!("{km:.0} km"), format!("{:.0} mi", km * KM_MI));
+        match self {
+            AirUnits::Imperial => format!("{mi} / {k}"),
+            _ => format!("{k} / {mi}"),
+        }
+    }
+
+    /// A temperature given in °C in both systems at once, the chosen set
+    /// first: `12 °C / 54 °F`, or `54 °F / 12 °C` in the imperial set.
+    pub fn temperature_dual(self, celsius: f32) -> String {
+        let (c, f) =
+            (AirUnits::Metric.temperature(celsius), AirUnits::Imperial.temperature(celsius));
+        match self {
+            AirUnits::Imperial => format!("{f} / {c}"),
+            _ => format!("{c} / {f}"),
+        }
+    }
+
     pub fn altitude_head(self) -> &'static str {
         match self {
             AirUnits::Metric => "ALT m",
@@ -585,9 +708,84 @@ impl AirUnits {
     }
 }
 
+/// The seconds since local midnight of the zone `utc_offset_s` east of UTC, at
+/// the unix time `now`.
+pub fn local_secs_of_day(now: i64, utc_offset_s: i32) -> u32 {
+    (now + i64::from(utc_offset_s)).rem_euclid(86_400) as u32
+}
+
+/// A zone's name as an offset from UTC: `UTC`, `UTC+1`, `UTC+5:30`, `UTC-3:30`.
+pub fn utc_label(utc_offset_s: i32) -> String {
+    let sign = if utc_offset_s < 0 { '-' } else { '+' };
+    let mins = utc_offset_s.unsigned_abs() / 60;
+    match (mins / 60, mins % 60) {
+        (0, 0) => "UTC".to_string(),
+        (h, 0) => format!("UTC{sign}{h}"),
+        (h, m) => format!("UTC{sign}{h}:{m:02}"),
+    }
+}
+
 #[cfg(test)]
 mod air_units_tests {
     use super::*;
+
+    #[test]
+    fn a_time_of_day_is_24_hours_except_in_the_imperial_set_which_is_12() {
+        for (secs, h24, h12) in [
+            (0, "00:00", "12:00 AM"),
+            (5 * 3600 + 7 * 60, "05:07", "5:07 AM"),
+            (12 * 3600, "12:00", "12:00 PM"),
+            (14 * 3600 + 5 * 60 + 59, "14:05", "2:05 PM"),
+            (23 * 3600 + 59 * 60, "23:59", "11:59 PM"),
+        ] {
+            assert_eq!(AirUnits::Aviation.clock(secs), h24);
+            assert_eq!(AirUnits::Metric.clock(secs), h24);
+            assert_eq!(AirUnits::Imperial.clock(secs), h12);
+        }
+    }
+
+    #[test]
+    fn a_temperature_is_celsius_except_in_the_imperial_set_which_is_fahrenheit() {
+        assert_eq!(AirUnits::Aviation.temperature(11.6), "12 °C");
+        assert_eq!(AirUnits::Metric.temperature(11.6), "12 °C");
+        assert_eq!(AirUnits::Imperial.temperature(11.6), "53 °F");
+        assert_eq!(AirUnits::Imperial.temperature(0.0), "32 °F");
+        assert_eq!(AirUnits::Imperial.temperature(-40.0), "-40 °F");
+        assert_eq!(AirUnits::Metric.temperature(-0.3), "0 °C", "never a negative zero");
+        assert_eq!(AirUnits::Metric.temperature(-17.5), "-18 °C");
+    }
+
+    #[test]
+    fn the_airport_card_shows_both_systems_with_the_chosen_one_first() {
+        assert_eq!(AirUnits::Aviation.altitude_dual(1000), "1000 ft / 305 m");
+        assert_eq!(AirUnits::Metric.altitude_dual(1000), "305 m / 1000 ft");
+        assert_eq!(AirUnits::Aviation.distance_dual(100.0), "100 km / 62 mi");
+        assert_eq!(AirUnits::Imperial.distance_dual(100.0), "62 mi / 100 km");
+        assert_eq!(AirUnits::Metric.temperature_dual(11.6), "12 °C / 53 °F");
+        assert_eq!(AirUnits::Imperial.temperature_dual(11.6), "53 °F / 12 °C");
+    }
+
+    #[test]
+    fn local_time_is_the_clock_in_utc_moved_by_the_zones_offset() {
+        // 2026-10-31 13:05:00 UTC.
+        let now = 1_793_451_900;
+        assert_eq!(local_secs_of_day(now, 0), 13 * 3600 + 5 * 60);
+        assert_eq!(local_secs_of_day(now, 3600), 14 * 3600 + 5 * 60);
+        assert_eq!(local_secs_of_day(now, -5 * 3600), 8 * 3600 + 5 * 60);
+        assert_eq!(local_secs_of_day(now, 19_800), 18 * 3600 + 35 * 60, "India, half an hour");
+        assert_eq!(local_secs_of_day(now, 11 * 3600), 5 * 60, "past midnight");
+        assert_eq!(local_secs_of_day(60, -3600), 23 * 3600 + 60, "before the epoch's midnight");
+    }
+
+    #[test]
+    fn a_zone_is_named_by_its_offset() {
+        assert_eq!(utc_label(0), "UTC");
+        assert_eq!(utc_label(3600), "UTC+1");
+        assert_eq!(utc_label(-5 * 3600), "UTC-5");
+        assert_eq!(utc_label(19_800), "UTC+5:30");
+        assert_eq!(utc_label(-12_600), "UTC-3:30");
+        assert_eq!(utc_label(14 * 3600), "UTC+14");
+    }
 
     #[test]
     fn each_set_writes_the_same_flight_in_its_own_units() {

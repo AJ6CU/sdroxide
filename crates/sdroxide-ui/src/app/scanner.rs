@@ -1,6 +1,7 @@
 //! The Scanner window: what to scan, how loud a signal has to be to stop it,
 //! and what to do once it has stopped.
 
+use crate::i18n::{Tr, tr};
 use eframe::egui::{self, RichText};
 use sdroxide_types::{
     Command, Mode, SCAN_STEPS_HZ, SQUELCH_OPEN_DB, ScanKind, ScanResume, ScannerConfig,
@@ -42,7 +43,7 @@ impl SdroxideApp {
         // Edited in place and sent whole on any change, the way the skimmer's
         // settings are; the engine persists it and echoes it back.
         let mut cfg = self.scanner.clone();
-        let show = self.tool_window(ctx, "scanner", "Scanner", [420.0, 520.0], true, |me, ui| {
+        let show = self.tool_window(ctx, "scanner", &tr!("scanner-scanner"), [420.0, 520.0], true, |me, ui| {
             me.scanner_body(ui, &mut cfg, cmds);
         });
         if cfg != self.scanner {
@@ -58,10 +59,10 @@ impl SdroxideApp {
         // What to scan.
         ui.horizontal(|ui| {
             for kind in ScanKind::ALL {
-                if crate::chrome::chip(ui, cfg.kind == kind, kind.label())
+                if crate::chrome::chip(ui, cfg.kind == kind, kind.tr())
                     .on_hover_text(match kind {
-                        ScanKind::Memories => "Work through the stored memory channels",
-                        ScanKind::Range => "Work through a slice of a band on a channel grid",
+                        ScanKind::Memories => tr!("scanner-work-through-stored-memory-channels"),
+                        ScanKind::Range => tr!("scanner-work-through-slice-band-channel"),
                     })
                     .clicked()
                 {
@@ -69,7 +70,7 @@ impl SdroxideApp {
                 }
             }
             crate::chrome::row_tail(ui, |ui| {
-                let label = if scan.running { "STOP" } else { "START" };
+                let label = if scan.running { tr!("scanner-stop") } else { tr!("scanner-start") };
                 if crate::chrome::chip_accent(
                     ui,
                     scan.running,
@@ -101,11 +102,11 @@ impl SdroxideApp {
         // pair of typed frequencies. The metre table is the schedule's, so the
         // band named here is the band named there. LW and MW lead it.
         ui.horizontal_wrapped(|ui| {
-            ui.label(RichText::new("Broadcast band").weak());
+            ui.label(RichText::new(tr!("scanner-broadcast-band")).weak());
             let mut preset = |ui: &mut egui::Ui, name: &str, lo: f64, hi: f64| {
                 let on = (cfg.range_lo_hz - lo).abs() < 1.0 && (cfg.range_hi_hz - hi).abs() < 1.0;
                 if crate::chrome::chip(ui, on, name)
-                    .on_hover_text(format!("Scan {name} ({:.0}-{:.0} kHz)", lo / 1e3, hi / 1e3))
+                    .on_hover_text(tr!("scanner-scan-band-hover", name = name, lo = format!("{:.0}", lo / 1e3), hi = format!("{:.0}", hi / 1e3)))
                     .clicked()
                 {
                     cfg.range_lo_hz = lo;
@@ -121,16 +122,16 @@ impl SdroxideApp {
         });
         ui.add_space(4.0);
         egui::Grid::new("scan-range").num_columns(2).spacing([10.0, 6.0]).show(ui, |ui| {
-            ui.label("From");
+            ui.label(tr!("scanner-from"));
             ui.horizontal(|ui| {
                 mhz_edit(ui, &mut cfg.range_lo_hz);
-                ui.label("to");
+                ui.label(tr!("scanner-range-to"));
                 mhz_edit(ui, &mut cfg.range_hi_hz);
                 ui.label(RichText::new("MHz").weak());
             });
             ui.end_row();
 
-            ui.label("Step");
+            ui.label(tr!("scanner-step"));
             ui.horizontal(|ui| {
                 for step in SCAN_STEPS_HZ {
                     let label = if step >= 10_000.0 {
@@ -145,7 +146,7 @@ impl SdroxideApp {
             });
             ui.end_row();
 
-            ui.label("Mode");
+            ui.label(tr!("scanner-mode"));
             egui::ComboBox::from_id_salt("scan-mode").selected_text(cfg.mode.label()).show_styled(
                 ui,
                 |ui| {
@@ -160,11 +161,8 @@ impl SdroxideApp {
         });
         if !cfg.range_is_usable() {
             ui.label(
-                RichText::new(
-                    "That range is empty — the high edge has to be at least one \
-                               channel above the low one.",
-                )
-                .color(crate::theme::ALERT()),
+                RichText::new(tr!("scanner-range-empty-high-edge-has"))
+                    .color(crate::theme::ALERT()),
             );
         }
         // Done after the edits above, so retuning the range takes its skipped
@@ -181,20 +179,16 @@ impl SdroxideApp {
     /// who will wonder why the repeater never comes up.
     fn scanner_range_skips(&self, ui: &mut egui::Ui, cfg: &mut ScannerConfig) {
         if cfg.skip_freq_hz.is_empty() {
-            ui.label(
-                RichText::new("SKIP while it is holding to pass over that channel from now on")
-                    .size(10.0)
-                    .weak(),
-            );
+            ui.label(RichText::new(tr!("scanner-skip-while-holding-pass-over")).size(10.0).weak());
             return;
         }
         let listed: Vec<f64> = cfg.skip_freq_hz.clone();
         let mut drop_at: Option<usize> = None;
         let mut clear = false;
         ui.horizontal(|ui| {
-            ui.label(RichText::new("Skipping").size(10.5).weak());
-            if crate::chrome::chip(ui, false, "CLEAR")
-                .on_hover_text("Stop passing over any of them")
+            ui.label(RichText::new(tr!("scanner-skipping")).size(10.5).weak());
+            if crate::chrome::chip(ui, false, tr!("scanner-clear"))
+                .on_hover_text(tr!("scanner-stop-passing-over-any-them"))
                 .clicked()
             {
                 clear = true;
@@ -207,7 +201,7 @@ impl SdroxideApp {
             ui.horizontal_wrapped(|ui| {
                 for (i, f) in listed.iter().enumerate() {
                     if crate::chrome::chip(ui, true, format!("{:.4}", f / 1e6))
-                        .on_hover_text("Stop passing over this channel")
+                        .on_hover_text(tr!("scanner-stop-passing-over-channel"))
                         .clicked()
                     {
                         drop_at = Some(i);
@@ -224,15 +218,12 @@ impl SdroxideApp {
 
     fn scanner_memories(&self, ui: &mut egui::Ui, cfg: &mut ScannerConfig) {
         if self.memories.is_empty() {
-            ui.label(
-                RichText::new("No memory channels stored yet — store some in the MEM window.")
-                    .weak(),
-            );
+            ui.label(RichText::new(tr!("scanner-no-memory-channels-stored-yet")).weak());
             return;
         }
         self.scanner_folders(ui, cfg);
         self.scanner_fast(ui, cfg);
-        ui.label(RichText::new("SKIP a channel to pass over it").size(10.0).weak());
+        ui.label(RichText::new(tr!("scanner-skip-channel-pass-over")).size(10.0).weak());
         // Resolved before the loop: the rows borrow `cfg` mutably to toggle a
         // skip, so the filter cannot still be holding it.
         let listed: Vec<&sdroxide_types::MemoryChannel> =
@@ -241,7 +232,7 @@ impl SdroxideApp {
             egui::Grid::new("scan-mems").num_columns(3).spacing([8.0, 4.0]).show(ui, |ui| {
                 for m in listed {
                     let skipped = cfg.skip.contains(&m.id);
-                    if crate::chrome::chip(ui, skipped, "SKIP").clicked() {
+                    if crate::chrome::chip(ui, skipped, tr!("scanner-skip")).clicked() {
                         if skipped {
                             cfg.skip.retain(|&id| id != m.id);
                         } else {
@@ -253,8 +244,12 @@ impl SdroxideApp {
                     let text = RichText::new(name);
                     ui.label(if skipped { text.weak() } else { text });
                     ui.label(
-                        RichText::new(format!("{:.6} MHz  {}", m.freq_hz / 1e6, m.mode.label()))
-                            .weak(),
+                        RichText::new(format!(
+                            "{e6:.6} MHz {mode}",
+                            e6 = m.freq_hz / 1e6,
+                            mode = m.mode.label()
+                        ))
+                        .weak(),
                     );
                     ui.end_row();
                 }
@@ -275,27 +270,18 @@ impl SdroxideApp {
         let can_sweep = !self.caps.as_ref().is_some_and(|c| c.audio_mode);
         ui.horizontal_wrapped(|ui| {
             let hint = if can_sweep {
-                "Look for all the channels that fall inside one receiver window on the same \
-                 transform the panadapter is made from, and only tune to the ones something is \
-                 on. A list on one band then costs one tune a lap however long it is, instead \
-                 of a settling time per channel. The scan still listens on each candidate \
-                 before stopping, so what stops it is unchanged — but the sweep measures \
-                 through the FFT rather than through the receiver's filter, so check the \
-                 threshold if it starts stopping on nothing."
+                tr!("scanner-look-all-channels-fall-inside")
             } else {
-                "This radio hands over demodulated audio and has no spectrum of its own to \
-                 search, so its memory scan visits every channel either way."
+                tr!("scanner-radio-hands-over-demodulated-audio")
             };
             let resp = ui.add_enabled_ui(can_sweep, |ui| {
-                crate::chrome::chip(ui, cfg.mem_fast && can_sweep, "FAST")
+                crate::chrome::chip(ui, cfg.mem_fast && can_sweep, tr!("scanner-fast"))
             });
             if resp.inner.on_hover_text(hint).clicked() {
                 cfg.mem_fast = !cfg.mem_fast;
             }
             ui.label(
-                RichText::new("read the list off the spectrum instead of visiting every channel")
-                    .size(10.0)
-                    .weak(),
+                RichText::new(tr!("scanner-read-list-off-spectrum-instead")).size(10.0).weak(),
             );
         });
     }
@@ -329,12 +315,9 @@ impl SdroxideApp {
         };
         let unfiled = count(None);
         ui.horizontal_wrapped(|ui| {
-            ui.label(RichText::new("Folders").size(10.5).weak());
-            if crate::chrome::chip(ui, cfg.folders.is_empty(), "ALL")
-                .on_hover_text(
-                    "Scan every folder, and every folder made from now on. Pick folders \
-                     instead to scan only those.",
-                )
+            ui.label(RichText::new(tr!("scanner-folders")).size(10.5).weak());
+            if crate::chrome::chip(ui, cfg.folders.is_empty(), tr!("scanner-all"))
+                .on_hover_text(tr!("scanner-scan-every-folder-every-folder"))
                 .clicked()
             {
                 cfg.folders.clear();
@@ -354,14 +337,14 @@ impl SdroxideApp {
                 toggle(ui, Some(f.id), f.name.clone(), count(Some(f.id)));
             }
             if unfiled > 0 {
-                toggle(ui, None, "Unfiled".to_string(), unfiled);
+                toggle(ui, None, tr!("scanner-unfiled"), unfiled);
             }
         });
         if !cfg.folders.is_empty()
             && !self.memories.iter().any(|m| cfg.scans_folder(self.filed_under(m)))
         {
             ui.label(
-                RichText::new("Nothing is filed under the folders you picked.")
+                RichText::new(tr!("scanner-nothing-filed-under-folders-you"))
                     .color(crate::theme::ALERT()),
             );
         }
@@ -388,17 +371,12 @@ impl SdroxideApp {
                     .any(|m| m.mode.carries_speech()),
             };
             let hint = if any_speech {
-                "Stop only on channels that sound like somebody talking: a voice is periodic, \
-                 fills the speech band and rises and falls a few times a second, which a \
-                 carrier, a birdie and a data burst do not. Each candidate is listened to for \
-                 at least half a second, because that is what it takes to hear a syllable."
+                tr!("scanner-stop-only-on-channels-that-sound")
             } else {
-                "Nothing in this scan is in a mode that carries speech — a voice hunt here \
-                 would run and stop nowhere, so this is not offered until one is. FM, AM and \
-                 the sidebands carry voices; the digital modes do not."
+                tr!("scanner-nothing-in-this-scan-is-in-a-mode")
             };
             let resp = ui.add_enabled_ui(any_speech, |ui| {
-                crate::chrome::chip(ui, cfg.voice_only && any_speech, "VOICE")
+                crate::chrome::chip(ui, cfg.voice_only && any_speech, tr!("scanner-voice"))
             });
             if resp.inner.on_hover_text(hint).clicked() && any_speech {
                 cfg.voice_only = !cfg.voice_only;
@@ -415,9 +393,9 @@ impl SdroxideApp {
             }
             ui.label(
                 RichText::new(if any_speech {
-                    "stop only where somebody is talking"
+                    tr!("scanner-stop-only-where-somebody-is")
                 } else {
-                    "no voice to look for in these modes"
+                    tr!("scanner-no-voice-to-look-for-in-these")
                 })
                 .size(10.0)
                 .weak(),
@@ -427,13 +405,10 @@ impl SdroxideApp {
 
     fn scanner_thresholds(&mut self, ui: &mut egui::Ui, cfg: &mut ScannerConfig) {
         egui::Grid::new("scan-levels").num_columns(2).spacing([10.0, 6.0]).show(ui, |ui| {
-            ui.label("Stops at");
+            ui.label(tr!("scanner-stops"));
             ui.horizontal(|ui| {
-                if crate::chrome::chip(ui, cfg.follow_squelch, "SQL")
-                    .on_hover_text(
-                        "Use the receiver's own squelch, so the scan stops exactly where the \
-                         audio would open",
-                    )
+                if crate::chrome::chip(ui, cfg.follow_squelch, tr!("scanner-sql"))
+                    .on_hover_text(tr!("scanner-use-receiver-s-own-squelch"))
                     .clicked()
                 {
                     cfg.follow_squelch = !cfg.follow_squelch;
@@ -442,10 +417,9 @@ impl SdroxideApp {
                     let sql = self.state.rx[0].squelch_db;
                     ui.label(
                         RichText::new(if sql <= SQUELCH_OPEN_DB + 1.0 {
-                            "squelch is off — the scan will stop on the first thing it looks at"
-                                .to_string()
+                            tr!("scanner-squelch-off-scan-will-stop")
                         } else {
-                            format!("{sql:.0} dBFS")
+                            format!("{sql:.0} dBFS", sql = sql)
                         })
                         .weak(),
                     );
@@ -456,15 +430,15 @@ impl SdroxideApp {
                             .range(-140.0..=-10.0)
                             .suffix(" dBFS"),
                     )
-                    .on_hover_text("Channel power a signal has to reach to stop the scan");
+                    .on_hover_text(tr!("scanner-channel-power-signal-has-reach"));
                 }
             });
             ui.end_row();
 
-            ui.label("Voice");
+            ui.label(tr!("bandplan-kind-phone"));
             self.scanner_voice(ui, cfg);
             ui.end_row();
-            ui.label("Listens for");
+            ui.label(tr!("scanner-listens"));
             ui.add(
                 egui::DragValue::new(&mut cfg.dwell_ms)
                     .speed(5.0)
@@ -472,23 +446,20 @@ impl SdroxideApp {
                     .suffix(" ms"),
             )
             .on_hover_text(if cfg.voice_only {
-                "How long to stay on a candidate before judging it. The voice check needs at \
-                 least this much: a voice is a rhythm of syllables, and half a second is two of \
-                 them"
+                tr!("scanner-how-long-to-stay-on-a-candidate")
             } else {
-                "How long to stay on a candidate before judging it. Below about a tenth of a \
-                 second the level meter has not settled and weak signals get missed"
+                tr!("scanner-how-long-stay-candidate-before")
             });
             ui.end_row();
 
-            ui.label("Resumes");
+            ui.label(tr!("scanner-resumes"));
             ui.horizontal(|ui| {
                 for r in ScanResume::ALL {
-                    if crate::chrome::chip(ui, cfg.resume == r, r.label())
+                    if crate::chrome::chip(ui, cfg.resume == r, r.tr())
                         .on_hover_text(match r {
-                            ScanResume::Carrier => "Carry on once the signal drops",
-                            ScanResume::Timed => "Carry on after a fixed time, regardless",
-                            ScanResume::Manual => "Stay until you press NEXT",
+                            ScanResume::Carrier => tr!("scanner-carry-once-signal-drops"),
+                            ScanResume::Timed => tr!("scanner-carry-after-fixed-time-regardless"),
+                            ScanResume::Manual => tr!("scanner-stay-until-you-press-next"),
                         })
                         .clicked()
                     {
@@ -503,10 +474,10 @@ impl SdroxideApp {
                             .suffix(" ms"),
                     )
                     .on_hover_text(match cfg.resume {
-                        ScanResume::Timed => "How long to stay",
+                        ScanResume::Timed => tr!("scanner-how-long-stay"),
                         // Long enough to ride out the gap between overs, or the
                         // scan leaves in the middle of a conversation.
-                        _ => "How long to wait after the signal drops",
+                        _ => tr!("scanner-how-long-wait-after-signal"),
                     });
                 }
             });
@@ -518,14 +489,14 @@ impl SdroxideApp {
         let scan = self.state.scan;
         ui.horizontal(|ui| {
             if !scan.running {
-                ui.label(RichText::new("stopped").weak());
+                ui.label(RichText::new(tr!("scanner-stopped")).weak());
                 return;
             }
             let here = self.state.active_freq_hz() / 1e6;
             let (text, colour) = if scan.holding {
-                (format!("holding {here:.6} MHz"), crate::theme::GREEN())
+                (tr!("scanner-holding-mhz", here = format!("{:.6}", here)), crate::theme::GREEN())
             } else {
-                (format!("scanning · {here:.6} MHz"), crate::theme::CYAN())
+                (tr!("scanner-scanning-mhz", here = format!("{:.6}", here)), crate::theme::CYAN())
             };
             ui.label(RichText::new(text).color(colour).strong());
             // Name what it stopped on, from the broadcast table, so a listener
@@ -542,13 +513,16 @@ impl SdroxideApp {
                 );
             }
             crate::chrome::row_tail(ui, |ui| {
-                if crate::chrome::chip(ui, false, "SKIP")
-                    .on_hover_text("Move on, and don't stop on this channel again")
+                if crate::chrome::chip(ui, false, tr!("scanner-skip"))
+                    .on_hover_text(tr!("scanner-move-don-t-stop-channel"))
                     .clicked()
                 {
                     cmds.push(Command::ScanSkip);
                 }
-                if crate::chrome::chip(ui, false, "NEXT").on_hover_text("Move on now").clicked() {
+                if crate::chrome::chip(ui, false, tr!("scanner-next"))
+                    .on_hover_text(tr!("scanner-move-now"))
+                    .clicked()
+                {
                     cmds.push(Command::ScanNext);
                 }
             });
@@ -567,24 +541,21 @@ impl SdroxideApp {
     fn scanner_voice_status(&self, ui: &mut egui::Ui, scan: sdroxide_types::ScanState) {
         if !self.state.rx[0].mode.carries_speech() {
             ui.label(
-                RichText::new(format!(
-                    "{} carries no speech — passing these channels by",
-                    self.state.rx[0].mode.label()
-                ))
+                RichText::new(tr!("scanner-mode-no-speech", mode = self.state.rx[0].mode.label()))
                 .size(10.5)
                 .weak(),
             );
             return;
         }
         let Some(v) = scan.voice else {
-            ui.label(RichText::new("listening for a voice…").size(10.5).weak());
+            ui.label(RichText::new(tr!("scanner-listening-for-a-voice")).size(10.5).weak());
             return;
         };
         let (text, colour) = if scan.holding {
-            (format!("voice {} · somebody is talking", v.score), crate::theme::GREEN())
+            (tr!("scanner-voice-holding", score = v.score), crate::theme::GREEN())
         } else {
             (
-                format!("passed {:.4} MHz · voice {}", v.freq_hz as f64 / 1e6, v.score),
+                tr!("scanner-voice-passed", mhz = format!("{:.4}", v.freq_hz as f64 / 1e6), score = v.score),
                 crate::theme::TEXT(),
             )
         };

@@ -107,7 +107,7 @@ fn engine() -> (sdroxide_radio::EngineHandles, Arc<Line>) {
     let rate = 384_000.0;
     let line = Arc::new(Line::default());
     let src = MockSource { line: Arc::clone(&line), reported: false, center: 14_200_000.0, rate };
-    let cfg = EngineConfig { tx_ham_only: false, ..Default::default() };
+    let cfg = EngineConfig { tx_bands_open: true, tx_ham_only: false, ..Default::default() };
     let h = start_engine(Box::new(src), tx_caps(rate), cfg);
     // Let the engine finish coming up before the line is operated.
     std::thread::sleep(Duration::from_millis(150));

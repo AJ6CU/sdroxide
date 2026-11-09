@@ -17,6 +17,7 @@
 //! nothing has refreshed it for [`PLOT_STALE_S`], which is far longer than an
 //! aircraft stays in range of one ground station.
 
+use crate::i18n::tr;
 use std::collections::BTreeMap;
 
 use eframe::egui::{Align2, FontId, Rect, Sense, Ui, pos2, vec2};
@@ -137,7 +138,7 @@ impl HfdlMapState {
 }
 
 /// The view to ease toward: every plot, plus us, framed.
-fn target_view(home: Option<(f64, f64)>, pts: &[(f64, f64)], aspect: f64) -> (f64, f64, f64) {
+pub(crate) fn target_view(home: Option<(f64, f64)>, pts: &[(f64, f64)], aspect: f64) -> (f64, f64, f64) {
     let all: Vec<(f64, f64)> = home.into_iter().chain(pts.iter().copied()).collect();
     if all.is_empty() {
         return (20.0, 0.0, 360.0);
@@ -241,7 +242,7 @@ pub fn show(
         p.text(
             rect.center(),
             Align2::CENTER_CENTER,
-            "no aircraft located yet",
+            tr!("hfdlmap-no-aircraft-located-yet"),
             FontId::proportional(11.0),
             alpha(map.station, 160.0),
         );
@@ -364,12 +365,16 @@ pub fn show(
         let (key, a) = &live[i];
         let mut tip = a.label.clone();
         tip.push_str(&format!("\n{:.4}, {:.4}", a.lat, a.lon));
-        tip.push_str(&format!("\n{:.3} MHz", a.freq_khz as f32 / 1e3));
+        tip.push_str(&tr!("hfdlmap-mhz", e3 = format!("{:.3}", a.freq_khz as f32 / 1e3)));
         if let Some(snr) = a.snr_db {
             tip.push_str(&format!("\n{snr:.0} dB"));
         }
-        tip.push_str(&format!("\n{} fix{}", a.fixes, if a.fixes == 1 { "" } else { "es" }));
-        tip.push_str(&format!("\nheard {} ago", fmt_age(now - a.last_at)));
+        tip.push_str(&tr!(
+            "hfdlmap-fix",
+            fixes = a.fixes,
+            es = if a.fixes == 1 { "" } else { "es" }
+        ));
+        tip.push_str(&tr!("hfdlmap-heard-ago", last_at = fmt_age(now - a.last_at)));
         if let Some((hlat, hlon)) = home {
             let km = sdroxide_types::distance_km((hlat, hlon), (a.lat, a.lon));
             let bear = sdroxide_types::bearing_deg((hlat, hlon), (a.lat, a.lon));
@@ -398,7 +403,7 @@ fn fmt_age(secs: i64) -> String {
     if s < 90 {
         format!("{s} s")
     } else if s < 5400 {
-        format!("{} min", s / 60)
+        format!("{value} min", value = s / 60)
     } else {
         format!("{} h", s / 3600)
     }

@@ -324,10 +324,7 @@ pub enum RadioEvent {
     /// [`RadioEvent::IsmStatus`] follows — settings travel separately, in
     /// [`crate::RadioState::qo100`].
     ///
-    /// Native-engine only for now: bridging this to a remote/WASM client
-    /// would mean a matching variant in `sdroxide_proto::ServerMsg`, the way
-    /// `IsmStatus` has one — not done yet, since every station this shipped
-    /// for runs its own hardware locally.
+    /// Bridged to remote and web clients as `ServerMsg::Qo100Status`.
     Qo100Status(crate::Qo100Status),
     /// What the HFDL (ARINC 635) channel decoder has made of the tuned
     /// channel: burst level, how many bursts carried recognized events, and
@@ -336,10 +333,18 @@ pub enum RadioEvent {
     /// [`RadioEvent::Qo100Status`] follows — settings travel separately, in
     /// [`crate::RadioState::hfdl`].
     ///
-    /// Native-engine only for now, like [`RadioEvent::Qo100Status`]: bridging
-    /// this to a remote/WASM client would mean a matching variant in
-    /// `sdroxide_proto::ServerMsg` — not done yet.
+    /// Bridged to remote and web clients as `ServerMsg::HfdlStatus`.
     HfdlStatus(crate::HfdlStatus),
+    /// The radiosonde decoder's level and the sondes it has heard, with their
+    /// tracks. Bridged to remote and web clients as `ServerMsg::SondeStatus`.
+    SondeStatus(Box<crate::SondeStatus>),
+    /// The weather-satellite decoder's state and the picture lines new since
+    /// the last one. Bridged to remote and web clients as
+    /// `ServerMsg::WxsatStatus`.
+    WxsatStatus(Box<crate::WxsatStatus>),
+    /// The VOR beacon the receiver is parked on: radial, ident and how well the
+    /// two 30 Hz signals are heard. Rides `ServerMsg::VorStatus`.
+    VorStatus(Box<crate::VorStatus>),
     /// Everything the VDL Mode 2 decoder has: the message log, the station
     /// table, and what every channel of the plan is doing. A whole snapshot, a
     /// couple of times a second.
@@ -490,6 +495,42 @@ pub enum RadioEvent {
     /// while a speaker feed exists. The engine's, so it rides
     /// `ServerMsg::AudioLevel`. Appended last.
     AudioLevel(Box<crate::AudioLevel>),
+    /// The engine refused a key-down because of the operator's transmit band
+    /// list: why, and the frequency it would have radiated on (Hz). Typed rather
+    /// than a [`RadioEvent::Notice`] so the screen can word it in the operator's
+    /// language. Rides `ServerMsg::TxRefused`. Appended last.
+    TxRefused(crate::TxBlock, f64),
+    /// The engine refused a mode that does not apply on the band the receiver
+    /// is on (WFM on 11 m, AM on an FM broadcast…). Typed rather than a
+    /// [`RadioEvent::Notice`] so the screen words it in the operator's language,
+    /// and so a remote screen gets it at all. Rides `ServerMsg::ModeRefused`.
+    ModeRefused(crate::Mode, crate::Band),
+
+    /// The dynamic-DNS worker's last answer.
+    ///
+    /// From the **engine**, because the name has to point at the address of the
+    /// machine that is heard: a headless station updates with no screen open,
+    /// and a screen on a laptop driving a remote station must not send its own
+    /// address to the provider. Only the provider's word travels — never the
+    /// update address, which carries the token.
+    DyndnsAnswer {
+        at_unix: i64,
+        ok: bool,
+        text: String,
+    },
+    /// The file of a band plan, answering [`Command::ExportBandPlan`]. Goes to
+    /// every screen (the bridge does not know who asked), so a screen saves it
+    /// only if it is the one that asked.
+    BandPlanExport {
+        /// The plan's file name without `.json`.
+        file: String,
+        /// The text of the file.
+        json: String,
+    },
+    /// The Meshtastic receiver's level, counters, nodes and packet log, a whole
+    /// snapshot each time. Bridged to remote and web clients as
+    /// `ServerMsg::MeshtasticStatus`.
+    MeshtasticStatus(Box<crate::MeshtasticStatus>),
 }
 
 /// Snapshot of the frontend's switchable sound devices (native clients).

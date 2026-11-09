@@ -19,6 +19,7 @@ use sdroxide_aircraft_history::{FORMAT_VERSION, ListReply, Status, Summary};
 use sdroxide_aircraft_online::{Info, Status as InfoStatus};
 
 use super::aircraft_history::Reason;
+use crate::i18n::tr;
 use super::aircraft_online::Badge;
 use super::aircraft_registry::AircraftCard;
 
@@ -316,22 +317,27 @@ impl StatsStore {
 /// One line on where the numbers come from, for the top of the view.
 pub(in crate::app) fn source_note(state: &StatsState, has_station: bool) -> String {
     if !has_station {
-        return "Counting the aircraft heard now. The station you connect to keeps the last day."
-            .to_string();
+        return tr!("aircraft-stats-src-no-station");
     }
     match state {
-        StatsState::Idle | StatsState::Loading => {
-            "Asking the station for the last day\u{2026}".to_string()
-        }
-        StatsState::Ready(_) => {
-            "The last 24 h kept by the station, with the aircraft heard now.".to_string()
-        }
-        StatsState::Unavailable(Reason::Disabled) => "The station has not switched its history \
-             on \u{2014} counting the aircraft heard now."
-            .to_string(),
+        StatsState::Idle | StatsState::Loading => tr!("aircraft-stats-src-asking"),
+        StatsState::Ready(_) => tr!("aircraft-stats-src-ready"),
+        StatsState::Unavailable(Reason::Disabled) => tr!("aircraft-stats-src-disabled"),
         StatsState::Unavailable(r) => {
-            format!("{} \u{2014} counting the aircraft heard now.", capitalised(r.note()))
+            tr!("aircraft-stats-src-reason", reason = capitalised(&r.note()))
         }
+    }
+}
+
+/// A table's title as drawn; the title itself is the English key.
+pub(in crate::app) fn table_title(title: &str) -> String {
+    match title {
+        "Category" => tr!("aircraft-stats-category"),
+        "Airline" => tr!("aircraft-stats-airline"),
+        "Model" => tr!("aircraft-stats-model"),
+        "Operator" => tr!("aircraft-stats-operator"),
+        "Route" => tr!("aircraft-stats-route"),
+        other => other.to_string(),
     }
 }
 

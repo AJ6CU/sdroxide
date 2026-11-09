@@ -6,6 +6,7 @@
 //! exception that gets its own panel — it paints a scrolling image rather than
 //! producing characters.
 
+use crate::i18n::tr;
 use eframe::egui::{self, Color32, RichText};
 use sdroxide_types::{Command, Mode};
 
@@ -26,73 +27,62 @@ impl SdroxideApp {
     fn stanag_readout(&self, ui: &mut egui::Ui, s: Option<&sdroxide_types::StanagStatus>) {
         let dim = crate::theme::gray(150);
         let Some(s) = s else {
-            ui.label(RichText::new("waiting for the modem…").size(10.5).color(dim));
+            ui.label(RichText::new(tr!("textmodem-waiting-modem")).size(10.5).color(dim));
             return;
         };
         let (word, ink) = if s.locked {
-            ("LOCKED", crate::theme::GREEN())
+            (tr!("textmodem-locked"), crate::theme::GREEN())
         } else {
-            ("NO FRAME", crate::theme::YELLOW())
+            (tr!("textmodem-no-frame"), crate::theme::YELLOW())
         };
         let r = s.reference;
         ui.horizontal_wrapped(|ui| {
-            ui.label(RichText::new(word).size(11.0).strong().color(ink)).on_hover_text(
-                "A frame is being tracked. It is accepted only when the sync correlation, \
-                 folded over twelve frames, stands clear of its own null and the frame-period \
-                 autocorrelation says a frame is present.",
-            );
+            ui.label(RichText::new(&word).size(11.0).strong().color(ink))
+                .on_hover_text(tr!("textmodem-locked-hint"));
             ui.label(
-                RichText::new(format!("sync {:.2} (null {:.2})", s.sync, s.sync_null))
+                RichText::new(tr!(
+                    "textmodem-sync-readout",
+                    sync = format!("{:.2}", s.sync),
+                    null = format!("{:.2}", s.sync_null)
+                ))
                     .size(10.5)
                     .color(dim),
             )
-            .on_hover_text(
-                "The differential sync correlation folded over every frame phase, and the \
-                 median over those phases — the null it has to beat. Measured off the air: \
-                 0.85 on a 4285 against 0.14 on a strong PSK carrier of another mode.",
-            );
-            ui.label(RichText::new(format!("frame {:.2}", s.frame_acf)).size(10.5).color(dim))
-                .on_hover_text(
-                    "How much of a frame repeats one frame later. A 4285 repeats its 80 sync \
-                     symbols, so 0.3-0.6; another mode's carrier measures about 0.03.",
-                );
+            .on_hover_text(tr!("textmodem-sync-hint"));
             ui.label(
-                RichText::new(format!("refs {:.2}/{:.2}/{:.2}", r[0], r[1], r[2]))
+                RichText::new(tr!("textmodem-frame-readout", acf = format!("{:.2}", s.frame_acf)))
                     .size(10.5)
                     .color(dim),
             )
-            .on_hover_text(
-                "The three reference blocks' concentrations after descrambling. They are all \
-                 symbol 0 before scrambling, so a correct frame collapses each of them onto \
-                 one point — 0.7 and up. Sixteen symbols of noise give 0.25.",
-            );
-            ui.label(RichText::new(&s.rate).size(10.5).color(dim)).on_hover_text(
-                "What the constellation can say. Each uncoded rate shares its constellation \
-                 with a coded one, so the coded rates need Annex E to be told apart — and \
-                 their payload needs Annex E's FEC to be read.",
-            );
+            .on_hover_text(tr!("textmodem-frame-hint"));
             ui.label(
-                RichText::new(format!("{:+.0} Hz · {} frames", s.offset_hz, s.frames))
+                RichText::new(tr!(
+                    "textmodem-refs-readout",
+                    a = format!("{:.2}", r[0]),
+                    b = format!("{:.2}", r[1]),
+                    c = format!("{:.2}", r[2])
+                ))
                     .size(10.5)
                     .color(dim),
             )
-            .on_hover_text(
-                "The carrier offset the reference blocks agree on, and how many frames have \
-                 been demodulated this session.",
-            );
+            .on_hover_text(tr!("textmodem-refs-hint"));
+            ui.label(RichText::new(&s.rate).size(10.5).color(dim)).on_hover_text(tr!("textmodem-rate-hint"));
             ui.label(
-                RichText::new(format!("SOM {}/32 · {} msg", s.best_som, s.messages))
+                RichText::new(tr!(
+                    "textmodem-offset-frames",
+                    offset = format!("{:+.0}", s.offset_hz),
+                    n = s.frames
+                ))
                     .size(10.5)
                     .color(dim),
             )
-            .on_hover_text(
-                "Annex E's start-of-message pattern, and how close the decoder's output has \
-                 come to it. Noise sits near 16 of 32; a coded transmission reaches the \
-                 twenties even when a fade stops it matching, and a match is what names the \
-                 coded rate and starts a message. The code and interleaver decode a \
-                 generated signal exactly but no coded station has been read off the air \
-                 yet, so a match here is the first thing to expect when one is.",
-            );
+            .on_hover_text(tr!("textmodem-offset-frames-hint"));
+            ui.label(
+                RichText::new(tr!("textmodem-som-readout", best = s.best_som, n = s.messages))
+                    .size(10.5)
+                    .color(dim),
+            )
+            .on_hover_text(tr!("textmodem-som-hint"));
         });
     }
 
@@ -124,23 +114,28 @@ impl SdroxideApp {
             ui.label(RichText::new(mode.label()).size(11.0).strong().color(crate::theme::CYAN()));
             if mode.is_rx_only() {
                 ui.label(
-                    RichText::new("RX ONLY").size(10.5).strong().color(crate::theme::YELLOW()),
+                    RichText::new(tr!("textmodem-rx-only"))
+                        .size(10.5)
+                        .strong()
+                        .color(crate::theme::YELLOW()),
                 )
-                .on_hover_text(
-                    "This mode's decoder is ported and reads its recordings; its modulator \
-                     is not written yet, so the sending half is off rather than refusing \
-                     after the fact.",
-                );
+                .on_hover_text(tr!("textmodem-rx-only-hint"));
             }
             ui.label(
                 RichText::new(format!("{audio_hz:.0} Hz"))
                     .size(11.0)
                     .color(crate::theme::gray(150)),
             );
-            if crate::chrome::chip(ui, false, "−").on_hover_text("Tune down 10 Hz").clicked() {
+            if crate::chrome::chip(ui, false, "−")
+                .on_hover_text(tr!("textmodem-tune-down-10-hz"))
+                .clicked()
+            {
                 cmds.push(Command::SetDigiAudioFreq((audio_hz - 10.0).clamp(200.0, 3500.0)));
             }
-            if crate::chrome::chip(ui, false, "+").on_hover_text("Tune up 10 Hz").clicked() {
+            if crate::chrome::chip(ui, false, "+")
+                .on_hover_text(tr!("textmodem-tune-up-10-hz"))
+                .clicked()
+            {
                 cmds.push(Command::SetDigiAudioFreq((audio_hz + 10.0).clamp(200.0, 3500.0)));
             }
             crate::app::panels::on_air_readout(ui, on_air);
@@ -202,7 +197,7 @@ impl SdroxideApp {
                         .show_themed(ui, |ui| {
                             if rx_text.is_empty() {
                                 ui.label(
-                                    RichText::new("— listening —")
+                                    RichText::new(tr!("textmodem-listening"))
                                         .monospace()
                                         .size(12.0)
                                         .color(crate::theme::gray(90)),
@@ -302,9 +297,9 @@ impl SdroxideApp {
                                             .frame(egui::Frame::NONE)
                                             .desired_width(f32::INFINITY)
                                             .hint_text(if send_on_enter {
-                                                "Type a line, Return sends it…"
+                                                tr!("textmodem-type-line-return-sends")
                                             } else {
-                                                "Type here to transmit…"
+                                                tr!("textmodem-type-here-transmit")
                                             }),
                                     )
                                 })
@@ -335,7 +330,7 @@ impl SdroxideApp {
 
         // Controls.
         ui.horizontal(|ui| {
-            let label = if tx_on { "  TX ON  " } else { "   TX   " };
+            let label = if tx_on { tr!("textmodem-tx-2") } else { tr!("textmodem-tx-3") };
             if tx_gated(ui, tx_ok, |ui| {
                 crate::chrome::chip_accent(
                     ui,
@@ -359,7 +354,7 @@ impl SdroxideApp {
                 crate::chrome::chip_accent(
                     ui,
                     false,
-                    RichText::new(" CALL CQ ").size(13.0).strong(),
+                    RichText::new(tr!("textmodem-call-cq")).size(13.0).strong(),
                     crate::theme::GREEN(),
                     crate::theme::INK_ON_CYAN(),
                 )
@@ -367,26 +362,24 @@ impl SdroxideApp {
             .clicked()
             {
                 // Own the CQ text so the green sent-progress shows locally.
-                let call = if my_call.is_empty() { "NOCALL".to_string() } else { my_call.clone() };
+                let call = if my_call.is_empty() {
+                    tr!("textmodem-nocall").to_string()
+                } else {
+                    my_call.clone()
+                };
                 let cq = format!("CQ CQ CQ DE {call} {call} {call} PSE K\n");
                 cmds.push(Command::DigiAbortTx);
                 self.text_tx = cq.clone();
                 cmds.push(Command::DigiTxText(cq));
                 cmds.push(Command::DigiTxActive(true));
             }
-            if crate::chrome::chip(ui, false, " CLEAR ").clicked() {
+            if crate::chrome::chip(ui, false, tr!("textmodem-clear")).clicked() {
                 self.text_tx.clear();
                 cmds.push(Command::DigiAbortTx);
                 cmds.push(Command::DigiTxText(String::new()));
             }
             crate::chrome::row_tail(ui, |ui| {
-                self.send_on_return_chip(
-                    ui,
-                    cmds,
-                    "Hold what is typed until Return, then send the line in one piece \
-                     instead of streaming each character onto the air as it is typed. \
-                     Lets a line be read back and corrected before any of it goes out.",
-                );
+                self.send_on_return_chip(ui, cmds, &tr!("textmodem-hold-what-typed-until-return"));
                 self.text_msg_edit_chip(ui);
             });
         });
@@ -406,12 +399,7 @@ impl SdroxideApp {
     /// The chip that opens the message editor, beside SEND ON RETURN.
     fn text_msg_edit_chip(&mut self, ui: &mut egui::Ui) {
         if crate::chrome::chip(ui, self.text_macro_edit, "MSG")
-            .on_hover_text(
-                "Your own message buttons — working conditions, the weather, a standard \
-                 reply. Each sends its whole text in one go, and F1–F9 press the first \
-                 nine. They travel with the station's configuration, so a remote client \
-                 has them too.",
-            )
+            .on_hover_text(tr!("textmodem-msg-hint"))
             .clicked()
         {
             self.text_macro_edit = !self.text_macro_edit;
@@ -427,7 +415,7 @@ impl SdroxideApp {
     ) {
         if super::macros::macro_window(
             ctx,
-            "MESSAGES",
+            &tr!("textmodem-messages"),
             "TextMacros",
             &mut self.text_macro_edit,
             &mut self.digi_cfg_edit.text_macros,
@@ -460,16 +448,27 @@ impl SdroxideApp {
 
         // Header: mode + tuning readout / nudges, variant chips, TX indicator.
         ui.horizontal(|ui| {
-            ui.label(RichText::new("HELL").size(11.0).strong().color(crate::theme::CYAN()));
+            ui.label(
+                RichText::new(tr!("textmodem-hell"))
+                    .size(11.0)
+                    .strong()
+                    .color(crate::theme::CYAN()),
+            );
             ui.label(
                 RichText::new(format!("{audio_hz:.0} Hz"))
                     .size(11.0)
                     .color(crate::theme::gray(150)),
             );
-            if crate::chrome::chip(ui, false, "−").on_hover_text("Tune down 10 Hz").clicked() {
+            if crate::chrome::chip(ui, false, "−")
+                .on_hover_text(tr!("textmodem-tune-down-10-hz"))
+                .clicked()
+            {
                 cmds.push(Command::SetDigiAudioFreq(audio_hz - 10.0));
             }
-            if crate::chrome::chip(ui, false, "+").on_hover_text("Tune up 10 Hz").clicked() {
+            if crate::chrome::chip(ui, false, "+")
+                .on_hover_text(tr!("textmodem-tune-up-10-hz"))
+                .clicked()
+            {
                 cmds.push(Command::SetDigiAudioFreq(audio_hz + 10.0));
             }
             self.digi_freq_chip(ui, cmds);
@@ -477,7 +476,10 @@ impl SdroxideApp {
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 if transmitting {
                     ui.label(
-                        RichText::new("● TX").size(11.0).strong().color(crate::theme::ALERT()),
+                        RichText::new(tr!("textmodem-tx"))
+                            .size(11.0)
+                            .strong()
+                            .color(crate::theme::ALERT()),
                     );
                 }
                 self.digi_squelch_slider(ui, cmds);
@@ -491,15 +493,19 @@ impl SdroxideApp {
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = 4.0;
             let v = &mut self.view.hell;
-            ui.label(RichText::new("Contrast").size(10.5).color(crate::theme::CYAN_DIM()));
+            ui.label(
+                RichText::new(tr!("textmodem-contrast")).size(10.5).color(crate::theme::CYAN_DIM()),
+            );
             ui.spacing_mut().slider_width = 70.0;
             crate::chrome::slider(
                 ui,
                 egui::Slider::new(&mut v.contrast, 0.4..=3.0).show_value(false),
             )
-            .on_hover_text("Harder or softer dots — redraws the whole strip");
+            .on_hover_text(tr!("textmodem-harder-softer-dots-redraws-whole"));
             ui.add_space(6.0);
-            ui.label(RichText::new("Width").size(10.5).color(crate::theme::CYAN_DIM()));
+            ui.label(
+                RichText::new(tr!("textmodem-width")).size(10.5).color(crate::theme::CYAN_DIM()),
+            );
             for px in [1.0f32, 2.0, 3.0, 4.0] {
                 let sel = (v.col_px - px).abs() < 0.01;
                 if ui.selectable_label(sel, format!("{px:.0}×")).clicked() {
@@ -507,29 +513,29 @@ impl SdroxideApp {
                 }
             }
             ui.add_space(6.0);
-            if crate::chrome::chip(ui, v.doubled, " 2ROW ")
-                .on_hover_text(
-                    "Draw every column twice, stacked. Hell has no vertical sync, so this \
-                     keeps one complete copy of the text readable whatever the phase.",
-                )
+            if crate::chrome::chip(ui, v.doubled, tr!("textmodem-t-2row"))
+                .on_hover_text(tr!("textmodem-draw-every-column-twice-stacked"))
                 .clicked()
             {
                 v.doubled = !v.doubled;
             }
-            if crate::chrome::chip(ui, v.reverse, " REV ")
-                .on_hover_text("Reverse video — light dots on dark paper")
+            if crate::chrome::chip(ui, v.reverse, tr!("textmodem-rev"))
+                .on_hover_text(tr!("textmodem-reverse-video-light-dots-dark"))
                 .clicked()
             {
                 v.reverse = !v.reverse;
             }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                if crate::chrome::chip(ui, false, " CLEAR RX ").clicked() {
+                if crate::chrome::chip(ui, false, tr!("textmodem-clear-rx")).clicked() {
                     self.hell.clear();
                 }
                 ui.label(
-                    RichText::new(format!("{:.1} char/s", variant.chars_per_sec()))
-                        .size(10.5)
-                        .color(crate::theme::gray(120)),
+                    RichText::new(tr!(
+                        "textmodem-char-s",
+                        chars_per_sec = format!("{:.1}", variant.chars_per_sec())
+                    ))
+                    .size(10.5)
+                    .color(crate::theme::gray(120)),
                 );
             });
         });
@@ -632,9 +638,9 @@ impl SdroxideApp {
                                             .frame(egui::Frame::NONE)
                                             .desired_width(f32::INFINITY)
                                             .hint_text(if send_on_enter {
-                                                "Type a line, Return sends it…"
+                                                tr!("textmodem-type-line-return-sends")
                                             } else {
-                                                "Type here to transmit…"
+                                                tr!("textmodem-type-here-transmit")
                                             }),
                                     )
                                 })
@@ -659,7 +665,7 @@ impl SdroxideApp {
         ui.add_space(gap);
 
         ui.horizontal(|ui| {
-            let label = if tx_on { "  TX ON  " } else { "   TX   " };
+            let label = if tx_on { tr!("textmodem-tx-2") } else { tr!("textmodem-tx-3") };
             if tx_gated(ui, tx_ok, |ui| {
                 crate::chrome::chip_accent(
                     ui,
@@ -668,9 +674,7 @@ impl SdroxideApp {
                     crate::theme::ALERT(),
                     Color32::WHITE,
                 )
-                .on_hover_text(
-                    "Hold the channel: idle sends blank paper, so the strip keeps scrolling",
-                )
+                .on_hover_text(tr!("textmodem-hold-channel-idle-sends-blank"))
             })
             .clicked()
             {
@@ -687,21 +691,25 @@ impl SdroxideApp {
                 crate::chrome::chip_accent(
                     ui,
                     false,
-                    RichText::new(" CALL CQ ").size(13.0).strong(),
+                    RichText::new(tr!("textmodem-call-cq")).size(13.0).strong(),
                     crate::theme::GREEN(),
                     crate::theme::INK_ON_CYAN(),
                 )
             })
             .clicked()
             {
-                let call = if my_call.is_empty() { "NOCALL".to_string() } else { my_call.clone() };
+                let call = if my_call.is_empty() {
+                    tr!("textmodem-nocall").to_string()
+                } else {
+                    my_call.clone()
+                };
                 let cq = format!("CQ CQ CQ DE {call} {call} {call} PSE K ");
                 cmds.push(Command::DigiAbortTx);
                 self.text_tx = cq.clone();
                 cmds.push(Command::DigiTxText(cq));
                 cmds.push(Command::DigiTxActive(true));
             }
-            if crate::chrome::chip(ui, false, " CLEAR ").clicked() {
+            if crate::chrome::chip(ui, false, tr!("textmodem-clear")).clicked() {
                 self.text_tx.clear();
                 cmds.push(Command::DigiAbortTx);
                 cmds.push(Command::DigiTxText(String::new()));
@@ -712,17 +720,8 @@ impl SdroxideApp {
             // every keyboard mode is a control that does nothing.
             if !self.weather_reports.is_empty() {
                 let n = self.weather_reports.len();
-                if crate::chrome::chip(ui, self.weather.show, &format!(" WEATHER {n} "))
-                    .on_hover_text(
-                        "Decoded SYNOP and SHIP reports heard on this band.\n\n\
-                         They are kept here rather than in the decode list because the \
-                         figures on their own mean nothing — and because the weather at a \
-                         position three hours ago is what you come back for.\n\n\
-                         Found in the RTTY text as it arrives, so the mode has to be tuned \
-                         to the station's shift and baud. A land station sends no position, \
-                         so those rows carry the station number and the figures but no \
-                         coordinates; a ship report carries its own.",
-                    )
+                if crate::chrome::chip(ui, self.weather.show, &tr!("textmodem-weather-chip", n = n))
+                    .on_hover_text(tr!("textmodem-weather-hint"))
                     .clicked()
                 {
                     self.weather.show = !self.weather.show;
@@ -732,10 +731,7 @@ impl SdroxideApp {
                 self.send_on_return_chip(
                     ui,
                     cmds,
-                    "Hold what is typed until Return, then send the line in one piece \
-                     instead of painting each character onto the strip as it is typed. \
-                     A correction typed live is already on the paper; one made before \
-                     Return never was.",
+                    &tr!("textmodem-hold-what-typed-until-return-2"),
                 );
             });
         });
@@ -783,7 +779,7 @@ impl SdroxideApp {
                     // 450 is what the Deutscher Wetterdienst broadcasts use and
                     // is far enough from 425 to matter; the nudge covers the
                     // rest, since commercial shifts are not a short list.
-                    cap(ui, "Shift");
+                    cap(ui, &tr!("textmodem-shift"));
                     for s in [170.0f32, 425.0, 450.0, 850.0] {
                         let sel = (cfg.rtty_shift_hz - s).abs() < 0.5;
                         if ui.selectable_label(sel, format!("{s:.0}")).clicked() {
@@ -791,11 +787,11 @@ impl SdroxideApp {
                             changed = true;
                         }
                     }
-                    if ui.small_button("−").on_hover_text("Shift −5 Hz").clicked() {
+                    if ui.small_button("−").on_hover_text(tr!("textmodem-shift-5-hz")).clicked() {
                         cfg.rtty_shift_hz = (cfg.rtty_shift_hz - 5.0).clamp(20.0, 1200.0);
                         changed = true;
                     }
-                    if ui.small_button("+").on_hover_text("Shift +5 Hz").clicked() {
+                    if ui.small_button("+").on_hover_text(tr!("textmodem-shift-5-hz-2")).clicked() {
                         cfg.rtty_shift_hz = (cfg.rtty_shift_hz + 5.0).clamp(20.0, 1200.0);
                         changed = true;
                     }
@@ -808,7 +804,7 @@ impl SdroxideApp {
                         cap(ui, &format!("{:.0}", cfg.rtty_shift_hz));
                     }
                     ui.add_space(8.0);
-                    cap(ui, "Baud");
+                    cap(ui, &tr!("textmodem-baud"));
                     for b in [45.45f32, 50.0, 75.0, 100.0] {
                         let sel = (cfg.rtty_baud - b).abs() < 0.5;
                         let lbl = if (b - 45.45).abs() < 0.5 {
@@ -824,11 +820,7 @@ impl SdroxideApp {
                     ui.add_space(8.0);
                     if ui
                         .selectable_label(cfg.rtty_reverse, "RV")
-                        .on_hover_text(
-                            "Reverse: swap mark and space. Needed when the signal \
-                             is received on the opposite sideband to the one it \
-                             was sent on, which inverts the tones.",
-                        )
+                        .on_hover_text(tr!("textmodem-reverse-swap-mark-space-needed"))
                         .clicked()
                     {
                         cfg.rtty_reverse = !cfg.rtty_reverse;
@@ -836,10 +828,7 @@ impl SdroxideApp {
                     }
                     if ui
                         .selectable_label(cfg.rtty_afc, "AFC")
-                        .on_hover_text(
-                            "Track tuning error automatically instead of staying \
-                             pinned to the cursor.",
-                        )
+                        .on_hover_text(tr!("textmodem-track-tuning-error-automatically-instead"))
                         .clicked()
                     {
                         cfg.rtty_afc = !cfg.rtty_afc;
@@ -848,7 +837,7 @@ impl SdroxideApp {
                 }
                 Mode::Olivia | Mode::Contestia => {
                     let contestia = mode == Mode::Contestia;
-                    cap(ui, "Tones");
+                    cap(ui, &tr!("textmodem-tones"));
                     // Contestia's narrowest is four carriers. The two modes
                     // share this field — they are the same engine and the same
                     // waveform — so a 2 left over from Olivia is raised to 4 by
@@ -863,7 +852,7 @@ impl SdroxideApp {
                         }
                     }
                     if contestia && cfg.olivia_tones < 4 {
-                        cap(ui, &format!("(Olivia's {} → 4)", cfg.olivia_tones));
+                        cap(ui, &tr!("textmodem-olivia-tones-raised", n = cfg.olivia_tones));
                     }
                     ui.add_space(8.0);
                     cap(ui, "BW");
@@ -876,11 +865,8 @@ impl SdroxideApp {
                     }
                     ui.add_space(8.0);
                     if ui
-                        .selectable_label(cfg.olivia_reverse, "REVERSE")
-                        .on_hover_text(
-                            "Invert the tone order, both ways. A station sending \
-                             reversed reads as noise until this is on.",
-                        )
+                        .selectable_label(cfg.olivia_reverse, tr!("morse-reverse"))
+                        .on_hover_text(tr!("textmodem-olivia-reverse-hint"))
                         .clicked()
                     {
                         cfg.olivia_reverse = !cfg.olivia_reverse;
@@ -888,7 +874,7 @@ impl SdroxideApp {
                     }
                 }
                 Mode::Thor => {
-                    cap(ui, "Mode");
+                    cap(ui, &tr!("textmodem-mode"));
                     for m in sdroxide_types::ThorMode::ALL {
                         if ui.selectable_label(cfg.thor_mode == m, m.label()).clicked() {
                             cfg.thor_mode = m;
@@ -897,12 +883,8 @@ impl SdroxideApp {
                     }
                     ui.add_space(8.0);
                     if ui
-                        .selectable_label(cfg.thor_reverse, "REVERSE")
-                        .on_hover_text(
-                            "Invert the tone steps. IFK+ carries its data in the step between \
-                             successive tones, so a station received on the opposite sideband \
-                             has every step negative and reads as noise until this is on.",
-                        )
+                        .selectable_label(cfg.thor_reverse, tr!("morse-reverse"))
+                        .on_hover_text(tr!("textmodem-ifk-reverse-hint"))
                         .clicked()
                     {
                         cfg.thor_reverse = !cfg.thor_reverse;
@@ -913,14 +895,13 @@ impl SdroxideApp {
                     // Nine variants of one modem at different symbol rates.
                     // Nothing in the signal says which, and a decoder tuned to
                     // the wrong one hears nothing rather than something wrong.
-                    cap(ui, "Mode");
+                    cap(ui, &tr!("textmodem-mode"));
                     for m in sdroxide_types::DominoMode::ALL {
                         let sel = cfg.domino_mode == m;
-                        let hint = format!(
-                            "{} — {:.1} baud, 18 tones, incremental frequency keying with no \
-                             forward error correction",
-                            m.name(),
-                            m.baud()
+                        let hint = tr!(
+                            "textmodem-domino-hint",
+                            name = m.name(),
+                            baud = format!("{:.1}", m.baud())
                         );
                         if ui.selectable_label(sel, m.name()).on_hover_text(hint).clicked() && !sel
                         {
@@ -930,12 +911,8 @@ impl SdroxideApp {
                     }
                     ui.add_space(8.0);
                     if ui
-                        .selectable_label(cfg.thor_reverse, "REVERSE")
-                        .on_hover_text(
-                            "Invert the tone steps. IFK+ carries its data in the step between \
-                             successive tones, so a station received on the opposite sideband \
-                             has every step negative and reads as noise until this is on.",
-                        )
+                        .selectable_label(cfg.thor_reverse, tr!("morse-reverse"))
+                        .on_hover_text(tr!("textmodem-ifk-reverse-hint"))
                         .clicked()
                     {
                         cfg.thor_reverse = !cfg.thor_reverse;
@@ -943,20 +920,26 @@ impl SdroxideApp {
                     }
                 }
                 Mode::Mt63 => {
-                    cap(ui, "Mode");
+                    cap(ui, &tr!("textmodem-mode"));
                     for m in sdroxide_types::Mt63Mode::ALL {
                         let sel = cfg.mt63_mode == m;
                         if ui
                             .selectable_label(sel, m.label())
-                            .on_hover_text(format!(
-                                "MT63-{}, {:.0} Hz wide{} — the {} interleave spreads a burst \
-                                 over {} characters",
-                                m.label(),
-                                m.bandwidth_hz() as f32,
-                                if m.long() { "" } else { ", short interleave" },
-                                if m.long() { "long" } else { "short" },
-                                if m.long() { 64 } else { 32 }
-                            ))
+                            .on_hover_text(if m.long() {
+                                tr!(
+                                    "textmodem-mt63-long-hint",
+                                    label = m.label(),
+                                    bw = format!("{:.0}", m.bandwidth_hz() as f32),
+                                    chars = 64
+                                )
+                            } else {
+                                tr!(
+                                    "textmodem-mt63-short-hint",
+                                    label = m.label(),
+                                    bw = format!("{:.0}", m.bandwidth_hz() as f32),
+                                    chars = 32
+                                )
+                            })
                             .clicked()
                             && !sel
                         {
@@ -967,24 +950,18 @@ impl SdroxideApp {
                     // The rest of the standard, and why it is not here.
                     ui.add_space(8.0);
                     ui.label(
-                        RichText::new("1K and 500L not offered yet")
+                        RichText::new(tr!("textmodem-mt63-not-offered"))
                             .size(10.5)
                             .color(crate::theme::YELLOW()),
                     )
-                    .on_hover_text(
-                        "MT63-1K and the 500 Hz long interleave read with the batch decoder \
-                         but not yet through the live receiver: the lock searches the symbol \
-                         phase and the polarity but not the band centre, and a search that \
-                         does was found to trade one variant for another. See \
-                         docs/internal/MODE-PROGRESS.md.",
-                    );
+                    .on_hover_text(tr!("textmodem-mt63-not-offered-hint"));
                 }
                 Mode::Mfsk => {
                     // Eleven variants, one modem: nothing in the signal says
                     // which is in use, so the operator has to — and a decoder
                     // tuned to the wrong one hears nothing at all rather than
                     // something wrong.
-                    cap(ui, "Mode");
+                    cap(ui, &tr!("textmodem-mode"));
                     for m in sdroxide_types::MfskMode::ALL {
                         let sel = cfg.mfsk_mode == m;
                         // The two the corpus only partly carries are named where
@@ -992,23 +969,22 @@ impl SdroxideApp {
                         // thin decode is the recording rather than the mode.
                         let caveat = match m {
                             sdroxide_types::MfskMode::Mfsk8 => {
-                                " — the corpus recording loses one span of its text; \
-                                 the decoder is the one every other variant uses"
+                                tr!("textmodem-mfsk-caveat-mfsk8")
                             }
                             sdroxide_types::MfskMode::Mfsk11 => {
-                                " — the corpus recording loses its leading group to the \
-                                 resampler's start-up"
+                                tr!("textmodem-mfsk-caveat-mfsk11")
                             }
-                            _ => "",
+                            _ => String::new(),
                         };
                         if ui
                             .selectable_label(sel, m.label())
-                            .on_hover_text(format!(
-                                "{} — {:.1} baud, {} tones, {:.0} Hz wide{caveat}",
-                                m.label(),
-                                m.baud(),
-                                m.tones(),
-                                m.bandwidth_hz()
+                            .on_hover_text(tr!(
+                                "textmodem-mfsk-hint",
+                                label = m.label(),
+                                baud = format!("{:.1}", m.baud()),
+                                tones = m.tones(),
+                                bw = format!("{:.0}", m.bandwidth_hz()),
+                                caveat = caveat
                             ))
                             .clicked()
                             && !sel
@@ -1019,12 +995,8 @@ impl SdroxideApp {
                     }
                     ui.add_space(8.0);
                     if ui
-                        .selectable_label(cfg.mfsk_reverse, "REVERSE")
-                        .on_hover_text(
-                            "Invert the tone order. A station received on the opposite \
-                             sideband to the one it was sent on arrives mirrored about its \
-                             centre and reads as noise until this is on.",
-                        )
+                        .selectable_label(cfg.mfsk_reverse, tr!("morse-reverse"))
+                        .on_hover_text(tr!("textmodem-mfsk-reverse-hint"))
                         .clicked()
                     {
                         cfg.mfsk_reverse = !cfg.mfsk_reverse;
@@ -1037,28 +1009,24 @@ impl SdroxideApp {
                     // waveforms, so the family comes first and the variants of
                     // the chosen family follow. Thirty-two chips in one row is a
                     // menu, not a control.
-                    cap(ui, "Family");
+                    cap(ui, &tr!("textmodem-psk-family"));
                     for f in PskFamily::ALL {
                         let sel = cfg.psk_coded.family() == f;
                         let hint = match f {
                             PskFamily::Plain => {
-                                "PSK31's own family: one differential carrier, no forward error \
-                                 correction"
+                                tr!("textmodem-psk-family-plain-hint")
                             }
                             PskFamily::Bpsk63F => {
-                                "The robust code at 62.5 baud, with no interleaver — the one coded \
-                                 mode fldigi sends without one"
+                                tr!("textmodem-psk-family-bpsk63f-hint")
                             }
                             PskFamily::Robust => {
-                                "One carrier with the robust code and a 2x2xN interleaver"
+                                tr!("textmodem-psk-family-robust-hint")
                             }
                             PskFamily::MultiCarrier => {
-                                "Several carriers, PSK31's varicode and **no** code — wider and \
-                                 faster, and it needs a clean signal"
+                                tr!("textmodem-psk-family-multi-hint")
                             }
                             PskFamily::RobustMulti => {
-                                "Several carriers **and** the robust code: the widest and the most \
-                                 robust of the PSK modes"
+                                tr!("textmodem-psk-family-robust-multi-hint")
                             }
                         };
                         if ui.selectable_label(sel, f.label()).on_hover_text(hint).clicked() && !sel
@@ -1072,7 +1040,7 @@ impl SdroxideApp {
                         // Nothing in the signal says which speed it is, so the
                         // operator has to — and a decoder tuned to the wrong one
                         // hears nothing at all rather than something wrong.
-                        cap(ui, "Speed");
+                        cap(ui, &tr!("morse-speed"));
                         for sp in PskSpeed::ALL {
                             let sel = cfg.psk_speed == sp;
                             // The fastest reads from partway in — the receiver's
@@ -1080,12 +1048,10 @@ impl SdroxideApp {
                             // and the chip says so rather than letting a listener
                             // think the band was dead.
                             let hint = match sp {
-                                PskSpeed::Bps1000 => format!(
-                                    "{:.0} baud — reads from about a second in: at this rate the \
-                                     receiver's lock time is a third of a message",
-                                    sp.baud()
-                                ),
-                                _ => format!("{:.1} baud", sp.baud()),
+                                PskSpeed::Bps1000 => {
+                                    tr!("textmodem-psk-baud-fast-hint", baud = format!("{:.0}", sp.baud()))
+                                }
+                                _ => tr!("textmodem-psk-baud-hint", baud = format!("{:.1}", sp.baud())),
                             };
                             if ui.selectable_label(sel, sp.label()).on_hover_text(hint).clicked()
                                 && !sel
@@ -1095,24 +1061,18 @@ impl SdroxideApp {
                             }
                         }
                         ui.add_space(8.0);
-                        cap(ui, "Modulation");
+                        cap(ui, &tr!("textmodem-psk-modulation"));
                         for m in PskModulation::ALL {
                             let sel = cfg.psk_modulation == m;
                             let hint = match m {
                                 PskModulation::Bpsk => {
-                                    "One bit per symbol, differentially detected"
+                                    tr!("textmodem-psk-bpsk-hint")
                                 }
                                 PskModulation::Qpsk => {
-                                    "Two bits per symbol with a rate-1/2 code, so one data bit per \
-                                     symbol: the same text rate as BPSK at the same speed, with \
-                                     half the errors"
+                                    tr!("textmodem-psk-qpsk-hint")
                                 }
                                 PskModulation::Psk8 => {
-                                    "Three bits per symbol, no code: the fastest of the three at \
-                                     any given speed and the least robust. Receive only — there \
-                                     is no eight-phase transmitter. Proven on a synthetic: the \
-                                     8PSK recordings in the test corpus are not a clean \
-                                     constellation"
+                                    tr!("textmodem-psk-8psk-hint")
                                 }
                             };
                             if ui.selectable_label(sel, m.label()).on_hover_text(hint).clicked()
@@ -1123,10 +1083,10 @@ impl SdroxideApp {
                             }
                         }
                     } else {
-                        cap(ui, "Mode");
+                        cap(ui, &tr!("textmodem-mode"));
                         for v in PskCoded::in_family(cfg.psk_coded.family()) {
                             let sel = cfg.psk_coded == v;
-                            let code = if v.fec() { "coded" } else { "no code" };
+                            let code = if v.fec() { tr!("textmodem-psk-coded") } else { tr!("textmodem-psk-no-code") };
                             // **The four widest banks do not decode yet**, and the chip
                             // says so rather than doing nothing when it is picked. The
                             // fault is the multi-carrier front end's chain order, not the
@@ -1139,22 +1099,16 @@ impl SdroxideApp {
                                     | PskCoded::Psk125C12
                                     | PskCoded::Psk500Rc4
                             );
-                            let mut hint = format!(
-                                "{:.1} baud, {} carrier{}, {code}, {:.0} Hz wide — receive only: \
-                                 the coded PSK transmitter is not written",
-                                v.baud(),
-                                v.carriers(),
-                                if v.carriers() == 1 { "" } else { "s" },
-                                v.bandwidth_hz()
+                            let mut hint = tr!(
+                                "textmodem-psk-coded-hint",
+                                baud = format!("{:.1}", v.baud()),
+                                n = v.carriers(),
+                                code = code,
+                                bw = format!("{:.0}", v.bandwidth_hz())
                             );
                             if wide {
-                                hint.push_str(
-                                    "\n\n**This wide bank does not decode yet.** Its carriers \
-                                     are close enough together that the receiver's filter at \
-                                     the input rate cannot separate them; the narrower banks do \
-                                     read their own recordings. Nothing you hear here is lost — \
-                                     it is the front end, not the signal.",
-                                );
+                                hint.push_str("\n\n");
+                                hint.push_str(&tr!("textmodem-psk-wide-bank-hint"));
                             }
                             if ui.selectable_label(sel, v.label()).on_hover_text(hint).clicked()
                                 && !sel
@@ -1183,17 +1137,26 @@ impl SdroxideApp {
         ui.add_space(6.0);
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = 3.0;
-            ui.label(RichText::new("Mode").size(10.5).strong().color(crate::theme::CYAN_DIM()));
+            ui.label(
+                RichText::new(tr!("textmodem-mode"))
+                    .size(10.5)
+                    .strong()
+                    .color(crate::theme::CYAN_DIM()),
+            );
             let cfg = &mut self.digi_cfg_edit;
             let mut changed = false;
             for v in sdroxide_types::HellVariant::ALL {
                 let sel = cfg.hell_variant == v;
-                let hint = format!(
-                    "{} — {:.1} char/s, {:.0} Hz wide, {}",
-                    v.label(),
-                    v.chars_per_sec(),
-                    v.bandwidth_hz(),
-                    if v.is_fsk() { "frequency-shifted" } else { "on/off keyed" }
+                let hint = tr!(
+                    "textmodem-char-s-hz-wide",
+                    value = v.label(),
+                    chars_per_sec = format!("{:.1}", v.chars_per_sec()),
+                    bandwidth_hz = format!("{:.0}", v.bandwidth_hz()),
+                    keyed = &if v.is_fsk() {
+                        tr!("textmodem-frequency-shifted")
+                    } else {
+                        tr!("textmodem-off-keyed")
+                    }
                 );
                 if ui.selectable_label(sel, v.label()).on_hover_text(hint).clicked() && !sel {
                     cfg.hell_variant = v;
@@ -1211,7 +1174,7 @@ impl SdroxideApp {
         // reason.
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = 3.0;
-            ui.label(RichText::new("Slant").size(10.5).strong().color(crate::theme::CYAN_DIM()));
+            ui.label(RichText::new(tr!("textmodem-hell-slant")).size(10.5).strong().color(crate::theme::CYAN_DIM()));
             let mut ppm = self.digi_cfg_edit.hell_slant_ppm;
             if ui
                 .add(
@@ -1221,11 +1184,7 @@ impl SdroxideApp {
                         .suffix(" ppm")
                         .fixed_decimals(0),
                 )
-                .on_hover_text(
-                    "Receive sample-clock trim. A capture whose dots arrive 0.4 % long — an \
-                     ordinary sound card, and what SkySweep's off-air Hell recording measures — \
-                     needs about -4000. Adjust until the glyphs stand upright.",
-                )
+                .on_hover_text(tr!("textmodem-hell-slant-hint"))
                 .changed()
             {
                 self.digi_cfg_edit.hell_slant_ppm = ppm;

@@ -73,7 +73,7 @@ async fn spawn_station(port: u16) {
         remove_radio: None,
         rename_radio: None,
         radio_power: None,
-        aircraft_online: false,
+        aircraft_online: Some(false),
     }));
     tokio::time::sleep(Duration::from_millis(600)).await;
 }

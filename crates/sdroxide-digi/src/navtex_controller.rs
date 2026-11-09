@@ -55,6 +55,7 @@ fn sensitivity(cfg: &DigiConfig) -> i8 {
 pub struct NavtexController {
     cfg: DigiConfig,
     rx: NavtexRx,
+    tap_rate: f64,
     /// Text decoded but not yet consumed by the framer.
     pending: String,
     /// The message being received, if a `ZCZC` has been seen.
@@ -84,6 +85,7 @@ impl NavtexController {
         let mut ctrl = NavtexController {
             cfg,
             rx,
+            tap_rate,
             pending: String::new(),
             live: None,
             messages: Vec::new(),
@@ -135,65 +137,102 @@ impl NavtexController {
     /// split across any two calls. Once opened, everything goes into the body
     /// until `NNNN` closes it — including the line breaks, which is how a
     /// warning keeps its shape.
+    ///
+    /// A `ZCZC` that arrives while a message is already open means the
+    /// previous closing sequence was lost: the open message is filed as it
+    /// stands and a new one is opened, so the next broadcast is not appended
+    /// to the end of the one before it.
     fn frame(&mut self) {
         let taken = std::mem::take(&mut self.pending);
         for ch in taken.chars() {
-            match self.live.as_mut() {
-                None => {
-                    self.text.push(ch);
-                    if self.text.len() > TEXT_CAP {
-                        let cut = self.text.len() - TEXT_CAP;
-                        let cut = (cut..self.text.len())
-                            .find(|&i| self.text.is_char_boundary(i))
-                            .unwrap_or(self.text.len());
-                        self.text.drain(..cut);
-                    }
-                    if self.text.ends_with("ZCZC") {
-                        self.live = Some(NavtexMessage {
-                            station: '?',
-                            kind: '?',
-                            serial: 0,
-                            text: String::new(),
-                            at: Self::now_unix(),
-                            complete: false,
-                            lost: 0,
-                        });
-                        self.status_dirty = true;
-                    }
-                }
-                Some(msg) => {
-                    if ch == '*' {
-                        msg.lost += 1;
-                    }
-                    msg.text.push(ch);
-                    // The four header characters follow `ZCZC` and a space,
-                    // and are parsed as soon as they have all arrived. A
-                    // station that sends no space still lands them here: the
-                    // parse skips leading whitespace of its own.
-                    if msg.station == '?' {
-                        let head: Vec<char> =
-                            msg.text.chars().filter(|c| !c.is_whitespace()).collect();
-                        if head.len() >= 4 {
-                            msg.station = head[0];
-                            msg.kind = head[1];
-                            msg.serial =
-                                head[2..4].iter().collect::<String>().parse::<u8>().unwrap_or(0);
-                            // The header is addressing, not text: drop it out
-                            // of the body so the panel's first line is the
-                            // warning rather than four letters of routing.
-                            msg.text.clear();
-                            self.status_dirty = true;
-                        }
-                    }
-                    if msg.text.ends_with("NNNN") {
-                        msg.text.truncate(msg.text.len() - 4);
-                        msg.complete = true;
-                        self.close();
-                    } else if msg.text.len() > BODY_CAP {
-                        self.close();
-                    }
-                }
+            self.frame_one(ch);
+        }
+    }
+
+    fn frame_one(&mut self, ch: char) {
+        if self.live.is_none() {
+            self.text.push(ch);
+            if self.text.len() > TEXT_CAP {
+                let cut = self.text.len() - TEXT_CAP;
+                let cut = (cut..self.text.len())
+                    .find(|&i| self.text.is_char_boundary(i))
+                    .unwrap_or(self.text.len());
+                self.text.drain(..cut);
             }
+            if self.text.ends_with("ZCZC") {
+                self.live = Some(NavtexMessage {
+                    station: '?',
+                    kind: '?',
+                    serial: 0,
+                    text: String::new(),
+                    at: Self::now_unix(),
+                    complete: false,
+                    lost: 0,
+                });
+                self.status_dirty = true;
+            }
+            return;
+        }
+
+        let mut msg = self.live.take().expect("live checked above");
+        if ch == '*' {
+            msg.lost += 1;
+        }
+        msg.text.push(ch);
+        // The four header characters follow `ZCZC` and a space, and are
+        // parsed as soon as they have all arrived. A station that sends no
+        // space still lands them here: the parse skips leading whitespace of
+        // its own.
+        if msg.station == '?' {
+            let head: Vec<char> = msg.text.chars().filter(|c| !c.is_whitespace()).collect();
+            if head.len() >= 4 {
+                msg.station = head[0];
+                msg.kind = head[1];
+                msg.serial = head[2..4].iter().collect::<String>().parse::<u8>().unwrap_or(0);
+                // The header is addressing, not text: drop it out of the body
+                // so the panel's first line is the warning rather than four
+                // letters of routing.
+                msg.text.clear();
+                self.status_dirty = true;
+            }
+        }
+
+        let do_close;
+        let reopen;
+        if msg.text.ends_with("NNNN") {
+            msg.text.truncate(msg.text.len() - 4);
+            msg.complete = true;
+            do_close = true;
+            reopen = false;
+        } else if msg.text.len() > BODY_CAP {
+            do_close = true;
+            reopen = false;
+        } else if msg.text.ends_with("ZCZC") && msg.text.len() > 4 {
+            // A second opener inside an open message: the previous closing
+            // sequence was lost. Drop it out of the body and reopen.
+            msg.text.truncate(msg.text.len() - 4);
+            do_close = true;
+            reopen = true;
+        } else {
+            do_close = false;
+            reopen = false;
+        }
+
+        self.live = Some(msg);
+        if do_close {
+            self.close();
+        }
+        if reopen {
+            self.live = Some(NavtexMessage {
+                station: '?',
+                kind: '?',
+                serial: 0,
+                text: String::new(),
+                at: Self::now_unix(),
+                complete: false,
+                lost: 0,
+            });
+            self.status_dirty = true;
         }
     }
 
@@ -347,6 +386,11 @@ impl DigiEngine for NavtexController {
         self.live = None;
         self.text.clear();
         self.pending.clear();
+        // Restart the decoder from scratch: drop any latched sync so a stale
+        // phase cannot keep producing garbage on a quiet channel.
+        self.rx = NavtexRx::new(self.tap_rate);
+        self.rx.set_reverse(self.cfg.navtex_reverse);
+        self.rx.set_sensitivity(sensitivity(&self.cfg));
         self.status_dirty = true;
         self.save_messages();
     }
@@ -524,5 +568,28 @@ mod tests {
         assert_eq!(s.messages.len(), 2, "text={:?} live={:?}", s.text, s.live);
         assert_eq!(s.messages[0].serial, 1, "{:?}", s.messages);
         assert_eq!(s.messages[1].serial, 2, "{:?}", s.messages);
+    }
+
+    /// A broadcast whose closing `NNNN` was lost must not swallow the next one:
+    /// the next `ZCZC` closes it and starts a new message. (#481)
+    #[test]
+    fn a_lost_closing_sequence_does_not_merge_two_broadcasts() {
+        let mut c = ctrl();
+        feed(&mut c, "ZCZC FA12 FIRST WITHOUT CLOSING");
+        feed(&mut c, "ZCZC PA01 SECOND NNNN");
+        let s = c.navtex_status();
+        assert_eq!(
+            s.messages.len(),
+            2,
+            "two broadcasts merged into one: {:?} live={:?} text={:?}",
+            s.messages,
+            s.live,
+            s.text
+        );
+        assert!(
+            s.messages.iter().any(|m| m.station == 'P' && m.serial == 1 && m.complete),
+            "second broadcast not filed complete: {:?}",
+            s.messages
+        );
     }
 }

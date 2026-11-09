@@ -13,6 +13,7 @@
 //! lines is capped, so the card cannot grow with what a registry says.
 
 // ==== IMPL ====
+use crate::i18n::tr;
 use eframe::egui::{self, RichText};
 use sdroxide_types::AdsbAircraft;
 
@@ -32,7 +33,7 @@ pub(in crate::app) const MAX_CHARS: usize = 28;
 /// Most lines the card carries.
 pub(in crate::app) const MAX_LINES: usize = 14;
 /// Tallest the picture is drawn, points.
-const PHOTO_H: f32 = 84.0;
+const PHOTO_H: f32 = 106.0;
 /// Column widths of a line, points: label, badge, value. The note takes the rest.
 const COL_LABEL: f32 = 62.0;
 const COL_BADGE: f32 = 44.0;
@@ -65,7 +66,7 @@ pub(in crate::app) struct HoverCard {
     pub photo: Option<HoverPhoto>,
     /// One grey line, only when the operator could do something about the
     /// missing online half.
-    pub footer: Option<&'static str>,
+    pub footer: Option<String>,
 }
 
 /// Lift the note that two or more lines share into one, and clear it from
@@ -111,17 +112,11 @@ pub(in crate::app) fn hover_photo(state: &OnlineState, thumb: ThumbStatus) -> Op
 /// The one-line note under the card for an online half that is not there. Only
 /// the reasons the operator can do something about; a failure that mends itself
 /// is not said.
-pub(in crate::app) fn footer(state: &OnlineState) -> Option<&'static str> {
+pub(in crate::app) fn footer(state: &OnlineState) -> Option<String> {
     match state {
-        OnlineState::Unavailable(Reason::Disabled) => {
-            Some("online unavailable — relay off on the station")
-        }
-        OnlineState::Unavailable(Reason::NoStation) => {
-            Some("online unavailable — no station to ask")
-        }
-        OnlineState::Unavailable(Reason::Unauthorized) => {
-            Some("online unavailable — not signed in")
-        }
+        OnlineState::Unavailable(Reason::Disabled) => Some(tr!("aircraft-footer-disabled")),
+        OnlineState::Unavailable(Reason::NoStation) => Some(tr!("aircraft-footer-no-station")),
+        OnlineState::Unavailable(Reason::Unauthorized) => Some(tr!("aircraft-footer-unauthorized")),
         _ => None,
     }
 }
@@ -153,8 +148,11 @@ pub(in crate::app) fn hover_card(
             &own
         }
     };
-    let age =
-        format!("{}, {} ago", source_label(Source::Adsb), super::util::fmt_age(now - live.last_at));
+    let age = tr!(
+        "aircraft-provenance",
+        source = source_label(Source::Adsb),
+        age = super::util::fmt_age(now - live.last_at)
+    );
 
     let all: Vec<Row> = aircraft_online::rows(card, state, now)
         .into_iter()
@@ -169,7 +167,7 @@ pub(in crate::app) fn hover_card(
         let km = sdroxide_types::distance_km(h, (lat, lon));
         let bear = sdroxide_types::bearing_deg(h, (lat, lon));
         let range = format!("{}  {bear:.0}°", sdroxide_types::AirUnits::current().distance(km));
-        lines.push(extra("Range", range, "from your station".into()));
+        lines.push(extra("Range", range, tr!("aircraft-from-your-station")));
     }
     if let Some(vr) = live.vertical_rate_fpm.filter(|v| v.abs() > 100) {
         lines.push(extra(
@@ -244,7 +242,7 @@ fn draw_inner(
             }
             if let Some(out) = pin.as_deref_mut() {
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    let r = ui.small_button("✕").on_hover_text("Close (Esc)");
+                    let r = ui.small_button("✕").on_hover_text(tr!("aircraft-hover-close"));
                     if r.clicked() {
                         out.actions.push(PinAction::Close);
                     }
@@ -254,7 +252,7 @@ fn draw_inner(
         });
         for r in &card.lines {
             ui.horizontal(|ui| {
-                cell(ui, COL_LABEL, RichText::new(r.label).size(10.5).color(gray));
+                cell(ui, COL_LABEL, RichText::new(aircraft_card::field_label(r.label)).size(10.5).color(gray));
                 ui.allocate_ui_with_layout(
                     egui::vec2(COL_BADGE, LINE_H),
                     egui::Layout::left_to_right(egui::Align::Center),
@@ -309,17 +307,29 @@ fn draw_inner(
                 }
             });
         }
-        if let Some(f) = card.footer {
+        if let Some(f) = &card.footer {
             ui.label(RichText::new(f).size(10.0).color(crate::theme::gray(130)));
         }
         if let Some(out) = pin.as_deref_mut() {
             match offer {
                 LookupOffer::Button => {
                     ui.add_space(4.0);
-                    let r = ui.small_button("Look up online").on_hover_text(
-                        "Ask this station's relay about this aircraft: type, operator, \
-                         route and a photo. Nothing is asked until you press it.",
+                    let r = ui.small_button(tr!("aircraft-hover-lookup"))
+                        .on_hover_text(tr!("aircraft-hover-lookup-hint"));
+                    if r.clicked() {
+                        out.actions.push(PinAction::Lookup);
+                    }
+                    out.lookup = Some(r.rect);
+                }
+                LookupOffer::Retry(secs) => {
+                    ui.add_space(4.0);
+                    ui.label(
+                        RichText::new(tr!("aircraft-hover-lookup-retry", s = secs))
+                            .size(10.0)
+                            .weak(),
                     );
+                    let r = ui.small_button(tr!("aircraft-hover-lookup"))
+                        .on_hover_text(tr!("aircraft-hover-lookup-hint"));
                     if r.clicked() {
                         out.actions.push(PinAction::Lookup);
                     }
@@ -327,12 +337,12 @@ fn draw_inner(
                 }
                 LookupOffer::Asking => {
                     ui.add_space(4.0);
-                    ui.label(RichText::new("asking the station…").size(10.0).weak());
+                    ui.label(RichText::new(tr!("aircraft-asking-station-dots")).size(10.0).weak());
                 }
                 LookupOffer::Waiting => {
                     ui.add_space(4.0);
                     ui.label(
-                        RichText::new("another lookup is running — one at a time")
+                        RichText::new(tr!("aircraft-hover-lookup-waiting"))
                             .size(10.0)
                             .weak(),
                     );
@@ -341,10 +351,7 @@ fn draw_inner(
             }
             if history != HistoryOffer::Hidden {
                 ui.add_space(4.0);
-                let r = ui.small_button(history.label()).on_hover_text(
-                    "Where this aircraft has been in the last day, from your station's own \
-                     record. It asks your station, never the internet.",
-                );
+                let r = ui.small_button(history.label()).on_hover_text(tr!("aircraft-hover-history-hint"));
                 if r.clicked() {
                     out.actions.push(PinAction::History);
                 }
@@ -369,20 +376,35 @@ pub(in crate::app) enum LookupOffer {
     Asking,
     /// Another aircraft's question is out; one at a time.
     Waiting,
+    /// The question failed and will be asked again by itself in this many
+    /// seconds; the button asks now.
+    Retry(i64),
 }
 
-/// Whether the pinned card offers the lookup. Only an aircraft nobody has asked
-/// about, on a station that will answer: once asked, whatever came back is what
-/// the card says, and the card's own back-off decides about asking again.
+impl LookupOffer {
+    /// Whether a press on the button is taken: the first question, or a retry.
+    pub(in crate::app) fn pressable(self) -> bool {
+        matches!(self, LookupOffer::Button | LookupOffer::Retry(_))
+    }
+}
+
+/// Whether the pinned card offers the lookup: for an aircraft nobody has asked
+/// about, on a station that will answer, and again after a failure that mends
+/// itself (`retry_in` is the seconds left of its back-off). Once asked, the
+/// card follows the question on its own; the button only hurries a retry.
 pub(in crate::app) fn lookup_offer(
     state: &OnlineState,
     has_station: bool,
     line_busy: bool,
+    retry_in: Option<i64>,
 ) -> LookupOffer {
     match state {
         OnlineState::Idle if has_station && line_busy => LookupOffer::Waiting,
         OnlineState::Idle if has_station => LookupOffer::Button,
         OnlineState::Loading => LookupOffer::Asking,
+        OnlineState::Unavailable(_) if has_station => {
+            retry_in.map_or(LookupOffer::None, LookupOffer::Retry)
+        }
         _ => LookupOffer::None,
     }
 }
@@ -787,8 +809,8 @@ mod tests {
     fn only_a_switched_off_relay_or_a_missing_station_says_so_in_the_footer() {
         for r in [Reason::Disabled, Reason::NoStation, Reason::Unauthorized] {
             let c = card_with(Some(&heard()), &OnlineState::Unavailable(r), ThumbStatus::NotTried);
-            assert!(c.footer.is_some_and(|f| f.contains("online unavailable")), "{r:?}");
-            assert!(c.footer.is_some_and(|f| f.chars().count() <= 60), "{r:?}");
+            assert!(c.footer.as_ref().is_some_and(|f| f.contains("online unavailable")), "{r:?}");
+            assert!(c.footer.as_ref().is_some_and(|f| f.chars().count() <= 60), "{r:?}");
         }
         for st in [
             OnlineState::Idle,
@@ -866,6 +888,110 @@ mod tests {
             assert!(rect.width() <= HOVER_W + 1.0, "too wide: {rect:?}");
             assert!(rect.height() <= HOVER_MAX_H, "too tall: {rect:?}");
         }
+    }
+
+    /// Height the card gains when the thumbnail is drawn, measured on the
+    /// real card rather than read from the constant.
+    fn thumbnail_gain(thumb_w: usize, thumb_h: usize) -> f32 {
+        let c = card_with(Some(&heard()), &ready(info()), ThumbStatus::Ready);
+        let ctx = egui::Context::default();
+        let tex = ctx.load_texture(
+            "thumb",
+            egui::ColorImage::new([thumb_w, thumb_h], vec![egui::Color32::GRAY; thumb_w * thumb_h]),
+            Default::default(),
+        );
+        let mut heights = [0.0_f32; 2];
+        for (i, t) in [None, Some(&tex)].into_iter().enumerate() {
+            let mut out = ctx.run_ui(egui::RawInput::default(), |ui| {
+                heights[i] = draw(ui, &c, t).height();
+            });
+            out.textures_delta.clear();
+        }
+        heights[1] - heights[0]
+    }
+
+    #[test]
+    fn the_thumbnail_is_drawn_a_quarter_larger_than_it_was() {
+        // It was 84 px high and the operator found it too small. A Planespotters
+        // thumbnail is 280 x 187 (3:2), so the proportions must survive.
+        let gain = thumbnail_gain(280, 187);
+        assert!(gain >= PHOTO_H, "the picture is not drawn at its reserved height: {gain}");
+        assert!(PHOTO_H >= 104.0 && PHOTO_H <= 112.0, "about a quarter larger than 84: {PHOTO_H}");
+        assert!(gain < PHOTO_H + 8.0, "{gain} is more than the picture and its gap");
+    }
+
+    #[test]
+    fn the_larger_thumbnail_keeps_the_card_inside_its_bounds() {
+        let c = card_with(Some(&heard()), &ready(info()), ThumbStatus::Ready);
+        let ctx = egui::Context::default();
+        let tex = ctx.load_texture(
+            "thumb",
+            egui::ColorImage::new([280, 187], vec![egui::Color32::GRAY; 280 * 187]),
+            Default::default(),
+        );
+        let mut rect = egui::Rect::NOTHING;
+        let mut out = ctx.run_ui(egui::RawInput::default(), |ui| {
+            rect = draw(ui, &c, Some(&tex));
+        });
+        out.textures_delta.clear();
+        assert!(rect.width() <= HOVER_W + 1.0 && rect.height() <= HOVER_MAX_H, "{rect:?}");
+    }
+
+    /// Writes the card with a stand-in picture (a gradient, 3:2 like a
+    /// Planespotters thumbnail), next to the old 84 px picture, to look at.
+    #[test]
+    #[ignore = "writes a picture to look at; not an assertion"]
+    fn thumbnail_size_preview() {
+        let (w, h) = (700.0_f32, 470.0_f32);
+        let ctx = egui::Context::default();
+        let px: Vec<egui::Color32> = (0..280 * 187)
+            .map(|i| {
+                let (x, y) = ((i % 280) as u8, (i / 280) as u8);
+                egui::Color32::from_rgb(x, y, 200 - y / 2)
+            })
+            .collect();
+        let tex = ctx.load_texture(
+            "thumb",
+            egui::ColorImage::new([280, 187], px),
+            Default::default(),
+        );
+        let c = card_with(Some(&heard()), &ready(info()), ThumbStatus::Ready);
+        let mut tx = crate::test_raster::Textures::default();
+        let mut last = None;
+        for i in 0..3 {
+            let input = egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(w, h))),
+                time: Some(1.0 + i as f64 / 30.0),
+                ..Default::default()
+            };
+            let mut full = ctx.run_ui(input, |ui| {
+                ui.horizontal_top(|ui| {
+                    ui.vertical(|ui| {
+                        ui.label("before: 84 px");
+                        ui.add(egui::Image::new(&tex).max_height(84.0).corner_radius(3.0));
+                    });
+                    ui.vertical(|ui| {
+                        ui.label(format!("after: {PHOTO_H} px, in the card"));
+                        draw(ui, &c, Some(&tex));
+                    });
+                });
+            });
+            tx.apply(&full.textures_delta);
+            full.textures_delta.clear();
+            last = Some(full);
+        }
+        let img = crate::test_raster::rasterize(
+            &ctx,
+            last.unwrap(),
+            &tx,
+            egui::vec2(w, h),
+            crate::theme::BG_DEEP(),
+        );
+        let out = std::env::var("THUMB_PREVIEW").unwrap_or_else(|_| {
+            format!("{}/../../target/thumb_preview.png", env!("CARGO_MANIFEST_DIR"))
+        });
+        img.save(&out).expect("write the preview");
+        println!("wrote {out}");
     }
 
     #[test]
@@ -962,20 +1088,25 @@ mod tests {
     }
 
     #[test]
-    fn the_lookup_button_is_offered_only_for_an_aircraft_nobody_has_asked_about() {
+    fn the_lookup_button_is_offered_for_an_aircraft_nobody_asked_and_after_a_failure_that_mends() {
         use LookupOffer::*;
-        assert_eq!(lookup_offer(&OnlineState::Idle, true, false), Button);
-        assert_eq!(lookup_offer(&OnlineState::Idle, true, true), Waiting);
-        assert_eq!(lookup_offer(&OnlineState::Loading, true, true), Asking);
-        assert_eq!(lookup_offer(&ready(info()), true, false), None);
+        assert_eq!(lookup_offer(&OnlineState::Idle, true, false, Option::None), Button);
+        assert_eq!(lookup_offer(&OnlineState::Idle, true, true, Option::None), Waiting);
+        assert_eq!(lookup_offer(&OnlineState::Loading, true, true, Option::None), Asking);
+        assert_eq!(lookup_offer(&ready(info()), true, false, Option::None), None);
         for r in [Reason::Offline, Reason::Busy, Reason::Unknown] {
-            assert_eq!(
-                lookup_offer(&OnlineState::Unavailable(r), true, false),
-                None,
-                "{r:?} is mended by the back-off, not by a button"
-            );
+            let st = OnlineState::Unavailable(r);
+            assert_eq!(lookup_offer(&st, true, false, Some(12)), Retry(12), "{r:?}");
+            assert!(Retry(12).pressable());
+            assert_eq!(lookup_offer(&st, true, false, Option::None), None, "{r:?}: no retry");
         }
-        assert_eq!(lookup_offer(&OnlineState::Idle, false, false), None, "no station");
+        assert!(Button.pressable());
+        for o in [None, Asking, Waiting] {
+            assert!(!o.pressable(), "{o:?}");
+        }
+        assert_eq!(lookup_offer(&OnlineState::Idle, false, false, Option::None), None, "no station");
+        let off = OnlineState::Unavailable(Reason::NoStation);
+        assert_eq!(lookup_offer(&off, false, false, Some(3)), None, "no station");
     }
 
     #[test]
@@ -984,19 +1115,19 @@ mod tests {
         use LookupOffer::*;
         // Control: the same aircraft on a station that has not said no is offered it.
         let fresh = super::super::aircraft_online::OnlineStore::default();
-        assert_eq!(lookup_offer(fresh.state_for(1, true), true, false), Button);
+        assert_eq!(lookup_offer(fresh.state_for(1, true), true, false, Option::None), Button);
         let mut store = super::super::aircraft_online::OnlineStore::default();
         // The station says it will not answer: every aircraft's state follows.
         store.deliver(1, Answer::Unavailable(Reason::Disabled), NOW);
         for icao in [1_u32, 2, 3] {
             let st = store.state_for(icao, true);
-            assert_eq!(lookup_offer(st, true, false), None, "{icao}: {st:?}");
+            assert_eq!(lookup_offer(st, true, false, Option::None), None, "{icao}: {st:?}");
         }
         let mut store = super::super::aircraft_online::OnlineStore::default();
         store.deliver(1, Answer::Unavailable(Reason::Unauthorized), NOW);
-        assert_eq!(lookup_offer(store.state_for(2, true), true, false), None);
+        assert_eq!(lookup_offer(store.state_for(2, true), true, false, Option::None), None);
         let store = super::super::aircraft_online::OnlineStore::default();
-        assert_eq!(lookup_offer(store.state_for(2, false), false, false), None);
+        assert_eq!(lookup_offer(store.state_for(2, false), false, false, Option::None), None);
     }
 
     // ── pressing the pinned card ──────────────────────────────────────────
@@ -1098,6 +1229,7 @@ mod tests {
             (LookupOffer::Button, true),
             (LookupOffer::Asking, false),
             (LookupOffer::Waiting, false),
+            (LookupOffer::Retry(7), true),
         ] {
             let out = pinned_frame(&ctx, vec![], &card, offer);
             assert_eq!(out.lookup.is_some(), drawn, "{offer:?}");

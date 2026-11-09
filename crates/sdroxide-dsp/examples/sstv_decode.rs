@@ -49,7 +49,8 @@ fn main() {
                     }
                     lines += 1;
                 }
-                SstvEvent::ImageComplete => complete = true,
+                SstvEvent::ImageComplete { .. } => complete = true,
+                SstvEvent::GaveUp => {}
                 SstvEvent::FskId(id) => eprintln!("fsk id: {id}"),
                 SstvEvent::UnsupportedMode { code, name } => {
                     eprintln!("unsupported VIS ${code:02X} ({name:?})");

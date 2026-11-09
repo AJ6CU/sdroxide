@@ -5,6 +5,7 @@
 //! saving as you type: a half-typed host or password would otherwise be tried
 //! with the next picture.
 
+use crate::i18n::{Tr, tr};
 use eframe::egui::{self, Color32, ComboBox, RichText};
 use sdroxide_types::{
     Command, FtpSecurity, PictureUploadConfig, PictureUploadStatus, TlsVerify, UploadFormat,
@@ -37,29 +38,32 @@ impl crate::app::SdroxideApp {
         edit: &mut PictureUploadConfig,
         apply: &mut bool,
     ) {
-        net_heading(ui, "Received pictures → FTP");
+        net_heading(ui, &tr!("settings-picup-received-pictures-ftp"));
         note(
             ui,
-            "Uploads every received SSTV picture (and, if ticked, every weather chart) as it is \
-             saved, laid out the way QSSTV does it so web pages written for QSSTV work unchanged.",
+            &tr!("settings-picup-uploads-every-received-sstv-picture"),
             crate::theme::gray(140),
         );
-        crate::chrome::checkbox(ui, &mut edit.enabled, "Upload received pictures");
+        crate::chrome::checkbox(
+            ui,
+            &mut edit.enabled,
+            tr!("settings-picup-upload-received-pictures"),
+        );
 
         ui.add_enabled_ui(edit.enabled, |ui| {
-            net_row(ui, "Server", &mut edit.host, 200.0);
+            net_row(ui, &tr!("settings-picup-server"), &mut edit.host, 200.0);
             ui.horizontal(|ui| {
-                ui.add_sized([96.0, 22.0], egui::Label::new("Port"));
+                ui.add_sized([96.0, 22.0], egui::Label::new(tr!("settings-picup-port")));
                 ui.add(egui::DragValue::new(&mut edit.port).range(1..=65535));
             });
             ui.horizontal(|ui| {
-                ui.add_sized([96.0, 22.0], egui::Label::new("Security"));
+                ui.add_sized([96.0, 22.0], egui::Label::new(tr!("settings-picup-security")));
                 let before = edit.security;
                 ComboBox::from_id_salt("picup_security")
-                    .selected_text(edit.security.label())
+                    .selected_text(edit.security.tr())
                     .show_styled(ui, |ui| {
                         for s in FtpSecurity::ALL {
-                            ui.selectable_value(&mut edit.security, s, s.label());
+                            ui.selectable_value(&mut edit.security, s, s.tr());
                         }
                     });
                 // Follow the change of convention, but only from the port
@@ -68,17 +72,17 @@ impl crate::app::SdroxideApp {
                     edit.port = edit.security.default_port();
                 }
             });
-            net_row(ui, "User", &mut edit.user, 160.0);
-            net_secret(ui, "Password", &mut edit.password, 160.0);
+            net_row(ui, &tr!("settings-picup-user"), &mut edit.user, 160.0);
+            net_secret(ui, &tr!("settings-picup-password"), &mut edit.password, 160.0);
 
             if edit.security.is_tls() {
                 ui.horizontal(|ui| {
-                    ui.add_sized([96.0, 22.0], egui::Label::new("Certificate"));
+                    ui.add_sized([96.0, 22.0], egui::Label::new(tr!("settings-picup-certificate")));
                     ComboBox::from_id_salt("picup_verify")
-                        .selected_text(edit.verify.label())
+                        .selected_text(edit.verify.tr())
                         .show_styled(ui, |ui| {
                             for v in TlsVerify::ALL {
-                                ui.selectable_value(&mut edit.verify, v, v.label());
+                                ui.selectable_value(&mut edit.verify, v, v.tr());
                             }
                         });
                 });
@@ -86,12 +90,14 @@ impl crate::app::SdroxideApp {
                     TlsVerify::System => {
                         note(
                             ui,
-                            "Trusted when this computer's operating system trusts it, as a \
-                             browser here would. A private CA can be added below (PEM).",
+                            &tr!("settings-picup-trusted-when-computer-s-operating"),
                             crate::theme::gray(140),
                         );
                         ui.horizontal(|ui| {
-                            ui.add_sized([96.0, 22.0], egui::Label::new("Extra CA"));
+                            ui.add_sized(
+                                [96.0, 22.0],
+                                egui::Label::new(tr!("settings-picup-extra-ca")),
+                            );
                             crate::chrome::field(
                                 ui,
                                 egui::TextEdit::multiline(&mut edit.extra_ca_pem)
@@ -106,22 +112,20 @@ impl crate::app::SdroxideApp {
                         net_row(ui, "SHA-256", &mut edit.pinned_sha256, 320.0);
                         note(
                             ui,
-                            "Only the certificate with this fingerprint is accepted — the way \
-                             to trust a self-signed server. TEST shows the server's.",
+                            &tr!("settings-picup-only-certificate-fingerprint-accepted-way"),
                             crate::theme::gray(140),
                         );
                     }
                     TlsVerify::Off => note(
                         ui,
-                        "⚠ Any certificate is accepted. The link is encrypted, but anyone in \
-                         the path can pose as the server and read the password.",
+                        &tr!("settings-picup-any-certificate-accepted-link-encrypted"),
                         RED,
                     ),
                 }
             } else {
                 note(
                     ui,
-                    "⚠ Plain FTP sends the password and the pictures unencrypted.",
+                    &tr!("settings-picup-plain-ftp-sends-password-pictures"),
                     crate::theme::YELLOW(),
                 );
             }
@@ -129,37 +133,42 @@ impl crate::app::SdroxideApp {
             ui.add_space(4.0);
             ui.horizontal(|ui| {
                 ui.add_sized([96.0, 22.0], egui::Label::new(""));
-                crate::chrome::checkbox(ui, &mut edit.upload_sstv, "SSTV");
+                crate::chrome::checkbox(ui, &mut edit.upload_sstv, tr!("settings-picup-sstv"));
             });
             ui.add_enabled_ui(edit.upload_sstv, |ui| {
-                net_row(ui, "SSTV dir", &mut edit.sstv_dir, 200.0);
+                net_row(ui, &tr!("settings-picup-sstv-dir"), &mut edit.sstv_dir, 200.0);
             });
             ui.horizontal(|ui| {
                 ui.add_sized([96.0, 22.0], egui::Label::new(""));
-                crate::chrome::checkbox(ui, &mut edit.upload_wefax, "Weather fax");
+                crate::chrome::checkbox(
+                    ui,
+                    &mut edit.upload_wefax,
+                    tr!("settings-picup-weather-fax"),
+                );
             });
             ui.add_enabled_ui(edit.upload_wefax, |ui| {
-                net_row(ui, "WEFAX dir", &mut edit.wefax_dir, 200.0);
+                net_row(ui, &tr!("settings-picup-wefax-dir"), &mut edit.wefax_dir, 200.0);
             });
-            note(ui, "Empty is the login directory.", crate::theme::gray(140));
+            note(ui, &tr!("settings-picup-empty-login-directory"), crate::theme::gray(140));
 
             ui.add_space(4.0);
             ui.horizontal(|ui| {
-                ui.add_sized([96.0, 22.0], egui::Label::new("File names"));
-                ComboBox::from_id_salt("picup_naming")
-                    .selected_text(edit.naming.label())
-                    .show_styled(ui, |ui| {
+                ui.add_sized([96.0, 22.0], egui::Label::new(tr!("settings-picup-file-names")));
+                ComboBox::from_id_salt("picup_naming").selected_text(edit.naming.tr()).show_styled(
+                    ui,
+                    |ui| {
                         for n in UploadNaming::ALL {
-                            ui.selectable_value(&mut edit.naming, n, n.label());
+                            ui.selectable_value(&mut edit.naming, n, n.tr());
                         }
-                    });
+                    },
+                );
                 if edit.naming == UploadNaming::Sequence {
-                    ui.label("keep");
+                    ui.label(tr!("settings-picup-keep"));
                     ui.add(egui::DragValue::new(&mut edit.keep_images).range(1..=999));
                 }
             });
             ui.horizontal(|ui| {
-                ui.add_sized([96.0, 22.0], egui::Label::new("Format"));
+                ui.add_sized([96.0, 22.0], egui::Label::new(tr!("settings-picup-format")));
                 ComboBox::from_id_salt("picup_format")
                     .selected_text(edit.format.label())
                     .show_styled(ui, |ui| {
@@ -168,27 +177,27 @@ impl crate::app::SdroxideApp {
                         }
                     });
                 if edit.naming == UploadNaming::Sequence {
-                    crate::chrome::checkbox(ui, &mut edit.add_extension, "add extension")
-                        .on_hover_text("image1.png rather than QSSTV's bare image1");
+                    crate::chrome::checkbox(
+                        ui,
+                        &mut edit.add_extension,
+                        tr!("settings-picup-add-extension"),
+                    )
+                    .on_hover_text(tr!("settings-picup-image1-png-rather-than-qsstv"));
                 }
             });
             ui.horizontal_wrapped(|ui| {
                 ui.add_sized([96.0, 22.0], egui::Label::new(""));
-                crate::chrome::checkbox(ui, &mut edit.stamp, "Caption bar").on_hover_text(
-                    "Time, frequency, mode and the sender's FSK ID across the top, as QSSTV \
-                     draws it. Only the uploaded copy is marked.",
-                );
-                crate::chrome::checkbox(ui, &mut edit.downscale, "Fit 960 × 768");
-                crate::chrome::checkbox(ui, &mut edit.heartbeat, "checknew.jpg").on_hover_text(
-                    "QSSTV's heartbeat: a tiny picture whose height is the minute, uploaded \
-                     beside each one, and made two pixels wide when the program closes.",
-                );
-                crate::chrome::checkbox(ui, &mut edit.passive_nat_workaround, "NAT workaround")
-                    .on_hover_text(
-                        "Ignore a private address in the server's passive-mode reply and use \
-                         the server's own — for a server behind NAT that does not know its \
-                         public address.",
-                    );
+                crate::chrome::checkbox(ui, &mut edit.stamp, tr!("settings-picup-caption-bar"))
+                    .on_hover_text(tr!("settings-picup-time-frequency-mode-sender-s"));
+                crate::chrome::checkbox(ui, &mut edit.downscale, tr!("settings-picup-fit-960-768"));
+                crate::chrome::checkbox(ui, &mut edit.heartbeat, "checknew.jpg")
+                    .on_hover_text(tr!("settings-picup-qsstv-s-heartbeat-tiny-picture"));
+                crate::chrome::checkbox(
+                    ui,
+                    &mut edit.passive_nat_workaround,
+                    tr!("settings-picup-nat-workaround"),
+                )
+                .on_hover_text(tr!("settings-picup-ignore-private-address-server-s"));
             });
         });
 
@@ -197,7 +206,7 @@ impl crate::app::SdroxideApp {
             if crate::chrome::chip_accent(
                 ui,
                 false,
-                RichText::new(" APPLY ").strong(),
+                RichText::new(tr!("settings-picup-apply")).strong(),
                 crate::theme::GREEN(),
                 crate::theme::INK_ON_CYAN(),
             )
@@ -208,19 +217,16 @@ impl crate::app::SdroxideApp {
             let waiting = self.picup_test_pending.is_some();
             let test = ui.add_enabled(
                 !waiting && edit.is_usable(),
-                egui::Button::new(RichText::new("TEST").size(11.0)),
+                egui::Button::new(RichText::new(tr!("settings-picup-test")).size(11.0)),
             );
             if test
-                .on_hover_text(
-                    "Connect with the settings above — applied or not — log in, and write and \
-                     delete a small file in each upload directory.",
-                )
+                .on_hover_text(tr!("settings-picup-connect-settings-above-applied-not"))
                 .clicked()
             {
                 cmds.push(Command::TestPictureUpload(Box::new(edit.clone())));
             }
             if waiting {
-                ui.label(RichText::new("checking…").size(11.0).weak());
+                ui.label(RichText::new(tr!("settings-picup-checking")).size(11.0).weak());
             }
         });
         if let Some(st) = self.picup_test.as_ref().filter(|_| self.picup_test_pending.is_none()) {
@@ -230,21 +236,17 @@ impl crate::app::SdroxideApp {
                     && sdroxide_types::normalize_fingerprint(&edit.pinned_sha256) == fp;
                 ui.horizontal_wrapped(|ui| {
                     ui.label(
-                        RichText::new(format!(
-                            "Server certificate SHA-256: {}",
-                            format_fingerprint(fp)
+                        RichText::new(tr!(
+                            "settings-picup-server-fingerprint",
+                            fingerprint = format_fingerprint(fp)
                         ))
                         .size(10.5)
                         .monospace(),
                     );
                     if !pinned
                         && ui
-                            .small_button("Trust this certificate")
-                            .on_hover_text(
-                                "Pin it: switch to \"Pinned fingerprint\" with this one. Check \
-                                 it against the server first — this is what the server said, \
-                                 not proof of who it is. Then APPLY.",
-                            )
+                            .small_button(tr!("settings-picup-trust-certificate"))
+                            .on_hover_text(tr!("settings-picup-pin-switch-pinned-fingerprint-one"))
                             .clicked()
                     {
                         edit.verify = TlsVerify::Pinned;
@@ -255,7 +257,7 @@ impl crate::app::SdroxideApp {
         }
         if let Some(st) = self.picup_last.as_ref() {
             ui.horizontal(|ui| {
-                ui.label(RichText::new("Last upload").size(11.0).weak());
+                ui.label(RichText::new(tr!("settings-picup-last-upload")).size(11.0).weak());
                 result_line(ui, st);
             });
         }

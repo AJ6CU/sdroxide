@@ -16,6 +16,7 @@
 //! 3. that a transceiver keyed at its own microphone is seen late, and what to
 //!    do about it.
 
+use crate::i18n::{Tr, tr};
 use eframe::egui::{self, Color32, ComboBox, RichText};
 use sdroxide_types::{
     FailSafe, RelayChannel, RelayConfig, RelayDevice, RelayFamily, RelayLink, RelayRole,
@@ -40,20 +41,19 @@ pub(in crate::app) fn settings_relay_tab(
     test: &mut Option<u8>,
 ) {
     ui.label(
-        RichText::new("Transmit/receive switch").size(14.0).strong().color(crate::theme::CYAN()),
+        RichText::new(tr!("settings-relay-transmit-receive-switch"))
+            .size(14.0)
+            .strong()
+            .color(crate::theme::CYAN()),
     );
     ui.add_space(4.0);
     if !seeded {
-        super::note(ui, "Waiting for the station's T/R switch configuration…");
+        super::note(ui, &tr!("settings-relay-waiting-station-s-t-r"));
         return;
     }
     super::note(
         ui,
-        "Closes a contact while this station transmits — to disconnect and ground the SDR's \
-             antenna input, and to key an amplifier or an outboard T/R relay in sequence with it. \
-             Works with the cheap USB relay boards (LCUS, KMtronic, Numato), with a serial \
-             RTS/DTR line into any interface that wants a PTT closure, and with anything else \
-             through a command hook.",
+        &tr!("settings-relay-closes-contact-while-station-transmits"),
     );
     ui.add_space(8.0);
 
@@ -63,10 +63,10 @@ pub(in crate::app) fn settings_relay_tab(
         .spacing([12.0, 6.0])
         .min_row_height(ui.spacing().interact_size.y)
         .show(ui, |ui| {
-            ui.label("Hardware");
+            ui.label(tr!("settings-relay-hardware"));
             ComboBox::from_id_salt("relay-link")
                 .width(260.0)
-                .selected_text(cfg.link.label())
+                .selected_text(cfg.link.tr())
                 .show_styled(ui, |ui| {
                     for l in [
                         RelayLink::Off,
@@ -77,7 +77,7 @@ pub(in crate::app) fn settings_relay_tab(
                         RelayLink::Gpio,
                         RelayLink::Command,
                     ] {
-                        if ui.selectable_label(cfg.link == l, l.label()).clicked() {
+                        if ui.selectable_label(cfg.link == l, l.tr()).clicked() {
                             cfg.link = l;
                         }
                     }
@@ -85,7 +85,7 @@ pub(in crate::app) fn settings_relay_tab(
             ui.end_row();
 
             if cfg.link == RelayLink::Serial {
-                ui.label("Board");
+                ui.label(tr!("settings-relay-board"));
                 ComboBox::from_id_salt("relay-family")
                     .width(260.0)
                     .selected_text(cfg.family.label())
@@ -99,16 +99,15 @@ pub(in crate::app) fn settings_relay_tab(
                     })
                     .response
                     .on_hover_text(
-                        "LCUS is the four-byte A0-command board sold under a dozen names; KMtronic \
-                     and Numato can also be asked what they are set to",
+                        tr!("settings-relay-lcus-four-byte-a0-command"),
                     );
                 ui.end_row();
             }
 
             if cfg.link.uses_serial_port() {
-                ui.label("Port");
+                ui.label(tr!("settings-relay-port"));
                 let shown = if cfg.serial.path.is_empty() {
-                    "— choose —".to_string()
+                    tr!("settings-relay-choose").to_string()
                 } else {
                     cfg.serial.path.clone()
                 };
@@ -129,9 +128,9 @@ pub(in crate::app) fn settings_relay_tab(
             }
 
             if cfg.link.uses_device_list() {
-                ui.label("Device");
+                ui.label(tr!("settings-relay-device"));
                 let shown = if cfg.device.is_empty() {
-                    "— choose —".to_string()
+                    tr!("settings-relay-choose").to_string()
                 } else {
                     devices
                         .iter()
@@ -153,29 +152,27 @@ pub(in crate::app) fn settings_relay_tab(
             }
 
             if cfg.link == RelayLink::Cm108 {
-                ui.label("GPIO pin");
+                ui.label(tr!("settings-relay-gpio-pin"));
                 ui.add(egui::DragValue::new(&mut cfg.cm108_pin).range(1..=8)).on_hover_text(
-                "Pin 3 on every homebrew plan and every commercial board — it is the one at the \
-                 end of the package that a wire can be tacked to. If the relay does not click, \
-                 the card is a clone that does not implement these pins at all.",
+                tr!("settings-relay-pin-3-every-homebrew-plan"),
             );
                 ui.end_row();
             }
 
             if cfg.link == RelayLink::Gpio {
-                ui.label("GPIO chip");
+                ui.label(tr!("settings-relay-gpio-chip"));
                 crate::chrome::field(
                     ui,
                     egui::TextEdit::singleline(&mut cfg.device)
                         .desired_width(260.0)
                         .hint_text("/dev/gpiochip0"),
                 )
-                .on_hover_text("Linux only. `gpiodetect` lists the chips on the machine.");
+                .on_hover_text(tr!("settings-relay-linux-only-gpiodetect-lists-chips"));
                 ui.end_row();
             }
 
             if cfg.link == RelayLink::Command {
-                ui.label("On transmit");
+                ui.label(tr!("settings-relay-transmit"));
                 crate::chrome::field(
                     ui,
                     egui::TextEdit::singleline(&mut cfg.tx_cmd)
@@ -183,7 +180,7 @@ pub(in crate::app) fn settings_relay_tab(
                         .hint_text("usbrelay 1_1=1"),
                 );
                 ui.end_row();
-                ui.label("On receive");
+                ui.label(tr!("settings-relay-receive"));
                 crate::chrome::field(
                     ui,
                     egui::TextEdit::singleline(&mut cfg.rx_cmd)
@@ -196,7 +193,7 @@ pub(in crate::app) fn settings_relay_tab(
 
     if cfg.link == RelayLink::Off {
         ui.add_space(8.0);
-        super::note(ui, "Nothing is switched.");
+        super::note(ui, &tr!("settings-relay-nothing-switched"));
         ui.add_space(8.0);
         apply_button(ui, apply);
         return;
@@ -206,20 +203,17 @@ pub(in crate::app) fn settings_relay_tab(
         ui.add_space(4.0);
         super::note(
             ui,
-            "Starting a program costs an unpredictable amount of time, and none of it is \
-                 counted in the lead — so leave a wider margin here than you would for a relay \
-                 board. The contact table's numbers mean nothing for this link: your commands \
-                 are run once on key-down and once on key-up.",
+            &tr!("settings-relay-starting-program-costs-unpredictable-amount"),
         );
     }
 
     // ── the channels ────────────────────────────────────────────────────────
     ui.add_space(10.0);
-    ui.label(RichText::new("Contacts").strong());
+    ui.label(RichText::new(tr!("settings-relay-contacts")).strong());
     ui.end_row();
     ui.add_space(4.0);
     if cfg.link == RelayLink::SerialLines {
-        super::note(ui, "Contact 1 is RTS and contact 2 is DTR.");
+        super::note(ui, &tr!("settings-relay-contact-1-rts-contact-2"));
         ui.add_space(4.0);
     }
     let busy = status.keyed;
@@ -240,15 +234,15 @@ pub(in crate::app) fn settings_relay_tab(
     let mut remove: Option<usize> = None;
     let cols = if gpio { 8 } else { 7 };
     egui::Grid::new("relay-channels").num_columns(cols).spacing([10.0, 6.0]).show(ui, |ui| {
-        super::note(ui, "No.");
+        super::note(ui, &tr!("settings-relay-no"));
         if gpio {
-            super::note(ui, "GPIO");
+            super::note(ui, &tr!("settings-relay-gpio"));
         }
-        super::note(ui, "Name");
-        super::note(ui, "Job");
-        super::note(ui, "TX closes");
-        super::note(ui, "Lead");
-        super::note(ui, "Hold");
+        super::note(ui, &tr!("settings-relay-name"));
+        super::note(ui, &tr!("settings-relay-job"));
+        super::note(ui, &tr!("settings-relay-tx-closes"));
+        super::note(ui, &tr!("settings-relay-lead"));
+        super::note(ui, &tr!("settings-relay-hold"));
         ui.label("");
         ui.end_row();
 
@@ -263,10 +257,8 @@ pub(in crate::app) fn settings_relay_tab(
                 // after it is added.
                 match lines.get_mut(usize::from(ch.index).saturating_sub(1)) {
                     Some(line) => {
-                        ui.add(egui::DragValue::new(line).range(0..=255)).on_hover_text(
-                            "The line's offset on this chip — the BCM number on a Raspberry Pi \
-                             header, which is not the physical pin number",
-                        );
+                        ui.add(egui::DragValue::new(line).range(0..=255))
+                            .on_hover_text(tr!("settings-relay-line-s-offset-chip-bcm"));
                     }
                     None => {
                         ui.label("");
@@ -277,11 +269,11 @@ pub(in crate::app) fn settings_relay_tab(
                 ui,
                 egui::TextEdit::singleline(&mut ch.label)
                     .desired_width(120.0)
-                    .hint_text("SDR antenna"),
+                    .hint_text(tr!("settings-relay-sdr-antenna")),
             );
             ComboBox::from_id_salt(("relay-role", i))
                 .width(180.0)
-                .selected_text(ch.role.label())
+                .selected_text(ch.role.tr())
                 .show_styled(ui, |ui| {
                     for r in [
                         RelayRole::SdrAntenna,
@@ -293,7 +285,7 @@ pub(in crate::app) fn settings_relay_tab(
                         if r == RelayRole::BandDecoder && !band_decoder_ok && ch.role != r {
                             continue;
                         }
-                        if ui.selectable_label(ch.role == r, r.label()).clicked() {
+                        if ui.selectable_label(ch.role == r, r.tr()).clicked() {
                             ch.role = r;
                             let (lead, hold) = r.default_timing();
                             ch.lead_ms = lead;
@@ -302,17 +294,11 @@ pub(in crate::app) fn settings_relay_tab(
                     }
                 })
                 .response
-                .on_hover_text(
-                    "Decides the default timings and what the log calls it — and, for a band \
-                     decoder, that the contact follows the band table below",
-                );
+                .on_hover_text(tr!("settings-relay-decides-default-timings-what-log"));
             let mut high = ch.active_high;
             if ui
                 .checkbox(&mut high, "")
-                .on_hover_text(
-                    "On: transmitting energises the coil. Off: transmitting releases it.\n\nThis \
-                     is a wiring decision before it is a setting — see the note below.",
-                )
+                .on_hover_text(tr!("settings-relay-transmitting-energises-coil-off-transmitting"))
                 .changed()
             {
                 ch.active_high = high;
@@ -320,45 +306,38 @@ pub(in crate::app) fn settings_relay_tab(
             let band_decoder = ch.role == RelayRole::BandDecoder;
             ui.add(egui::DragValue::new(&mut ch.lead_ms).range(0..=200).suffix(" ms"))
                 .on_hover_text(if band_decoder {
-                    "How long before RF this contact moves from its band's RX word to its TX \
-                     word. A retune moves it at once; this is for key-down, when a \
-                     transmit-only filter has to be in circuit before the power is."
+                    tr!("settings-relay-how-long-before-rf-contact")
                 } else {
-                    "Closed this long before RF. A small coax relay throws in 5 to 15 ms. \
-                     Transmit waits for the longest of these, so a large value is an audible \
-                     gap in the receive audio; anything over 250 ms is ignored."
+                    tr!("settings-relay-closed-long-before-rf-small")
                 });
             ui.add(egui::DragValue::new(&mut ch.hold_ms).range(0..=2000).suffix(" ms"))
                 .on_hover_text(if band_decoder {
-                    "How long after RF stops this contact goes back from its TX word to its \
-                     RX word."
+                    tr!("settings-relay-how-long-after-rf-stops")
                 } else {
-                    "Opened this long after RF stops. Longer than the lead on purpose: letting \
-                     the antenna back a moment late costs nothing, and letting it back early \
-                     costs a front end. Zero is a real answer, and the right one for an \
-                     amplifier's key line."
+                    tr!("settings-relay-opened-long-after-rf-stops")
                 });
             ui.horizontal(|ui| {
                 if crate::chrome::chip_accent_enabled(
                     ui,
                     !busy,
                     false,
-                    " TEST ",
+                    &tr!("settings-relay-test"),
                     None,
                     crate::theme::CYAN(),
                     crate::theme::INK_ON_CYAN(),
                 )
                 .on_hover_text(if busy {
-                    "Not while the station is on the air"
+                    tr!("settings-relay-not-while-station-air")
                 } else {
-                    "Close this contact for half a second, so you can hear the relay and check \
-                     the wiring with the transmitter cold"
+                    tr!("settings-relay-close-contact-half-second-so")
                 })
                 .clicked()
                 {
                     *test = Some(ch.index);
                 }
-                if count > 1 && ui.small_button("×").on_hover_text("Remove").clicked() {
+                if count > 1
+                    && ui.small_button("×").on_hover_text(tr!("settings-relay-remove")).clicked()
+                {
                     remove = Some(i);
                 }
             });
@@ -369,7 +348,7 @@ pub(in crate::app) fn settings_relay_tab(
         cfg.channels.remove(i);
     }
     ui.add_space(4.0);
-    if ui.small_button("+ add a contact").clicked() {
+    if ui.small_button(tr!("settings-relay-add-contact")).clicked() {
         let next = cfg.channels.iter().map(|c| c.index).max().unwrap_or(0).saturating_add(1);
         let (lead, hold) = RelayRole::Aux.default_timing();
         cfg.channels.push(RelayChannel {
@@ -389,22 +368,20 @@ pub(in crate::app) fn settings_relay_tab(
         .spacing([12.0, 6.0])
         .min_row_height(ui.spacing().interact_size.y)
         .show(ui, |ui| {
-            ui.label("If it will not answer");
+            ui.label(tr!("settings-relay-if-will-not-answer"));
             ComboBox::from_id_salt("relay-failsafe")
                 .width(260.0)
-                .selected_text(cfg.fail_safe.label())
+                .selected_text(cfg.fail_safe.tr())
                 .show_styled(ui, |ui| {
                     for f in [FailSafe::RefuseTx, FailSafe::WarnOnly] {
-                        if ui.selectable_label(cfg.fail_safe == f, f.label()).clicked() {
+                        if ui.selectable_label(cfg.fail_safe == f, f.tr()).clicked() {
                             cfg.fail_safe = f;
                         }
                     }
                 })
                 .response
                 .on_hover_text(
-                    "A switch that exists to protect a receiver is not worth having if it silently \
-                 stops protecting it — so refusing is the default. Choose the other where a \
-                 loose USB cable ending your contest is the worse outcome.",
+                    tr!("settings-relay-switch-exists-protect-receiver-not"),
                 );
             ui.end_row();
         });
@@ -415,26 +392,19 @@ pub(in crate::app) fn settings_relay_tab(
     ui.add_space(4.0);
     super::note(
         ui,
-        "The order is the timings: the longest lead closes first, and the longest hold opens \
-             last. So give the antenna relay the longer lead and the longer hold, and the \
-             amplifier the shorter of each — then the antenna is always switched before the \
-             amplifier is keyed, and the amplifier always unkeys before the antenna comes back.",
+        &tr!("settings-relay-order-timings-longest-lead-closes"),
     );
 
     relay_band_table(ui, cfg);
 
     // ── the transmit sense input ────────────────────────────────────────────
     ui.add_space(12.0);
-    ui.label(RichText::new("Transmit sense input").strong());
+    ui.label(RichText::new(tr!("settings-relay-transmit-sense-input")).strong());
     ui.end_row();
     ui.add_space(4.0);
     super::note(
         ui,
-        "When a transceiver keys itself — its own microphone button, foot switch, VOX or \
-             keyer — sdroxide finds out by asking over CAT, and that answer arrives a few \
-             hundred milliseconds into the over. Wire the rig's SEND line, through an \
-             opto-isolator, into a handshake input on this same port and it is seen in a few \
-             milliseconds instead. The meter and the transmit interlock get faster with it.",
+        &tr!("settings-relay-when-transceiver-keys-itself-own"),
     );
     ui.add_space(6.0);
     ui.add_enabled_ui(cfg.link.uses_serial_port(), |ui| {
@@ -443,13 +413,13 @@ pub(in crate::app) fn settings_relay_tab(
             .spacing([12.0, 6.0])
             .min_row_height(ui.spacing().interact_size.y)
             .show(ui, |ui| {
-                ui.label("Line");
+                ui.label(tr!("settings-relay-line"));
                 ComboBox::from_id_salt("relay-sense-line")
                     .width(260.0)
-                    .selected_text(cfg.sense.line.label())
+                    .selected_text(cfg.sense.line.tr())
                     .show_styled(ui, |ui| {
                         for l in [SenseLine::Off, SenseLine::Cts, SenseLine::Dsr, SenseLine::Dcd] {
-                            if ui.selectable_label(cfg.sense.line == l, l.label()).clicked() {
+                            if ui.selectable_label(cfg.sense.line == l, l.tr()).clicked() {
                                 cfg.sense.line = l;
                             }
                         }
@@ -457,13 +427,12 @@ pub(in crate::app) fn settings_relay_tab(
                 ui.end_row();
 
                 if cfg.sense.line != SenseLine::Off {
-                    ui.label("Transmitting is");
+                    ui.label(tr!("settings-relay-transmitting"));
                     let mut high = cfg.sense.active_high;
                     if ui
-                    .checkbox(&mut high, "a high line")
+                    .checkbox(&mut high, tr!("settings-relay-high-line"))
                     .on_hover_text(
-                        "Most opto-isolated interfaces pull the line down when the rig keys, so \
-                         this is usually off",
+                        tr!("settings-relay-most-opto-isolated-interfaces-pull"),
                     )
                     .changed()
                 {
@@ -471,53 +440,47 @@ pub(in crate::app) fn settings_relay_tab(
                 }
                     ui.end_row();
 
-                    ui.label("Belongs to radio");
+                    ui.label(tr!("settings-relay-belongs-radio"));
                     ui.add(
                     egui::DragValue::new(&mut cfg.sense.radio)
                         .range(0..=15)
                         .custom_formatter(|n, _| format!("{}", n as u32 + 1)),
                 )
                 .on_hover_text(
-                    "Which radio tab the sensed transceiver is. On a station with one radio this \
-                     is 1 and nothing depends on it.",
+                    tr!("settings-relay-which-radio-tab-sensed-transceiver"),
                 );
                     ui.end_row();
                 }
             });
     });
     if !cfg.link.uses_serial_port() {
-        super::note(ui, "Needs a serial port — the handshake lines are on it.");
+        super::note(ui, &tr!("settings-relay-needs-serial-port-handshake-lines"));
     }
 
     // ── the two things that are not settings ────────────────────────────────
     ui.add_space(12.0);
     ui.label(
-        RichText::new("Wiring is the only fail-safe that survives this program.")
+        RichText::new(tr!("settings-relay-wiring-only-fail-safe-survives"))
             .strong()
             .color(WARN),
     );
     super::note(
         ui,
-        "Choose “TX closes” so that the *de-energised* contact is the state you want when \
-             the board is unplugged, the computer is off, or sdroxide is not running. Wired so \
-             that de-energised means grounded, a dead relay leaves the SDR deaf — annoying, and \
-             safe. Wired the other way, a dead relay plus one transmission is a dead front end. \
-             With a real amplifier behind it, take the first.",
+        &tr!("settings-relay-choose-tx-closes-so-de"),
     );
+    ui.label(RichText::new(tr!("settings-relay-choose-tx-closes-so-de")).weak());
     ui.add_space(6.0);
     super::note(
         ui,
-        "This cannot protect the first instant of an over you start at the radio. Key the \
-             rig from sdroxide and the contacts always lead the RF; wire the sense input above \
-             and they follow within milliseconds. For a front end genuinely worth protecting, \
-             use an RF-sensed hardware T/R switch as well — no program on a computer can be the \
-             whole answer.",
+        &tr!("settings-relay-cannot-protect-first-instant-over"),
     );
 
     // ── status and apply ────────────────────────────────────────────────────
     ui.add_space(10.0);
     if let Some(why) = cfg.refusal() {
-        ui.label(RichText::new(format!("Not usable yet: {why}")).color(WARN));
+        ui.label(
+            RichText::new(tr!("settings-relay-not-usable", why = why.to_string())).color(WARN),
+        );
     } else if let Some(e) = status.error.as_ref() {
         ui.label(RichText::new(format!("● {e}")).color(BAD));
     } else if status.configured && status.present {
@@ -525,22 +488,23 @@ pub(in crate::app) fn settings_relay_tab(
             RichText::new(format!(
                 "● {} — {}",
                 status.describe,
-                if status.keyed { "contacts in TRANSMIT" } else { "receiving" }
+                if status.keyed {
+                    tr!("settings-relay-contacts-transmit")
+                } else {
+                    tr!("settings-relay-receiving")
+                }
             ))
             .color(GOOD),
         );
     } else if status.configured {
-        super::note(ui, "Not open.");
+        super::note(ui, &tr!("settings-relay-not-open"));
     } else {
-        super::note(ui, "Status unknown — press APPLY.");
+        super::note(ui, &tr!("settings-relay-status-unknown-press-apply"));
     }
 
     ui.add_space(8.0);
     if busy {
-        ui.label(
-            RichText::new("The station is on the air — APPLY will take effect after this over.")
-                .color(WARN),
-        );
+        ui.label(RichText::new(tr!("settings-relay-station-air-apply-will-take")).color(WARN));
         ui.add_space(4.0);
     }
     apply_button(ui, apply);
@@ -569,17 +533,14 @@ fn relay_band_table(ui: &mut egui::Ui, cfg: &mut RelayConfig) {
     ui.separator();
     ui.end_row();
     ui.add_space(4.0);
-    ui.label(RichText::new("Band decoder outputs").size(14.0).strong().color(crate::theme::CYAN()));
+    ui.label(RichText::new(tr!("settings-relay-band-decoder-outputs")).size(14.0).strong().color(crate::theme::CYAN()));
     ui.add_space(2.0);
     super::note(
         ui,
-        "One control word per band: bit 0 is contact 1, bit 1 contact 2 and so on, matching \
-             the numbering above. RX follows the receive dial's band; TX the band of whichever \
-             radio keyed, switched in on each contact's lead before RF and back after its hold \
-             — give them the same value for a filter that does not care which way the RF is \
-             going, and different ones for a receive-only preamp bypass or a transmit-only LPF \
-             bank. Bands left at 0 assert nothing. Applies on Apply / reconnect.",
+        &tr!("settings-relay-one-control-word-per-band"),
     );
+    ui.add_space(2.0);
+    ui.label(RichText::new(tr!("settings-relay-one-control-word-per-band")).weak());
     ui.add_space(6.0);
 
     let bands: Vec<sdroxide_types::Band> = sdroxide_types::Band::ALL
@@ -593,7 +554,7 @@ fn relay_band_table(ui: &mut egui::Ui, cfg: &mut RelayConfig) {
         .min_row_height(ui.spacing().interact_size.y)
         .striped(true)
         .show(ui, |ui| {
-            for h in ["Band", "RX", "TX", "Outputs asserted"] {
+            for h in [tr!("settings-relay-band"), tr!("settings-relay-rx"), tr!("settings-relay-tx"), tr!("settings-relay-outputs-asserted")] {
                 ui.label(RichText::new(h).weak().size(10.0));
             }
             ui.end_row();
@@ -603,10 +564,9 @@ fn relay_band_table(ui: &mut egui::Ui, cfg: &mut RelayConfig) {
                     .map(|i| (cfg.band_table[i].rx_mask, cfg.band_table[i].tx_mask))
                     .unwrap_or((0, 0));
                 if band == sdroxide_types::Band::Gen {
-                    ui.label("Other").on_hover_text(
-                        "Everywhere outside the amateur bands — short-wave listening, and \
-                         anything a transverter's dial lands on that no band covers.",
-                    );
+                    ui.label(tr!("settings-relay-other")).on_hover_text(tr!(
+                        "settings-relay-everywhere-outside-amateur-bands-short"
+                    ));
                 } else {
                     ui.label(band.label());
                 }
@@ -663,18 +623,22 @@ fn decoder_channels_asserted(decoders: &[(u8, String)], rx: u32, tx: u32) -> Str
             .collect();
         if names.is_empty() { "—".into() } else { names.join(", ") }
     };
-    if rx == tx { list(rx) } else { format!("{} / TX {}", list(rx), list(tx)) }
+    if rx == tx {
+        list(rx)
+    } else {
+        tr!("settings-relay-rx-tx-words", rx = list(rx), tx = list(tx))
+    }
 }
 
 fn apply_button(ui: &mut egui::Ui, apply: &mut bool) {
     if crate::chrome::chip_accent(
         ui,
         false,
-        RichText::new(" APPLY ").strong(),
+        RichText::new(tr!("settings-relay-apply")).strong(),
         crate::theme::GREEN(),
         crate::theme::INK_ON_CYAN(),
     )
-    .on_hover_text("Persist and (re)open the switch")
+    .on_hover_text(tr!("settings-relay-persist-re-open-switch"))
     .clicked()
     {
         *apply = true;

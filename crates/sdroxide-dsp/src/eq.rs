@@ -251,6 +251,59 @@ impl Default for ParametricEq {
     }
 }
 
+/// The receive CW peak filter (APF): one peaking bell on the demodulated
+/// audio, centred on the CW pitch — the mid band of [`ParametricEq`], on the
+/// receive side.
+///
+/// **Retuned only when a number changes.** A bell this narrow rings for a few
+/// milliseconds when its coefficients move, so recomputing them every block
+/// would click on every frame of a drag. [`Self::configure`] keeps the last
+/// setting and goes through [`Biquad::set`], which keeps the delay line, only
+/// when the centre, width, gain or rate is different.
+pub struct CwPeakFilter {
+    bell: Biquad,
+    /// Centre, width, gain and rate the coefficients were last made from, by
+    /// bit pattern: "nothing changed" means the same numbers, not close ones.
+    tuned: Option<(u32, u32, u32, u64)>,
+}
+
+impl CwPeakFilter {
+    pub fn new() -> Self {
+        CwPeakFilter { bell: Biquad::new(), tuned: None }
+    }
+
+    /// Tune the bell to `centre_hz`, `width_hz` wide, lifting by `gain_db`,
+    /// at `rate` Hz. A no-op when nothing has changed since the last call.
+    pub fn configure(&mut self, centre_hz: f32, width_hz: f32, gain_db: f32, rate: f64) {
+        let want = (centre_hz.to_bits(), width_hz.to_bits(), gain_db.to_bits(), rate.to_bits());
+        if self.tuned == Some(want) {
+            return;
+        }
+        self.tuned = Some(want);
+        let q = f64::from(centre_hz) / f64::from(width_hz.max(1.0));
+        self.bell.set(Coeffs::peaking(f64::from(centre_hz), f64::from(gain_db), q, rate));
+    }
+
+    /// Forget the delay line, so a filter switched back on does not ring out
+    /// whatever it last heard.
+    pub fn reset(&mut self) {
+        self.bell.reset();
+    }
+
+    /// Run `audio` through the bell in place.
+    pub fn process(&mut self, audio: &mut [f32]) {
+        for s in audio.iter_mut() {
+            *s = self.bell.process(*s);
+        }
+    }
+}
+
+impl Default for CwPeakFilter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -283,6 +336,43 @@ mod tests {
 
     fn flat_state() -> TxEqState {
         TxEqState::default()
+    }
+
+    /// The CW peak lifts the pitch by its gain and leaves a neighbour 300 Hz
+    /// away all but alone — measured in the second half, once the bell has
+    /// settled.
+    #[test]
+    fn the_cw_peak_lifts_the_pitch_and_not_its_neighbours() {
+        let rate = 12_000.0;
+        let n = 12_000;
+        for (freq, lo, hi) in [(700.0, 11.5, 12.5), (1000.0, -0.5, 0.5), (400.0, -0.5, 0.5)] {
+            let src = tone(rate, freq, 0.1, n);
+            let mut out = src.clone();
+            let mut peak = CwPeakFilter::new();
+            peak.configure(700.0, 50.0, 12.0, rate);
+            peak.process(&mut out);
+            let db = 10.0
+                * (goertzel(&out[n / 2..], freq, rate) / goertzel(&src[n / 2..], freq, rate))
+                    .log10();
+            assert!((lo..=hi).contains(&db), "{freq} Hz moved {db:.2} dB");
+        }
+    }
+
+    /// The same setting twice leaves the coefficients alone, and a new one
+    /// keeps the delay line: retuning mid-signal does not restart the filter.
+    #[test]
+    fn the_cw_peak_retunes_only_on_a_change_and_keeps_its_history() {
+        let mut peak = CwPeakFilter::new();
+        peak.configure(700.0, 100.0, 6.0, 12_000.0);
+        let tuned = peak.tuned;
+        peak.configure(700.0, 100.0, 6.0, 12_000.0);
+        assert_eq!(peak.tuned, tuned);
+        let mut a = tone(12_000.0, 700.0, 0.1, 256);
+        peak.process(&mut a);
+        let history = (peak.bell.x1, peak.bell.y1);
+        peak.configure(700.0, 60.0, 6.0, 12_000.0);
+        assert_ne!(peak.tuned, tuned);
+        assert_eq!((peak.bell.x1, peak.bell.y1), history, "retuning cleared the delay line");
     }
 
     #[test]

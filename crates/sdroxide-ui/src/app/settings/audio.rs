@@ -24,6 +24,7 @@ use eframe::egui::{self, ComboBox, RichText};
 
 use super::general::{device_field, settings_rx_audio_gain};
 use crate::app::SdroxideApp;
+use crate::i18n::{Tr as _, tr};
 use crate::chrome::StyledCombo as _;
 use crate::theme::gray;
 
@@ -75,23 +76,20 @@ fn is_machine_default_device(_name: &str, _output: bool) -> bool {
 /// So it says what happened and gives the way back. A control that changes
 /// something outside itself without saying so is this fork's own bug class.
 fn sound_server_takes_over(ui: &mut egui::Ui, what: &str, device: &str, output: bool) {
-    let direction = if output { "playback" } else { "recording" };
-    let text = format!(
-        "**This {what} is a sound-server device, not a sound card.** Using it also makes it the \
-         {direction} device for *everything else* on this computer — other programs will record \
-         from it too. PipeWire has no way for one program to pick its own capture source, so \
-         this is unavoidable. To change it: pick a sound card, or set the machine's default back \
-         (`wpctl set-default <name>`) and rescan."
-    );
+    let device = device.to_string();
+    let warning = match (what, output) {
+        ("speakers", _) => tr!("settings-audio-takes-over-speakers"),
+        _ => tr!("settings-audio-takes-over-microphone"),
+    };
     ui.add(
         egui::Label::new(
-            RichText::new(format!("⚠  Currently chosen: {device}"))
+            RichText::new(tr!("settings-audio-currently-chosen", device = device))
                 .size(10.5)
                 .color(egui::Color32::from_rgb(220, 170, 40)),
         )
         .wrap(),
     );
-    note(ui, &text);
+    note(ui, &warning);
 }
 
 /// Which sound-card rows this radio has, and which way they run.
@@ -184,10 +182,8 @@ impl SdroxideApp {
     ) {
         section(
             ui,
-            "Your audio",
-            "The speakers you listen on and the microphone your voice goes out through. These \
-             belong to this machine rather than to any radio, so they are the same whichever \
-             radio you are working.",
+            &tr!("settings-audio-your-audio"),
+            &tr!("settings-audio-your-audio-why"),
         );
 
         let Some(devs) = &self.audio_devices else {
@@ -198,17 +194,15 @@ impl SdroxideApp {
             // nothing.
             note(
                 ui,
-                "Sound devices are chosen in the browser here, not in this window — the page asks \
-                 your browser for the speakers and the microphone. Your station's own \
-                 sound-card settings, further down this page, still apply.",
+                &tr!("settings-audio-browser-note"),
             );
             return;
         };
 
         let mut out = devs.selected_output.clone();
         let out_chosen = out.clone();
-        field(ui, "Speakers", |ui| {
-            device_field(ui, "a-your-out", &devs.outputs, &mut out, "your speakers");
+        field(ui, &tr!("settings-audio-speakers"), |ui| {
+            device_field(ui, "a-your-out", &devs.outputs, &mut out, "speakers");
         });
         if out != devs.selected_output {
             *audio_pick = Some((true, out));
@@ -219,20 +213,19 @@ impl SdroxideApp {
             }
         }
 
-        field(ui, "Channels", |ui| {
+        field(ui, &tr!("settings-general-channels"), |ui| {
             let mut routing = devs.routing;
             ComboBox::from_id_salt("a-your-routing")
                 .width(200.0)
-                .selected_text(routing.label())
+                .selected_text(routing.tr())
                 .show_styled(ui, |ui| {
                     for r in sdroxide_types::AudioRouting::ALL {
-                        ui.selectable_value(&mut routing, r, r.label());
+                        ui.selectable_value(&mut routing, r, r.tr());
                     }
                 })
                 .response
                 .on_hover_text(
-                    "Which speaker channel(s) the received audio reaches. Left or right silences \
-                     the other, for hearing on one side only.",
+                    tr!("settings-audio-channels-hint"),
                 );
             if routing != devs.routing {
                 *routing_pick = Some(routing);
@@ -240,8 +233,8 @@ impl SdroxideApp {
         });
 
         let mut mic = devs.selected_input.clone();
-        field(ui, "Microphone", |ui| {
-            device_field(ui, "a-your-in", &devs.inputs, &mut mic, "your microphone");
+        field(ui, &tr!("elad-tx-input-mic"), |ui| {
+            device_field(ui, "a-your-in", &devs.inputs, &mut mic, "microphone");
         });
         let mic_chosen = mic.clone();
         if mic != devs.selected_input {
@@ -255,9 +248,7 @@ impl SdroxideApp {
 
         note(
             ui,
-            "The microphone is what carries your voice out when the rig is keyed by sound (MCW) \
-             or by VOX. If your rig keys itself from CAT instead, the microphone is not used \
-             for transmit at all and this row changes nothing.",
+            &tr!("settings-audio-microphone-note"),
         );
     }
 
@@ -281,31 +272,25 @@ impl SdroxideApp {
         let Some(cfg) = radio_edit.as_mut() else { return };
         section(
             ui,
-            "Stream the audio out",
-            "Send what this radio receives to another program over the network \
-             — a decoder, a recorder, a second machine — without going through \
-             a sound card.",
+            &tr!("settings-audio-stream-out"),
+            &tr!("settings-audio-stream-out-why"),
         );
         ui.horizontal(|ui| {
-            ui.label(RichText::new("Send to").strong());
+            ui.label(RichText::new(tr!("settings-servers-send")).strong());
             ui.end_row();
             crate::chrome::field(
                 ui,
                 egui::TextEdit::singleline(&mut cfg.udp_audio)
                     .desired_width(150.0)
-                    .hint_text("off"),
+                    .hint_text(tr!("topbar-off")),
             )
             .on_hover_text(
-                "`host:port`. Mono, 16-bit, at the receive rate, one datagram per audio block, \
-                 and it is the **recording tap's** audio: the AF volume, MUTE and transmitting \
-                 do not affect it, because an external decoder wants the radio and not your \
-                 headphone level.\n\nA numeric address, not a hostname. Empty is off.",
+                tr!("settings-audio-send-to-hint"),
             );
         });
         note(
             ui,
-            "`127.0.0.1:7355` sends it to another program on this computer; this machine's own \
-             address sends it over the network.",
+            &tr!("settings-audio-send-to-note"),
         );
     }
 
@@ -324,10 +309,8 @@ impl SdroxideApp {
 
         section(
             ui,
-            "This radio's audio",
-            "The sound card between this radio and this computer. It belongs to the radio and \
-             not to the machine: two radios here can share the computer and still need different \
-             cards, so these settings stay with the radio you opened Settings from.",
+            &tr!("settings-audio-radio-audio"),
+            &tr!("settings-audio-radio-audio-why"),
         );
 
         let cards = self
@@ -338,8 +321,7 @@ impl SdroxideApp {
         if cards.is_none() {
             super::note_rich(
                 ui,
-                "This machine has not reported its sound cards yet. The names can still be \
-                     typed below; a list appears once the devices have been asked for.",
+                &tr!("settings-audio-no-cards-yet"),
                 Some(10.5),
                 None,
             );
@@ -352,13 +334,9 @@ impl SdroxideApp {
         // safe to press while receiving.
         crate::app::settings::radio::probe_only(ui, can_probe, |ui| {
             if ui
-                .button("Rescan sound cards")
+                .button(tr!("settings-audio-rescan"))
                 .on_hover_text(
-                    "Ask the machine again which sound cards it has. Nothing is opened, so this \
-                     is safe to press while receiving.\n\nUse it after plugging a codec in. It \
-                     does not re-open the radio — that is Apply / reconnect on the Radio tab — \
-                     and it cannot repair a card the sound server has renamed, which is reported \
-                     on the radio instead.",
+                    tr!("settings-audio-rescan-hint"),
                 )
                 .clicked()
             {
@@ -368,8 +346,8 @@ impl SdroxideApp {
 
         if has_rx {
             let mut rx = cfg.radio_audio_in.clone();
-            field(ui, "From the radio", |ui| {
-                device_field(ui, "a-radio-in", inputs, &mut rx, "this radio's receive audio");
+            field(ui, &tr!("settings-audio-from-radio"), |ui| {
+                device_field(ui, "a-radio-in", inputs, &mut rx, "radio-rx");
             });
             if rx != cfg.radio_audio_in {
                 cfg.radio_audio_in = rx;
@@ -377,12 +355,42 @@ impl SdroxideApp {
         }
         if has_tx {
             let mut tx = cfg.radio_audio_out.clone();
-            field(ui, "To the radio", |ui| {
-                device_field(ui, "a-radio-out", outputs, &mut tx, "this radio's transmit audio");
+            field(ui, &tr!("settings-audio-to-radio"), |ui| {
+                device_field(ui, "a-radio-out", outputs, &mut tx, "radio-tx");
             });
             if tx != cfg.radio_audio_out {
                 cfg.radio_audio_out = tx;
             }
+            // Mixer level for the radio's TX audio device, so a USB interface
+            // (SS9900v) is loud enough to trigger its VOX. Only meaningful for
+            // an ALSA card; a no-op elsewhere.
+            let mut out_level = cfg.radio_audio_out_level.unwrap_or(80);
+            field(ui, &tr!("settings-audio-radio-out-level"), |ui| {
+                let resp = ui.add(egui::Slider::new(&mut out_level, 0..=100).suffix("%"));
+                if resp.changed() {
+                    cfg.radio_audio_out_level = Some(out_level);
+                    #[cfg(not(target_arch = "wasm32"))]
+                    if let Some(name) = cfg.radio_audio_out.as_deref() {
+                        sdroxide_audio::set_mixer_level(name, true, out_level);
+                    }
+                }
+                resp.on_hover_text(tr!("settings-audio-radio-out-level-hint"));
+            });
+        }
+
+        if has_rx {
+            let mut in_level = cfg.radio_audio_in_level.unwrap_or(80);
+            field(ui, &tr!("settings-audio-radio-in-level"), |ui| {
+                let resp = ui.add(egui::Slider::new(&mut in_level, 0..=100).suffix("%"));
+                if resp.changed() {
+                    cfg.radio_audio_in_level = Some(in_level);
+                    #[cfg(not(target_arch = "wasm32"))]
+                    if let Some(name) = cfg.radio_audio_in.as_deref() {
+                        sdroxide_audio::set_mixer_level(name, false, in_level);
+                    }
+                }
+                resp.on_hover_text(tr!("settings-audio-radio-in-level-hint"));
+            });
         }
 
         if has_rx {
@@ -391,10 +399,7 @@ impl SdroxideApp {
 
         note(
             ui,
-            "**From the radio** is what your rig sends out — a USB sound output, or a receiver's \
-             headphone socket into a sound card's line input. **To the radio** is what the rig \
-             listens to for your voice, and is also how the program keys a rig by sound: leave \
-             it empty and the rig's own microphone is used, if it has one.",
+            &tr!("settings-audio-radio-note"),
         );
     }
 
@@ -410,8 +415,8 @@ impl SdroxideApp {
         // lines apart.
         section(
             ui,
-            "Recording",
-            "Where audio recordings, scheduled recordings and raw I/Q captures are written.",
+            &tr!("settings-audio-recording"),
+            &tr!("settings-audio-recording-why"),
         );
         self.settings_recordings_dir(ui, choose, reset);
     }

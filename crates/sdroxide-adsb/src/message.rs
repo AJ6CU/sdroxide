@@ -29,10 +29,33 @@
 //! **The metric altitude encoding** (AC with its M bit set), for the same
 //! reason: it is provided for in the standard and used by nothing.
 //!
-//! **Target state and status (TC 29) and operational status (TC 31).** They
-//! carry selected altitude, autopilot modes and integrity figures — real
-//! information, but none of it belongs on a target list, and every field would
-//! be another thing claimed without a way to check it.
+//! **Comm-B replies (DF 20/21).** Their 56-bit payload says which register it
+//! holds only by inference, and the registers that would give indicated
+//! airspeed, Mach, roll and wind (BDS 5,0 and 6,0) are told apart from the
+//! others by plausibility checks. A wrong guess is a plausible wrong number, so
+//! none of it is read: DF 20/21 still give the altitude and the squawk, as
+//! before.
+//!
+//! # What the aircraft says about its own flight
+//!
+//! Three extended squitters carry it, each with a fixed layout, so nothing is
+//! inferred. Layouts from DO-260B, checked against the published example
+//! messages quoted in the tests:
+//!
+//! * **TC 29, subtype 1** — the selected altitude, selected heading and
+//!   barometric setting, the autopilot modes, and the accuracy figures. A
+//!   field whose "valid" marker is clear is absent, never zero. Subtype 0 (the
+//!   older layout) is not read.
+//! * **TC 31, subtypes 0 and 1** — the ADS-B version, and for version 1 and 2
+//!   the accuracy and integrity categories.
+//! * **TC 19, subtypes 3 and 4** — a heading and an airspeed (indicated or
+//!   true, by a flag) in place of the ground velocity. Never mixed with the
+//!   ground speed: they are separate values.
+//!
+//! A category of 0 means "unknown" in every one of these fields, and is
+//! reported as absent.
+
+use sdroxide_types::{NAV_ALT_HOLD, NAV_APPROACH, NAV_AUTOPILOT, NAV_LNAV, NAV_VNAV};
 
 /// The 56 bits of an extended squitter's message field, decoded.
 #[derive(Debug, Clone, PartialEq)]
@@ -48,9 +71,35 @@ pub enum Es {
         ground_speed_kt: Option<f32>,
         track_deg: Option<f32>,
         vertical_rate_fpm: Option<i32>,
+        /// Velocity accuracy category; `None` is "unknown".
+        nac_v: Option<u8>,
+    },
+    /// TC 19, subtypes 3 and 4: a heading and an airspeed instead of a ground
+    /// velocity.
+    Airspeed {
+        heading_deg: Option<f32>,
+        airspeed_kt: Option<f32>,
+        /// The airspeed is true rather than indicated.
+        true_airspeed: bool,
+        nac_v: Option<u8>,
     },
     /// TC 28: the squawk and whether anything is wrong.
     Status { squawk: Option<u16>, emergency: Option<&'static str> },
+    /// TC 29, subtype 1: what is set on the autopilot, and how good the
+    /// position is.
+    TargetState {
+        selected_altitude_ft: Option<i32>,
+        selected_heading_deg: Option<f32>,
+        qnh_hpa: Option<f32>,
+        nac_p: Option<u8>,
+        sil: Option<u8>,
+        /// The `NAV_*` bits; `None` when the aircraft says the mode bits are
+        /// not valid.
+        nav_modes: Option<u8>,
+    },
+    /// TC 31, subtypes 0 and 1: the ADS-B version and, from version 1 on, the
+    /// accuracy and integrity it claims.
+    OperationalStatus { version: u8, nac_p: Option<u8>, sil: Option<u8> },
     /// A type code this decoder does not read. Kept as a variant rather than
     /// dropped so the frame still counts as heard, which is what keeps an
     /// aircraft on the list between position reports.
@@ -190,6 +239,8 @@ fn decode_es(me: &[u8]) -> Es {
             cpr: Cpr { odd: bits(me, 21, 1) == 1, lat: bits(me, 22, 17), lon: bits(me, 39, 17) },
         },
         19 => velocity(me),
+        29 => target_state(me),
+        31 => operational_status(me),
         28 => {
             // Subtype 1 is the emergency/priority status; the rest are ACAS
             // resolution advisories, which say what a collision-avoidance box
@@ -215,19 +266,101 @@ fn decode_es(me: &[u8]) -> Es {
     }
 }
 
-/// TC 19, subtypes 1 and 2: velocity over the ground.
+/// A four-bit or smaller category field, where 0 is "unknown".
+fn category_field(me: &[u8], start: usize, len: usize) -> Option<u8> {
+    let v = bits(me, start, len) as u8;
+    (v != 0).then_some(v)
+}
+
+/// TC 29: target state and status, DO-260B layout (subtype 1) only.
 ///
-/// Subtypes 3 and 4 give an airspeed and a heading instead, which are what the
-/// aircraft is doing through the air rather than over the map. They are not
-/// decoded: a leader line drawn from an airspeed points somewhere the aircraft
-/// is not going, and the two cannot be told apart once they are in the same
-/// field.
+/// ME bit numbers below count from 0. Selected altitude is 11 bits at 9
+/// (`(n - 1) * 32` ft), the barometric setting 9 bits at 20 (`800 + (n - 1) *
+/// 0.8` hPa), the heading a status bit at 29 and 9 bits at 30 (`n * 360 / 512`
+/// degrees). Accuracy and integrity follow (NACp at 39, SIL at 44), then the
+/// mode bits behind their own valid marker at 46.
+fn target_state(me: &[u8]) -> Es {
+    if bits(me, 5, 2) != 1 {
+        return Es::Other;
+    }
+    let alt_raw = bits(me, 9, 11);
+    let baro_raw = bits(me, 20, 9);
+    let hdg_valid = bits(me, 29, 1) == 1;
+    let hdg_raw = bits(me, 30, 9);
+    let modes_valid = bits(me, 46, 1) == 1;
+    let nav_modes = modes_valid.then(|| {
+        let mut m = 0u8;
+        for (offset, bit) in [
+            (47, NAV_AUTOPILOT),
+            (48, NAV_VNAV),
+            (49, NAV_ALT_HOLD),
+            (51, NAV_APPROACH),
+            (53, NAV_LNAV),
+        ] {
+            if bits(me, offset, 1) == 1 {
+                m |= bit;
+            }
+        }
+        m
+    });
+    Es::TargetState {
+        selected_altitude_ft: (alt_raw != 0).then(|| (alt_raw as i32 - 1) * 32),
+        selected_heading_deg: hdg_valid.then(|| hdg_raw as f32 * 360.0 / 512.0),
+        qnh_hpa: (baro_raw != 0).then(|| 800.0 + (baro_raw as f32 - 1.0) * 0.8),
+        nac_p: category_field(me, 39, 4),
+        sil: category_field(me, 44, 2),
+        nav_modes,
+    }
+}
+
+/// TC 31: operational status, subtypes 0 (airborne) and 1 (surface).
+///
+/// The version is 3 bits at 40. From version 1 on, NACp is 4 bits at 44 and SIL
+/// 2 bits at 50; a version-0 transmitter does not define them, so they are not
+/// read.
+fn operational_status(me: &[u8]) -> Es {
+    if bits(me, 5, 3) > 1 {
+        return Es::Other;
+    }
+    let version = bits(me, 40, 3) as u8;
+    let (nac_p, sil) = if version >= 1 {
+        (category_field(me, 44, 4), category_field(me, 50, 2))
+    } else {
+        (None, None)
+    };
+    Es::OperationalStatus { version, nac_p, sil }
+}
+
+/// TC 19, subtypes 3 and 4: a heading and an airspeed.
+///
+/// Heading is a valid bit at 13 and 10 bits at 14 (`n * 360 / 1024` degrees);
+/// the airspeed a type bit at 24 (0 indicated, 1 true) and 10 bits at 25, `n -
+/// 1` knots in subtype 3 and four times that in subtype 4. Zero is "no
+/// information" for both.
+fn airspeed(me: &[u8], subtype: u32) -> Es {
+    let hdg_valid = bits(me, 13, 1) == 1;
+    let hdg_raw = bits(me, 14, 10);
+    let as_raw = bits(me, 25, 10);
+    let scale = if subtype == 4 { 4.0f32 } else { 1.0 };
+    Es::Airspeed {
+        heading_deg: hdg_valid.then(|| hdg_raw as f32 * 360.0 / 1024.0),
+        airspeed_kt: (as_raw != 0).then(|| (as_raw as f32 - 1.0) * scale),
+        true_airspeed: bits(me, 24, 1) == 1,
+        nac_v: category_field(me, 10, 3),
+    }
+}
+
+/// TC 19, subtypes 1 and 2: velocity over the ground. Subtypes 3 and 4, which
+/// give an airspeed and a heading instead, are [`airspeed`]: kept apart, since
+/// a leader line drawn from an airspeed points somewhere the aircraft is not
+/// going.
 fn velocity(me: &[u8]) -> Es {
     let st = bits(me, 5, 3);
     // The supersonic subtypes carry the same fields with four times the scale.
     let scale = match st {
         1 => 1.0f32,
         2 => 4.0,
+        3 | 4 => return airspeed(me, st),
         _ => return Es::Other,
     };
     let ew_west = bits(me, 13, 1) == 1;
@@ -252,7 +385,12 @@ fn velocity(me: &[u8]) -> Es {
         if bits(me, 36, 1) == 1 { -mag } else { mag }
     });
 
-    Es::Velocity { ground_speed_kt: speed, track_deg: track, vertical_rate_fpm: vr }
+    Es::Velocity {
+        ground_speed_kt: speed,
+        track_deg: track,
+        vertical_rate_fpm: vr,
+        nac_v: category_field(me, 10, 3),
+    }
 }
 
 /// The surface movement code, which is a speed on a piecewise scale that gets
@@ -388,7 +526,7 @@ mod tests {
     /// 322.197 degrees, 417.655 knots, level.
     #[test]
     fn a_velocity_squitter_reads_back_its_track_and_speed() {
-        let Es::Velocity { ground_speed_kt, track_deg, vertical_rate_fpm } =
+        let Es::Velocity { ground_speed_kt, track_deg, vertical_rate_fpm, .. } =
             es_of("8DA3D42599250129780484712C50")
         else {
             panic!("not a velocity");
@@ -419,6 +557,177 @@ mod tests {
         assert!(cpr.odd);
         assert_eq!(cpr.lat, 74_158);
         assert_eq!(cpr.lon, 50_194);
+    }
+
+    /// A 14-byte extended squitter whose message field has `value` written
+    /// into `len` bits at `start` (counted from the message field's first bit,
+    /// as the layouts above are).
+    fn me_with(fields: &[(usize, usize, u32)]) -> Vec<u8> {
+        let mut msg = vec![0u8; 14];
+        msg[0] = 17 << 3;
+        for &(start, len, value) in fields {
+            for i in 0..len {
+                if value >> (len - 1 - i) & 1 == 1 {
+                    let b = 32 + start + i;
+                    msg[b / 8] |= 0x80 >> (b % 8);
+                }
+            }
+        }
+        msg
+    }
+
+    fn es_from(msg: &[u8]) -> Es {
+        match decode(msg, 0).body {
+            Body::Squitter(es) => es,
+            other => panic!("not a squitter: {other:?}"),
+        }
+    }
+
+    /// The published target-state message: selected altitude 16 992 ft, QNH
+    /// 1012.8 hPa, selected heading 66.8°, autopilot, VNAV and LNAV engaged,
+    /// altitude hold and approach not.
+    #[test]
+    fn a_target_state_squitter_reads_back_what_the_autopilot_is_set_to() {
+        let Es::TargetState {
+            selected_altitude_ft,
+            selected_heading_deg,
+            qnh_hpa,
+            nav_modes,
+            ..
+        } = es_of("8DA05629EA21485CBF3F8CADAEEB")
+        else {
+            panic!("not a target state");
+        };
+        assert_eq!(selected_altitude_ft, Some(16_992));
+        assert!((qnh_hpa.expect("a QNH") - 1012.8).abs() < 0.01);
+        assert!((selected_heading_deg.expect("a heading") - 66.8).abs() < 0.1);
+        assert_eq!(nav_modes, Some(NAV_AUTOPILOT | NAV_VNAV | NAV_LNAV));
+    }
+
+    /// The same message with the heading's high bit set reads as 246.8°: the
+    /// heading is a nine-bit angle over the whole circle, with no sign.
+    #[test]
+    fn a_selected_heading_in_the_second_half_of_the_circle_reads_past_180() {
+        let Es::TargetState { selected_heading_deg, .. } = es_of("8DA05629EA21485EBF3F8CADAEEB")
+        else {
+            panic!("not a target state");
+        };
+        assert!((selected_heading_deg.unwrap() - 246.796_875).abs() < 0.01);
+    }
+
+    /// A field whose valid marker is clear is absent, never zero: nothing set
+    /// on the autopilot must not read as "heading 0, altitude 0".
+    #[test]
+    fn a_target_state_with_nothing_valid_reads_as_nothing() {
+        let msg = me_with(&[(0, 5, 29), (5, 2, 1)]);
+        let Es::TargetState {
+            selected_altitude_ft,
+            selected_heading_deg,
+            qnh_hpa,
+            nac_p,
+            sil,
+            nav_modes,
+        } = es_from(&msg)
+        else {
+            panic!("not a target state");
+        };
+        assert_eq!(
+            (selected_altitude_ft, selected_heading_deg, qnh_hpa, nac_p, sil, nav_modes),
+            (None, None, None, None, None, None)
+        );
+    }
+
+    /// Mode bits behind a clear valid marker are not read, even when set.
+    #[test]
+    fn the_mode_bits_are_only_read_when_the_aircraft_says_they_are_valid() {
+        // Autopilot bit set (47), mode-status bit (46) clear.
+        let msg = me_with(&[(0, 5, 29), (5, 2, 1), (47, 1, 1)]);
+        let Es::TargetState { nav_modes, .. } = es_from(&msg) else { panic!() };
+        assert_eq!(nav_modes, None);
+        let msg = me_with(&[(0, 5, 29), (5, 2, 1), (46, 1, 1), (47, 1, 1), (51, 1, 1)]);
+        let Es::TargetState { nav_modes, .. } = es_from(&msg) else { panic!() };
+        assert_eq!(nav_modes, Some(NAV_AUTOPILOT | NAV_APPROACH));
+    }
+
+    /// Subtype 0 is the older layout; reading it with this one would give
+    /// plausible wrong numbers, so it is not read.
+    #[test]
+    fn the_older_target_state_layout_is_not_read() {
+        let msg = me_with(&[(0, 5, 29), (5, 2, 0), (9, 11, 100)]);
+        assert_eq!(es_from(&msg), Es::Other);
+    }
+
+    /// The accuracy fields of a target state: a category of 0 is "unknown".
+    #[test]
+    fn accuracy_categories_read_back_and_zero_is_unknown() {
+        let msg = me_with(&[(0, 5, 29), (5, 2, 1), (39, 4, 10), (44, 2, 3)]);
+        let Es::TargetState { nac_p, sil, .. } = es_from(&msg) else { panic!() };
+        assert_eq!((nac_p, sil), (Some(10), Some(3)));
+        let msg = me_with(&[(0, 5, 29), (5, 2, 1)]);
+        let Es::TargetState { nac_p, sil, .. } = es_from(&msg) else { panic!() };
+        assert_eq!((nac_p, sil), (None, None));
+    }
+
+    /// Operational status: the version, and the accuracy only for a version
+    /// that defines it.
+    #[test]
+    fn an_operational_status_gives_the_version_and_its_accuracy() {
+        let v2 = me_with(&[(0, 5, 31), (5, 3, 0), (40, 3, 2), (44, 4, 9), (50, 2, 3)]);
+        assert_eq!(
+            es_from(&v2),
+            Es::OperationalStatus { version: 2, nac_p: Some(9), sil: Some(3) }
+        );
+        // The same bits under version 0 mean something else.
+        let v0 = me_with(&[(0, 5, 31), (5, 3, 0), (40, 3, 0), (44, 4, 9), (50, 2, 3)]);
+        assert_eq!(es_from(&v0), Es::OperationalStatus { version: 0, nac_p: None, sil: None });
+        // Surface status is read too; a reserved subtype is not.
+        let surface = me_with(&[(0, 5, 31), (5, 3, 1), (40, 3, 2)]);
+        assert!(matches!(es_from(&surface), Es::OperationalStatus { version: 2, .. }));
+        let reserved = me_with(&[(0, 5, 31), (5, 3, 4), (40, 3, 2)]);
+        assert_eq!(es_from(&reserved), Es::Other);
+    }
+
+    /// The published airspeed message (subtype 3): heading 243.98°, true
+    /// airspeed 375 kt. Kept apart from the ground velocity.
+    #[test]
+    fn an_airspeed_squitter_reads_back_its_heading_and_airspeed() {
+        let Es::Airspeed { heading_deg, airspeed_kt, true_airspeed, nac_v } =
+            es_of("8DA05F219B06B6AF189400CBC33F")
+        else {
+            panic!("not an airspeed");
+        };
+        assert!((heading_deg.expect("a heading") - 243.98).abs() < 0.01);
+        assert_eq!(airspeed_kt, Some(375.0));
+        assert!(true_airspeed);
+        assert_eq!(nac_v, None);
+    }
+
+    /// Subtype 4 is the supersonic one: the same field at four times the scale.
+    /// A heading marked not available, and an airspeed of zero, are absent.
+    #[test]
+    fn the_supersonic_airspeed_scale_and_the_absent_cases() {
+        let fast = me_with(&[(0, 5, 19), (5, 3, 4), (13, 1, 1), (14, 10, 256), (25, 10, 101)]);
+        let Es::Airspeed { heading_deg, airspeed_kt, true_airspeed, .. } = es_from(&fast) else {
+            panic!("not an airspeed");
+        };
+        assert_eq!(heading_deg, Some(90.0));
+        assert_eq!(airspeed_kt, Some(400.0), "4 x (101 - 1)");
+        assert!(!true_airspeed, "the type bit clear is indicated airspeed");
+        let none = me_with(&[(0, 5, 19), (5, 3, 3), (14, 10, 256)]);
+        let Es::Airspeed { heading_deg, airspeed_kt, .. } = es_from(&none) else { panic!() };
+        assert_eq!((heading_deg, airspeed_kt), (None, None));
+    }
+
+    /// Velocity accuracy rides every airborne velocity message, at the same
+    /// three bits.
+    #[test]
+    fn the_velocity_accuracy_is_read_from_both_kinds_of_velocity_message() {
+        let ground = me_with(&[(0, 5, 19), (5, 3, 1), (10, 3, 2), (14, 10, 100), (25, 10, 100)]);
+        let Es::Velocity { nac_v, .. } = es_from(&ground) else { panic!() };
+        assert_eq!(nac_v, Some(2));
+        let air = me_with(&[(0, 5, 19), (5, 3, 3), (10, 3, 4)]);
+        let Es::Airspeed { nac_v, .. } = es_from(&air) else { panic!() };
+        assert_eq!(nac_v, Some(4));
     }
 
     /// The layout functions are public, so a truncated buffer has to come back

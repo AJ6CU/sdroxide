@@ -27,11 +27,22 @@ use sdroxide_aircraft_online::{
 
 use super::aircraft_card::{self, CardKey, icao_hex};
 use super::aircraft_registry::AircraftCard;
+use crate::i18n::tr;
 
-/// Seconds before a failed question may be asked again.
+/// Seconds before a question the registry could not answer may be asked again.
 pub(in crate::app) const RETRY_S: i64 = 300;
-/// Seconds after which a question that never came back is given up on.
-pub(in crate::app) const FLIGHT_TIMEOUT_S: i64 = 30;
+/// Seconds before a read that failed (no answer from the station or from the
+/// services behind it) is tried again: it mends itself, so it is soon.
+pub(in crate::app) const RETRY_OFFLINE_S: i64 = 30;
+/// Seconds before a read the station refused for its rate ceiling is tried again.
+pub(in crate::app) const RETRY_BUSY_S: i64 = 60;
+/// Seconds after which a question that never came back is given up on. A
+/// browser's `fetch` has no timeout of its own, so this is the only one there.
+pub(in crate::app) const FLIGHT_TIMEOUT_S: i64 = 15;
+/// Questions that may be out at once. A card that is slow or failing holds one
+/// place, never the whole line; a few at a time keeps the relay's own ceiling
+/// in sight.
+pub(in crate::app) const MAX_IN_FLIGHT: usize = 3;
 /// Cards whose online state is kept; the least recently looked at go first.
 pub(in crate::app) const MAX_KEPT: usize = 64;
 
@@ -54,19 +65,16 @@ pub(in crate::app) enum Reason {
 }
 
 impl Reason {
-    /// What the card says about it. Only the reasons the operator can do
-    /// something about are said; a failure that will mend itself is not an
-    /// error, and is not drawn as one.
-    pub(in crate::app) fn note(self) -> Option<&'static str> {
+    /// What the card says about it. A read that failed says so and that it
+    /// will be tried again, so it never fails in silence; an aircraft the
+    /// registry simply does not know says nothing.
+    pub(in crate::app) fn note(self) -> Option<String> {
         match self {
-            Reason::Disabled => {
-                Some("online unavailable — the station has not switched the relay on")
-            }
-            Reason::NoStation => {
-                Some("online unavailable — no station to ask; the radio data is all there is")
-            }
-            Reason::Unauthorized => Some("online unavailable — not signed in to the station"),
-            Reason::Offline | Reason::Busy | Reason::Unknown => None,
+            Reason::Disabled => Some(tr!("aircraft-online-unavailable-disabled")),
+            Reason::NoStation => Some(tr!("aircraft-online-unavailable-no-station")),
+            Reason::Unauthorized => Some(tr!("aircraft-online-unavailable-unauthorized")),
+            Reason::Offline | Reason::Busy => Some(tr!("aircraft-online-unavailable-retry")),
+            Reason::Unknown => None,
         }
     }
 
@@ -74,7 +82,9 @@ impl Reason {
     /// this session.
     pub(in crate::app) fn retry_after(self) -> Option<i64> {
         match self {
-            Reason::Offline | Reason::Busy | Reason::Unknown => Some(RETRY_S),
+            Reason::Offline => Some(RETRY_OFFLINE_S),
+            Reason::Busy => Some(RETRY_BUSY_S),
+            Reason::Unknown => Some(RETRY_S),
             Reason::Disabled | Reason::Unauthorized | Reason::NoStation => None,
         }
     }
@@ -178,17 +188,309 @@ pub(in crate::app) fn photo_url(peer_url: &str, icao: u32) -> Option<String> {
     Some(format!("{base}/aircraft-photo/{}", super::aircraft_card::icao_hex(icao)))
 }
 
-/// Where the card being closed lets the thumbnail go: `DELETE {station}/aircraft-photo`.
-pub(in crate::app) fn photo_release_url(peer_url: &str) -> Option<String> {
-    let base = crate::login::http_base(&crate::login::station_key(peer_url))?;
-    Some(format!("{base}/aircraft-photo"))
+/// Where the card being closed lets its thumbnail go:
+/// `DELETE {station}/aircraft-photo/{icao}`. Only that aircraft's, so a card
+/// opened a moment before keeps its own.
+pub(in crate::app) fn photo_release_url(peer_url: &str, icao: u32) -> Option<String> {
+    photo_url(peer_url, icao)
 }
+
+/// Where the station hands over the Wikipedia picture of the airport whose card
+/// is open: `GET {station}/airport-photo?lang=en&title=Amsterdam_Airport_Schiphol`
+/// (and `DELETE` of the same lets it go). A language and a title, never an
+/// address: the station builds every address itself.
+pub(in crate::app) fn airport_photo_url(peer_url: &str, lang: &str, title: &str) -> Option<String> {
+    let base = crate::login::http_base(&crate::login::station_key(peer_url))?;
+    Some(format!("{base}/airport-photo?lang={}&title={}", escape_query(lang), escape_query(title)))
+}
+
+/// The article's page, where the picture's credit points: its author and licence
+/// are on that page. `lang` and `title` are the table's own.
+pub(in crate::app) fn airport_page_url(lang: &str, title: &str) -> String {
+    format!("https://{}.wikipedia.org/wiki/{}", escape_query(lang), escape_query(title))
+}
+
+/// Everything but letters, digits and `-._~` as `%XX`, byte by byte.
+fn escape_query(text: &str) -> String {
+    text.bytes()
+        .map(|b| match b {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'.' | b'_' | b'~' => {
+                char::from(b).to_string()
+            }
+            _ => format!("%{b:02X}"),
+        })
+        .collect()
+}
+
+/// Seconds a thumbnail that failed waits before it is asked for again while its
+/// card stays open, and how many times: the station may have been busy or the
+/// picture's host slow, which mends itself.
+pub(in crate::app) const THUMB_RETRY_S: f64 = 4.0;
+pub(in crate::app) const THUMB_TRIES: u8 = 3;
 
 /// Whether the thumbnail held is for a card that is no longer open: nothing has
 /// asked for it in the frame before this one or the one before that. The card
 /// that is open asks every frame it is drawn.
 pub(in crate::app) fn thumb_unwanted(last_wanted: Option<u64>, frame: u64) -> bool {
     last_wanted.is_none_or(|w| frame > w + 1)
+}
+
+/// Where the station hands over the local time's offset and the temperature at
+/// the airport whose box is open: `GET {station}/airport-weather?lat=52.31&lon=4.76`.
+/// The airport's place and nothing else: the station builds the address.
+pub(in crate::app) fn airport_weather_url(peer_url: &str, lat: f64, lon: f64) -> Option<String> {
+    let base = crate::login::http_base(&crate::login::station_key(peer_url))?;
+    // The same rounding the station applies, so that what is asked is what is kept.
+    let key = sdroxide_aircraft_online::Spot::new(lat, lon)?.key();
+    let (lat, lon) = key.split_once(',')?;
+    Some(format!("{base}/airport-weather?lat={lat}&lon={lon}"))
+}
+
+/// What the station's answer to a weather question means.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(in crate::app) enum Reading {
+    Got(sdroxide_aircraft_online::Weather),
+    /// Busy, down or out of reach: worth asking again in a moment.
+    Retry,
+    /// Turned away (relay off, sign-in refused, a place it will not look up) or
+    /// an answer that is not one: asking again would only repeat it.
+    Gone,
+}
+
+pub(in crate::app) fn classify_weather(status: Option<u16>, body: &str) -> Reading {
+    match status {
+        Some(200) => serde_json::from_str::<sdroxide_aircraft_online::Weather>(body)
+            .ok()
+            .filter(|w| w.v == sdroxide_aircraft_online::WEATHER_VERSION)
+            .map_or(Reading::Gone, Reading::Got),
+        Some(429 | 502 | 504) | None => Reading::Retry,
+        Some(_) => Reading::Gone,
+    }
+}
+
+/// How long the weather of an open box is trusted before it is asked again. The
+/// station keeps an answer half a minute; the temperature moves slowly and the
+/// zone's offset changes twice a year.
+pub(in crate::app) const WEATHER_REFRESH_S: f64 = 600.0;
+
+/// The weather of the one airport whose box is open, in memory, for as long as
+/// the box stays open. Nothing is written anywhere.
+#[derive(Default)]
+pub(in crate::app) struct WeatherStore {
+    entry: Option<WeatherEntry>,
+}
+
+struct WeatherEntry {
+    airport: usize,
+    /// The pass in which the box last asked, as for the thumbnails.
+    wanted: u64,
+    weather: Option<sdroxide_aircraft_online::Weather>,
+    asking: bool,
+    /// Questions sent since the last answer that came.
+    tries: u8,
+    /// When the last question was sent or answered (egui seconds).
+    at: f64,
+    gone: bool,
+}
+
+/// What an open box knows about its airport's clock and air.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(in crate::app) enum Clock {
+    /// Not asked, not asked any more, or never answered: UTC only.
+    Offline,
+    /// On its way.
+    Asking,
+    Known(sdroxide_aircraft_online::Weather),
+}
+
+impl WeatherStore {
+    /// Called every frame the box is drawn. True when a question is due: the
+    /// first one for this airport, a repeat after a failure (a few times, a few
+    /// seconds apart) or a refresh once the answer is old.
+    pub(in crate::app) fn step(&mut self, airport: usize, pass: u64, now: f64) -> bool {
+        let Some(e) = self.entry.as_mut().filter(|e| e.airport == airport) else {
+            self.entry = Some(WeatherEntry {
+                airport,
+                wanted: pass,
+                weather: None,
+                asking: true,
+                tries: 1,
+                at: now,
+                gone: false,
+            });
+            return true;
+        };
+        e.wanted = pass;
+        if e.asking || e.gone {
+            return false;
+        }
+        let due = match e.weather {
+            Some(_) => now - e.at >= WEATHER_REFRESH_S,
+            None => e.tries < THUMB_TRIES && now - e.at >= THUMB_RETRY_S,
+        };
+        if due {
+            e.asking = true;
+            e.tries += 1;
+            e.at = now;
+        }
+        due
+    }
+
+    /// Take the station's answer for `airport`; one for another airport (the box
+    /// moved on while it was on its way) is dropped.
+    pub(in crate::app) fn deliver(&mut self, airport: usize, reading: Reading, now: f64) {
+        let Some(e) = self.entry.as_mut().filter(|e| e.airport == airport) else { return };
+        e.asking = false;
+        e.at = now;
+        match reading {
+            Reading::Got(w) => {
+                e.weather = Some(w);
+                e.tries = 0;
+            }
+            Reading::Retry => {}
+            Reading::Gone => e.gone = true,
+        }
+    }
+
+    pub(in crate::app) fn clock(&self, airport: usize) -> Clock {
+        let Some(e) = self.entry.as_ref().filter(|e| e.airport == airport) else {
+            return Clock::Offline;
+        };
+        match e.weather {
+            Some(w) => Clock::Known(w),
+            None if e.asking || (!e.gone && e.tries < THUMB_TRIES) => Clock::Asking,
+            None => Clock::Offline,
+        }
+    }
+
+    /// Whether something must look again soon: a repeat is waiting on its pause,
+    /// or a good answer is waiting to be refreshed.
+    pub(in crate::app) fn needs_a_later_look(&self) -> bool {
+        self.entry.as_ref().is_some_and(|e| !e.gone && !e.asking)
+    }
+
+    /// Once a frame: a box nothing has asked for in the pass before this one or
+    /// the one before that is closed, and what it held goes with it.
+    pub(in crate::app) fn release(&mut self, pass: u64) {
+        if self.entry.as_ref().is_some_and(|e| thumb_unwanted(Some(e.wanted), pass)) {
+            self.entry = None;
+        }
+    }
+
+    /// Forget everything: the relay was switched off or there is no station.
+    pub(in crate::app) fn clear(&mut self) {
+        self.entry = None;
+    }
+}
+
+#[cfg(test)]
+mod weather_tests {
+    use sdroxide_aircraft_online::{WEATHER_VERSION, Weather};
+
+    use super::*;
+
+    fn w() -> Weather {
+        Weather { v: WEATHER_VERSION, utc_offset_s: 3600, temp_c: Some(11.6) }
+    }
+
+    #[test]
+    fn the_station_is_asked_for_the_airports_place_and_only_that() {
+        assert_eq!(
+            airport_weather_url("ws://10.0.0.2:8080/ws", 52.308_613, 4.763_889).as_deref(),
+            Some("http://10.0.0.2:8080/airport-weather?lat=52.31&lon=4.76")
+        );
+        assert_eq!(
+            airport_weather_url("ws://10.0.0.2:8080/ws", -33.9461, -118.408).as_deref(),
+            Some("http://10.0.0.2:8080/airport-weather?lat=-33.95&lon=-118.41")
+        );
+        assert_eq!(airport_weather_url("ws://10.0.0.2:8080/ws", 91.0, 0.0), None);
+        assert_eq!(airport_weather_url("ws://10.0.0.2:8080/ws", f64::NAN, 0.0), None);
+    }
+
+    #[test]
+    fn an_answer_is_read_by_its_status_and_its_shape() {
+        let body = serde_json::to_string(&w()).unwrap();
+        assert_eq!(classify_weather(Some(200), &body), Reading::Got(w()));
+        for status in [Some(429), Some(502), None] {
+            assert_eq!(classify_weather(status, ""), Reading::Retry, "{status:?}");
+        }
+        for status in [Some(401), Some(503), Some(400), Some(404)] {
+            assert_eq!(classify_weather(status, ""), Reading::Gone, "{status:?}");
+        }
+        assert_eq!(classify_weather(Some(200), "<html>"), Reading::Gone);
+        let future = body.replace(&format!("\"v\":{WEATHER_VERSION}"), "\"v\":99");
+        assert_eq!(classify_weather(Some(200), &future), Reading::Gone, "a shape it does not know");
+    }
+
+    #[test]
+    fn an_open_box_asks_once_and_shows_waiting_then_the_answer() {
+        let mut s = WeatherStore::default();
+        assert_eq!(s.clock(7), Clock::Offline, "nothing asked yet");
+        assert!(s.step(7, 10, 0.0), "the first frame asks");
+        assert!(!s.step(7, 11, 0.1), "the next frames wait for the answer");
+        assert_eq!(s.clock(7), Clock::Asking);
+        s.deliver(7, Reading::Got(w()), 0.5);
+        assert_eq!(s.clock(7), Clock::Known(w()));
+        assert!(!s.step(7, 12, 1.0), "a good answer is not asked for again at once");
+    }
+
+    #[test]
+    fn a_failed_question_is_repeated_a_few_times_then_the_box_says_offline() {
+        let mut s = WeatherStore::default();
+        assert!(s.step(1, 1, 0.0));
+        s.deliver(1, Reading::Retry, 0.2);
+        assert_eq!(s.clock(1), Clock::Asking, "tries remain: the room is kept");
+        assert!(!s.step(1, 2, 1.0), "not before the pause");
+        assert!(s.step(1, 3, THUMB_RETRY_S + 1.0));
+        s.deliver(1, Reading::Retry, 5.5);
+        assert!(s.step(1, 4, 12.0));
+        s.deliver(1, Reading::Retry, 12.1);
+        assert_eq!(s.clock(1), Clock::Offline, "three tries spent");
+        assert!(!s.step(1, 5, 100.0), "and no more");
+    }
+
+    #[test]
+    fn a_refusal_is_not_asked_again() {
+        let mut s = WeatherStore::default();
+        assert!(s.step(1, 1, 0.0));
+        s.deliver(1, Reading::Gone, 0.1);
+        assert_eq!(s.clock(1), Clock::Offline);
+        assert!(!s.step(1, 2, 60.0));
+        assert!(!s.needs_a_later_look());
+    }
+
+    #[test]
+    fn a_good_answer_is_refreshed_after_ten_minutes_and_kept_if_the_refresh_fails() {
+        let mut s = WeatherStore::default();
+        s.step(1, 1, 0.0);
+        s.deliver(1, Reading::Got(w()), 0.5);
+        assert!(!s.step(1, 2, WEATHER_REFRESH_S - 1.0));
+        assert!(s.step(1, 3, WEATHER_REFRESH_S + 1.0));
+        assert_eq!(s.clock(1), Clock::Known(w()), "the old one shows meanwhile");
+        s.deliver(1, Reading::Retry, WEATHER_REFRESH_S + 2.0);
+        assert_eq!(s.clock(1), Clock::Known(w()), "and after a failure too");
+    }
+
+    #[test]
+    fn another_airport_replaces_the_first_and_a_late_answer_for_the_first_is_dropped() {
+        let mut s = WeatherStore::default();
+        s.step(1, 1, 0.0);
+        assert!(s.step(2, 2, 1.0), "the box moved to another airport");
+        s.deliver(1, Reading::Got(w()), 2.0);
+        assert_eq!(s.clock(1), Clock::Offline);
+        assert_eq!(s.clock(2), Clock::Asking, "the late answer did not become B's");
+    }
+
+    #[test]
+    fn closing_the_box_lets_the_weather_go() {
+        let mut s = WeatherStore::default();
+        s.step(1, 5, 0.0);
+        s.deliver(1, Reading::Got(w()), 0.5);
+        s.release(6);
+        assert_eq!(s.clock(1), Clock::Known(w()), "still asked for in the pass before");
+        s.release(7);
+        assert_eq!(s.clock(1), Clock::Offline, "two passes without a question: gone");
+    }
 }
 
 /// What the station answered to a request to switch the relay.
@@ -199,15 +501,15 @@ pub(in crate::app) enum SwitchAnswer {
     /// The relay is off now.
     Off,
     /// It did not change, and the sentence says why.
-    Refused(&'static str),
+    Refused(String),
 }
 
 /// Read the reply to a switch request.
 pub(in crate::app) fn classify_switch(http_status: Option<u16>, body: &str) -> SwitchAnswer {
     match http_status {
-        None => SwitchAnswer::Refused("the station did not answer"),
-        Some(401) => SwitchAnswer::Refused("not signed in to the station"),
-        Some(403) => SwitchAnswer::Refused("the station refused the request"),
+        None => SwitchAnswer::Refused(tr!("aircraft-switch-no-answer")),
+        Some(401) => SwitchAnswer::Refused(tr!("aircraft-switch-not-signed-in")),
+        Some(403) => SwitchAnswer::Refused(tr!("aircraft-switch-refused")),
         Some(200) => {
             #[derive(serde::Deserialize)]
             struct Reply {
@@ -216,13 +518,21 @@ pub(in crate::app) fn classify_switch(http_status: Option<u16>, body: &str) -> S
             match serde_json::from_str::<Reply>(body) {
                 Ok(r) if r.enabled => SwitchAnswer::On,
                 Ok(_) => SwitchAnswer::Off,
-                Err(_) => {
-                    SwitchAnswer::Refused("the station does not offer this switch (too old?)")
-                }
+                Err(_) => SwitchAnswer::Refused(tr!("aircraft-switch-too-old")),
             }
         }
-        Some(404) => SwitchAnswer::Refused("the station does not offer this switch (too old?)"),
-        Some(_) => SwitchAnswer::Refused("the station could not change it"),
+        Some(404) => SwitchAnswer::Refused(tr!("aircraft-switch-too-old")),
+        Some(_) => SwitchAnswer::Refused(tr!("aircraft-switch-failed")),
+    }
+}
+
+/// What to say when the station did not do what the switch asked: it answered
+/// with the other state, so something holds the relay there (the station's
+/// environment variable). `None` when it did as asked or refused outright.
+pub(in crate::app) fn held_note(asked: bool, answer: &SwitchAnswer) -> Option<String> {
+    match (asked, answer) {
+        (true, SwitchAnswer::Off) | (false, SwitchAnswer::On) => Some(tr!("aircraft-switch-held")),
+        _ => None,
     }
 }
 
@@ -244,8 +554,8 @@ pub(in crate::app) struct OnlineStore {
     /// Set once the station says it will not answer anybody (relay off, sign-in
     /// missing): after that no card is asked about.
     blocked: Option<OnlineState>,
-    /// The question out, and when it went.
-    in_flight: Option<(u32, i64)>,
+    /// The questions out, and when each went; at most [`MAX_IN_FLIGHT`].
+    in_flight: Vec<(u32, i64)>,
     clock: u64,
 }
 
@@ -254,13 +564,18 @@ impl OnlineStore {
     /// so every card may ask again. Cards that did get an answer keep it.
     pub(in crate::app) fn unblock(&mut self) {
         self.blocked = None;
-        self.in_flight = None;
+        self.in_flight.clear();
         self.entries.retain(|_, e| matches!(e.state, OnlineState::Ready(_)));
     }
 
     #[cfg(test)]
     pub(in crate::app) fn len(&self) -> usize {
         self.entries.len()
+    }
+
+    /// The station said its relay is off, for every card.
+    pub(in crate::app) fn relay_off(&self) -> bool {
+        matches!(self.blocked, Some(OnlineState::Unavailable(Reason::Disabled)))
     }
 
     /// Every card the relay has answered for this session, with its address.
@@ -285,10 +600,32 @@ impl OnlineStore {
         self.entries.get(&icao).map_or(&IDLE, |e| &e.state)
     }
 
-    /// Whether a question is out and still being waited for. One at a time:
-    /// while this is true no other aircraft can be asked about.
+    /// Whether every place for a question is taken by one still being waited
+    /// for. Only then can no other aircraft be asked about.
     pub(in crate::app) fn line_busy(&self, now: i64) -> bool {
-        self.in_flight.is_some_and(|(_, at)| now - at < FLIGHT_TIMEOUT_S)
+        self.in_flight.iter().filter(|(_, at)| now - at < FLIGHT_TIMEOUT_S).count() >= MAX_IN_FLIGHT
+    }
+
+    /// Seconds before a failed question for `icao` may be asked again, `0` when
+    /// it is due. `None` when it did not fail, or will not be retried.
+    pub(in crate::app) fn retry_in(&self, icao: u32, now: i64) -> Option<i64> {
+        let e = self.entries.get(&icao)?;
+        match (&e.state, e.retry_at) {
+            (OnlineState::Unavailable(_), Some(t)) => Some((t - now).max(0)),
+            _ => None,
+        }
+    }
+
+    /// A press on the lookup button: whatever back-off a failure left for
+    /// `icao` is over, so the next [`Self::next_request`] sends it. One press,
+    /// one question; the line's own ceiling (three out at once) still holds.
+    pub(in crate::app) fn retry_now(&mut self, icao: u32) {
+        if let Some(e) = self.entries.get_mut(&icao)
+            && matches!(e.state, OnlineState::Unavailable(_))
+            && e.retry_at.is_some()
+        {
+            e.retry_at = Some(0);
+        }
     }
 
     /// The question to send now, if any. Called every frame the card is open:
@@ -303,14 +640,26 @@ impl OnlineStore {
         if !has_station || self.blocked.is_some() {
             return None;
         }
-        if let Some((_, at)) = self.in_flight {
-            if now - at < FLIGHT_TIMEOUT_S {
-                return None;
-            }
-            // Never came back. Let the line move; the card waits out a back-off.
-            if let Some((lost, _)) = self.in_flight.take() {
-                self.settle(lost, OnlineState::Unavailable(Reason::Offline), Some(now + RETRY_S));
-            }
+        // Whatever never came back is given up on and says so: its place is
+        // free and the card waits out a short back-off.
+        let lost: Vec<u32> = self
+            .in_flight
+            .iter()
+            .filter(|(_, at)| now - at >= FLIGHT_TIMEOUT_S)
+            .map(|(i, _)| *i)
+            .collect();
+        self.in_flight.retain(|(_, at)| now - at < FLIGHT_TIMEOUT_S);
+        for icao in lost {
+            self.settle(
+                icao,
+                OnlineState::Unavailable(Reason::Offline),
+                Some(now + RETRY_OFFLINE_S),
+            );
+        }
+        if self.in_flight.iter().any(|(i, _)| *i == want.icao)
+            || self.in_flight.len() >= MAX_IN_FLIGHT
+        {
+            return None;
         }
         self.clock += 1;
         if let Some(e) = self.entries.get_mut(&want.icao) {
@@ -324,15 +673,13 @@ impl OnlineStore {
             }
         }
         self.settle(want.icao, OnlineState::Loading, None);
-        self.in_flight = Some((want.icao, now));
+        self.in_flight.push((want.icao, now));
         Some(want.clone())
     }
 
     /// Take an answer to the question for `icao`.
     pub(in crate::app) fn deliver(&mut self, icao: u32, answer: Answer, now: i64) {
-        if self.in_flight.is_some_and(|(i, _)| i == icao) {
-            self.in_flight = None;
-        }
+        self.in_flight.retain(|(i, _)| *i != icao);
         match answer {
             Answer::Info(info) => self.settle(icao, OnlineState::Ready(info), None),
             Answer::Unavailable(r) => {
@@ -351,7 +698,7 @@ impl OnlineStore {
             let oldest = self
                 .entries
                 .iter()
-                .filter(|(i, _)| self.in_flight.map(|(f, _)| f) != Some(**i) && **i != icao)
+                .filter(|(i, _)| !self.in_flight.iter().any(|(f, _)| f == *i) && **i != icao)
                 .min_by_key(|(_, e)| e.touched)
                 .map(|(i, _)| *i);
             match oldest {
@@ -384,10 +731,8 @@ pub(in crate::app) struct Row {
     pub note: String,
 }
 
-const ONLINE_NOTE: &str = "adsbdb, through the station";
-
 fn online_row(label: &'static str, value: String) -> Row {
-    Row { label, value, badge: Badge::Online, note: ONLINE_NOTE.to_string() }
+    Row { label, value, badge: Badge::Online, note: tr!("aircraft-online-source") }
 }
 
 fn airport(a: &sdroxide_aircraft_online::Airport) -> String {
@@ -444,7 +789,7 @@ pub(in crate::app) fn rows(card: &AircraftCard, state: &OnlineState, now: i64) -
             label: "Online",
             value: "…".to_string(),
             badge: Badge::Missing,
-            note: "asking the station".to_string(),
+            note: tr!("aircraft-asking-station"),
         }),
         OnlineState::Unavailable(r) => {
             if let Some(note) = r.note() {
@@ -452,7 +797,7 @@ pub(in crate::app) fn rows(card: &AircraftCard, state: &OnlineState, now: i64) -
                     label: "Online",
                     value: "—".to_string(),
                     badge: Badge::Missing,
-                    note: note.to_string(),
+                    note,
                 });
             }
         }
@@ -471,12 +816,12 @@ pub(in crate::app) enum Provenance {
 }
 
 impl Provenance {
-    pub(in crate::app) fn label(self) -> &'static str {
+    pub(in crate::app) fn label(self) -> String {
         match self {
-            Provenance::Radio => "radio",
-            Provenance::RadioOnline => "radio + online",
-            Provenance::Online => "online",
-            Provenance::Nothing => "",
+            Provenance::Radio => tr!("aircraft-provenance-radio"),
+            Provenance::RadioOnline => tr!("aircraft-provenance-radio-online"),
+            Provenance::Online => tr!("aircraft-provenance-online"),
+            Provenance::Nothing => String::new(),
         }
     }
 }
@@ -549,7 +894,7 @@ pub(in crate::app) fn photo_view(state: &OnlineState, thumb: ThumbStatus) -> Opt
     Some(PhotoView {
         thumb_url: thumb_url.clone(),
         show_image: thumb != ThumbStatus::Failed && thumb_fetchable(thumb_url),
-        credit: format!("Photo: {photographer} / Planespotters"),
+        credit: tr!("aircraft-photo-credit", photographer = photographer),
         page_url: page_ok(page_url).then(|| page_url.clone()),
     })
 }
@@ -557,17 +902,44 @@ pub(in crate::app) fn photo_view(state: &OnlineState, thumb: ThumbStatus) -> Opt
 #[cfg(test)]
 mod tests {
     #[test]
+    fn an_airport_photo_is_asked_by_language_and_title_never_by_address() {
+        assert_eq!(
+            super::airport_photo_url(
+                "wss://shack.example/sdr/ws/2",
+                "en",
+                "Amsterdam_Airport_Schiphol"
+            )
+            .as_deref(),
+            Some(
+                "https://shack.example/sdr/airport-photo?lang=en&title=Amsterdam_Airport_Schiphol"
+            )
+        );
+        assert_eq!(
+            super::airport_photo_url("ws://shack.test:4950/ws", "es", "Aeropuerto_de_Málaga_(x&y)")
+                .as_deref(),
+            Some(
+                "http://shack.test:4950/airport-photo?lang=es&title=Aeropuerto_de_M%C3%A1laga_%28x%26y%29"
+            ),
+            "nothing in a title can end the query or start another"
+        );
+        assert_eq!(
+            super::airport_page_url("en", "Amsterdam_Airport_Schiphol"),
+            "https://en.wikipedia.org/wiki/Amsterdam_Airport_Schiphol"
+        );
+    }
+
+    #[test]
     fn the_photo_is_asked_by_aircraft_and_released_by_one_address() {
         assert_eq!(
             super::photo_url("wss://shack.example/sdr/ws/2", 0x4ca1fa).as_deref(),
             Some("https://shack.example/sdr/aircraft-photo/4CA1FA")
         );
         assert_eq!(
-            super::photo_release_url("ws://shack.test:4950/ws").as_deref(),
-            Some("http://shack.test:4950/aircraft-photo")
+            super::photo_release_url("ws://shack.test:4950/ws", 0x4CA1FA).as_deref(),
+            Some("http://shack.test:4950/aircraft-photo/4CA1FA")
         );
         assert_eq!(super::photo_url("not an address", 1), None);
-        assert_eq!(super::photo_release_url("not an address"), None);
+        assert_eq!(super::photo_release_url("not an address", 0x4CA1FA), None);
     }
 
     #[test]
@@ -618,6 +990,27 @@ mod tests {
     }
 
     #[test]
+    fn the_relay_is_taken_as_on_until_the_station_says_it_is_off() {
+        let mut s = OnlineStore::default();
+        assert!(!s.relay_off(), "on by default: nothing has been asked yet");
+        s.deliver(1, Answer::Unavailable(Reason::Offline), 1);
+        assert!(!s.relay_off(), "a failed read is not a switched-off relay");
+        s.deliver(1, Answer::Unavailable(Reason::Disabled), 2);
+        assert!(s.relay_off());
+        s.unblock();
+        assert!(!s.relay_off(), "switching it on clears it");
+    }
+
+    #[test]
+    fn a_station_that_answers_with_the_other_state_is_said_to_hold_the_relay() {
+        assert!(held_note(true, &SwitchAnswer::Off).is_some(), "asked on, still off");
+        assert!(held_note(false, &SwitchAnswer::On).is_some(), "asked off, still on");
+        assert_eq!(held_note(true, &SwitchAnswer::On), None);
+        assert_eq!(held_note(false, &SwitchAnswer::Off), None);
+        assert_eq!(held_note(true, &SwitchAnswer::Refused("x".into())), None);
+    }
+
+    #[test]
     fn switching_the_relay_on_lets_every_card_ask_again_and_keeps_the_answers_it_has() {
         let mut s = OnlineStore::default();
         let w = |icao| Want { icao, callsign: None, registration: None };
@@ -640,11 +1033,13 @@ mod tests {
     fn the_line_is_busy_while_a_question_is_out_and_free_after_its_answer_or_timeout() {
         let mut st = OnlineStore::default();
         assert!(!st.line_busy(NOW));
-        let w = Want { icao: 5, callsign: None, registration: None };
-        assert!(st.next_request(Some(&w), true, NOW).is_some());
-        assert!(st.line_busy(NOW + 1));
+        for i in 0..MAX_IN_FLIGHT as u32 {
+            assert!(!st.line_busy(NOW), "a place is free");
+            assert!(st.next_request(Some(&want(i)), true, NOW).is_some());
+        }
+        assert!(st.line_busy(NOW + 1), "every place is taken");
         assert!(!st.line_busy(NOW + FLIGHT_TIMEOUT_S), "a question that never came back");
-        st.deliver(5, Answer::Unavailable(Reason::Offline), NOW + 2);
+        st.deliver(0, Answer::Unavailable(Reason::Offline), NOW + 2);
         assert!(!st.line_busy(NOW + 3));
     }
 
@@ -743,7 +1138,7 @@ mod tests {
 
     #[test]
     fn a_card_with_no_online_data_reads_exactly_as_the_radio_card_does() {
-        for st in [OnlineState::Idle, OnlineState::Unavailable(Reason::Offline)] {
+        for st in [OnlineState::Idle, OnlineState::Unavailable(Reason::Unknown)] {
             let all = rows(&heard(), &st, NOW);
             let radio = lines(&heard(), NOW);
             assert_eq!(all.len(), radio.len(), "{st:?}");
@@ -840,15 +1235,20 @@ mod tests {
         assert!(Reason::Disabled.note().unwrap().contains("online unavailable"));
         assert!(Reason::NoStation.note().unwrap().contains("online unavailable"));
         assert!(Reason::Unauthorized.note().is_some());
-        for quiet in [Reason::Offline, Reason::Busy, Reason::Unknown] {
-            assert_eq!(quiet.note(), None, "{quiet:?}");
+        assert_eq!(Reason::Unknown.note(), None, "the registry just does not know it");
+        for failed in [Reason::Offline, Reason::Busy] {
+            let n = failed.note().unwrap_or_else(|| panic!("{failed:?} failed in silence"));
+            assert!(n.contains("again"), "{n}");
         }
         let all = rows(&heard(), &OnlineState::Unavailable(Reason::Disabled), NOW);
         let r = all.last().unwrap();
         assert_eq!((r.label, r.value.as_str(), r.badge), ("Online", "—", Badge::Missing));
         assert!(r.note.contains("online unavailable"), "{}", r.note);
-        let quiet = rows(&heard(), &OnlineState::Unavailable(Reason::Busy), NOW);
+        let quiet = rows(&heard(), &OnlineState::Unavailable(Reason::Unknown), NOW);
         assert_eq!(quiet.len(), lines(&heard(), NOW).len());
+        let failed = rows(&heard(), &OnlineState::Unavailable(Reason::Offline), NOW);
+        assert_eq!(failed.last().unwrap().label, "Online");
+        assert!(failed.last().unwrap().note.contains("again"));
     }
 
     #[test]
@@ -866,8 +1266,8 @@ mod tests {
         let w = want(0x4CA1FA);
         assert_eq!(s.next_request(Some(&w), true, NOW), Some(w.clone()));
         assert_eq!(s.state_for(w.icao, true), &OnlineState::Loading);
-        // Redrawn every frame, asked once.
-        for t in 0..100 {
+        // Redrawn every frame while the question is out, asked once.
+        for t in 0..FLIGHT_TIMEOUT_S {
             assert_eq!(s.next_request(Some(&w), true, NOW + t), None);
         }
         s.deliver(w.icao, Answer::Info(Box::new(info())), NOW + 1);
@@ -916,33 +1316,73 @@ mod tests {
             assert!(s.next_request(Some(&w), true, NOW).is_some());
             s.deliver(5, Answer::Unavailable(r), NOW);
             assert_eq!(s.next_request(Some(&w), true, NOW), None, "{r:?}");
-            assert_eq!(s.next_request(Some(&w), true, NOW + RETRY_S - 1), None, "{r:?}");
-            assert!(s.next_request(Some(&w), true, NOW + RETRY_S).is_some(), "{r:?}");
+            let wait = r.retry_after().unwrap();
+            assert_eq!(s.next_request(Some(&w), true, NOW + wait - 1), None, "{r:?}");
+            assert!(s.next_request(Some(&w), true, NOW + wait).is_some(), "{r:?}");
             // And again: each failure restarts the wait.
-            s.deliver(5, Answer::Unavailable(r), NOW + RETRY_S);
-            assert_eq!(s.next_request(Some(&w), true, NOW + RETRY_S + 1), None, "{r:?}");
+            s.deliver(5, Answer::Unavailable(r), NOW + wait);
+            assert_eq!(s.next_request(Some(&w), true, NOW + wait + 1), None, "{r:?}");
         }
-        assert_eq!(Reason::Offline.retry_after(), Some(RETRY_S));
+        assert!(
+            Reason::Offline.retry_after().unwrap() <= 60,
+            "a failed read mends itself, so it is tried again soon, not in five minutes"
+        );
+        assert_eq!(Reason::Unknown.retry_after(), Some(RETRY_S));
         assert_eq!(Reason::Disabled.retry_after(), None);
         assert_eq!(Reason::Unauthorized.retry_after(), None);
         assert_eq!(Reason::NoStation.retry_after(), None);
     }
 
     #[test]
-    fn one_question_is_out_at_a_time() {
+    fn a_second_card_is_asked_while_the_first_is_still_out() {
         let mut s = OnlineStore::default();
         assert!(s.next_request(Some(&want(1)), true, NOW).is_some());
-        assert_eq!(s.next_request(Some(&want(2)), true, NOW + 1), None);
-        s.deliver(1, Answer::Unavailable(Reason::Offline), NOW + 2);
-        assert!(s.next_request(Some(&want(2)), true, NOW + 3).is_some());
+        assert!(
+            s.next_request(Some(&want(2)), true, NOW + 1).is_some(),
+            "a card that is slow to answer must not hold every other card"
+        );
+        assert_eq!(
+            s.next_request(Some(&want(1)), true, NOW + 2),
+            None,
+            "the same card is not asked twice"
+        );
     }
 
     #[test]
-    fn a_question_that_never_comes_back_does_not_hold_the_line_for_ever() {
+    fn only_a_few_questions_are_out_at_once() {
+        let mut s = OnlineStore::default();
+        for i in 0..MAX_IN_FLIGHT as u32 {
+            assert!(s.next_request(Some(&want(i)), true, NOW + i as i64).is_some());
+        }
+        assert!(s.line_busy(NOW + 5), "every place is taken");
+        assert_eq!(s.next_request(Some(&want(99)), true, NOW + 5), None);
+        s.deliver(0, Answer::Unavailable(Reason::Offline), NOW + 6);
+        assert!(!s.line_busy(NOW + 6), "an answer freed a place");
+        assert!(s.next_request(Some(&want(99)), true, NOW + 6).is_some());
+    }
+
+    #[test]
+    fn a_card_that_fails_never_stops_another_from_being_read() {
         let mut s = OnlineStore::default();
         assert!(s.next_request(Some(&want(1)), true, NOW).is_some());
-        assert_eq!(s.next_request(Some(&want(2)), true, NOW + FLIGHT_TIMEOUT_S - 1), None);
+        // The first card fails after a long wait; the operator opens another.
+        let t = NOW + FLIGHT_TIMEOUT_S - 1;
+        assert!(s.next_request(Some(&want(2)), true, t).is_some(), "card 2 asked during the wait");
+        s.deliver(1, Answer::Unavailable(Reason::Offline), t + 1);
+        s.deliver(2, Answer::Info(Box::new(info())), t + 2);
+        assert!(matches!(s.state_for(2, true), OnlineState::Ready(_)));
+        assert!(matches!(s.state_for(1, true), OnlineState::Unavailable(Reason::Offline)));
+    }
+
+    #[test]
+    fn a_question_that_never_comes_back_is_given_up_quickly_and_frees_its_place() {
+        assert!(FLIGHT_TIMEOUT_S <= 15, "a browser fetch has no timeout of its own");
+        let mut s = OnlineStore::default();
+        assert!(s.next_request(Some(&want(1)), true, NOW).is_some());
+        // The lost one is settled with a reason when the time is up.
         assert!(s.next_request(Some(&want(2)), true, NOW + FLIGHT_TIMEOUT_S).is_some());
+        assert!(!s.line_busy(NOW + FLIGHT_TIMEOUT_S));
+        assert!(matches!(s.state_for(1, true), OnlineState::Unavailable(Reason::Offline)));
         // The lost one is not asked again at once either.
         assert_eq!(s.next_request(Some(&want(1)), true, NOW + FLIGHT_TIMEOUT_S + 1), None);
     }

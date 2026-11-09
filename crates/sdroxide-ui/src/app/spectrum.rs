@@ -6,6 +6,7 @@
 //! — CW skimmer boxes, FT8 callsign labels, network spot flags — are rebuilt
 //! here each frame from state the rest of the app maintains.
 
+use crate::i18n::tr;
 use eframe::egui::Color32;
 use sdroxide_types::{Mode, SkimmerKind, SkimmerSpot, SpectrumConfig, Spot, SpotKind};
 
@@ -143,7 +144,7 @@ fn pick_levels(bins: &[u8], db_floor: f32, db_ceil: f32) -> Option<(f32, f32)> {
     // margin at a time. One step may overshoot; the next fit reels it in.
     let step = range / 255.0;
     let reach = |clipped: bool, margin: f32| if clipped { 15.0 } else { margin };
-    let mut floor = noise - reach(noise <= db_floor + step, 5.0); // noise just above the floor (dark)
+    let floor = noise - reach(noise <= db_floor + step, 5.0); // noise just above the floor (dark)
     let mut ceil = peak + reach(peak >= db_ceil - step, 6.0); // headroom so strong signals don't clip
     // Keep a usable dynamic range even on an empty/flat band — but **anchor it at
     // the noise, not at the middle of the window**. Centring it put a dead band
@@ -402,21 +403,17 @@ impl SdroxideApp {
         let ceiling =
             self.display_class.map_or(waterfall_gpu::DEFAULT_TEX_W, waterfall_gpu::manual_ceiling);
         let reason = match self.display_class {
-            None => "This window has no GPU renderer, so the waterfall stays at its                      standard width."
-                .to_string(),
+            None => tr!("spectrum-window-has-no-gpu-renderer").to_string(),
             Some(c) if c.device_type == crate::egui_wgpu::wgpu::DeviceType::Cpu => {
-                "This machine is drawing without a GPU — every column of the waterfall                  is the processor's work, and it is already sharing that with the radio."
-                    .to_string()
+                tr!("spectrum-machine-drawing-without-gpu-every").to_string()
             }
             Some(c) if c.backend == crate::egui_wgpu::wgpu::Backend::Gl => {
-                "This window renders through OpenGL, which is sdroxide's compatibility                  path — a Raspberry Pi, an older graphics chip, or a browser without                  WebGPU. A wider waterfall is not worth the frame rate there."
-                    .to_string()
+                tr!("spectrum-window-renders-through-opengl-which").to_string()
             }
-            Some(c) if c.max_texture_dim < waterfall_gpu::MAX_TEX_W => format!(
-                "This renderer will not hold a texture wider than {} pixels.",
-                c.max_texture_dim
-            ),
-            Some(_) => "Wider than this renderer can draw.".to_string(),
+            Some(c) if c.max_texture_dim < waterfall_gpu::MAX_TEX_W => {
+                tr!("spectrum-renderer-will-not-hold-texture", max_texture_dim = c.max_texture_dim)
+            }
+            Some(_) => tr!("spectrum-wider-than-renderer-can-draw").to_string(),
         };
         DetailReport { chosen: self.bins_for_detail(detail), ceiling, reason }
     }
@@ -1049,6 +1046,33 @@ impl SdroxideApp {
         }
     }
 
+    /// Remember whether this radio's docked band/mode selector is on screen,
+    /// and whether it was left showing, so the next start matches.
+    ///
+    /// Per radio and presentation-only: a phone gets no dock at all
+    /// (`layout::band_dock_room` decides at draw time), so this records what the
+    /// operator asked for rather than what a given window can show. Written out
+    /// the moment it changes, because a setting that only survives a clean quit
+    /// is a setting the operator will make twice. (SWL users group, 2026-11-01.)
+    ///
+    /// The stored map is **re-read before it is changed**. Every radio tab holds
+    /// its own copy of `UiSettings` and the write is of the whole struct, so a
+    /// tab loaded before another tab docked would write its stale copy back and
+    /// erase that tab's radio (review, 2026-11-01). Merging on the stored map is
+    /// what makes "per radio" true between tabs and not only between restarts.
+    pub(in crate::app) fn remember_band_dock(&mut self) {
+        let mut stored = crate::app::persist::load_ui_settings(None).band_dock_open;
+        let changed = if self.band_docked {
+            stored.insert(self.radio_id, self.band_dock_visible) != Some(self.band_dock_visible)
+        } else {
+            stored.remove(&self.radio_id).is_some()
+        };
+        self.ui_settings.band_dock_open = stored;
+        if changed {
+            crate::app::persist::persist_ui_settings(&self.ui_settings);
+        }
+    }
+
     /// Center the view on the tuned frequency after big jumps (band change,
     /// memory recall, startup) — i.e. whenever the tuning changed AND left
     /// the visible span. Deliberate pans away from the VFO are never
@@ -1076,7 +1100,7 @@ impl SdroxideApp {
         // out, and gated to audio-mode sources so an SDR that un-decimates keeps
         // its zoom.
         if refit_on_window_growth(
-            self.caps.as_ref().is_some_and(|c| c.audio_mode),
+            self.caps.as_ref().is_some_and(window_follows_the_rig),
             prev_rate,
             self.state.sample_rate,
             self.view.span(),
@@ -1192,6 +1216,16 @@ fn base_fft_for_rate(chip: u32, rate_hz: f64) -> u32 {
 /// that.
 const WIDER_THAN_PASSBAND: f64 = 1.001;
 
+/// Whether the device window is the rig's to set, so a jump in it is the
+/// operator choosing a new bandwidth rather than an SDR being decimated: a
+/// demod-audio front end, or a radio whose picture comes from an attached
+/// panadapter receiver. The second is the TS-200 on CAT beside a HackRF at
+/// 2.5 Msps — it opens on the receiver's 2.5 MHz, not on the 48 kHz it had
+/// alone, and a view left on the old sliver is the wrong default bandwidth.
+fn window_follows_the_rig(caps: &sdroxide_types::DeviceCaps) -> bool {
+    caps.audio_mode || caps.rx_audio_external
+}
+
 /// Whether a jump in the device window should re-fit the view to it.
 ///
 /// True only for an audio-mode front end whose window grew by a large factor
@@ -1265,6 +1299,17 @@ fn focus_hz(mode: Mode, dial_hz: f64, audio_hz: f32, cw_qrg: bool, audio_front_e
             dial_hz - audio_hz as f64
         } else {
             dial_hz + audio_hz as f64
+        };
+    }
+    // **FT8 and the modes that decode anywhere in the passband.** Their signals
+    // are all above the dial (200-3000 Hz), so CTR centres the middle of that
+    // band, not the dial: centred on the dial, half the window is empty and
+    // half the decode band is out of it. A view anchor only, like SSTV's.
+    if let Some(centre) = mode.audio_band_centre_hz() {
+        return if mode.is_lower_sideband_at(dial_hz) {
+            dial_hz - f64::from(centre)
+        } else {
+            dial_hz + f64::from(centre)
         };
     }
     //
@@ -1380,8 +1425,11 @@ mod tests {
         // screenshots showed: the picture either side of an empty centre line.
         assert_eq!(focus_hz(Mode::Sstv, 27_700_000.0, 0.0, false, true), 27_701_750.0);
         assert_eq!(focus_hz(Mode::Sstv, 3_730_000.0, 0.0, false, true), 3_728_250.0);
-        // A mode that really is worked on the dial is untouched...
-        assert_eq!(focus_hz(Mode::Ft8, 14_074_000.0, 0.0, false, true), 14_074_000.0);
+        // FT8 decodes 200-3000 Hz above the dial: CTR centres that band...
+        assert_eq!(focus_hz(Mode::Ft8, 14_074_000.0, 0.0, false, true), 14_075_500.0);
+        assert_eq!(focus_hz(Mode::Ft8, 3_573_000.0, 700.0, false, false), 3_574_500.0);
+        // ...and a mode really worked on the dial is untouched.
+        assert_eq!(focus_hz(Mode::Usb, 14_074_000.0, 0.0, false, true), 14_074_000.0);
         // **Olivia listens at one audio centre and cannot find a signal that is
         // not there.** A click puts the signal on that centre, so the dial ends
         // up beside it — and the window has to follow the signal, or the
@@ -1517,6 +1565,23 @@ mod tests {
         assert!(!refit_on_window_growth(true, 200_000.0, 200_000.0, 20_000.0));
         // A gentle change (un-decimating 2x) is below the factor gate.
         assert!(!refit_on_window_growth(true, 100_000.0, 200_000.0, 50_000.0));
+    }
+
+    /// A CAT rig with a receiver attached as its panadapter (TS-200 48 kHz +
+    /// HackRF 2.5 Msps): the window jumps to the receiver's rate and the view
+    /// has to open out to it, as it does for a rig's own scope.
+    #[test]
+    fn an_attached_panadapter_receiver_refits_the_view_to_its_bandwidth() {
+        let paired = sdroxide_types::DeviceCaps { rx_audio_external: true, ..Default::default() };
+        let plain_sdr = sdroxide_types::DeviceCaps::default();
+        assert!(super::window_follows_the_rig(&paired));
+        assert!(!super::window_follows_the_rig(&plain_sdr));
+        assert!(refit_on_window_growth(
+            super::window_follows_the_rig(&paired),
+            48_000.0,
+            2_500_000.0,
+            48_000.0
+        ));
     }
 
     #[test]
@@ -1826,21 +1891,24 @@ mod focus_tests {
         assert_eq!(focus_hz(Mode::Dsc, dial, sdroxide_types::DSC_TONE_HZ, false, false), dial);
     }
 
-    /// The modes that pick a slot inside a sub-band stay on the dial. FT8's
-    /// tone offset moves by itself whenever the engine chooses a new transmit
+    /// The modes that pick a slot inside a sub-band centre the **middle of the
+    /// decode band** (dial + 1500 Hz), whatever their own tone offset is: FT8's
+    /// offset moves by itself whenever the engine chooses a new transmit
     /// frequency, and a window that followed it would slide out from under the
-    /// operator mid-QSO.
+    /// operator mid-QSO. The anchor is a constant, not the offset.
     #[test]
-    fn the_slotted_modes_stay_on_the_dial() {
+    fn the_slotted_modes_centre_the_decode_band() {
         let dial = 14_074_000.0;
         // Olivia is not here: it holds an audio centre and `focus_hz` follows
         // the signal, which is its own test below.
-        for m in [Mode::Ft8, Mode::Ft4, Mode::Js8, Mode::Psk] {
-            assert_eq!(
-                focus_hz(m, dial, 1500.0, false, false),
-                dial,
-                "{m:?} chased its own tone offset"
-            );
+        for m in [Mode::Ft8, Mode::Ft4, Mode::Js8, Mode::Psk, Mode::Wspr] {
+            for tx_offset in [300.0, 1500.0, 2700.0] {
+                assert_eq!(
+                    focus_hz(m, dial, tx_offset, false, false),
+                    dial + 1500.0,
+                    "{m:?} chased its own tone offset {tx_offset}"
+                );
+            }
         }
     }
 

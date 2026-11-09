@@ -14,6 +14,7 @@ use eframe::egui::{self, RichText};
 use sdroxide_types::{Command, JobAction, Mode, RecordingJob, RecordingKind, RxId, Vfo};
 
 use crate::app::SdroxideApp;
+use crate::i18n::tr;
 use crate::app::persist::persist_recording_jobs;
 use crate::app::util::{date_str, parse_utc, time_str};
 use crate::time::now_unix;
@@ -86,7 +87,7 @@ impl SdroxideApp {
             let name = j.name.clone();
             self.recording_jobs[i].done = true;
             self.jobs.running = None;
-            self.jobs.status = Some(format!("Finished \"{name}\""));
+            self.jobs.status = Some(tr!("recjobs-finished", name = name));
             persist_recording_jobs(&self.recording_jobs);
         }
 
@@ -95,7 +96,7 @@ impl SdroxideApp {
             if self.state.recording || self.state.iq_recording {
                 let name = self.recording_jobs[i].name.clone();
                 self.recording_jobs[i].done = true;
-                self.jobs.status = Some(format!("Skipped \"{name}\" — already recording"));
+                self.jobs.status = Some(tr!("recjobs-skipped", name = name));
                 persist_recording_jobs(&self.recording_jobs);
                 return;
             }
@@ -110,7 +111,7 @@ impl SdroxideApp {
             }
             self.jobs.running = Some(j.id);
             let name = if j.name.is_empty() { j.utc_text() } else { j.name };
-            self.jobs.status = Some(format!("Recording \"{name}\""));
+            self.jobs.status = Some(tr!("recjobs-recording-name", name = name));
         }
     }
 
@@ -130,7 +131,7 @@ impl SdroxideApp {
         let open = self.tool_window(
             ctx,
             "recordings",
-            "RECORDINGS",
+            &tr!("recjobs-title"),
             [720.0, 480.0],
             self.jobs.show,
             |me, ui| {
@@ -194,14 +195,14 @@ impl SdroxideApp {
         crate::chrome::window_body_bg(ui);
         let rows = self.recording_jobs.clone();
         ui.horizontal(|ui| {
-            if crate::chrome::chip(ui, false, "+ NEW JOB").clicked() {
+            if crate::chrome::chip(ui, false, tr!("recjobs-new-job")).clicked() {
                 *new_job = true;
             }
             if let Some(s) = &self.jobs.status {
                 ui.label(RichText::new(s).size(11.0).color(crate::theme::CYAN()));
             }
             if self.jobs.running.is_some() {
-                ui.label(RichText::new("● recording").size(11.0).color(crate::theme::ALERT()));
+                ui.label(RichText::new(tr!("recjobs-recording")).size(11.0).color(crate::theme::ALERT()));
             }
         });
         if self.jobs.edit.is_some() {
@@ -214,7 +215,7 @@ impl SdroxideApp {
             |ui| {
                 if rows.is_empty() {
                     ui.label(
-                        RichText::new("No scheduled recordings — press + NEW JOB to add one.")
+                        RichText::new(tr!("recjobs-none"))
                             .color(crate::theme::gray(150)),
                     );
                 }
@@ -233,17 +234,17 @@ impl SdroxideApp {
                                 .color(crate::theme::gray(160)),
                         );
                         ui.label(
-                            RichText::new(j.kind.label()).size(11.0).color(crate::theme::gray(160)),
+                            RichText::new(kind_label(j.kind)).size(11.0).color(crate::theme::gray(160)),
                         );
                         if j.done {
                             ui.label(
-                                RichText::new("done").size(10.5).color(crate::theme::gray(130)),
+                                RichText::new(tr!("recjobs-done")).size(10.5).color(crate::theme::gray(130)),
                             );
                         }
-                        if ui.small_button("edit").clicked() {
+                        if ui.small_button(tr!("recjobs-edit")).clicked() {
                             *edit = Some(j.id);
                         }
-                        if ui.small_button("del").clicked() {
+                        if ui.small_button(tr!("recjobs-del")).clicked() {
                             *delete = Some(j.id);
                         }
                     });
@@ -261,26 +262,26 @@ impl SdroxideApp {
             .show(ui, |ui| {
                 ui.set_width(ui.available_width());
                 egui::Grid::new("job-form").num_columns(4).spacing([10.0, 6.0]).show(ui, |ui| {
-                    ui.label("Station");
+                    ui.label(tr!("recjobs-station"));
                     crate::chrome::field(
                         ui,
                         egui::TextEdit::singleline(&mut j.name)
                             .desired_width(220.0)
-                            .hint_text("BBC World Service"),
+                            .hint_text(tr!("recjobs-station-hint")),
                     );
-                    ui.label("Kind");
+                    ui.label(tr!("recjobs-kind"));
                     egui::ComboBox::from_id_salt("job-kind")
                         .width(90.0)
-                        .selected_text(j.kind.label())
+                        .selected_text(kind_label(j.kind))
                         .show_ui(ui, |ui| {
                             for k in [RecordingKind::Audio, RecordingKind::Iq, RecordingKind::Both]
                             {
-                                ui.selectable_value(&mut j.kind, k, k.label());
+                                ui.selectable_value(&mut j.kind, k, kind_label(k));
                             }
                         });
                     ui.end_row();
 
-                    ui.label("Start (UTC)");
+                    ui.label(tr!("recjobs-start-utc"));
                     ui.horizontal(|ui| {
                         crate::chrome::field(
                             ui,
@@ -291,7 +292,7 @@ impl SdroxideApp {
                             egui::TextEdit::singleline(&mut self.jobs.time).desired_width(64.0),
                         );
                     });
-                    ui.label("For");
+                    ui.label(tr!("recjobs-for"));
                     ui.horizontal(|ui| {
                         let mut minutes = (j.duration_s / 60) as i32;
                         if ui
@@ -304,7 +305,7 @@ impl SdroxideApp {
                     });
                     ui.end_row();
 
-                    ui.label("Frequency");
+                    ui.label(tr!("settings-frequency"));
                     ui.horizontal(|ui| {
                         let mut khz = (j.freq_hz / 1e3).round() as i64;
                         if ui
@@ -329,14 +330,22 @@ impl SdroxideApp {
                 });
                 ui.add_space(6.0);
                 ui.horizontal(|ui| {
-                    if crate::chrome::chip(ui, true, "SAVE").clicked() {
+                    if crate::chrome::chip(ui, true, tr!("recjobs-save")).clicked() {
                         *save = true;
                     }
-                    if crate::chrome::chip(ui, false, "CANCEL").clicked() {
+                    if crate::chrome::chip(ui, false, tr!("logbook-cancel")).clicked() {
                         *cancel = true;
                     }
                 });
             });
+    }
+}
+
+fn kind_label(k: RecordingKind) -> String {
+    match k {
+        RecordingKind::Audio => tr!("recjobs-kind-audio"),
+        RecordingKind::Iq => tr!("recjobs-kind-iq"),
+        RecordingKind::Both => tr!("recjobs-kind-both"),
     }
 }
 

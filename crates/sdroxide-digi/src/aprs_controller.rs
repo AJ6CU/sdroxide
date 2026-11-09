@@ -427,12 +427,6 @@ impl AprsController {
 
         // Bulletins are broadcast to everybody and are never acknowledged.
         let bulletin = m.kind == MessageKind::Bulletin;
-        if !for_me && !bulletin {
-            // Somebody else's traffic. It is in the raw log and that is where
-            // it belongs; a message pane full of other people's conversations
-            // is a message pane nobody reads.
-            return;
-        }
 
         // De-duplicate against the digipeaters, but acknowledge every copy: a
         // repeat almost always means the sender did not hear the first ack.
@@ -845,6 +839,27 @@ mod tests {
         }
     }
 
+    /// 501 messages leave 500, the oldest the one lost.
+    #[test]
+    fn the_message_log_keeps_five_hundred_and_drops_the_oldest() {
+        let mut c = AprsController::new(DigiConfig::default(), 48_000.0);
+        for n in 1..=501 {
+            c.messages.push(sdroxide_types::AprsMessage {
+                at: n,
+                from: "N0CALL".into(),
+                to: "N1CALL".into(),
+                text: format!("m{n}"),
+                id: String::new(),
+                state: Default::default(),
+                tries: 0,
+            });
+            c.trim_messages();
+        }
+        assert_eq!(c.messages.len(), 500);
+        assert_eq!(c.messages.first().map(|m| m.text.as_str()), Some("m2"));
+        assert_eq!(c.messages.last().map(|m| m.text.as_str()), Some("m501"));
+    }
+
     /// A frame off the air becomes a station on the map.
     #[test]
     fn a_position_report_puts_a_station_on_the_map() {
@@ -916,15 +931,29 @@ mod tests {
         assert_eq!(c.ch.queued(), 3, "a repeat must be acknowledged again");
     }
 
-    /// Somebody else's conversation stays out of the message pane. It is in
-    /// the raw log, which is where other people's traffic belongs.
+    /// Every message on the channel is listed, whoever it is for — the operator
+    /// asked to see all of them. It is only *acknowledged* when it is ours: a
+    /// station that answered every message it overheard would take the channel
+    /// down.
     #[test]
-    fn another_stations_message_is_not_delivered_to_us() {
+    fn another_stations_message_is_shown_but_not_acknowledged() {
         let mut c = AprsController::new(station("OE3JJS"), 48_000.0);
-        c.absorb("VK2ABC", "APZSDR", &[], true, b":G0XYZ    :hello{7", false);
-        assert!(c.messages.is_empty());
+        c.absorb("VK2ABC", "APZSDR", &[], true, b":G0XYZ    :hello hello{7", false);
+        assert_eq!(c.messages.len(), 1, "an overheard message must be listed");
+        assert_eq!(c.messages[0].from, "VK2ABC");
+        assert_eq!(c.messages[0].to, "G0XYZ");
+        assert_eq!(c.messages[0].text, "hello hello");
         assert_eq!(c.ch.queued(), 0, "acknowledged a message that was not ours");
-        assert_eq!(c.traffic.len(), 1, "it still belongs in the raw log");
+        assert_eq!(c.traffic.len(), 1, "it is in the raw log too");
+    }
+
+    /// Somebody else's acknowledgement is not a message: it says nothing in
+    /// words, and listing it would bury the conversation under receipts.
+    #[test]
+    fn another_stations_acknowledgement_is_not_listed() {
+        let mut c = AprsController::new(station("OE3JJS"), 48_000.0);
+        c.absorb("VK2ABC", "APZSDR", &[], true, b":G0XYZ    :ack7", false);
+        assert!(c.messages.is_empty());
     }
 
     /// A bulletin is broadcast to everybody, so it is shown — and never
@@ -1029,7 +1058,12 @@ mod tests {
         c.queue_message("VK2ABC".into(), "hello".into());
         c.absorb("VK2ABC", "APZSDR", &[], true, b":N0CALL   :hello{7", false);
         assert_eq!(c.ch.queued(), 0, "transmitted without a callsign");
-        assert!(c.messages.is_empty(), "a message was queued with no callsign to send it from");
+        // The overheard message is listed now that every message is. What must
+        // not be there is anything *we* sent.
+        assert!(
+            c.messages.iter().all(|m| m.state == AprsMsgState::Received),
+            "a message was queued with no callsign to send it from"
+        );
     }
 
     /// The beacon reads back as our own position, and puts us on our own map.

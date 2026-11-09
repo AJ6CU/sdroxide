@@ -34,6 +34,7 @@ pub(in crate::app) fn dab_mhz(hz: f64) -> String {
 }
 
 use crate::app::SdroxideApp;
+use crate::i18n::tr;
 use crate::theme;
 
 /// The width at which the pane is split three ways.
@@ -192,7 +193,7 @@ pub(in crate::app) fn dab_service_extra(s: &DabService) -> String {
         extra.push_str(&format!(" · {p}"));
     }
     if let Some(c) = s.subchannel {
-        extra.push_str(&format!(" · sub {c}"));
+        extra.push_str(&tr!("dab-sub-channel", n = c));
     }
     extra
 }
@@ -207,7 +208,7 @@ impl SdroxideApp {
         let st: DabStatus = match self.dab_status.as_ref() {
             Some(s) => (**s).clone(),
             None => {
-                ui.label(RichText::new("starting the DAB receiver…").weak());
+                ui.label(RichText::new(tr!("dab-starting-receiver")).weak());
                 return;
             }
         };
@@ -230,17 +231,17 @@ impl SdroxideApp {
                 ui.label(RichText::new(e).strong());
             } else if st.unavailable.is_none() {
                 ui.label(
-                    RichText::new("no ensemble named yet — is a DAB transmission on this channel?")
+                    RichText::new(tr!("dab-no-ensemble-yet"))
                         .weak(),
                 );
             }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 ui.label(
-                    RichText::new(format!(
-                        "{} MHz · {} frames · {} fibs",
-                        dab_mhz(st.window_center_hz),
-                        st.frames,
-                        st.fibs
+                    RichText::new(tr!(
+                        "dab-window-stats",
+                        mhz = dab_mhz(st.window_center_hz),
+                        frames = st.frames,
+                        fibs = st.fibs
                     ))
                     .size(10.0)
                     .color(theme::gray(140)),
@@ -408,11 +409,7 @@ impl SdroxideApp {
                 want = Some(cur - VOLUME_STEP);
             }
         }
-        resp.clone().on_hover_text(
-            "The station as you hear it, left and right — and the volume: drag or \
-             click along the bars, or use the wheel. Click it, then the arrow keys \
-             step it. Works on a screen locked with the padlock.",
-        );
+        resp.clone().on_hover_text(tr!("dab-volume-meter-hint"));
         if let Some(v) = want {
             let v = v.clamp(0.0, 1.0);
             if (v - cur).abs() > 1e-4 {

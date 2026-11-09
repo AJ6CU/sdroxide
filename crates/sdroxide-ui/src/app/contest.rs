@@ -11,6 +11,7 @@ use eframe::egui;
 use sdroxide_types::{Command, ContestId, ContestSession, Exchange, QsoRecord};
 
 use super::SdroxideApp;
+use crate::i18n::tr;
 
 /// The in-progress entry: what the operator is typing for the station being
 /// worked. Session-only, cleared after every logged QSO.
@@ -34,7 +35,7 @@ impl SdroxideApp {
         if !self.show_contest {
             return;
         }
-        let show = self.tool_window(ctx, "contest", "CONTEST", [660.0, 540.0], true, |me, ui| {
+        let show = self.tool_window(ctx, "contest", &tr!("contest-title"), [660.0, 540.0], true, |me, ui| {
             me.contest_body(ui, cmds);
         });
         self.show_contest = show;
@@ -50,11 +51,7 @@ impl SdroxideApp {
 
     /// The pre-session setup: pick the contest and enter our own exchange.
     fn contest_setup(&mut self, ui: &mut egui::Ui, cmds: &mut Vec<Command>) {
-        ui.label(
-            "Pick a contest and enter what you send. The logger works on any mode — \
-             type the exchange for CW or SSB, and the FT8 side fills it in by itself \
-             where the contest has an FT8 layout.",
-        );
+        ui.label(tr!("contest-intro"));
         ui.add_space(8.0);
         let mut picked = self.contest_pick;
         ui.horizontal_wrapped(|ui| {
@@ -68,24 +65,21 @@ impl SdroxideApp {
         let spec = picked.spec();
         ui.add_space(8.0);
         ui.label(egui::RichText::new(spec.name).strong());
-        ui.label(format!("  you send: {}", exchange_hint(spec.sent)));
-        ui.label(format!("  they send: {}", exchange_hint(spec.rcvd)));
+        ui.label(tr!("contest-you-send", exchange = exchange_hint(spec.sent)));
+        ui.label(tr!("contest-they-send", exchange = exchange_hint(spec.rcvd)));
         if picked == ContestId::CbActivity {
             ui.label(
-                egui::RichText::new(
-                    "CB / 11 m activity: a report and a free-text exchange — put the \
-                     channel, name or area the activity uses in it.",
-                )
+                egui::RichText::new(tr!("contest-cb-note"))
                 .size(11.0),
             );
         }
         ui.add_space(8.0);
         ui.horizontal(|ui| {
-            ui.label("Your exchange");
+            ui.label(tr!("contest-your-exchange"));
             crate::chrome::field(ui, egui::TextEdit::singleline(&mut self.contest_my_exchange));
         });
         ui.add_space(8.0);
-        if crate::chrome::chip(ui, true, " START ").clicked() {
+        if crate::chrome::chip(ui, true, format!(" {} ", tr!("contest-start"))).clicked() {
             let now = crate::time::now_unix_f64() as i64;
             // Seeded from the log, so a session stopped and restarted — or the
             // program itself restarted — carries on from the last serial
@@ -147,13 +141,16 @@ impl SdroxideApp {
         let mut stop = false;
         ui.horizontal_wrapped(|ui| {
             ui.label(egui::RichText::new(contest.label()).strong());
-            ui.label(format!(
-                "QSO {} · {} pts · {} mult · SCORE {}",
-                score.qsos, score.points, score.mults, score.total
+            ui.label(tr!(
+                "contest-score-line",
+                qsos = score.qsos,
+                points = score.points,
+                mults = score.mults,
+                total = score.total
             ));
-            ui.label(format!("{r10} in 10 min · {r60}/hr"));
+            ui.label(tr!("contest-rate", r10 = r10, r60 = r60));
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                if crate::chrome::chip(ui, false, " STOP ").clicked() {
+                if crate::chrome::chip(ui, false, format!(" {} ", tr!("contest-stop"))).clicked() {
                     stop = true;
                 }
             });
@@ -171,7 +168,7 @@ impl SdroxideApp {
         }
         if spec.multiplier != sdroxide_types::Multiplier::None {
             ui.label(
-                egui::RichText::new("score is an estimate — the sponsor adjudicates")
+                egui::RichText::new(tr!("contest-estimate"))
                     .size(10.0)
                     .color(crate::theme::gray(140)),
             );
@@ -192,20 +189,20 @@ impl SdroxideApp {
             self.contest_entry.fields = vec![String::new(); contest.received_fields().len()];
         }
         ui.horizontal_wrapped(|ui| {
-            ui.label("CALL");
+            ui.label(tr!("contest-call"));
             crate::chrome::field(
                 ui,
                 egui::TextEdit::singleline(&mut self.contest_entry.call).desired_width(100.0),
             );
             if dupe {
-                ui.label(egui::RichText::new("DUPE").strong().color(crate::theme::ALERT()));
+                ui.label(egui::RichText::new(tr!("contest-dupe")).strong().color(crate::theme::ALERT()));
             }
-            ui.label("SENT");
+            ui.label(tr!("contest-sent"));
             crate::chrome::field(
                 ui,
                 egui::TextEdit::singleline(&mut self.contest_entry.rst_sent).desired_width(46.0),
             );
-            ui.label("RCVD");
+            ui.label(tr!("contest-rcvd"));
             crate::chrome::field(
                 ui,
                 egui::TextEdit::singleline(&mut self.contest_entry.rst_rcvd).desired_width(46.0),
@@ -228,12 +225,12 @@ impl SdroxideApp {
             let ours = self.contest.as_ref().map(|s| s.sent_exchange(stx)).unwrap_or_default();
             let rst = self.contest_entry.rst_sent.trim();
             if ours.is_empty() {
-                ui.label(format!("sending {rst}"));
+                ui.label(tr!("contest-sending", rst = rst));
             } else {
-                ui.label(format!("sending {rst} {ours}"));
+                ui.label(tr!("contest-sending-ours", rst = rst, ours = ours));
             }
             ui.label(format!("· {} {}", self.state.band.label(), self.state.rx[0].mode.label()));
-            if crate::chrome::chip(ui, true, " LOG ").clicked() {
+            if crate::chrome::chip(ui, true, format!(" {} ", tr!("contest-log"))).clicked() {
                 self.log_contest_qso(cmds);
             }
             if crate::chrome::chip(ui, false, " CABRILLO ").clicked() {
@@ -357,6 +354,7 @@ impl SdroxideApp {
         }
         let call = rec.call.clone();
         self.last_logged_qso_id = Some(rec.id);
+        self.session_qso_ids.insert(rec.id);
         self.qso_log.push(rec);
         self.session_qsos += 1;
         crate::app::persist::persist_qso_log(&self.qso_log);

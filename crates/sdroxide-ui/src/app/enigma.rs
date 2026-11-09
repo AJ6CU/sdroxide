@@ -16,6 +16,7 @@ use eframe::egui::{self, Color32, RichText};
 use sdroxide_enigma::{Enigma, Plugboard, REFLECTORS, ROTORS, SolveParams, Variant, Wheel};
 
 use crate::app::SdroxideApp;
+use crate::i18n::tr;
 
 /// The faceplate's palette. Fixed rather than themed: this is a *machine*, not
 /// a screen, and an operator switching the app to a light theme should still
@@ -108,7 +109,7 @@ impl EnigmaState {
     fn solve_now(&mut self) {
         let cipher = self.input.clone();
         if cipher.chars().filter(|c| c.is_ascii_alphabetic()).count() < 8 {
-            self.note = Some("give it more ciphertext to work with".into());
+            self.note = Some(tr!("enigma-need-more"));
             return;
         }
         let params = SolveParams {
@@ -156,7 +157,7 @@ impl SdroxideApp {
         if !self.enigma.show {
             return;
         }
-        let show = self.tool_window(ctx, "enigma", "ENIGMA", [460.0, 640.0], true, |me, ui| {
+        let show = self.tool_window(ctx, "enigma", &tr!("enigma-title"), [460.0, 640.0], true, |me, ui| {
             me.enigma_body(ui);
         });
         self.enigma.show = show;
@@ -201,7 +202,7 @@ impl SdroxideApp {
         }
         let pairs = self.enigma.plugboard.to_string_pairs();
         ui.label(
-            RichText::new(if pairs.is_empty() { "no cables".into() } else { pairs })
+            RichText::new(if pairs.is_empty() { tr!("enigma-no-cables") } else { pairs })
                 .size(12.0)
                 .monospace()
                 .color(BRASS),
@@ -260,7 +261,7 @@ impl SdroxideApp {
                 ui.vertical(|ui| {
                     let thin = ROTORS[self.enigma.rotors[i]].thin;
                     ui.label(
-                        RichText::new(if thin { "thin" } else { "Rotor" })
+                        RichText::new(if thin { tr!("enigma-thin") } else { tr!("enigma-rotor") })
                             .size(9.5)
                             .color(LEGEND_DIM),
                     );
@@ -291,7 +292,7 @@ impl SdroxideApp {
                     if win.clicked() {
                         self.enigma.starts[i] = (self.enigma.starts[i] + 1) % 26;
                     }
-                    win.on_hover_text("Grundstellung — click to advance the wheel");
+                    win.on_hover_text(tr!("enigma-window-hint"));
                     // Ringstellung.
                     ui.horizontal(|ui| {
                         ui.label(RichText::new("Ring").size(9.5).color(LEGEND_DIM));
@@ -351,7 +352,7 @@ impl SdroxideApp {
             egui::TextEdit::singleline(&mut self.enigma.input)
                 .desired_width(ui.available_width())
                 .text_color(LEGEND)
-                .hint_text("type, or use the keys above"),
+                .hint_text(tr!("enigma-input-hint")),
         );
         if resp.changed() {
             self.enigma.encipher();
@@ -367,11 +368,11 @@ impl SdroxideApp {
             .color(BRASS),
         );
         ui.horizontal(|ui| {
-            if ui.button("CLEAR").clicked() {
+            if ui.button(tr!("enigma-clear")).clicked() {
                 self.enigma.input.clear();
                 self.enigma.output.clear();
             }
-            if ui.button("COPY ⇄").clicked() {
+            if ui.button(tr!("enigma-copy")).clicked() {
                 // Feed the result back as the input, so the symmetry is visible.
                 self.enigma.input = self.enigma.output.replace(' ', "");
                 self.enigma.encipher();
@@ -381,21 +382,18 @@ impl SdroxideApp {
         ui.add_space(8.0);
         ui.separator();
         ui.label(
-            RichText::new(
-                "LÖSEN — paste a ciphertext. Give a crib word you expect in the message \
-                 for a cabled text; without one the solver handles an unwired machine.",
-            )
+            RichText::new(tr!("enigma-solve-note"))
             .size(10.5)
             .color(LEGEND_DIM),
         );
         ui.horizontal(|ui| {
-            ui.label(RichText::new("Crib").size(11.0).color(LEGEND_DIM));
+            ui.label(RichText::new(tr!("enigma-crib")).size(11.0).color(LEGEND_DIM));
             ui.add(
                 egui::TextEdit::singleline(&mut self.enigma.crib)
                     .desired_width(120.0)
                     .text_color(LEGEND),
             );
-            if ui.button("SOLVE").clicked() {
+            if ui.button(tr!("enigma-solve")).clicked() {
                 self.enigma.solve_now();
             }
         });
@@ -406,10 +404,7 @@ impl SdroxideApp {
         // The machine's own weakness, said out loud because it is the point.
         ui.add_space(4.0);
         ui.label(
-            RichText::new(
-                "A letter never enciphers to itself — the reflector sees to that. That is \
-                 the real machine's flaw, and it is what the solver prunes on.",
-            )
+            RichText::new(tr!("enigma-flaw"))
             .size(10.0)
             .color(LEGEND_DIM),
         );

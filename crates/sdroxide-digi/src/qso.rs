@@ -848,6 +848,7 @@ impl QsoMachine {
                 && !matches!(self.step, QsoStep::Idle | QsoStep::Confirming)
             {
                 self.transcript.push(TranscriptLine::rcvd(d.message.clone()));
+                self.final_msg = Some("RR73".to_string());
                 self.log_qso(now_utc);
                 changed = true;
                 continue;
@@ -1138,6 +1139,12 @@ impl QsoMachine {
             && self.step == QsoStep::TxRReport
             && matches!(payload, Payload::Rrr | Payload::Rr73 | Payload::B73)
         {
+            self.final_msg = Some(match payload {
+                Payload::Rrr => "RRR".to_string(),
+                Payload::Rr73 => "RR73".to_string(),
+                Payload::B73 => "73".to_string(),
+                _ => String::new(),
+            });
             self.log_qso(now_utc);
             return true;
         }
@@ -1301,6 +1308,7 @@ impl QsoMachine {
                 stx,
                 srx_string,
                 stx_string,
+                final_msg: self.final_msg.clone().unwrap_or_default(),
                 ..Default::default() // id assigned by the logbook, no comment
             });
             // Say so in the transcript. The exchange stays on screen for the

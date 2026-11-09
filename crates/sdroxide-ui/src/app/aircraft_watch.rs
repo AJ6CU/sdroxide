@@ -19,6 +19,7 @@ use sdroxide_aircraft_history::watch::{Outcome, WatchEdit, WatchReply, Watchlist
 use sdroxide_aircraft_history::{FORMAT_VERSION, Status};
 
 use super::aircraft_history::Reason;
+use crate::i18n::tr;
 use super::aircraft_registry::AircraftCard;
 
 /// How often the list is read again from the station.
@@ -169,20 +170,20 @@ pub(in crate::app) fn alert_text(a: &Alert) -> String {
     let called = a.callsign.as_deref().map(str::trim).filter(|c| !c.is_empty());
     match called {
         Some(c) if normalize(c).as_deref() != Some(a.entry.as_str()) => {
-            format!("{} is on the air, as {c}", a.entry)
+            tr!("aircraft-alert-on-air-as", entry = a.entry, callsign = c)
         }
-        _ => format!("{} is on the air", a.entry),
+        _ => tr!("aircraft-alert-on-air", entry = a.entry),
     }
 }
 
 /// What the person is told of an edit that did not take; nothing for one that did.
-pub(in crate::app) fn outcome_note(o: Outcome) -> Option<&'static str> {
+pub(in crate::app) fn outcome_note(o: Outcome) -> Option<String> {
     match o {
         Outcome::Added | Outcome::Removed => None,
-        Outcome::Already => Some("Already on the list."),
-        Outcome::Absent => Some("Not on the list."),
-        Outcome::Invalid => Some("Not a callsign or a registration: 3 to 10 letters or digits."),
-        Outcome::Full => Some("The list is full: 100 aircraft."),
+        Outcome::Already => Some(tr!("aircraft-watch-already")),
+        Outcome::Absent => Some(tr!("aircraft-watch-absent")),
+        Outcome::Invalid => Some(tr!("aircraft-watch-invalid")),
+        Outcome::Full => Some(tr!("aircraft-watch-full")),
     }
 }
 

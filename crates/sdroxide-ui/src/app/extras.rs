@@ -2,14 +2,15 @@
 //! ordinary modes. The System box's EXTRAS chip opens it, and like PLAYBACK it
 //! is a tool window — it can be pulled out into a window of its own with ⇱.
 //!
-//! Five buttons side by side is the room it is built for; DAB, AIRCRAFT and RADIO
-//! (the Radio Classic panel) are in it so far.
+//! Five buttons side by side is the room it is built for; DAB, AIRCRAFT, RADIO
+//! (the Radio Classic panel), ANTENNA and PROGRAMS are in it so far.
 
+use crate::i18n::tr;
 use eframe::egui;
 use sdroxide_types::{Command, Mode, RxId};
 
 /// How many launcher buttons the panel is wide enough for.
-pub(in crate::app) const EXTRAS_SLOTS: usize = 5;
+pub(in crate::app) const EXTRAS_SLOTS: usize = 7;
 
 /// One button's width and height, and the gap between buttons.
 const SLOT_W: f32 = 112.0;
@@ -18,7 +19,7 @@ const SLOT_GAP: f32 = 6.0;
 /// The window's opening height.
 const EXTRAS_H: f32 = 110.0;
 
-/// The window's width: the five slots, their gaps and the frame around them.
+/// The window's width: the slots, their gaps and the frame around them.
 pub(in crate::app) const EXTRAS_W: f32 =
     EXTRAS_SLOTS as f32 * SLOT_W + (EXTRAS_SLOTS as f32 - 1.0) * SLOT_GAP + 24.0;
 
@@ -92,7 +93,7 @@ impl super::SdroxideApp {
         let show = self.tool_window_sized(
             ctx,
             "extras",
-            "EXTRAS",
+            &tr!("extras-title"),
             [EXTRAS_W, EXTRAS_H],
             [EXTRAS_W, 0.0],
             false,
@@ -105,6 +106,45 @@ impl super::SdroxideApp {
         self.remember_tool_geometry(ctx, "extras", pos, size);
     }
 
+    /// A tool window that keeps where the operator left it, as AIRCRAFT does:
+    /// it opens at `own` until it has been moved or resized, and then at that
+    /// place on every platform and in every session. `epoch` changes with each
+    /// opening, so egui holds no geometry of its own for it and the remembered
+    /// one is what applies. Returns whether it is still open.
+    pub(in crate::app) fn remembered_tool_window(
+        &mut self,
+        ctx: &egui::Context,
+        id: &'static str,
+        title: &str,
+        own: [f32; 2],
+        floor: [f32; 2],
+        epoch: u32,
+        body: impl FnOnce(&mut Self, &mut egui::Ui),
+    ) -> bool {
+        #[cfg(not(target_arch = "wasm32"))]
+        if !self.tool_windows.contains_key(id) {
+            let os = self.tool_geometry_slots(id).1.to_owned();
+            self.tool_windows.insert(id, super::ToolWindowState { undocked: false, window: os });
+        }
+        let screen = ctx.content_rect();
+        let frame =
+            egui::Rect::from_min_max(egui::pos2(screen.left(), self.top_bar_bottom), screen.max);
+        let saved = *self.tool_geometry_slots(id).0;
+        let (pos, size) = tool_place_at(
+            saved,
+            frame,
+            screen,
+            egui::vec2(own[0], own[1]),
+            egui::vec2(floor[0], floor[1]),
+        );
+        self.tool_place = Some(super::ToolPlace { pos, size, epoch });
+        self.tool_rect = None;
+        let open = self.tool_window_sized(ctx, id, title, own, floor, false, true, body);
+        self.tool_place = None;
+        self.remember_tool_geometry(ctx, id, pos, size);
+        open
+    }
+
     /// The remembered docked and detached places of a tool window that keeps
     /// them, by its window id.
     fn tool_geometry_slots(
@@ -115,6 +155,12 @@ impl super::SdroxideApp {
         match id {
             "aircraft" => {
                 (&mut self.ui_settings.aircraft_window, &mut self.ui_settings.aircraft_os_window)
+            }
+            "schedule" => {
+                (&mut self.ui_settings.schedule_window, &mut self.ui_settings.schedule_os_window)
+            }
+            "memories" => {
+                (&mut self.ui_settings.memories_window, &mut self.ui_settings.memories_os_window)
             }
             _ => (&mut self.ui_settings.extras_window, &mut self.ui_settings.extras_os_window),
         }
@@ -173,17 +219,32 @@ impl super::SdroxideApp {
         }
     }
 
+    /// Whether RADIO CLASSIC is on, docked or in its window.
+    pub(in crate::app) fn radio_classic_active(&self) -> bool {
+        self.ui_settings.radio_classic_on || self.show_radio_classic
+    }
+
+    /// The RADIO chips' switch — EXTRAS' and the Wideband row's are this one.
+    pub(in crate::app) fn toggle_radio_classic(&mut self) {
+        if self.radio_classic_active() {
+            self.ui_settings.radio_classic_on = false;
+            self.show_radio_classic = false;
+            self.ui_settings.tool_windows_open &= !super::frame::TW_RADIO_CLASSIC;
+        } else {
+            self.ui_settings.radio_classic_on = true;
+        }
+        crate::app::persist::persist_ui_settings(&self.ui_settings);
+    }
+
     fn extras_body(&mut self, ui: &mut egui::Ui, cmds: &mut Vec<Command>) {
         crate::chrome::window_body_bg(ui);
-        crate::chrome::menu_caption(ui, "Receivers");
+        crate::chrome::menu_caption(ui, &tr!("extras-receivers"));
         let mode = self.state.rx[0].mode;
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = SLOT_GAP;
             let dab =
                 crate::chrome::chip_sized(ui, mode == Mode::Dab, "DAB", egui::vec2(SLOT_W, SLOT_H))
-                    .on_hover_text(
-                        "DAB / DAB+ digital radio — the player opens below the waterfall",
-                    );
+                    .on_hover_text(tr!("extras-dab-hint"));
             if dab.clicked() {
                 cmds.push(Command::SetMode { rx: RxId::Main, mode: Mode::Dab });
             }
@@ -191,51 +252,79 @@ impl super::SdroxideApp {
             let air = crate::chrome::chip_sized(
                 ui,
                 self.show_aircraft,
-                format!("AIRCRAFT{}", super::aircraft_watch::chip_suffix(unseen)),
+                format!("{}{}", tr!("aircraft-title"), super::aircraft_watch::chip_suffix(unseen)),
                 egui::vec2(SLOT_W, SLOT_H),
             )
             .on_hover_text(if unseen > 0 {
-                "AIRCRAFT — an aircraft on your watch list is on the air; open the Watch view"
+                tr!("extras-aircraft-watch-hint")
             } else {
-                "AIRCRAFT — the map of what the radio hears: aircraft and radiosondes, \
-                 in a window you can detach"
+                tr!("extras-aircraft-hint")
             });
             if air.clicked() {
                 self.show_aircraft = !self.show_aircraft;
             }
-            let rc_active = self.ui_settings.radio_classic_on || self.show_radio_classic;
-            let rc = crate::chrome::chip_sized(ui, rc_active, "RADIO", egui::vec2(SLOT_W, SLOT_H))
-                .on_hover_text(
-                    "RADIO CLASSIC — a classic radio face for broadcast listening: bands, \
-                 memories, the station name and RadioText. It docks under the waterfall \
-                 in the voice modes; Settings → Detachable puts it in a window",
-                );
-            if rc.clicked() {
-                if rc_active {
-                    self.ui_settings.radio_classic_on = false;
-                    self.show_radio_classic = false;
-                    self.ui_settings.tool_windows_open &= !super::frame::TW_RADIO_CLASSIC;
-                } else {
-                    self.ui_settings.radio_classic_on = true;
+            let wx = crate::chrome::chip_sized(
+                ui,
+                self.show_wxsat,
+                "WXSAT",
+                egui::vec2(SLOT_W, SLOT_H),
+            )
+            .on_hover_text(tr!("extras-wxsat-hint"));
+            if wx.clicked() {
+                self.show_wxsat = !self.show_wxsat;
+            }
+            // Where the settings have not switched the panel on, its slot is
+            // left empty like the spare ones below, so the window keeps its size.
+            if self.ui_settings.meshtastic_panel {
+                let mesh = crate::chrome::chip_sized(
+                    ui,
+                    self.show_meshtastic,
+                    "MESHTASTIC",
+                    egui::vec2(SLOT_W, SLOT_H),
+                )
+                .on_hover_text(tr!("extras-meshtastic-hint"));
+                if mesh.clicked() {
+                    self.show_meshtastic = !self.show_meshtastic;
                 }
-                crate::app::persist::persist_ui_settings(&self.ui_settings);
+            } else {
+                let (rect, _) =
+                    ui.allocate_exact_size(egui::vec2(SLOT_W, SLOT_H), egui::Sense::hover());
+                ui.painter().rect_stroke(
+                    rect,
+                    3.0,
+                    egui::Stroke::new(1.0, crate::theme::gray(60)),
+                    egui::StrokeKind::Inside,
+                );
+            }
+            let rc_active = self.radio_classic_active();
+            let rc = crate::chrome::chip_sized(ui, rc_active, tr!("topbar-radio"), egui::vec2(SLOT_W, SLOT_H))
+                .on_hover_text(tr!("extras-radio-hint"));
+            if rc.clicked() {
+                self.toggle_radio_classic();
             }
             let ant = crate::chrome::chip_sized(
                 ui,
                 self.show_antenna,
-                "ANTENNA",
+                tr!("extras-antenna"),
                 egui::vec2(SLOT_W, SLOT_H),
             )
-            .on_hover_text(
-                "ANTENNA — cutting lengths and SWR for a dipole, vertical, ground plane, \
-                 loop or Yagi",
-            );
+            .on_hover_text(tr!("extras-antenna-hint"));
             if ant.clicked() {
                 self.show_antenna = !self.show_antenna;
             }
+            let programs = crate::chrome::chip_sized(
+                ui,
+                self.schedule.show,
+                "PROGRAMS",
+                egui::vec2(SLOT_W, SLOT_H),
+            )
+            .on_hover_text(tr!("topbar-programs-hint"));
+            if programs.clicked() {
+                self.schedule.show = !self.schedule.show;
+            }
             // The other slots are kept: the panel is sized for them, so a
             // receiver added here does not widen the window.
-            for _ in 4..EXTRAS_SLOTS {
+            for _ in 7..EXTRAS_SLOTS {
                 let (rect, _) =
                     ui.allocate_exact_size(egui::vec2(SLOT_W, SLOT_H), egui::Sense::hover());
                 ui.painter().rect_stroke(
@@ -254,9 +343,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn the_panel_holds_five_buttons_side_by_side() {
+    fn the_panel_holds_every_button_side_by_side() {
         let row = EXTRAS_SLOTS as f32 * SLOT_W + (EXTRAS_SLOTS as f32 - 1.0) * SLOT_GAP;
-        assert!(EXTRAS_W >= row, "{EXTRAS_W} pt is narrower than five buttons ({row} pt)");
+        assert!(EXTRAS_W >= row, "{EXTRAS_W} pt is narrower than the buttons ({row} pt)");
     }
 
     fn screen() -> egui::Rect {
@@ -273,9 +362,9 @@ mod tests {
 
     #[test]
     fn a_remembered_place_and_size_win() {
-        let g = sdroxide_types::DetachedWindow { size: [700.0, 200.0], pos: Some([300.0, 400.0]) };
+        let g = sdroxide_types::DetachedWindow { size: [900.0, 200.0], pos: Some([300.0, 400.0]) };
         let (pos, size) = extras_place(Some(g), screen(), screen());
-        assert_eq!((pos, size), (egui::pos2(300.0, 400.0), egui::vec2(700.0, 200.0)));
+        assert_eq!((pos, size), (egui::pos2(300.0, 400.0), egui::vec2(900.0, 200.0)));
     }
 
     #[test]

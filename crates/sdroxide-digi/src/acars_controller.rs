@@ -49,6 +49,17 @@ impl AcarsController {
             .unwrap_or(0)
     }
 
+    /// File one message. The log is oldest first and keeps the newest
+    /// [`ACARS_MESSAGE_MAX`]; the panel lists it newest first.
+    fn record(&mut self, msg: AcarsMessage) {
+        self.messages.push(msg);
+        if self.messages.len() > ACARS_MESSAGE_MAX {
+            let cut = self.messages.len() - ACARS_MESSAGE_MAX;
+            self.messages.drain(..cut);
+        }
+        self.status_dirty = true;
+    }
+
     fn acars_status(&self) -> AcarsStatus {
         AcarsStatus {
             level: self.rx.level(),
@@ -121,12 +132,7 @@ impl DigiEngine for AcarsController {
                         crc_ok: f.crc_ok,
                         at: Self::now_unix(),
                     };
-                    self.messages.push(msg);
-                    if self.messages.len() > ACARS_MESSAGE_MAX {
-                        let cut = self.messages.len() - ACARS_MESSAGE_MAX;
-                        self.messages.drain(..cut);
-                    }
-                    self.status_dirty = true;
+                    self.record(msg);
                 }
             }
         }
@@ -183,5 +189,36 @@ impl DigiEngine for AcarsController {
 
     fn status(&self) -> DigiStatus {
         self.digi_status()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn message(n: i64) -> AcarsMessage {
+        AcarsMessage {
+            mode: "2".into(),
+            address: format!("N{n}"),
+            ack: "\x15".into(),
+            label: "H1".into(),
+            block_id: "1".into(),
+            text: format!("message {n}"),
+            crc_ok: true,
+            at: n,
+        }
+    }
+
+    /// 201 messages leave 200: the newest is kept, the oldest is the one lost.
+    #[test]
+    fn the_log_keeps_two_hundred_and_drops_the_oldest() {
+        let mut c = AcarsController::new(DigiConfig::default(), 48_000.0);
+        for n in 1..=201 {
+            c.record(message(n));
+        }
+        let st = c.acars_status();
+        assert_eq!(st.messages.len(), 200);
+        assert_eq!(st.messages.first().map(|m| m.at), Some(2), "message 1 was dropped");
+        assert_eq!(st.messages.last().map(|m| m.at), Some(201), "the newest is kept");
     }
 }

@@ -18,6 +18,7 @@ use sdroxide_aircraft_history::export::{Format, Row, Scope};
 use sdroxide_aircraft_online::{Info, Status as InfoStatus};
 
 use super::aircraft_history::Reason;
+use crate::i18n::tr;
 use super::aircraft_registry::AircraftCard;
 
 /// How long the station is waited for before the file is made here instead.
@@ -127,16 +128,16 @@ pub(in crate::app) fn finish(ready: Ready, rows: impl FnOnce() -> Vec<Row>, now:
     match ready {
         Ready::Station(format, body) => {
             let name = format.file_name(now);
-            let note = format!("Saved {name}: the station\u{2019}s last 24 hours.");
+            let note = tr!("aircraft-export-saved-station", name = name);
             Done { name, bytes: body.into_bytes(), note }
         }
         Ready::Local(format, reason) => {
             let rows = rows();
             let name = format.file_name(now);
-            let note = format!(
-                "{}: saved the {} aircraft heard in the last ten minutes instead.",
-                capitalised(reason.note()),
-                rows.len()
+            let note = tr!(
+                "aircraft-export-saved-local",
+                reason = capitalised(&reason.note()),
+                n = rows.len()
             );
             Done { name, bytes: format.render(&rows, Scope::Live, now).into_bytes(), note }
         }

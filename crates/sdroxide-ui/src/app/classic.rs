@@ -37,6 +37,7 @@
 //! Off by default, and desktop only: the strip is what this program's own
 //! screens are built around, and a phone has no room for a column at all.
 
+use crate::i18n::{Tr, tr};
 use eframe::egui::{self, RichText, Slider};
 use sdroxide_types::{AgcMode, ClassicSection, Command, Direction, RxId};
 
@@ -147,12 +148,11 @@ impl super::SdroxideApp {
         // the thing it moves is. `◀` folds it to the rails; the `▶` on the rails
         // brings it back. Nothing of this is drawn when Classic UI is off.
         ui.horizontal(|ui| {
-            ui.label(RichText::new("CONTROLS").size(10.5).strong().color(crate::theme::CYAN_DIM()));
+            ui.label(RichText::new(tr!("classic-controls")).size(10.5).strong().color(crate::theme::CYAN_DIM()));
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 if crate::chrome::chip(ui, false, RichText::new('◀').size(11.0))
                     .on_hover_text(
-                        "Fold the column away to a rail on the left. The readout and the meter \
-                         stay on the bar, and the control that brings this back is on the rail.",
+                        tr!("classic-fold-the-column-away-to-a-rail-on"),
                     )
                     .clicked()
                 {
@@ -303,8 +303,7 @@ impl super::SdroxideApp {
                         egui::DragAndDrop::set_payload(ui.ctx(), sec);
                     }
                     bar.on_hover_text(
-                        "Click to open or close this section. Drag it onto another \
-                             section to move it — the order is remembered.",
+                        tr!("classic-click-to-open-or-close-this"),
                     );
                     let bar_rect = egui::Rect::from_min_max(
                         egui::pos2(ui.max_rect().left(), row.response.rect.top() - 2.0),
@@ -359,7 +358,7 @@ impl super::SdroxideApp {
         // At the top, where the column's heading was, so the rail reads as that
         // heading folded rather than as a new control somewhere.
         if crate::chrome::chip(ui, true, RichText::new('▶').size(11.0))
-            .on_hover_text("Bring the control column back.")
+            .on_hover_text(tr!("classic-bring-the-control-column-back"))
             .clicked()
         {
             self.classic_collapsed = false;
@@ -375,21 +374,18 @@ impl super::SdroxideApp {
     /// slider here would be a second opinion about the same setting.
     fn classic_source_body(&mut self, ui: &mut egui::Ui, cmds: &mut Vec<Command>) {
         let label =
-            self.caps.as_ref().map(|c| c.label.clone()).unwrap_or_else(|| "no radio".to_string());
-        source_row(ui, "Radio", &label);
-        source_row(ui, "Rate", &format!("{:.3} Msps", self.state.sample_rate / 1e6));
-        source_row(ui, "Dial", &crate::app::frame::readout_text(self.state.rx_freq_hz()));
-        source_row(ui, "Mode", self.state.rx[0].mode.label());
+            self.caps.as_ref().map(|c| c.label.clone()).unwrap_or_else(|| tr!("classic-no-radio"));
+        source_row(ui, &tr!("settings-radio"), &label);
+        source_row(ui, &tr!("classic-rate"), &format!("{:.3} Msps", self.state.sample_rate / 1e6));
+        source_row(ui, &tr!("classic-dial"), &crate::app::frame::readout_text(self.state.rx_freq_hz()));
+        source_row(ui, &tr!("vdl2-mode"), self.state.rx[0].mode.label());
         if self.swl_mode() {
-            source_row(ui, "Receive", "listening screen");
+            source_row(ui, &tr!("classic-receive"), &tr!("classic-listening-screen"));
         }
         ui.add_space(4.0);
-        if crate::chrome::chip(ui, self.show_settings, "RADIO SETTINGS")
+        if crate::chrome::chip(ui, self.show_settings, tr!("classic-radio-settings"))
             .on_hover_text(
-                "The backend, the sample rate, the aerial, the converter and this \
-                 radio's own calibration — Settings → Radio, where they have always \
-                 been. The column shows what they are set to rather than a second copy \
-                 of the controls.",
+                tr!("classic-the-backend-the-sample-rate-the"),
             )
             .clicked()
         {
@@ -415,7 +411,7 @@ impl super::SdroxideApp {
     /// the panel's edge follows the drag. The strip puts volume and gain on one
     /// row because a strip is a plane of boxes; a column is a list.
     fn classic_receiver_body(&mut self, ui: &mut egui::Ui, cmds: &mut Vec<Command>) {
-        classic_row(ui, "Vol", |ui| {
+        classic_row(ui, &tr!("topbar-vol"), |ui| {
             let mut vol = self.state.rx[0].volume;
             let resp = crate::chrome::slider_readout(
                 ui,
@@ -423,7 +419,7 @@ impl super::SdroxideApp {
                     + 22.0,
                 Slider::new(&mut vol, 0.0..=1.0).show_value(false),
             )
-            .on_hover_text("Volume");
+            .on_hover_text(tr!("speech-volume"));
             if resp.changed() {
                 self.state.rx[0].volume = vol; // optimistic echo
                 cmds.push(Command::SetVolume { rx: RxId::Main, v: vol });
@@ -440,18 +436,15 @@ impl super::SdroxideApp {
             );
             if g.unit == sdroxide_types::GainUnit::Step {
                 hint.push_str(
-                    "\n\nCounted in steps, not decibels: what one step is worth is the \
-                     receiver's own business, and on an SDRplay it depends on the band as \
-                     well. Right is still more gain.",
+                    &tr!("classic-counted-in-steps-not-decibels-what"),
                 );
             }
             if hardware_agc {
                 hint.push_str(
-                    "\n\nThe PlutoSDR's own AGC is setting this gain, so moving the slider \
-                     does nothing. Set Settings → Radio → AGC to Manual to control it here.",
+                    &tr!("classic-the-plutosdr-s-own-agc-is-setting"),
                 );
             }
-            classic_row(ui, "Gain", |ui| {
+            classic_row(ui, &tr!("settings-radio-gain"), |ui| {
                 let mut db = self
                     .state
                     .gains
@@ -486,15 +479,15 @@ impl super::SdroxideApp {
                 }
             });
         }
-        classic_row(ui, "Filter", |ui| {
+        classic_row(ui, &tr!("topbar-filter"), |ui| {
             self.decim_chip(ui, cmds);
             // The AGC chip rides this row rather than one of its own: it is
             // a state light with a cycle behind it, not a value, and four
             // settings are few enough to walk through.
             if self.state.rx[0].mode.audio_agc() {
                 let agc = self.state.rx[0].agc;
-                if crate::chrome::chip(ui, agc != AgcMode::Off, format!("AGC {}", agc.label()))
-                    .on_hover_text("AGC hang time — click to cycle: Off / Slow / Med / Fast")
+                if crate::chrome::chip(ui, agc != AgcMode::Off, format!("AGC {}", agc.tr()))
+                    .on_hover_text(tr!("topbar-agc-hang-time-click-cycle"))
                     .clicked()
                 {
                     cmds.push(Command::SetAgc { rx: RxId::Main, agc: agc.next() });
@@ -504,7 +497,7 @@ impl super::SdroxideApp {
         // With the AGC off the audio rides on this fixed gain instead — the
         // demodulator's output unlevelled is whatever the band handed it.
         if self.state.rx[0].mode.audio_agc() && self.state.rx[0].agc == AgcMode::Off {
-            classic_row(ui, "Man", |ui| {
+            classic_row(ui, &tr!("topbar-man"), |ui| {
                 let mut db = self.state.rx[0].manual_gain_db;
                 let resp = crate::chrome::slider_readout(
                     ui,
@@ -518,8 +511,7 @@ impl super::SdroxideApp {
                         .suffix(" dB"),
                 )
                 .on_hover_text(
-                    "Manual audio gain, used while the AGC is off. Seeded from the level \
-                     the AGC was holding when it was switched off.",
+                    tr!("topbar-manual-audio-gain-used-while"),
                 );
                 if resp.changed() {
                     self.state.rx[0].manual_gain_db = db; // optimistic echo
@@ -534,7 +526,7 @@ impl super::SdroxideApp {
         ui.horizontal_wrapped(|ui| {
             ui.spacing_mut().slider_width = 520.0;
             let held = self.sql_hold.is_some();
-            if gutter_label_button(ui, "Squelch", held) {
+            if gutter_label_button(ui, &tr!("classic-squelch"), held) {
                 let (hold, send) = super::top_bar::sql_hold_toggle(
                     self.sql_hold,
                     super::top_bar::SqlHold::Dbfs(self.state.rx[0].squelch_db),
@@ -557,8 +549,7 @@ impl super::SdroxideApp {
                 }),
             )
             .on_hover_text(
-                "Gate the audio below this power in the receive passband, in dBFS. Left is \
-                 open. Set it above the noise and below the signal.",
+                tr!("classic-gate-the-audio-below-this-power-in"),
             );
             if resp.changed() {
                 self.state.rx[0].squelch_db = v; // optimistic echo
@@ -603,17 +594,16 @@ impl super::SdroxideApp {
         if !self.tx_chrome_ok() {
             let (why, fix) = match self.caps.as_ref().map(|c| c.tx_channels) {
                 None => (
-                    "This radio has not reported what it can do yet — its link is closed, or \
-                     it has not answered.",
-                    "Open the link in the radio strip, and the transmit controls appear here.",
+                    tr!("classic-this-radio-has-not-reported-what"),
+                    tr!("classic-open-the-link-in-the-radio-strip"),
                 ),
                 Some(0) => (
-                    "This device receives only: it has no transmitter for this program to key.",
-                    "Transmit is offered by a rig with a control or audio path — Settings → Radio.",
+                    tr!("classic-this-device-receives-only-it-has"),
+                    tr!("classic-transmit-is-offered-by-a-rig-with"),
                 ),
                 Some(_) => (
-                    "Transmit is off for this radio's screen.",
-                    "Settings → Radio → \"Show transmit controls\" brings it back.",
+                    tr!("classic-transmit-is-off-for-this-radio-s"),
+                    tr!("classic-settings-radio-show-transmit"),
                 ),
             };
             ui.label(egui::RichText::new(why).size(10.5).color(crate::theme::gray(170)));
@@ -621,14 +611,14 @@ impl super::SdroxideApp {
             ui.label(egui::RichText::new(fix).size(10.0).color(crate::theme::CYAN_DIM()));
             return;
         }
-        classic_row(ui, "Key", |ui| {
+        classic_row(ui, &tr!("classic-key"), |ui| {
             self.tx_ptt_chip(ui, cmds);
             self.tx_keyer_chip(ui);
         });
-        classic_row(ui, "Drive", |ui| {
+        classic_row(ui, &tr!("topbar-drive"), |ui| {
             self.tx_drive(ui, cmds);
         });
-        classic_row(ui, "Tune", |ui| {
+        classic_row(ui, &tr!("topbar-tune-2"), |ui| {
             self.tx_tune_chip(ui, cmds);
             self.tx_tune_level(ui, cmds);
         });
@@ -638,7 +628,7 @@ impl super::SdroxideApp {
         if self.digi_tx_level_applies() {
             let mut db = self.digi_tx_level_db();
             let hover = self.digi_tx_level_hover();
-            classic_row(ui, "Level", |ui| {
+            classic_row(ui, &tr!("txaudio-level"), |ui| {
                 let resp = crate::chrome::slider_readout(
                     ui,
                     crate::chrome::text_width(
@@ -654,7 +644,7 @@ impl super::SdroxideApp {
                 }
             });
         } else {
-            classic_row(ui, "Mic", |ui| {
+            classic_row(ui, &tr!("topbar-mic"), |ui| {
                 let mut mic = self.state.tx.mic_gain;
                 let resp = crate::chrome::slider_readout(
                     ui,
@@ -665,7 +655,7 @@ impl super::SdroxideApp {
                     ) + 22.0,
                     Slider::new(&mut mic, 0.0..=1.0).show_value(false),
                 )
-                .on_hover_text("Microphone gain");
+                .on_hover_text(tr!("topbar-microphone-gain"));
                 if resp.changed() {
                     self.state.tx.mic_gain = mic;
                     cmds.push(Command::SetMicGain(mic));
@@ -674,7 +664,7 @@ impl super::SdroxideApp {
         }
         if self.cessb_applies() {
             let mut db = self.state.tx.cessb_db;
-            classic_row(ui, "CESSB", |ui| {
+            classic_row(ui, &tr!("topbar-cessb"), |ui| {
                 let resp = crate::chrome::slider_readout(
                     ui,
                     crate::chrome::text_width(
@@ -685,9 +675,7 @@ impl super::SdroxideApp {
                     Slider::new(&mut db, 0.0..=sdroxide_types::CESSB_MAX_DB).suffix(" dB"),
                 )
                 .on_hover_text(
-                    "Controlled-envelope SSB: how much of the speech processing to \
-                     apply. Up is louder and flatter, at the cost of some splatter \
-                     either side.",
+                    tr!("classic-controlled-envelope-ssb-how-much"),
                 );
                 if resp.changed() {
                     cmds.push(Command::SetCessb(db));
@@ -777,10 +765,9 @@ pub(in crate::app) fn gutter_label_button(ui: &mut egui::Ui, label: &str, lit: b
         ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
     }
     resp.on_hover_text(if lit {
-        "Holding the squelch open. Click to put back the gate you had."
+        tr!("classic-holding-the-squelch-open-click-to")
     } else {
-        "Click to hold the squelch open — to hear whether something is there — and click \
-         again to put it back exactly as it was."
+        tr!("classic-click-to-hold-the-squelch-open-to")
     })
     .clicked()
 }
@@ -797,7 +784,7 @@ mod squelch_tests {
         let src = include_str!("classic.rs");
         let code = &src[..src.find("#[cfg(test)]").unwrap_or(src.len())];
         assert!(
-            code.contains("gutter_label_button(ui, \"Squelch\", held)"),
+            code.contains("gutter_label_button(ui, &tr!(\"classic-squelch\"), held)"),
             "the Classic column's Squelch caption is a plain label again"
         );
         assert!(

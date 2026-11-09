@@ -18,7 +18,7 @@
 use serde::{Deserialize, Serialize};
 
 /// The most received messages kept in the rolling list.
-pub const JTTY_MESSAGE_MAX: usize = 200;
+pub const JTTY_MESSAGE_MAX: usize = crate::MESSAGE_LOG_MAX;
 
 /// One decoded JTTY message.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

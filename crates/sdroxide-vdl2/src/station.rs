@@ -329,6 +329,25 @@ mod tests {
         assert_eq!(addrs, (40..50).collect::<Vec<u32>>());
     }
 
+    /// Out of the box the log keeps 200, and no setting can raise that.
+    #[test]
+    fn the_log_keeps_two_hundred_by_default_and_never_more() {
+        for cfg in [
+            Vdl2Settings::default(),
+            Vdl2Settings { max_messages: 60_000, ..Vdl2Settings::default() }.sane(),
+        ] {
+            let mut t = Tracker::new(cfg);
+            for i in 0..250u32 {
+                t.absorb(
+                    &frame(i, Vdl2AddrKind::Aircraft, Vdl2Frame::Ui { pf: false }, vec![]),
+                    1000 + i64::from(i),
+                );
+            }
+            assert_eq!(t.messages().len(), 200);
+            assert_eq!(t.messages().first().map(|m| m.src), Some(50), "the oldest were dropped");
+        }
+    }
+
     /// A station goes quiet and leaves the list; one still talking stays.
     #[test]
     fn a_silent_station_leaves_the_list() {

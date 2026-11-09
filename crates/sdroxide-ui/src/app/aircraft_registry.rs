@@ -58,6 +58,19 @@ pub(in crate::app) struct AircraftCard {
     pub registration: Option<Stamped<String>>,
     /// The last ACARS message, as its one-line summary.
     pub last_message: Option<Stamped<String>>,
+    // What the aircraft says about its own flight, from its ADS-B messages;
+    // each is absent until one has been heard.
+    pub selected_altitude_ft: Option<Stamped<i32>>,
+    pub selected_heading_deg: Option<Stamped<f32>>,
+    pub qnh_hpa: Option<Stamped<f32>>,
+    /// Indicated and true airspeed, knots.
+    pub airspeed: Option<Stamped<(Option<f32>, Option<f32>)>>,
+    pub heading_deg: Option<Stamped<f32>>,
+    /// The `NAV_*` bits of the autopilot modes engaged.
+    pub nav_modes: Option<Stamped<u8>>,
+    pub adsb_version: Option<Stamped<u8>>,
+    /// Position accuracy, velocity accuracy and source integrity categories.
+    pub accuracy: Option<Stamped<(Option<u8>, Option<u8>, Option<u8>)>>,
     /// Latest datum of any kind; what expiry looks at.
     pub last_seen: i64,
 }
@@ -168,6 +181,36 @@ impl AircraftRegistry {
         }
         if let Some(v) = a.track_deg {
             put(&mut c.track_deg, Field::Motion, v, Source::Adsb, a.last_at);
+        }
+        if let Some(v) = a.selected_altitude_ft {
+            put(&mut c.selected_altitude_ft, Field::Motion, v, Source::Adsb, a.last_at);
+        }
+        if let Some(v) = a.selected_heading_deg {
+            put(&mut c.selected_heading_deg, Field::Motion, v, Source::Adsb, a.last_at);
+        }
+        if let Some(v) = a.qnh_hpa {
+            put(&mut c.qnh_hpa, Field::Motion, v, Source::Adsb, a.last_at);
+        }
+        if a.ias_kt.is_some() || a.tas_kt.is_some() {
+            put(&mut c.airspeed, Field::Motion, (a.ias_kt, a.tas_kt), Source::Adsb, a.last_at);
+        }
+        if let Some(v) = a.heading_deg {
+            put(&mut c.heading_deg, Field::Motion, v, Source::Adsb, a.last_at);
+        }
+        if let Some(v) = a.nav_modes {
+            put(&mut c.nav_modes, Field::Motion, v, Source::Adsb, a.last_at);
+        }
+        if let Some(v) = a.adsb_version {
+            put(&mut c.adsb_version, Field::Motion, v, Source::Adsb, a.last_at);
+        }
+        if a.nac_p.is_some() || a.nac_v.is_some() || a.sil.is_some() {
+            put(
+                &mut c.accuracy,
+                Field::Motion,
+                (a.nac_p, a.nac_v, a.sil),
+                Source::Adsb,
+                a.last_at,
+            );
         }
         c.touch(a.last_at);
         trim(&mut self.cards);

@@ -509,6 +509,57 @@ impl ChromeStyle {
     }
 }
 
+/// Which quantity the meter shows. Turned with the arrows on the instrument.
+///
+/// `Auto` is the stock choice and follows the radio: the signal on receive and,
+/// while transmitting, the output power — the reading an operator keys up to
+/// see. The other four pin one quantity. A pinned view the radio has no figure
+/// for (SWR on a rig with no bridge, power on one with no sensor) is skipped by
+/// the arrows and falls back to `Auto`, so the needle never sits on a quantity
+/// nobody is measuring. Kept in `[ui]` and in the profile's screen
+/// ([`ClientScreen`]) with [`SmeterStyle`], for the same reason.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum MeterView {
+    /// The received signal, S-units — on transmit the last one heard.
+    Rx,
+    /// Output power: the rig's own meter, or watts where it measures them.
+    Power,
+    /// Standing-wave ratio.
+    Swr,
+    /// The rig's automatic level control.
+    Alc,
+    /// Signal on receive, power on transmit.
+    ///
+    /// Declared last because serde demands the catch-all be the final variant:
+    /// it also swallows an unrecognised value in a hand-edited config, so a
+    /// typo degrades to the stock view instead of throwing the whole `[ui]`
+    /// table away (see [`SmeterStyle`], which does the same).
+    #[default]
+    #[serde(other)]
+    Auto,
+}
+
+impl MeterView {
+    /// Every view, in the order the arrows turn through them.
+    pub const ALL: [MeterView; 5] =
+        [MeterView::Auto, MeterView::Power, MeterView::Swr, MeterView::Alc, MeterView::Rx];
+
+    fn step(self, by: isize) -> Self {
+        let i = Self::ALL.iter().position(|v| *v == self).unwrap_or(0) as isize;
+        Self::ALL[(i + by).rem_euclid(Self::ALL.len() as isize) as usize]
+    }
+
+    /// The view after this one (right arrow).
+    pub fn next(self) -> Self {
+        self.step(1)
+    }
+
+    /// The view before this one (left arrow).
+    pub fn prev(self) -> Self {
+        self.step(-1)
+    }
+}
+
 /// Which face the S-meter wears. Cycled by clicking the meter itself.
 ///
 /// A preference of the operator rather than of the radio — which instrument
@@ -813,10 +864,211 @@ impl BroadcastScope {
     }
 }
 
+/// The language the interface is drawn in: a BCP 47 tag such as `es` or
+/// `pt-BR`, or none to follow the operating system's.
+///
+/// A tag rather than an enum of the languages there are, because the list is
+/// whatever translations the client carries, and this crate knows none of
+/// them. A tag the client has no translation for is not an error: it falls
+/// back to the nearest it has, and to English last, the same as a system
+/// language it has never heard of. Held inline so [`UiSettings`] stays `Copy`.
+#[derive(Clone, Copy, PartialEq, Eq, Default)]
+pub struct UiLanguage {
+    tag: [u8; UiLanguage::MAX_LEN],
+    len: u8,
+}
+
+impl UiLanguage {
+    /// The longest tag held. Language, script and region come to eleven
+    /// (`zh-Hant-TW`); the rest is room for a variant.
+    pub const MAX_LEN: usize = 23;
+
+    /// Follow the operating system's language — the default.
+    pub const SYSTEM: UiLanguage = UiLanguage { tag: [0; Self::MAX_LEN], len: 0 };
+
+    /// A language picked by tag. `None` for an empty tag, one too long to
+    /// hold, or one with a character no language tag has.
+    pub fn from_tag(tag: &str) -> Option<UiLanguage> {
+        let tag = tag.trim();
+        if tag.is_empty()
+            || tag.len() > Self::MAX_LEN
+            || !tag.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
+        {
+            return None;
+        }
+        let mut out = Self::SYSTEM;
+        out.tag[..tag.len()].copy_from_slice(tag.as_bytes());
+        out.len = tag.len() as u8;
+        Some(out)
+    }
+
+    /// The picked tag, or `None` for the system's language.
+    pub fn tag(&self) -> Option<&str> {
+        // Only ever filled from a `&str` of ASCII, so this cannot fail.
+        (self.len > 0).then(|| std::str::from_utf8(&self.tag[..self.len as usize]).unwrap_or(""))
+    }
+
+    pub fn is_system(&self) -> bool {
+        self.len == 0
+    }
+}
+
+impl std::fmt::Debug for UiLanguage {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self.tag() {
+            Some(tag) => write!(f, "UiLanguage({tag})"),
+            None => f.write_str("UiLanguage(system)"),
+        }
+    }
+}
+
+/// Written as the bare tag, and as an empty string for the system's language,
+/// so `config.toml` reads `language = "es"`.
+impl Serialize for UiLanguage {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(self.tag().unwrap_or(""))
+    }
+}
+
+/// Anything that is not a tag it can hold — hand-edited nonsense, or a longer
+/// tag from some later build — reads as the system's language rather than
+/// failing the whole `[ui]` table, which would lose the theme and the layout
+/// along with it.
+impl<'de> Deserialize<'de> for UiLanguage {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let tag = String::deserialize(d)?;
+        Ok(UiLanguage::from_tag(&tag).unwrap_or(UiLanguage::SYSTEM))
+    }
+}
+
+/// The column the PROGRAMS list is ordered by.
+///
+/// `#[serde(other)]` on the default for the reason [`crate::MemorySort`] has it:
+/// a typo in a hand-edited `config.toml` degrades to frequency order rather than
+/// throwing the whole `[ui]` table away.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ProgramsSort {
+    /// Metre band, then frequency.
+    Band,
+    /// Station name, without regard to case.
+    Name,
+    /// Language.
+    Lang,
+    /// Target area.
+    Target,
+    /// Transmitter site.
+    Site,
+    /// Carrier frequency — the order the list has always had. Declared last
+    /// because `#[serde(other)]` must be on the last variant.
+    #[default]
+    #[serde(other)]
+    Freq,
+}
+
+/// What the PROGRAMS window remembers: every filter, the sort and the ALL chip.
+///
+/// A view preference like [`UiSettings::memory_sort`] — it belongs to whoever is
+/// reading the list, not to the station. `use_now` defaults to **on**, which is
+/// why this has a hand-written `Default` rather than a derived one.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct ProgramsFilters {
+    /// Free-text search.
+    pub query: String,
+    /// Language filter (substring).
+    pub lang: String,
+    /// Target-area filter (substring).
+    pub target: String,
+    /// Metre band, or empty for any.
+    pub band: String,
+    /// The fixed filter time as UTC `HHMM`, used while `use_now` is off.
+    pub hhmm: u16,
+    /// Filter at the present moment rather than at `hhmm`.
+    pub use_now: bool,
+    /// Only the starred stations.
+    pub favourites_only: bool,
+    /// One schedule only, or `None` for all of them.
+    pub source: Option<crate::ScheduleSource>,
+    /// Show each row's local time at the transmitter.
+    pub local_time: bool,
+    /// The ALL chip. The favourites it produced are kept on their own, so this
+    /// is only whether the chip is lit; restoring it must not rewrite them.
+    pub all: bool,
+    /// The column the list is ordered by.
+    pub sort: ProgramsSort,
+    /// Read that order backwards.
+    pub sort_desc: bool,
+}
+
+/// Everything the PROGRAMS window keeps, in one piece: the filters and sort, the
+/// TOUT chip (inside [`ProgramsFilters`]), the stations it starred, and the
+/// colours. **The station owns it**: a client that talks to a station reads this
+/// from it and writes every change back, so the browser keeps nothing of it and
+/// every screen sees the same window.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(default)]
+pub struct ProgramsState {
+    pub filters: ProgramsFilters,
+    /// The starred stations, by name — what the waterfall labels are drawn from.
+    pub favourites: Vec<String>,
+    /// The colour of every station's label, if one was chosen.
+    pub colour_all: Option<[u8; 3]>,
+    /// The colour of single stations, by name.
+    pub colours: std::collections::BTreeMap<String, [u8; 3]>,
+}
+
+impl Default for ProgramsFilters {
+    fn default() -> Self {
+        ProgramsFilters {
+            query: String::new(),
+            lang: String::new(),
+            target: String::new(),
+            band: String::new(),
+            hhmm: 0,
+            use_now: true,
+            favourites_only: false,
+            source: None,
+            local_time: false,
+            all: false,
+            sort: ProgramsSort::Freq,
+            sort_desc: false,
+        }
+    }
+}
+
 /// User display preferences. All have defaults so a missing `[ui]` table loads.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct UiSettings {
+    /// Radios with the **docked band/mode selector** on screen, by roster id,
+    /// and whether it was left *showing*.
+    ///
+    /// The key is what matters: present means the operator docked the selector
+    /// for that radio, so it comes back docked on the next start. The value is
+    /// the eye on it — `false` is a dock they docked and then hid, which is a
+    /// state that has to survive too, or the next start shows a dock they had
+    /// put away and offers no chip to put it away again (review, 2026-11-01).
+    ///
+    /// Presentation only, and per radio on purpose: a phone gets no dock at all
+    /// (`band_dock_room` decides), so a station that keeps it open on the shack
+    /// display must not force it on the phone that later connects to the same
+    /// radio. Reported by the SWL users group (2026-11-01): the dock had to be
+    /// opened by hand on every start. The key is the same radio id the view
+    /// state beside it already uses (`view:{id}`) — a station's radios are
+    /// numbered locally.
+    #[serde(default)]
+    pub band_dock_open: std::collections::BTreeMap<u32, bool>,
+
+    /// Public SDRs the operator starred, by **address**.
+    ///
+    /// The address and not the name: it is what a connection is made to and
+    /// what the two directories agree on, while the name and the place are the
+    /// operator's own words and change. A starred receiver that is renamed
+    /// keeps its star; one whose address changes is a different receiver and
+    /// does not.
+    #[serde(default)]
+    pub public_sdr_favourites: Vec<String>,
+
     /// GUI repaint + spectrum frame rate, in frames per second.
     pub frame_rate_fps: u32,
     /// How fast the waterfall scrolls.
@@ -929,6 +1181,9 @@ pub struct UiSettings {
     pub bandplan_colors: [[u8; 3]; BandplanKind::COUNT],
     /// Which layout the window wears, or `Auto` to pick from the viewport.
     pub layout: LayoutMode,
+    /// The language the interface is drawn in — see [`UiLanguage`]. This
+    /// screen's preference, like the theme: a remote client picks its own.
+    pub language: UiLanguage,
     /// Colour theme for the UI chrome.
     pub theme: UiTheme,
     /// The shape buttons wear.
@@ -956,6 +1211,10 @@ pub struct UiSettings {
     /// Cycled by clicking the meter; see [`SmeterStyle`] for why it is a
     /// screen preference rather than part of a radio's view.
     pub smeter_style: SmeterStyle,
+    /// What the meter measures — signal, power, SWR or ALC. Turned with the
+    /// arrows on the instrument; see [`MeterView`].
+    #[serde(default)]
+    pub smeter_view: MeterView,
     /// Ask sdroxide.com once per start whether a newer release has been
     /// published, and say so in the notice banner above the panadapter. In
     /// `[ui]` because it is this screen's preference, like the theme — the
@@ -982,6 +1241,20 @@ pub struct UiSettings {
     /// window, and the choice is kept.
     #[serde(default = "default_memory_waterfall_color")]
     pub memory_waterfall_color: [u8; 3],
+    /// The colour every scheduled broadcast station's label is painted in on
+    /// the waterfall, chosen in the PROGRAMS window. `None` keeps the stock
+    /// tint of the broadcast spot kind. A station with a colour of its own in
+    /// [`Self::programs_colours`] keeps that one.
+    #[serde(default)]
+    pub programs_colour_all: Option<[u8; 3]>,
+    /// The colour of single stations on the waterfall, by station name — the
+    /// key PROGRAMS' favourites use. Chosen in the PROGRAMS window.
+    #[serde(default)]
+    pub programs_colours: std::collections::BTreeMap<String, [u8; 3]>,
+    /// The PROGRAMS window's filters and sort, kept between sessions so the
+    /// window opens as it was left. See [`ProgramsFilters`].
+    #[serde(default)]
+    pub programs: ProgramsFilters,
     /// How the FT8/FT4 decode list orders the stations. This screen's
     /// preference like [`UiSettings::memory_sort`] above, and for the same
     /// reason: the decodes are the station's, the order they are read in is
@@ -1111,14 +1384,31 @@ pub struct UiSettings {
     /// detached it. Off by default.
     #[serde(default)]
     pub radio_classic_on: bool,
+    /// Public SDRs is docked under the waterfall (in the voice modes that have
+    /// nothing there) rather than in a window. Off by default: a window.
+    #[serde(default)]
+    pub public_sdr_docked: bool,
+    /// The last frequency Radio Classic was listening on, in Hz, and the mode it
+    /// was in — `0.0` and `None` until it has been used once. Switching the
+    /// panel on tunes here, or to 100 MHz in WFM the very first time.
+    #[serde(default)]
+    pub radio_classic_last_hz: f64,
+    #[serde(default)]
+    pub radio_classic_last_mode: Option<crate::Mode>,
     /// Which repair [`UiSettings::tool_windows_open`] has had. **1** clears the
-    /// bits the program used to set when a mode was selected — until then,
+    /// bits the program used to set when a mode was selected - until then,
     /// choosing a mode opened its panel in a window of its own instead of docking
     /// it under the waterfall, and wrote that into the settings, so the bits it
     /// left are indistinguishable from the operator's (issue #217). Cleared once;
     /// from then on a panel window is open only because somebody opened it.
     #[serde(default)]
     pub tool_windows_repaired: u8,
+    /// SESSION QSOs window: sort column (0=Time,1=Call,2=Grid,3=Band,4=Mode,
+    /// 5=RST sent,6=RST rcvd,7=Country,8=CQ,9=Distance,10=Final) and direction.
+    #[serde(default)]
+    pub session_qso_sort: u8,
+    #[serde(default = "default_true")]
+    pub session_qso_sort_desc: bool,
     /// Keep the screen on: ask the browser for a Screen Wake Lock so a phone
     /// or tablet left on the waterfall does not dim and lock itself. A
     /// property of this screen, like the theme, and carried with the profile's
@@ -1161,6 +1451,22 @@ pub struct UiSettings {
     /// (native only).
     #[serde(default)]
     pub aircraft_os_window: Option<DetachedWindow>,
+    /// Where the PROGRAMS window last was, docked in the main window — the same
+    /// remembered place and size as [`Self::extras_window`]. `None` until the
+    /// operator has moved or resized it: it then opens at its own size.
+    #[serde(default)]
+    pub schedule_window: Option<DetachedWindow>,
+    /// The same for the PROGRAMS window once detached into its own OS window
+    /// (native only).
+    #[serde(default)]
+    pub schedule_os_window: Option<DetachedWindow>,
+    /// Where the MEMORIES window last was, docked in the main window.
+    #[serde(default)]
+    pub memories_window: Option<DetachedWindow>,
+    /// The same for the MEMORIES window once detached into its own OS window
+    /// (native only).
+    #[serde(default)]
+    pub memories_os_window: Option<DetachedWindow>,
     /// Also carry this remote client's **control bindings** in the server
     /// profile, as well as its screen (which always travels — see
     /// `ClientScreen`).
@@ -1319,6 +1625,13 @@ pub struct UiSettings {
     /// arrangement and nothing else.
     #[serde(default)]
     pub classic_sections: String,
+    /// The Meshtastic panel is available: its chips show in the Extras window
+    /// and on the experimental bench, and its window may open. Off by default,
+    /// so the panel is not there until the operator asks for it in the
+    /// detachable-windows settings. Switching it off closes the window; it does
+    /// not stop the receiver (the panel's own switch does that).
+    #[serde(default)]
+    pub meshtastic_panel: bool,
 }
 
 /// One section of the Classic UI column — the units the operator drags into the
@@ -1626,6 +1939,8 @@ impl UiSettings {
 impl Default for UiSettings {
     fn default() -> Self {
         UiSettings {
+            band_dock_open: Default::default(),
+            public_sdr_favourites: Vec::new(),
             // Off: the dial is what every other radio shows, and an operator
             // who has not asked for the change should not find their readout
             // reading differently from the rig beside it.
@@ -1652,6 +1967,7 @@ impl Default for UiSettings {
             spot_colors: default_spot_colors(),
             bandplan_colors: default_bandplan_colors(),
             layout: LayoutMode::Auto,
+            language: UiLanguage::SYSTEM,
             theme: UiTheme::Default,
             button_style: ChromeStyle::Angled,
             window_style: ChromeStyle::Angled,
@@ -1660,12 +1976,16 @@ impl Default for UiSettings {
             menu_font_size: FontSize::Medium,
             ui_zoom: 1.0,
             smeter_style: SmeterStyle::Needle,
+            smeter_view: MeterView::Auto,
             update_check: true,
             memory_sort: crate::MemorySort::Stored,
             memory_sort_desc: false,
             memory_waterfall_lanes: 4,
             memory_waterfall_show_folder: true,
             memory_waterfall_color: [70, 224, 125],
+            programs_colour_all: None,
+            programs_colours: std::collections::BTreeMap::new(),
+            programs: ProgramsFilters::default(),
             decode_sort: crate::DecodeSort::None,
             // Strongest and farthest first, which is the useful end of both
             // numbers; the Country order flips this when it is picked.
@@ -1688,6 +2008,10 @@ impl Default for UiSettings {
             extras_os_window: None,
             aircraft_window: None,
             aircraft_os_window: None,
+            schedule_window: None,
+            schedule_os_window: None,
+            memories_window: None,
+            memories_os_window: None,
             client_share_bindings: false,
             client_bindings_declined: false,
             dismissed_advisories: 0,
@@ -1703,7 +2027,13 @@ impl Default for UiSettings {
             classic_sections: String::new(),
             tool_windows_open: 0,
             radio_classic_on: false,
+            public_sdr_docked: false,
+            radio_classic_last_hz: 0.0,
+            radio_classic_last_mode: None,
             tool_windows_repaired: 0,
+            session_qso_sort: 0,
+            session_qso_sort_desc: true,
+            meshtastic_panel: false,
         }
     }
 }
@@ -1998,6 +2328,19 @@ pub struct ClientScreen {
     /// listener sees, and they see it from whichever device they signed in on.
     /// Appended last: this struct rides the wire positionally.
     pub broadcast_scope: BroadcastScope,
+    /// What the meter measures — [`UiSettings::smeter_view`]. Appended last:
+    /// this struct rides the wire positionally.
+    pub smeter_view: MeterView,
+    /// The language the interface is drawn in — [`UiSettings::language`].
+    /// Kept with the profile so a browser whose own storage was cleared (or a
+    /// second device) comes back in the operator's language, and so the web
+    /// client knows which translation to fetch from the station. Appended
+    /// last: this struct rides the wire positionally.
+    ///
+    /// A profile that names none ([`UiLanguage::SYSTEM`]: one saved before the
+    /// field, or by an operator who follows the system) does not override the
+    /// client's own choice — see [`ClientScreen::apply_to`].
+    pub language: UiLanguage,
 }
 
 impl Default for ClientScreen {
@@ -2044,6 +2387,8 @@ impl ClientScreen {
             spectrum_fill_color: s.spectrum_fill_color,
             spectrum_fill_style: s.spectrum_fill_style,
             broadcast_scope: s.broadcast_scope,
+            smeter_view: s.smeter_view,
+            language: s.language,
         }
     }
 
@@ -2081,6 +2426,13 @@ impl ClientScreen {
         s.spectrum_fill_color = self.spectrum_fill_color;
         s.spectrum_fill_style = self.spectrum_fill_style;
         s.broadcast_scope = self.broadcast_scope;
+        s.smeter_view = self.smeter_view;
+        // Only a language the profile actually names. An empty one is "not
+        // said", not "follow the system": a profile stored before the field
+        // would otherwise reset every client's own pick on each connect.
+        if !self.language.is_system() {
+            s.language = self.language;
+        }
     }
 }
 
@@ -2139,6 +2491,25 @@ mod client_screen_tests {
         assert_eq!(back, screen);
     }
 
+    /// The meter's view is part of the screen a profile keeps on the server, and
+    /// comes back out of it on the client that signs in.
+    #[test]
+    fn the_meter_view_travels_with_the_profile() {
+        let mut s = UiSettings { smeter_view: MeterView::Alc, ..UiSettings::default() };
+        let screen = ClientScreen::from_settings(&s);
+        let bytes = postcard::to_allocvec(&screen).expect("encodes");
+        let back: ClientScreen = postcard::from_bytes(&bytes).expect("decodes");
+        assert_eq!(back.smeter_view, MeterView::Alc);
+        s.smeter_view = MeterView::Auto;
+        back.apply_to(&mut s);
+        assert_eq!(s.smeter_view, MeterView::Alc);
+        assert_eq!(
+            ClientScreen::default().smeter_view,
+            MeterView::Auto,
+            "power on transmit is stock"
+        );
+    }
+
     /// The sound welcome is on unless asked off, and the wake lock off unless
     /// asked on — including for a profile stored before either was carried,
     /// which has neither key and must not lose its welcome message.
@@ -2194,6 +2565,29 @@ mod client_screen_tests {
         assert!(other.spectrum_fill, "the fill stayed behind");
         assert_eq!(other.spectrum_fill_color, [40, 220, 60], "the colour stayed behind");
         assert_eq!(other.spectrum_fill_style, SpectrumFillStyle::Mixed, "the style stayed behind");
+    }
+
+    /// The language is part of the screen a profile keeps on the server, so a
+    /// browser with nothing stored comes back in it — and a profile that names
+    /// none (stored before the field) leaves the client's own pick alone.
+    #[test]
+    fn the_language_travels_with_the_profile() {
+        let mut mine = UiSettings::default();
+        mine.language = UiLanguage::from_tag("fr").unwrap();
+        let carried = ClientScreen::from_settings(&mine);
+        let back: ClientScreen =
+            postcard::from_bytes(&postcard::to_allocvec(&carried).unwrap()).unwrap();
+        let mut other = UiSettings::default();
+        assert!(other.language.is_system(), "a fresh client follows the system");
+        back.apply_to(&mut other);
+        assert_eq!(other.language.tag(), Some("fr"), "the language stayed behind");
+
+        let old: ClientScreen = serde_json::from_str(r#"{"simple_ui":true}"#).expect("old profile");
+        assert!(old.language.is_system(), "a profile from before the field names none");
+        let mut picked = UiSettings::default();
+        picked.language = UiLanguage::from_tag("de").unwrap();
+        old.apply_to(&mut picked);
+        assert_eq!(picked.language.tag(), Some("de"), "and does not override the client's pick");
     }
 
     /// The FFT size travels with the profile, including for a profile stored
@@ -2304,6 +2698,45 @@ pub fn set_force_swl(on: bool) {
 
 #[cfg(test)]
 mod tests {
+
+    /// The PROGRAMS filters survive a save and a load, and a config written
+    /// before they existed opens on the defaults — notably "now", not a stale
+    /// fixed time.
+    #[test]
+    fn the_programs_filters_round_trip_and_default_to_now() {
+        let mut s = UiSettings::default();
+        s.programs = ProgramsFilters {
+            query: "bbc".into(),
+            lang: "En".into(),
+            target: "Af".into(),
+            band: "49m".into(),
+            hhmm: 1423,
+            use_now: false,
+            favourites_only: true,
+            source: Some(crate::ScheduleSource::Aoki),
+            local_time: true,
+            all: true,
+            sort: ProgramsSort::Name,
+            sort_desc: true,
+        };
+        let text = serde_json::to_string(&s).unwrap();
+        let back: UiSettings = serde_json::from_str(&text).unwrap();
+        assert_eq!(back.programs, s.programs);
+
+        let fresh = ProgramsFilters::default();
+        assert!(fresh.use_now, "a new install filters at the present moment");
+        assert_eq!(fresh.sort, ProgramsSort::Freq);
+        assert!(!fresh.all && !fresh.sort_desc);
+    }
+
+    /// A column name the file does not know falls back to frequency order
+    /// instead of losing the whole table.
+    #[test]
+    fn an_unknown_programs_sort_reads_as_frequency() {
+        let f: ProgramsFilters = serde_json::from_str(r#"{"sort":"Sideways"}"#).unwrap();
+        assert_eq!(f.sort, ProgramsSort::Freq);
+        assert!(f.use_now, "the other fields keep their defaults");
+    }
     use super::*;
 
     /// **A stored section order is the operator's, and nothing in it is lost by
@@ -2461,6 +2894,27 @@ mod tests {
         // order: it is written out, not derived.
         assert!(LayoutMode::ALL.contains(&LayoutMode::Auto));
         assert_eq!(LayoutMode::ALL.len(), 5);
+    }
+
+    /// The language is written as the bare tag, the system's as an empty
+    /// string, and anything that is not a tag reads back as the system's
+    /// rather than costing the rest of `[ui]`.
+    #[test]
+    fn the_language_round_trips_as_a_bare_tag() {
+        let es = UiLanguage::from_tag("es").unwrap();
+        assert_eq!(serde_json::to_string(&es).unwrap(), "\"es\"");
+        assert_eq!(serde_json::to_string(&UiLanguage::SYSTEM).unwrap(), "\"\"");
+        let back: UiLanguage = serde_json::from_str("\"pt-BR\"").unwrap();
+        assert_eq!(back.tag(), Some("pt-BR"));
+        let none: UiLanguage = serde_json::from_str("\"\"").unwrap();
+        assert!(none.is_system());
+        let junk: UiLanguage = serde_json::from_str("\"<script>\"").unwrap();
+        assert!(junk.is_system());
+        let long: UiLanguage = serde_json::from_str(&format!("\"{}\"", "a".repeat(40))).unwrap();
+        assert!(long.is_system());
+        // A config written before the field existed loads with the system's.
+        let ui: UiSettings = serde_json::from_str("{}").unwrap();
+        assert!(ui.language.is_system());
     }
 
     /// The undocked state survives a serialise round trip, and the pre-array

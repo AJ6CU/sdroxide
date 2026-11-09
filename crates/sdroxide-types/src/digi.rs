@@ -1001,9 +1001,14 @@ pub(crate) fn parse_navtex_time(text: &str) -> Option<(u8, u8)> {
     None
 }
 
+/// The most messages any mode's log keeps. One number for every log of decoded
+/// messages (ACARS, VDL2, DSC, NAVTEX, APRS, JTTY, JS8): the newest takes the
+/// first place and the 201st is dropped.
+pub const MESSAGE_LOG_MAX: usize = 200;
+
 /// Messages kept. A station transmits on a ten-minute slot every four hours
 /// and its neighbours fill the rest, so this is a day or two of a busy area.
-pub const NAVTEX_MESSAGE_MAX: usize = 200;
+pub const NAVTEX_MESSAGE_MAX: usize = MESSAGE_LOG_MAX;
 
 /// What the NAVTEX receiver is doing.
 #[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
@@ -1029,9 +1034,9 @@ pub struct NavtexStatus {
     pub reverse: bool,
 }
 
-/// Most ACARS messages kept. A busy channel produces a few a minute and the
-/// pane is a rolling view, not a log.
-pub const ACARS_MESSAGE_MAX: usize = 300;
+/// Most ACARS messages kept ([`MESSAGE_LOG_MAX`]). A busy channel produces a few
+/// a minute and the pane is a rolling view, not a log.
+pub const ACARS_MESSAGE_MAX: usize = MESSAGE_LOG_MAX;
 
 /// One decoded ACARS message.
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
@@ -1067,9 +1072,10 @@ pub struct AcarsStatus {
     pub bad: u64,
 }
 
-/// Most DSC sequences kept. A DSC channel is mostly quiet — bursts are a
-/// second or two and sporadic — so this is a long evening's listening.
-pub const DSC_MESSAGE_MAX: usize = 300;
+/// Most DSC sequences kept ([`MESSAGE_LOG_MAX`]). A DSC channel is mostly quiet
+/// — bursts are a second or two and sporadic — so this is a long evening's
+/// listening.
+pub const DSC_MESSAGE_MAX: usize = MESSAGE_LOG_MAX;
 
 /// One DSC sequence as the receiver filed it: the message, and when it was
 /// heard.
@@ -1284,6 +1290,11 @@ pub struct QsoRecord {
     /// [`Self::hamqth_sent`] gives.
     #[serde(default)]
     pub log11dx_sent: bool,
+    /// Final message that completed this QSO (73 / RR73 / RRR), empty for a
+    /// manually logged contact. Appended after `log11dx_sent` for the reason
+    /// [`Self::hamqth_sent`] gives.
+    #[serde(default)]
+    pub final_msg: String,
     /// In the operator's Wavelog: uploaded from here and acknowledged, or
     /// downloaded from it in the first place. Appended for the reason
     /// [`Self::hamqth_sent`] gives.
@@ -2326,6 +2337,14 @@ pub struct DigiConfig {
     /// `navtex_rx_sensitivity` is ignored and the slider sits at 0.
     #[serde(default = "yes")]
     pub navtex_rx_auto: bool,
+    /// NAVTEX sync drop: consecutive slots with neither copy readable before
+    /// the character phase is given up. Default 48.
+    #[serde(default = "navtex_loss_limit_default")]
+    pub navtex_loss_limit: u8,
+    /// NAVTEX sync drop: consecutive slots whose two copies both parsed and
+    /// disagreed before sync is given up. Default 6.
+    #[serde(default = "navtex_disagree_limit_default")]
+    pub navtex_disagree_limit: u8,
     /// Let the RTTY decoder track tuning error rather than staying pinned to
     /// the cursor. On by default; the matched-filter detector is much less
     /// forgiving of mistuning than a wideband discriminator would be.
@@ -3236,6 +3255,33 @@ pub struct DigiConfig {
     /// for a continuous run: it stops whether or not contacts are being made.
     #[serde(default)]
     pub auto_session_min: u16,
+    /// SSTV: how many sync pulses the receiver wants before it starts drawing a
+    /// picture it has no VIS header for (4, 5 or 6; six by default).
+    ///
+    /// The pulses are *evidence* that a transmission is under way rather than
+    /// noise, and the lock always begins at the newest of them — so this trades
+    /// how quickly the receiver joins a picture already in progress against how
+    /// often it starts on noise. Six on a CB band, four where the band is quiet
+    /// and a picture is worth catching early. Appended at the tail, so this is a
+    /// wire change (`PROTO_VERSION` 262 → 263).
+    #[serde(default = "sstv_default_sync_pulses")]
+    pub sstv_sync_pulses: u8,
+    /// SSTV: save every finished frame, including the ones the gate would call
+    /// noise. Off by default.
+    ///
+    /// The way back. The gate's two signs separate the bench's speckle from its
+    /// pictures by a margin, not a gulf, and a near-flat picture lives on its
+    /// sync alone — so an operator who would rather have a doubtful frame than
+    /// miss one turns this on and nothing is discarded (review, 2026-11-04).
+    /// Appended at the tail, so this is a wire change.
+    #[serde(default)]
+    pub sstv_save_all: bool,
+}
+
+/// Six: the value the bench chose for a 27 MHz band full of CB QRM, where four
+/// started an image about once a minute.
+fn sstv_default_sync_pulses() -> u8 {
+    6
 }
 
 fn cw_default_tx_idle_s() -> f32 {
@@ -3387,6 +3433,8 @@ impl Default for DigiConfig {
             navtex_reverse: false,
             navtex_rx_sensitivity: 0,
             navtex_rx_auto: true,
+            navtex_loss_limit: 48,
+            navtex_disagree_limit: 6,
             rtty_afc: true,
             olivia_tones: 32,
             olivia_bw_hz: 1000.0,
@@ -3524,6 +3572,8 @@ impl Default for DigiConfig {
             sstv_rx_auto: true,
             wefax_rx_sensitivity: 0,
             wefax_rx_auto: true,
+            sstv_sync_pulses: sstv_default_sync_pulses(),
+            sstv_save_all: false,
         }
     }
 }
@@ -3721,6 +3771,10 @@ pub fn adif_band(freq_hz: f64) -> &'static str {
         // exactly as 11 m and the broadcast services do.
         m if (446.0..446.2).contains(&m) => "",
         m if m < 450.1 => "70cm",
+        // Between 70 cm and 33 cm (902-928) there is no amateur band, and the
+        // 868 MHz licence-free band sits in that gap: not an amateur contact,
+        // so no ADIF band, like PMR446 above.
+        m if m < 902.0 => "",
         m if m < 928.1 => "33cm",
         m if m < 1300.1 => "23cm",
         m if m < 2450.1 => "13cm",
@@ -3782,11 +3836,53 @@ pub(crate) fn adif_field(name: &str, value: &str) -> String {
 /// Windows logging software can refuse a file with bare LF endings.
 pub fn qso_log_to_adif(records: &[QsoRecord]) -> String {
     let mut out = String::from(
-        "ADIF export from sdroxide\r\n<ADIF_VER:5>3.1.4\r\n<PROGRAMID:8>sdroxide\r\n<EOH>\r\n",
+        "ADIF export from sdroxide\r\n<ADIF_VER:5>3.1.8\r\n<PROGRAMID:8>sdroxide\r\n<EOH>\r\n",
     );
     for r in records {
         out.push_str(&qso_to_adif_record(r));
         out.push_str("\r\n");
+    }
+    out
+}
+
+/// A QSO log as CSV (comma, UTF-8, header row). Used by the SESSION QSOs
+/// window's export. Fields that may contain a comma are quoted.
+pub fn qso_log_to_csv(records: &[QsoRecord]) -> String {
+    let mut out = String::from(
+        "Time UTC,Call,Grid,Band,Mode,RST Sent,RST Rcvd,Country,CQ Zone,Distance km,Final\n",
+    );
+    for r in records {
+        let dist = crate::geo::grid_distance_km(&r.my_grid, r.grid.as_deref().unwrap_or(""))
+            .map(|v| format!("{:.0}", v))
+            .unwrap_or_default();
+        let fields = [
+            {
+                let (y, mo, d, h, mi, _) = crate::utc_ymd_hms(r.start_utc);
+                format!("{y:04}-{mo:02}-{d:02} {h:02}:{mi:02}")
+            },
+            r.call.clone(),
+            r.grid.clone().unwrap_or_default(),
+            r.band.clone(),
+            r.mode.clone(),
+            r.rst_sent.map(|v| v.to_string()).unwrap_or_default(),
+            r.rst_rcvd.map(|v| v.to_string()).unwrap_or_default(),
+            r.country.clone(),
+            r.cq_zone.map(|v| v.to_string()).unwrap_or_default(),
+            dist,
+            r.final_msg.clone(),
+        ];
+        let line: Vec<String> = fields
+            .iter()
+            .map(|f| {
+                if f.contains(',') || f.contains('"') || f.contains('\n') {
+                    format!("\"{}\"", f.replace('"', "\"\""))
+                } else {
+                    f.clone()
+                }
+            })
+            .collect();
+        out.push_str(&line.join(","));
+        out.push('\n');
     }
     out
 }
@@ -4287,6 +4383,24 @@ pub fn digi_decodes_to_adif<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The operator's rule: no mode keeps more than 200 messages, the newest in
+    /// the first place and the 201st dropped. One number, so no log can drift
+    /// from it again (ACARS and DSC kept 300, APRS 300, VDL2 up to 2000).
+    #[test]
+    fn no_message_log_keeps_more_than_two_hundred() {
+        assert_eq!(MESSAGE_LOG_MAX, 200);
+        assert_eq!(ACARS_MESSAGE_MAX, MESSAGE_LOG_MAX);
+        assert_eq!(DSC_MESSAGE_MAX, MESSAGE_LOG_MAX);
+        assert_eq!(NAVTEX_MESSAGE_MAX, MESSAGE_LOG_MAX);
+        // APRS keeps 500: it lists every message on the channel, not only ours.
+        assert_eq!(crate::APRS_MESSAGE_MAX, 500);
+        assert_eq!(crate::JTTY_MESSAGE_MAX, MESSAGE_LOG_MAX);
+        assert_eq!(usize::from(crate::VDL2_MESSAGE_MAX), MESSAGE_LOG_MAX);
+        assert!(usize::from(crate::VDL2_MESSAGES) <= MESSAGE_LOG_MAX, "the default");
+        let s = crate::Vdl2Settings { max_messages: 60_000, ..Default::default() }.sane();
+        assert!(usize::from(s.max_messages) <= MESSAGE_LOG_MAX, "a hand-edited setting");
+    }
 
     /// The shipped FT8 decode depth is `Deep`: the fork exists for the recall,
     /// and the speed knob is opt-in. Pinned so a careless default change is
@@ -4971,6 +5085,8 @@ mod tests {
 }
 
 /// `#[serde(default)]` helper: a bool that defaults to true.
+fn navtex_loss_limit_default() -> u8 { 48 }
+fn navtex_disagree_limit_default() -> u8 { 6 }
 fn yes() -> bool {
     true
 }

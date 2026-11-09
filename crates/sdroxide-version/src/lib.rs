@@ -1,14 +1,22 @@
 //! The version string the program gives when an operator asks what it is.
 //!
-//! [`VERSION`] is the crate version plus, on a build CI did not cut from a tag,
-//! what kind of build it is and the commit it came from —
-//! `1.6.8-nightly.20260922.abc1234`. A release and a local `cargo build` both
-//! give the bare `1.6.8`, unchanged from what `CARGO_PKG_VERSION` gave before.
+//! [`VERSION`] is, in order of what decides it:
+//!
+//! - the **release** a tag names — `2.2.3.5` for `v2.2.3.5_brown`. This fork
+//!   keeps `CARGO_PKG_VERSION` at its plain semver (`2.2.0`) and cuts
+//!   fourth-point releases off it, so the crate version is not what an operator
+//!   installed; the tag's own version rides in `SDROXIDE_RELEASE` and is what a
+//!   release reports (issue #354);
+//! - the crate version plus, on a build CI did not cut from a tag, what kind of
+//!   build it is and the commit it came from —
+//!   `1.6.8-nightly.20260922.abc1234`;
+//! - the bare crate version for a local `cargo build`, unchanged from what
+//!   `CARGO_PKG_VERSION` gave before.
 //!
 //! It is deliberately **not** a drop-in replacement for `CARGO_PKG_VERSION`.
-//! Use it for what a person reads — `--version`, the About box, a crash report
-//! — and leave the plain crate version everywhere something other than a
-//! person parses it:
+//! Use it for what a person reads — `--version`, the About box, a crash report,
+//! the window title — and leave the plain crate version everywhere something
+//! other than a person parses it:
 //!
 //! - `sdroxide_config::version_is_newer` splits on `.` and compares the parts
 //!   as numbers, so a stamped version reads as `1.6.0` and the update banner
@@ -17,6 +25,13 @@
 //!   WSPRnet / PSK Reporter / FreeDV Reporter software fields ride wire
 //!   protocols other people's software parses;
 //! - the SSTV ID goes out over the air, where the extra characters do not fit.
+
+/// The rule that decides [`VERSION`], compiled into the build script as well as
+/// here so there is one implementation. Test-only in the crate: the value it
+/// produces is a `const`, so nothing at run time calls it — the tests are what
+/// keep it honest.
+#[cfg(test)]
+mod compose;
 
 /// What this build calls itself.
 pub const VERSION: &str = env!("SDROXIDE_VERSION");
@@ -74,20 +89,52 @@ pub fn is_newer_release(latest: &str, current: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use super::compose::compose_version;
+
     /// An unstamped build must stay byte-identical to what the call sites
     /// printed before the stamp existed, because a release is built that way.
     #[test]
     fn unstamped_build_is_the_plain_crate_version() {
-        if option_env!("SDROXIDE_BUILD").unwrap_or("").is_empty() {
+        if option_env!("SDROXIDE_BUILD").unwrap_or("").is_empty()
+            && option_env!("SDROXIDE_RELEASE").unwrap_or("").is_empty()
+        {
             assert_eq!(super::VERSION, env!("CARGO_PKG_VERSION"));
         }
     }
 
     /// A stamped one keeps the crate version as its prefix, so anything that
     /// eyeballs the leading digits still reads the release it came from.
+    ///
+    /// Not so for a **release** build: the tag's version replaces the crate
+    /// version outright, because this fork tags `v2.2.3.5_brown` off a crate
+    /// version of `2.2.0` and the tag is the truth (issue #354).
     #[test]
     fn stamped_build_keeps_the_crate_version_as_its_prefix() {
+        if !option_env!("SDROXIDE_RELEASE").unwrap_or("").is_empty() {
+            assert_eq!(super::VERSION, option_env!("SDROXIDE_RELEASE").unwrap());
+            return;
+        }
         assert!(super::VERSION.starts_with(env!("CARGO_PKG_VERSION")));
+    }
+
+    /// The three cases the build script decides between, checked here because
+    /// the build script cannot be tested: it has no test harness, and the rule
+    /// it runs is this one.
+    #[test]
+    fn the_release_tag_wins_over_the_crate_version() {
+        // A release tag: v2.2.3.5_brown is built off crate version 2.2.0, and
+        // `2.2.0` is what Settings used to say to someone running 2.2.3.5.
+        assert_eq!(compose_version("2.2.0", "2.2.3.5", ""), "2.2.3.5");
+        // A release is never stamped, but the release still decides if both
+        // arrive: the tag is what was installed.
+        assert_eq!(compose_version("2.2.0", "2.2.3.5", "nightly.20261031.abc12"), "2.2.3.5");
+        // Not a release: the stamp says which build it is.
+        assert_eq!(
+            compose_version("2.2.0", "", "nightly.20261031.abc12"),
+            "2.2.0-nightly.20261031.abc12"
+        );
+        // A plain `cargo build` anywhere: the crate version, byte for byte.
+        assert_eq!(compose_version("2.2.0", "", ""), "2.2.0");
     }
 
     /// The long form names the build, so `--version` says which of two

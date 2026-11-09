@@ -2,7 +2,7 @@
 //! lock-free ring buffer. The DSP engine owns the producer side.
 
 use std::collections::{HashMap, HashSet};
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -355,6 +355,7 @@ fn spawn_input(
     mut producer: rtrb::Producer<f32>,
     dropped: Arc<AtomicU64>,
     glitches: Arc<AtomicU64>,
+    failed: Arc<AtomicBool>,
     what: &'static str,
     label: String,
     // Whether a hole in this stream costs a decode — see
@@ -401,6 +402,7 @@ fn spawn_input(
                         log.on_glitch(what, &label);
                     } else {
                         warn!("{what}: audio input from \"{label}\" failed: {e}");
+                        failed.store(true, Ordering::Relaxed);
                     }
                 },
                 None,
@@ -540,9 +542,17 @@ pub struct AudioInput {
     pub swap: Option<DeviceSwap>,
     dropped: Arc<AtomicU64>,
     glitches: Arc<AtomicU64>,
+    failed: Arc<AtomicBool>,
 }
 
 impl AudioInput {
+    /// Whether the host reported the stream broken rather than merely glitched
+    /// — the device went away, or the audio service restarted under it. Such a
+    /// stream delivers nothing again, so its owner reopens it (#707).
+    pub fn has_failed(&self) -> bool {
+        self.failed.load(Ordering::Relaxed)
+    }
+
     /// Frames the capture callback had to throw away because the reader had not
     /// emptied the ring — a whole second of samples behind, at any rate.
     ///
@@ -885,6 +895,58 @@ pub fn input_device_names() -> Vec<String> {
     device_names(&cpal::default_host(), false)
 }
 
+/// Best-effort: set the ALSA mixer level of the sound card a device name
+/// points at, so a USB radio interface (e.g. the SS9900v) is loud enough to
+/// trigger its VOX and captures audio. `playback` selects output vs. input;
+/// `percent` is 0..=100. A missing device, a non-ALSA (virtual) device or any
+/// mixer error is silently ignored — the level is a hint, not a hard
+/// requirement, and the radio keeps running on whatever the card defaults to.
+#[cfg(target_os = "linux")]
+pub fn set_mixer_level(device_name: &str, playback: bool, percent: u8) {
+    use alsa::mixer::{Mixer, SelemId};
+    let host = cpal::default_host();
+    let devices: Vec<cpal::Device> = if playback {
+        host.output_devices().map(|d| d.collect()).unwrap_or_default()
+    } else {
+        host.input_devices().map(|d| d.collect()).unwrap_or_default()
+    };
+    let cards = alsa_cards();
+    let dev = devices.into_iter().find(|d| {
+        device_display(d, &cards).as_deref() == Some(device_name)
+    });
+    let Some(dev) = dev else { return };
+    let Some(card) = device_card_id(&dev) else { return };
+    let card_name = format!("hw:{}", card);
+    let Ok(mixer) = Mixer::new(&card_name, false) else { return };
+    let pct = percent.clamp(0, 100) as i64;
+    let names: &[&str] = if playback {
+        &["PCM", "Master", "Speaker", "Headphone"]
+    } else {
+        &["Mic", "Capture", "Mic Capture"]
+    };
+    for name in names {
+        let id = SelemId::new(name, 0);
+        if let Some(selem) = mixer.find_selem(&id) {
+            if playback {
+                let (lo, hi) = selem.get_playback_volume_range();
+                let v = lo + (hi - lo) * pct / 100;
+                let _ = selem.set_playback_volume_all(v);
+                let _ = selem.set_playback_switch_all(1);
+            } else {
+                let (lo, hi) = selem.get_capture_volume_range();
+                let v = lo + (hi - lo) * pct / 100;
+                let _ = selem.set_capture_volume_all(v);
+                let _ = selem.set_capture_switch_all(1);
+            }
+            // One control is enough; stop after the first that exists.
+            break;
+        }
+    }
+}
+
+#[cfg(not(target_os = "linux"))]
+pub fn set_mixer_level(_device_name: &str, _playback: bool, _percent: u8) {}
+
 /// True if the device reports at least one sample configuration we can use.
 fn has_usable_config(device: &cpal::Device, output: bool) -> bool {
     if output {
@@ -1122,6 +1184,7 @@ fn start_input_mono(
         let (producer, consumer) = rtrb::RingBuffer::<f32>::new(rate as usize);
         let dropped = Arc::new(AtomicU64::new(0));
         let glitches = Arc::new(AtomicU64::new(0));
+        let failed = Arc::new(AtomicBool::new(false));
         let started = Instant::now();
         match spawn_input(
             &device,
@@ -1131,6 +1194,7 @@ fn start_input_mono(
             producer,
             dropped.clone(),
             glitches.clone(),
+            failed.clone(),
             what,
             label.clone(),
             costs_a_decode,
@@ -1145,6 +1209,7 @@ fn start_input_mono(
                         swap,
                         dropped,
                         glitches,
+                        failed,
                     },
                     consumer,
                 ));
@@ -1271,6 +1336,7 @@ pub fn start_input_stereo(
         let (producer, consumer) = rtrb::RingBuffer::<f32>::new(rate as usize * 2);
         let dropped = Arc::new(AtomicU64::new(0));
         let glitches = Arc::new(AtomicU64::new(0));
+        let failed = Arc::new(AtomicBool::new(false));
         let started = Instant::now();
         match spawn_input(
             &device,
@@ -1280,6 +1346,7 @@ pub fn start_input_stereo(
             producer,
             dropped.clone(),
             glitches.clone(),
+            failed.clone(),
             "radio IQ input",
             label.clone(),
             true,
@@ -1306,6 +1373,7 @@ pub fn start_input_stereo(
                         swap,
                         dropped,
                         glitches,
+                        failed,
                     },
                     consumer,
                 ));

@@ -13,6 +13,7 @@
 //! a term that appears in one chapter out of eleven is visible before any
 //! scrolling happens.
 
+use crate::i18n::tr;
 use std::collections::HashMap;
 
 use eframe::egui::{
@@ -546,7 +547,7 @@ impl Help {
             ui.spacing_mut().item_spacing.x = 6.0;
             // Spelled out rather than drawn: the bundled fonts have no
             // magnifier glyph (nor ⌕), and a tofu box is worse than a word.
-            ui.label(RichText::new("FIND").color(theme::CYAN_DIM()).size(10.0).strong());
+            ui.label(RichText::new(tr!("help-find")).color(theme::CYAN_DIM()).size(10.0).strong());
 
             // The buttons and the tally are budgeted first so the field takes
             // what is left: on a phone that is a stub, but it is still a field.
@@ -557,7 +558,7 @@ impl Help {
                 ui,
                 egui::TextEdit::singleline(&mut self.search)
                     .desired_width(w)
-                    .hint_text("find in manual")
+                    .hint_text(tr!("help-find-manual"))
                     .text_color(theme::TEXT_STRONG()),
             );
             if std::mem::take(&mut self.focus_find) {
@@ -585,13 +586,13 @@ impl Help {
 
             let any = self.hits > 0;
             if crate::chrome::chip_enabled(ui, any, false, "◀")
-                .on_hover_text("Previous match  (Shift+Enter, Shift+F3)")
+                .on_hover_text(tr!("help-previous-match-shift-enter-shift"))
                 .clicked()
             {
                 self.step_hit(-1);
             }
             if crate::chrome::chip_enabled(ui, any, false, "▶")
-                .on_hover_text("Next match  (Enter, F3)")
+                .on_hover_text(tr!("help-next-match-enter-f3"))
                 .clicked()
             {
                 self.step_hit(1);
@@ -599,7 +600,7 @@ impl Help {
             let (tally, color) = if self.needle().is_empty() {
                 (String::new(), theme::CYAN_DIM())
             } else if self.hits == 0 {
-                ("no matches".to_string(), theme::ALERT())
+                (tr!("help-no-matches").to_string(), theme::ALERT())
             } else {
                 (format!("{} / {}", self.hit + 1, self.hits), theme::CYAN())
             };
@@ -610,7 +611,7 @@ impl Help {
             // heavier ✕ is one of the glyphs the bundled fonts lack.)
             if !self.search.is_empty()
                 && crate::chrome::chip(ui, false, "×")
-                    .on_hover_text("Clear the search  (Esc)")
+                    .on_hover_text(tr!("help-clear-search-esc"))
                     .clicked()
             {
                 self.clear_search();
@@ -660,7 +661,7 @@ impl Help {
         let mut counted: Option<usize> = None;
 
         let mut open = self.open;
-        let win = egui::Window::new("SDROXIDE MANUAL")
+        let win = egui::Window::new(tr!("help-sdroxide-manual"))
             .id(crate::layout::salted_id(ctx, "SDROXIDE MANUAL"))
             .open(&mut open)
             .frame(crate::chrome::window_frame())
@@ -740,7 +741,7 @@ impl Help {
                                     ui.set_min_height(full_h - 16.0);
                                     ui.set_width(NAV_W - 16.0);
                                     ui.label(
-                                        RichText::new("CONTENTS")
+                                        RichText::new(tr!("help-contents"))
                                             .color(theme::CYAN_DIM())
                                             .size(10.0)
                                             .strong(),
@@ -1093,7 +1094,7 @@ fn draw_block(
                         });
                 }
                 None => {
-                    ui.colored_label(theme::ALERT(), format!("[missing image: {path}]"));
+                    ui.colored_label(theme::ALERT(), tr!("help-missing-image", path = path));
                 }
             }
             if !alt.is_empty() {

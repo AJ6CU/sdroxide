@@ -60,6 +60,9 @@ pub fn run(
                 initial_antenna: boot.initial_antenna,
                 tx_ham_only,
                 cb_tx_allowed: settings.cb_tx_allowed,
+                // Production never bypasses the per-band TX list (tests only).
+                tx_bands_open: false,
+                rx_bands_enforced: true,
                 // The SWR guard matters MORE headless, not less: there is no
                 // operator watching the meter, so an unattended beacon or a
                 // remote client would otherwise keep transmitting into a fault
@@ -145,6 +148,9 @@ pub fn run(
                 initial_antenna: (None, None),
                 tx_ham_only,
                 cb_tx_allowed: settings.cb_tx_allowed,
+                // Production never bypasses the per-band TX list (tests only).
+                tx_bands_open: false,
+                rx_bands_enforced: true,
                 swr_guard: settings.swr_guard,
                 swr_limit: settings.swr_limit,
                 reopen: Some(crate::reopen_factory_for(&c, store.clone(), slot.id)),
@@ -215,9 +221,10 @@ pub fn run(
             }
             Ok(sdroxide_config::load_radios().is_enabled(id))
         })),
-        // The station reaches the internet for its clients' aircraft cards only
-        // when its operator has said so, here and nowhere a client can.
-        aircraft_online: sdroxide_server::aircraft_online_enabled_by(
+        // The station reaches the internet for its clients' aircraft cards unless
+        // its operator turned that off (the "En ligne" switch, or `=0` here, which
+        // no client can undo). `=1` holds it on.
+        aircraft_online: sdroxide_server::aircraft_online_forced_by(
             std::env::var(sdroxide_server::AIRCRAFT_ONLINE_ENV).ok().as_deref(),
         ),
     })?;

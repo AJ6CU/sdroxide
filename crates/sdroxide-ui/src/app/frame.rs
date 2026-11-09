@@ -5,6 +5,7 @@
 //! so the frame draws the newest state, and the repaint request at the end is
 //! what keeps the app idling instead of spinning when no stream is flowing.
 
+use crate::i18n::tr;
 use eframe::egui::{self, Color32, RichText};
 use sdroxide_types::{Band, Command, Mode, RadioEvent, SpectrumConfig, Spot};
 
@@ -166,7 +167,7 @@ fn paint_panadapter_chrome(ui: &egui::Ui, area: egui::Rect) {
 /// (`SdroxideApp::fit_levels_now`).
 fn levels_hidden_chip(ui: &mut egui::Ui, area: egui::Rect) -> bool {
     let galley = ui.painter().layout_no_wrap(
-        "No contrast — click to FIT".to_owned(),
+        tr!("frame-no-contrast-fit"),
         egui::FontId::proportional(13.0),
         egui::Color32::WHITE,
     );
@@ -188,11 +189,7 @@ fn levels_hidden_chip(ui: &mut egui::Ui, area: egui::Rect) -> bool {
         ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
     }
     p.galley(rect.center() - galley.size() / 2.0, galley, egui::Color32::WHITE);
-    resp.on_hover_text(
-        "The display floor/ceiling are past everything on screen, so the waterfall is one flat \
-         colour. Click to fit them to what the radio is hearing.",
-    )
-    .clicked()
+    resp.on_hover_text(tr!("frame-levels-hidden-hint")).clicked()
 }
 
 /// A short note centred on the panadapter, over a dark pill so it reads on any
@@ -225,9 +222,9 @@ const PANADAPTER_PILL_GAP: f32 = 4.0;
 /// labels.
 fn waterfall_bw_text(span_hz: f64) -> String {
     if span_hz.is_finite() && span_hz > 0.0 {
-        format!("BW waterfall · {}", spectrum_view::format_bandwidth(span_hz))
+        tr!("frame-bw-waterfall", span = spectrum_view::format_bandwidth(span_hz))
     } else {
-        "BW waterfall · —".to_owned()
+        tr!("frame-bw-waterfall-unknown")
     }
 }
 
@@ -242,6 +239,17 @@ fn panadapter_pill_rects(
     clock_text: egui::Vec2,
     bw_text: egui::Vec2,
 ) -> (egui::Rect, egui::Rect) {
+    let (clock, bw, _) = panadapter_pill_stack(area, clock_text, bw_text);
+    (clock, bw)
+}
+
+/// The three pills: the BAND TX pill sits under the bandwidth line with the
+/// same width and twice the height.
+fn panadapter_pill_stack(
+    area: egui::Rect,
+    clock_text: egui::Vec2,
+    bw_text: egui::Vec2,
+) -> (egui::Rect, egui::Rect, egui::Rect) {
     let size = egui::vec2(clock_text.x.max(bw_text.x) + 12.0, clock_text.y + 7.0);
     let clock =
         egui::Rect::from_min_size(egui::pos2(area.right() - size.x - 8.0, area.top() + 8.0), size);
@@ -249,7 +257,11 @@ fn panadapter_pill_rects(
         egui::pos2(clock.left(), clock.bottom() + PANADAPTER_PILL_GAP),
         size,
     );
-    (clock, bw)
+    let band_tx = egui::Rect::from_min_size(
+        egui::pos2(clock.left(), bw.bottom() + PANADAPTER_PILL_GAP),
+        egui::vec2(size.x, size.y * 2.0),
+    );
+    (clock, bw, band_tx)
 }
 
 /// The wall clock and the waterfall's visible bandwidth, top-right of the
@@ -258,19 +270,49 @@ fn panadapter_pill_rects(
 ///
 /// Draw-only over the picture — it never reflows the strip — and the local half
 /// of the clock is dropped when the operator is already on UTC.
-fn paint_panadapter_clock(ui: &egui::Ui, area: egui::Rect, span_hz: f64) {
+fn paint_panadapter_clock(
+    ui: &egui::Ui,
+    area: egui::Rect,
+    span_hz: f64,
+    pill: Option<super::tx_bands::BandTxPill>,
+) {
     let clock = crate::time::utc_and_local_now(crate::time::now_unix());
     let bw = waterfall_bw_text(span_hz);
     let p = ui.painter_at(area);
     let ink = egui::Color32::LIGHT_GRAY;
     let clock_galley = p.layout_no_wrap(clock, egui::FontId::proportional(11.0), ink);
     let bw_galley = p.layout_no_wrap(bw, egui::FontId::proportional(BW_LINE_FONT_PT), ink);
+    let (clock_galley_size, bw_galley_size) = (clock_galley.size(), bw_galley.size());
     let (clock_rect, bw_rect) = panadapter_pill_rects(area, clock_galley.size(), bw_galley.size());
     for rect in [clock_rect, bw_rect] {
         p.rect_filled(rect, 4.0, egui::Color32::from_black_alpha(150));
     }
     p.galley(clock_rect.center() - clock_galley.size() / 2.0, clock_galley, ink);
     p.galley(bw_rect.center() - bw_galley.size() / 2.0, bw_galley, ink);
+    if let Some(pill) = pill {
+        use super::tx_bands::BandTxPill;
+        let (_, _, rect) = panadapter_pill_stack(area, clock_galley_size, bw_galley_size);
+        let t = ui.input(|i| i.time);
+        // Blinking is driven by the interface clock: a repaint twice a second
+        // while transmitting, nothing otherwise.
+        let lit = pill != BandTxPill::Transmitting || (t * 2.0) as i64 % 2 == 0;
+        if pill == BandTxPill::Transmitting {
+            ui.ctx().request_repaint_after(std::time::Duration::from_millis(250));
+        }
+        let color = match pill {
+            BandTxPill::Allowed => egui::Color32::from_rgb(46, 204, 64),
+            _ => egui::Color32::from_rgb(255, 59, 48),
+        };
+        p.rect_filled(rect, 4.0, egui::Color32::BLACK);
+        if lit {
+            let g = p.layout_no_wrap(
+                tr!("frame-band-tx"),
+                egui::FontId::proportional(BW_LINE_FONT_PT),
+                color,
+            );
+            p.galley(rect.center() - g.size() / 2.0, g, color);
+        }
+    }
 }
 
 /// The dial as a large readout string, MHz with trailing zeros trimmed —
@@ -318,7 +360,7 @@ fn empty_centre(ui: &egui::Ui) {
         ink,
     );
     let hint = p.layout_no_wrap(
-        "every module is in its own window".to_owned(),
+        tr!("frame-every-module-own-window"),
         egui::FontId::proportional(13.0),
         dim,
     );
@@ -376,9 +418,7 @@ fn tool_window_title_button(
         |ui| {
             ui.set_min_size(rect.size());
             clicked = crate::chrome::chip_window_icon(ui, crate::chrome::WindowIcon::Out)
-                .on_hover_text(
-                    "WINDOW — move this window into its own OS window, put it on another monitor",
-                )
+                .on_hover_text(tr!("frame-window-chip-hint"))
                 .clicked();
         },
     );
@@ -388,7 +428,7 @@ fn tool_window_title_button(
 /// See [`SdroxideApp::tool_window_egui`]: the id epoch that resets a tool
 /// window's remembered geometry when this window's bounding changes. Bump it
 /// whenever a tool window's default size or its body's height-filling changes.
-const TOOL_WINDOW_EPOCH: &str = "b2";
+const TOOL_WINDOW_EPOCH: &str = "b3";
 
 /// The DETACH/DOCK chip a tool window wears at the top-right of its body. On the
 /// browser it is absent — there is no second window to move to.
@@ -407,12 +447,12 @@ fn tool_window_chip(ui: &mut egui::Ui, undocked: bool) -> bool {
             // two different places to go back to.
             (
                 crate::chrome::WindowIcon::Dock,
-                "DOCK — return this panel to the pane below the waterfall",
+                tr!("frame-dock-panel-pane-hint"),
             )
         } else {
             (
                 crate::chrome::WindowIcon::Out,
-                "WINDOW — move this window into its own OS window, to put it on another monitor",
+                tr!("frame-window-chip-hint"),
             )
         };
         // A **one-row** allocation, right-aligned — not `row_tail`. `row_tail`
@@ -463,23 +503,23 @@ fn detached_spec(module: sdroxide_types::DetachableModule) -> DetachedWindowSpec
     use sdroxide_types::DetachableModule as M;
     let app_id = module.app_id();
     let (name, default_size) = match module {
-        M::Panadapter => ("panadapter", [960.0, 540.0]),
-        M::Panel => ("panel", [520.0, 700.0]),
-        M::Controls => ("controls", [1280.0, 640.0]),
-        M::AuxPanadapter => ("aux panadapter", [960.0, 540.0]),
+        M::Panadapter => (tr!("frame-module-panadapter"), [960.0, 540.0]),
+        M::Panel => (tr!("frame-module-panel"), [520.0, 700.0]),
+        M::Controls => (tr!("frame-module-controls"), [1280.0, 640.0]),
+        M::AuxPanadapter => (tr!("frame-module-aux-panadapter"), [960.0, 540.0]),
         // Wide enough for the mode sections in five columns — the whole reason
         // it is a window and not the docked column, which cannot be this wide
         // without squeezing the operating panel below it.
-        M::BandMenu => ("band & mode", [560.0, 760.0]),
+        M::BandMenu => (tr!("frame-module-band-mode"), [560.0, 760.0]),
         // A compass wants to be near square: it is a dial with a readout
         // underneath, and a wide window would just be dial with margins.
-        M::Rotor => ("antenna rotator", [420.0, 520.0]),
+        M::Rotor => (tr!("frame-module-rotator"), [420.0, 520.0]),
     };
     DetachedWindowSpec {
         viewport_id: egui::ViewportId::from_hash_of(app_id),
         settle_id: egui::Id::new(format!("{app_id}-geom")),
         app_id: app_id.to_string(),
-        title: format!("{} — {name}", sdroxide_version::FLAVOR),
+        title: tr!("frame-detached-title", flavor = sdroxide_version::FLAVOR, name = name),
         default_size,
         min_size: [360.0, 240.0],
     }
@@ -496,7 +536,7 @@ fn tool_spec(id: &str, title: &str, default_size: [f32; 2]) -> DetachedWindowSpe
         viewport_id: egui::ViewportId::from_hash_of(&app_id),
         settle_id: egui::Id::new(format!("{app_id}-geom")),
         app_id,
-        title: format!("{} — {title}", sdroxide_version::FLAVOR),
+        title: tr!("frame-detached-title", flavor = sdroxide_version::FLAVOR, name = title),
         default_size,
         min_size: [240.0, 160.0],
     }
@@ -764,6 +804,8 @@ impl eframe::App for SdroxideApp {
     }
 
     fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
+        // This radio's band plan for everything this frame draws and decides.
+        let _plan = sdroxide_types::ThreadPlanGuard::enter(self.band_plan_cur);
         let ctx = ui.ctx().clone();
         let now = ctx.input(|i| i.time);
         self.konami.tick(ctx.input(|i| i.stable_dt).min(0.25));
@@ -841,6 +883,11 @@ impl eframe::App for SdroxideApp {
             crate::theme::apply_visuals(&ctx);
             ctx.request_repaint();
         }
+        if self.applied_language != self.ui_settings.language {
+            self.applied_language = self.ui_settings.language;
+            crate::i18n::set_language(self.applied_language, &ctx);
+            ctx.request_repaint();
+        }
         // The panadapter and skimmer font sizes need no visuals rewrite —
         // everything they size is laid out per frame — so they are simply
         // re-stored each frame.
@@ -853,6 +900,10 @@ impl eframe::App for SdroxideApp {
         // settings window write straight into `ui_settings`, and a colour has
         // to take on the frame it is chosen in or the picker feels dead.
         crate::theme::set_spot_colors(&self.ui_settings.spot_colors);
+        crate::theme::set_programs_colours(
+            self.ui_settings.programs_colour_all,
+            &self.ui_settings.programs_colours,
+        );
         crate::theme::set_bandplan_colors(&self.ui_settings.bandplan_colors);
         // …and whether the maps carry cities, which the four of them read
         // through one shared painter.
@@ -908,6 +959,7 @@ impl eframe::App for SdroxideApp {
         // A channel list chosen in the memories window: parsed here and sent
         // to the engine, which owns the list and the numbering in it.
         self.poll_chirp_import(&mut cmds);
+        self.poll_band_plan_import(&mut cmds);
         // A "stop after" deadline armed in the REC popup: stop the MP3
         // recording once it passes (issue #520).
         self.poll_recording_timer(&mut cmds);
@@ -1005,11 +1057,7 @@ impl eframe::App for SdroxideApp {
                             self.panel_floating = false;
                             crate::app::persist::persist_ui_settings(&self.ui_settings);
                         }
-                        None => self.show_notice(format!(
-                            "No workspace {} saved — save one in Settings › UI › Workspaces and \
-                             this key will call it back.",
-                            i + 1
-                        )),
+                        None => self.show_notice(tr!("frame-workspace-missing", n = i + 1)),
                     }
                 }
             }
@@ -1205,6 +1253,7 @@ impl eframe::App for SdroxideApp {
         //
         // Not during a playback: the radio standing in then is a file, and has
         // no transmitter by design rather than by nature.
+        self.tx_band_guard();
         let rx_only = !self.swl_mode()
             && self.state.playback.is_none()
             && self.caps.as_ref().is_some_and(|c| !c.is_transmit_capable());
@@ -1227,24 +1276,49 @@ impl eframe::App for SdroxideApp {
             if unavailable {
                 if self.panel_undock_notice_mode != Some(mode) {
                     self.panel_undock_notice_mode = Some(mode);
-                    self.radio_notice = Some(format!(
-                        "No operating panel in {} — it is undocked, and this mode has none.",
-                        mode.label()
-                    ));
+                    self.radio_notice =
+                        Some(tr!("frame-no-operating-panel", mode = mode.label()));
                 }
             } else {
                 self.panel_undock_notice_mode = None;
             }
         }
         // The engine's notice first, then another sdroxide on this machine.
-        let shown = self.radio_notice.clone().or_else(|| self.other_instance.clone());
+        // The transmit band list: why transmit is off at the dial, then the standing
+        // request to check and confirm the list (never dismissable — it stays
+        // until the operator has confirmed).
+        // The receive band list, for the band buttons drawn below.
+        super::top_bar::publish_rx_plan(ui.ctx(), self.radio_cfg.as_ref());
+        let tx_msg = self.radio_notice.is_none().then(|| self.tx_band_msg.clone()).flatten();
+        let tx_note = (self.radio_notice.is_none() && tx_msg.is_none())
+            .then(|| self.tx_bands_notice())
+            .flatten();
+        let shown = self
+            .radio_notice
+            .clone()
+            .or_else(|| tx_msg.clone())
+            .or_else(|| tx_note.clone())
+            .or_else(|| self.other_instance.clone());
         let notice = shown.or_else(|| {
             (rx_only && !self.rx_only_nudge_dismissed).then(|| {
-                "This radio is receive-only — it has no transmitter. Hide the transmit \
-                 controls and use the listening screen?"
-                    .to_string()
+                tr!("frame-rx-only-nudge")
             })
         });
+        // A refused PTT or TUNE press: big, red, every time — no cap.
+        if let Some(red) = self.tx_press_banner(crate::time::now_unix_f64()) {
+            egui::Frame::new()
+                .fill(crate::theme::ALERT())
+                .inner_margin(egui::Margin::symmetric(10, 8))
+                .show(ui, |ui| {
+                    ui.label(
+                        RichText::new(format!("⛔ {red}"))
+                            .size(20.0)
+                            .strong()
+                            .color(Color32::WHITE),
+                    );
+                });
+            ui.ctx().request_repaint_after(std::time::Duration::from_millis(500));
+        }
         if let Some(notice) = notice {
             let (wash, rule, mark, ink) = notice_banner_colors();
             egui::Frame::new()
@@ -1266,11 +1340,10 @@ impl eframe::App for SdroxideApp {
                             // actually clears it in the engine.
                             if let Some(swr) = self.state.tx.swr_tripped {
                                 if ui
-                                    .button(RichText::new("Acknowledge").size(13.0))
-                                    .on_hover_text(format!(
-                                        "Re-enables transmit after {swr:.1}:1. Check the antenna \
-                                         first: if the fault is still there, the next \
-                                         transmission stops too."
+                                    .button(RichText::new(tr!("frame-acknowledge")).size(13.0))
+                                    .on_hover_text(tr!(
+                                        "frame-re-enables-transmit-after-1",
+                                        swr = format!("{:.1}", swr)
                                     ))
                                     .clicked()
                                 {
@@ -1278,7 +1351,14 @@ impl eframe::App for SdroxideApp {
                                     self.radio_notice = None;
                                 }
                             } else {
-                                if ui.small_button("Dismiss").clicked() {
+                                if tx_note.is_some() {
+                                    if ui
+                                        .button(RichText::new(tr!("tx-bands-check")).size(13.0))
+                                        .clicked()
+                                    {
+                                        self.open_radio_settings();
+                                    }
+                                } else if ui.small_button(tr!("frame-dismiss")).clicked() {
                                     self.dismiss_notice();
                                     if rx_only {
                                         self.rx_only_nudge_dismissed = true;
@@ -1289,12 +1369,8 @@ impl eframe::App for SdroxideApp {
                                 // it, and nothing is retuned.
                                 if rx_only
                                     && ui
-                                        .button(RichText::new("Listening controls").size(13.0))
-                                        .on_hover_text(
-                                            "Hide the transmit controls and switch this radio to \
-                                             the listening screen (Settings → Radio). Nothing is \
-                                             retuned and the decoder keeps running.",
-                                        )
+                                        .button(RichText::new(tr!("frame-listening-controls")).size(13.0))
+                                        .on_hover_text(tr!("frame-listening-controls-hint"))
                                         .clicked()
                                 {
                                     if let Some(cfg) = self.radio_cfg.clone() {
@@ -1333,20 +1409,21 @@ impl eframe::App for SdroxideApp {
                     ui.horizontal_wrapped(|ui| {
                         ui.label(RichText::new("⬆").size(15.0).color(mark));
                         ui.label(
-                            RichText::new(format!(
-                                "SDR Oxide Brown {tag} is available — you are on {}.",
-                                sdroxide_version::VERSION
+                            RichText::new(tr!(
+                                "frame-update-available",
+                                tag = tag,
+                                version = sdroxide_version::VERSION
                             ))
                             .size(13.0)
                             .color(ink),
                         );
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                            if ui.small_button("Dismiss").clicked() {
+                            if ui.small_button(tr!("frame-dismiss")).clicked() {
                                 self.update_dismissed = true;
                             }
                             if ui
-                                .button(RichText::new("Download").size(13.0))
-                                .on_hover_text("Opens the release page in your browser")
+                                .button(RichText::new(tr!("frame-download")).size(13.0))
+                                .on_hover_text(tr!("frame-download-hint"))
                                 .clicked()
                             {
                                 crate::download::open_external(super::update::RELEASES_PAGE);
@@ -1390,15 +1467,18 @@ impl eframe::App for SdroxideApp {
                     ui.add_space(10.0);
                     ui.label(
                         RichText::new(match due_in {
-                            Some(s) if s >= 1.0 => format!("Reconnecting in {}s…", s.ceil() as u64),
-                            Some(_) => "Reconnecting…".to_string(),
-                            None => "Not connected.".to_string(),
+                            Some(s) if s >= 1.0 => {
+                                tr!("frame-reconnecting-s", value = s.ceil() as u64)
+                            }
+                            Some(_) => tr!("frame-reconnecting").to_string(),
+                            None => tr!("frame-not-connected").to_string(),
                         })
                         .size(13.0)
                         .color(crate::theme::gray(150)),
                     );
                     ui.add_space(10.0);
-                    retry = ui.button(RichText::new("Reconnect now").size(16.0)).clicked();
+                    retry =
+                        ui.button(RichText::new(tr!("frame-reconnect-now")).size(16.0)).clicked();
                 }
             });
             if retry {
@@ -1490,6 +1570,14 @@ impl eframe::App for SdroxideApp {
                 (dial - half, dial + half)
             } else if mode.is_rf_paint() {
                 (dial + 150.0, dial + 3450.0)
+            } else if mode == Mode::Navtex {
+                // NAVTEX sits ~1.7 kHz above the dial (USB), so a narrow
+                // carrier-centred-style window puts it at the far right edge
+                // with the CTR chip on. Widen the default span so the signal
+                // and a little context either side of it are visible instead
+                // of hugging the edge. (Per-decoder remembered zoom is a
+                // separate, larger feature — see the PR notes.)
+                (dial - 4000.0, dial + 4000.0)
             } else if mode.is_lower_sideband_at(dial) {
                 // Mirrored, because the mode is: SSTV and RADE keep phone
                 // practice and ride the lower sideband on 160/80/40 m, so their
@@ -1668,7 +1756,9 @@ impl eframe::App for SdroxideApp {
                 self.state.rx[0].mode,
                 phone,
             ) == crate::app::panels::radio_classic::RadioClassicPlace::Docked;
-            let panel_mode = cw_mode || rc_docked;
+            // Public SDRs takes it too, when the operator docked it there.
+            let psdr_docked = self.public_sdrs_docked_now(phone);
+            let panel_mode = cw_mode || rc_docked || psdr_docked;
             // As on the digital path above: no layers, no panadapter. In a mode
             // with nothing under it that leaves the pane empty, which is what
             // switching both off asks for.
@@ -1739,6 +1829,8 @@ impl eframe::App for SdroxideApp {
                         self.radio_classic.frame = frame.clone();
                         self.radio_classic_docked(ui, &mut cmds, panel_h);
                         self.radio_classic.frame = None;
+                    } else if psdr_docked {
+                        self.public_sdrs_docked(ui);
                     } else {
                         self.draw_operating_panel(ui, &mut cmds, Mode::Cw, panel_h);
                     }
@@ -1767,6 +1859,9 @@ impl eframe::App for SdroxideApp {
         self.settings_window(&ctx, &mut cmds);
         self.digi_settings_window(&ctx, &mut cmds);
         self.logbook_window(&ctx, &mut cmds);
+        if self.show_session_qsos {
+            self.session_qsos_window(&ctx, &mut cmds);
+        }
         self.contest_window(&ctx, &mut cmds);
         self.swl_window(&ctx, &mut cmds);
         self.listen_window(&ctx, &mut cmds);
@@ -1814,6 +1909,7 @@ impl eframe::App for SdroxideApp {
         sync!(self.schedule.show, TW_SCHEDULE);
         sync!(self.show_listen, TW_LISTEN);
         sync!(self.show_logbook, TW_LOGBOOK);
+        sync!(self.show_session_qsos, TW_SESSION_QSOS);
         sync!(self.show_settings, TW_SETTINGS);
         sync!(self.show_swl, TW_SWL_LOG);
         sync!(self.show_spots, TW_SPOTS);
@@ -1855,6 +1951,7 @@ impl eframe::App for SdroxideApp {
         if mode == sdroxide_types::Mode::Dab && self.show_dab {
             self.dab_window(&ctx, &mut cmds);
         }
+        self.radio_classic_tick(now, &mut cmds);
         self.radio_classic_window(&ctx, &mut cmds);
         if mode.is_js8() && self.show_js8 {
             self.js8_window(&ctx, &mut cmds);
@@ -1925,6 +2022,11 @@ impl eframe::App for SdroxideApp {
             self.ui_settings.tool_windows_open |= TW_LOGBOOK;
         } else {
             self.ui_settings.tool_windows_open &= !TW_LOGBOOK;
+        if self.show_session_qsos {
+            self.ui_settings.tool_windows_open |= TW_SESSION_QSOS;
+        } else {
+            self.ui_settings.tool_windows_open &= !TW_SESSION_QSOS;
+        }
         }
         if self.show_settings {
             self.ui_settings.tool_windows_open |= TW_SETTINGS;
@@ -2047,7 +2149,10 @@ impl eframe::App for SdroxideApp {
         self.extras_window(&ctx, &mut cmds);
         self.antenna_window(&ctx);
         self.aircraft_watch_tick(&ctx);
+        self.programs_sync_tick(&ctx);
         self.aircraft_window(&ctx, &mut cmds);
+        self.wxsat_window(&ctx, &mut cmds);
+        self.meshtastic_window(&ctx, &mut cmds);
         self.help.ui(&ctx);
         // Last, so it lands on top of everything else that opened this frame.
         self.oob_tx_window(&ctx);
@@ -2163,6 +2268,14 @@ impl eframe::App for SdroxideApp {
         // page is drawn through `&self`.
         self.wavelog_tick(&mut cmds);
 
+        // The QRZ card: whether it is on for the next frame, and the callsigns
+        // this frame's hovers asked it for. These go out whatever `auto_lookup`
+        // says — that switch is about filling the log form, this one is the
+        // card's own.
+        crate::callsign_card::set_active(&ctx, self.net_cfg_edit.qrz_card_active());
+        for call in crate::callsign_card::take_requests(&ctx) {
+            self.pending_lookups.push(call);
+        }
         // Flush queued lookups / uploads accumulated during window rendering.
         for call in std::mem::take(&mut self.pending_lookups) {
             cmds.push(Command::LookupCallsign { call });
@@ -2244,11 +2357,26 @@ impl eframe::App for SdroxideApp {
             eframe::set_value(storage, "qso_log", &self.qso_log);
             // Same split: authoritative on native is config.toml (written on
             // change).
-            eframe::set_value(storage, "ui_settings", &self.ui_settings);
+            // The browser keeps nothing of PROGRAMS (TOUT, stars, filters,
+            // colours): the station does, and hands it back at the next start.
+            #[cfg(target_arch = "wasm32")]
+            let ui = {
+                let mut ui = self.ui_settings.clone();
+                ui.programs = Default::default();
+                ui.programs_colour_all = None;
+                ui.programs_colours.clear();
+                ui
+            };
+            #[cfg(not(target_arch = "wasm32"))]
+            let ui = &self.ui_settings;
+            eframe::set_value(storage, "ui_settings", &ui);
             // Control-input bindings: authoritative on native is input.json.
             eframe::set_value(storage, "input", &self.input.cfg);
             // The Morse trainer's progress, so it carries to the browser build.
             eframe::set_value(storage, "morse_progress", &self.morse.progress);
+            // The custom filter presets: filter_presets.json natively.
+            #[cfg(target_arch = "wasm32")]
+            eframe::set_value(storage, "filter_presets", &self.filter_presets);
         }
     }
 }
@@ -2381,6 +2509,7 @@ impl SdroxideApp {
                 // it there — see `UiSettings::cw_qrg`.
                 line_on_cursor: self.ui_settings.cw_qrg,
                 center_on_cursor: self.ui_settings.cw_qrg,
+                center_offset_hz: None,
             })
         } else if mode.has_bottom_panel() {
             // **SSTV.** Its view is anchored on the
@@ -2428,6 +2557,8 @@ impl SdroxideApp {
                     || Self::centres_on_picture(mode)
                     || sstv_picture
                     || mode.holds_audio_centre(),
+                // FT8 and co: the middle of the decode band, not the dial.
+                center_offset_hz: mode.audio_band_centre_hz().map(|c| side * c),
             })
         } else {
             None
@@ -2615,7 +2746,7 @@ impl SdroxideApp {
             // waterfall is where the eye already is: say it here, centred,
             // rather than under a dial the radio has not reached.
             if self.atsmini_tuning && self.atsmini_active() {
-                centred_waterfall_note(&spec_ui, spec_area, "tuning — the radio is catching up");
+                centred_waterfall_note(&spec_ui, spec_area, &tr!("frame-tuning-catching-up"));
             }
             if let Some(l) = level
                 && crate::widgets::level_slider::show(ui, l, &mut self.view)
@@ -2625,7 +2756,7 @@ impl SdroxideApp {
                 self.view.auto_fit = false;
             }
             paint_panadapter_chrome(ui, area);
-            paint_panadapter_clock(ui, area, self.view.span());
+            paint_panadapter_clock(ui, area, self.view.span(), self.band_tx_pill());
             if self.levels_hidden(now) && levels_hidden_chip(ui, spec_area) {
                 self.view.auto_fit = true;
                 self.fit_levels_now(now);
@@ -2668,10 +2799,7 @@ impl SdroxideApp {
                 crate::chrome::row_tail(ui, |ui| {
                     self.layers_button(ui, "DISP", 0.0);
                     if crate::chrome::chip_window_icon(ui, crate::chrome::WindowIcon::In)
-                        .on_hover_text(
-                            "DOCK — return this spectrum into the main window, the same as \
-                         closing this one without hunting for its close box.",
-                        )
+                        .on_hover_text(tr!("frame-dock-spectrum-hint"))
                         .clicked()
                     {
                         self.ui_settings.set_detached(module, false);
@@ -2751,6 +2879,7 @@ impl SdroxideApp {
         ctx: &egui::Context,
         now: f64,
     ) {
+        let _plan = sdroxide_types::ThreadPlanGuard::enter(self.band_plan_cur);
         use sdroxide_types::DetachableModule as M;
         let spec = detached_spec(module);
         let seed = self.ui_settings.detached_state(module).window;
@@ -2824,9 +2953,7 @@ impl SdroxideApp {
                                                     crate::chrome::BAR_CHIP,
                                                 ),
                                             )
-                                            .on_hover_text(
-                                                "DOCK — put this panel back under the waterfall",
-                                            )
+                                            .on_hover_text(tr!("frame-dock-panel-hint"))
                                             .clicked();
                                         },
                                     );
@@ -2902,7 +3029,7 @@ impl SdroxideApp {
                             // for the window's close box.
                             ui.horizontal(|ui| {
                                 ui.label(
-                                    RichText::new("BAND & MODE")
+                                    RichText::new(tr!("topbar-band-mode"))
                                         .size(11.0)
                                         .strong()
                                         .color(crate::theme::CYAN()),
@@ -2912,11 +3039,7 @@ impl SdroxideApp {
                                         ui,
                                         crate::chrome::WindowIcon::In,
                                     )
-                                    .on_hover_text(
-                                        "DOCK — return the band and mode selector into the \
-                                             main window, the same as closing this one \
-                                             without hunting for its close box.",
-                                    )
+                                    .on_hover_text(tr!("frame-dock-band-menu-hint"))
                                     .clicked()
                                     {
                                         self.ui_settings.set_detached(
@@ -2955,7 +3078,7 @@ impl SdroxideApp {
                         .show(ui, |ui| {
                             ui.horizontal(|ui| {
                                 ui.label(
-                                    RichText::new("ANTENNA ROTATOR")
+                                    RichText::new(tr!("frame-antenna-rotator-caption"))
                                         .size(11.0)
                                         .strong()
                                         .color(crate::theme::CYAN()),
@@ -2965,11 +3088,7 @@ impl SdroxideApp {
                                         ui,
                                         crate::chrome::WindowIcon::In,
                                     )
-                                    .on_hover_text(
-                                        "DOCK — return the rotator into the main window, the \
-                                             same as closing this one without hunting for its \
-                                             close box.",
-                                    )
+                                    .on_hover_text(tr!("frame-dock-rotator-hint"))
                                     .clicked()
                                     {
                                         self.ui_settings.set_detached(
@@ -3096,7 +3215,7 @@ impl SdroxideApp {
     /// its own, because the title bar is exactly the thing the OS window will not
     /// have.
     fn floating_panel_window(&mut self, ctx: &egui::Context, cmds: &mut Vec<Command>, mode: Mode) {
-        let title = format!("{} — panel", mode.label());
+        let title = tr!("frame-panel-window-title", mode = mode.label());
         let mut open = true;
         // **No dud in the browser.** Detaching is native-only, so an out button
         // there would dock the panel instead of giving it a window — a control
@@ -3156,7 +3275,7 @@ impl SdroxideApp {
                                 crate::chrome::WindowIcon::Close,
                                 btn,
                             )
-                            .on_hover_text("DOCK — put this panel back under the waterfall")
+                            .on_hover_text(tr!("frame-dock-panel-hint"))
                             .clicked()
                             {
                                 open = false;
@@ -3168,10 +3287,9 @@ impl SdroxideApp {
                             };
                             if crate::chrome::chip_window_icon_sized(ui, roll_icon, btn)
                                 .on_hover_text(if rolled {
-                                    "Unroll — show the panel again"
+                                    tr!("frame-unroll-hint")
                                 } else {
-                                    "Roll up — leave the title bar and give the window back to the \
-                                 waterfall"
+                                    tr!("frame-roll-up-hint")
                                 })
                                 .clicked()
                             {
@@ -3189,10 +3307,7 @@ impl SdroxideApp {
                                     crate::chrome::WindowIcon::Out,
                                     btn,
                                 )
-                                .on_hover_text(
-                                    "WINDOW — give this panel a window of its own, to put on \
-                                     another monitor",
-                                )
+                                .on_hover_text(tr!("frame-window-panel-hint"))
                                 .clicked();
                             }
                         });
@@ -3472,9 +3587,19 @@ impl SdroxideApp {
         if self.auto_role.is_some()
             && cmds.iter().any(|c| matches!(c, Command::DigiStopQso | Command::DigiAbortTx))
         {
-            self.disarm_auto("auto stopped: a stop control was used".into());
+            self.disarm_auto(tr!("frame-auto-stopped-stop-control"));
         }
         for c in cmds {
+            // PTT or TUNE asked for where TX is off — a key, a MIDI button, any
+            // route: it never leaves, and the operator is told in red, every
+            // time (the engine would refuse it too).
+            if matches!(c, Command::SetPtt(true) | Command::SetTune(true))
+                && !self.tx_keyable_here()
+            {
+                self.tx_engine_refusal = None;
+                self.tx_press_refused_at = Some(crate::time::now_unix_f64());
+                continue;
+            }
             // Marked here rather than at the button, because the settings panel
             // holds borrows of `self` while it draws and cannot take a mutable
             // one. This is the point where the command is definitely going out,
@@ -3757,6 +3882,7 @@ impl SdroxideApp {
     }
 
     pub(crate) fn drain_events(&mut self, ctx: &egui::Context, now: f64) {
+        let _plan = sdroxide_types::ThreadPlanGuard::enter(self.band_plan_cur);
         // The settings row's explicit "save to profile" / "back to profile",
         // for the same reason as the answers below: the dialog is drawn from
         // `&self`, so what it asks for is left here and done where the app can
@@ -4036,6 +4162,25 @@ impl SdroxideApp {
                     self.error = Some(e);
                     self.arm_retry(now);
                 }
+                // The engine's dynamic-DNS worker answered. Only the provider's
+                // word arrives — the address carries the token and stays in the
+                // engine — and this is what the settings row shows.
+                RadioEvent::DyndnsAnswer { at_unix, ok, text } => {
+                    self.dyndns_last = Some((at_unix, ok, text));
+                }
+                // A band plan's file, sent to every screen: this one saves it
+                // only if it is the one that asked.
+                RadioEvent::BandPlanExport { file, json } => {
+                    let asked = self.band_plan_export_wanted.borrow().as_deref() == Some(&file);
+                    if asked {
+                        *self.band_plan_export_wanted.borrow_mut() = None;
+                        crate::download::save_as(
+                            &format!("{file}.json"),
+                            json.as_bytes(),
+                            crate::download::Mime::Text,
+                        );
+                    }
+                }
                 RadioEvent::LoginTest(r) => {
                     self.login_tests_pending.remove(&r.target);
                     self.push_net_log(format!(
@@ -4288,6 +4433,7 @@ impl SdroxideApp {
                     let call = r.call.clone();
                     let adif = auto_upload_adif(&self.net_cfg_edit, &r);
                     self.last_logged_qso_id = Some(r.id);
+                    self.session_qso_ids.insert(r.id);
                     self.qso_log.push(r);
                     self.session_qsos += 1;
                     persist_qso_log(&self.qso_log);
@@ -4397,6 +4543,14 @@ impl SdroxideApp {
                         self.slot_follow.edge(&t, edge);
                     }
                 }
+                RadioEvent::TxRefused(why, hz) => self.on_tx_refused(why, hz),
+                RadioEvent::ModeRefused(mode, band) => {
+                    self.radio_notice = Some(tr!(
+                        "topbar-mode-not-on-band",
+                        mode = mode.label(),
+                        band = super::tx_bands::tx_band_label(band)
+                    ));
+                }
                 RadioEvent::AudioLevel(l) => {
                     self.audio_level = Some((crate::time::now_unix_f64(), *l))
                 }
@@ -4410,6 +4564,14 @@ impl SdroxideApp {
                     self.aircraft_registry.expire(crate::time::now_unix());
                     self.hfdl_status = Some(st);
                 }
+                RadioEvent::SondeStatus(st) => self.sonde_status = Some(st),
+                RadioEvent::WxsatStatus(mut st) => {
+                    self.wxsat_picture.apply(&st);
+                    st.new_lines = Vec::new();
+                    self.wxsat_status = Some(st);
+                }
+                RadioEvent::MeshtasticStatus(st) => self.meshtastic_status = Some(st),
+                RadioEvent::VorStatus(st) => self.vor_status = Some(st),
                 RadioEvent::SstvStatus(s) => {
                     // Adopt a *newly* detected RX mode for the next transmit, but
                     // don't re-apply a steady detection every frame — that would
@@ -4420,6 +4582,15 @@ impl SdroxideApp {
                             self.sstv.preview_dirty = true;
                         }
                         self.sstv.last_detected = s.detected;
+                    }
+                    // **A frame the save gate dropped is wiped, not left on
+                    // screen.** Its lines were drawn as they arrived, and on a
+                    // quiet frequency nothing follows for hours: a panel holding
+                    // a frame of noise reads as a receiver that has hung (bench,
+                    // 2026-11-04). The panel says why instead.
+                    if s.not_saved.is_some() && !s.rx_active {
+                        self.sstv.rx_color = None;
+                        self.sstv.rx_tex = None;
                     }
                     self.sstv.status = s;
                 }
@@ -4542,9 +4713,21 @@ impl SdroxideApp {
                     // previous plan, and this bundle arrives on every
                     // station-config edit — a password change must not cost an
                     // allocation that is never freed.
-                    if sdroxide_types::band_plan() != &c.band_plan {
-                        sdroxide_types::set_band_plan(c.band_plan.clone());
+                    // This radio's own copy, not the process's: the engine announces
+                    // the plan *this radio* runs — the station's, or one of its
+                    // own — and another tab may be on another. The plan's name
+                    // rides with it, and the same plan may come under a new name,
+                    // which the equality alone does not see.
+                    let stale = self.band_plan_cur.is_none_or(|cur| {
+                        cur != &c.band_plan || cur.meta() != c.band_plan.meta()
+                    });
+                    if stale {
+                        self.band_plan_cur = Some(sdroxide_types::leak_band_plan(c.band_plan.clone()));
                     }
+                    // The library and the choice are the station's, announced
+                    // with every bundle: the list this client chooses from.
+                    self.band_plans = c.band_plans.clone();
+                    self.band_plan_name = c.band_plan_name.clone();
                     // The operator's own additions to the modes' frequency
                     // tables, on the same terms and for the same reason: the
                     // station owns the list, and this client draws the picker
@@ -4574,7 +4757,12 @@ impl SdroxideApp {
                 RadioEvent::MailMessage(m) => self.mail.on_message(m),
                 RadioEvent::MailSaved(mid) => self.mail.on_saved(mid),
                 RadioEvent::MailDeleted { folder, mid } => self.mail.on_deleted(folder, &mid),
-                RadioEvent::CallsignResult(info) => self.apply_callsign(info),
+                RadioEvent::CallsignResult(info) => {
+                    // The QRZ card keeps its own copy (photo included) and a
+                    // result it asked for is not news for the net log.
+                    let asked = crate::callsign_card::store(ctx, &info);
+                    self.apply_callsign(info, !asked);
+                }
                 RadioEvent::Upload(r) => self.on_upload_result(r),
                 RadioEvent::Confirmations(recs) => self.apply_confirmations(recs),
                 // Folded here rather than queued for the map's own pass: these
@@ -4597,12 +4785,11 @@ impl SdroxideApp {
                 // client may not have had it yet, and the per-radio SWL mode
                 // (`hide_tx`) rides in it — a radio that is a listener's screen
                 // must not show transmit controls while the announcement is in
-                // flight. Later edits are the settings dialog's, so this only
-                // ever fills a gap.
+                // flight.
                 RadioEvent::RadioConfig(c) => {
-                    if self.radio_cfg.is_none() {
-                        self.radio_cfg = Some(*c);
-                    }
+                    // Always the latest: the engine sends it after every change,
+                    // and a stale copy would judge the transmit bands wrongly.
+                    self.radio_cfg = Some(*c);
                 }
             }
         }
@@ -4665,7 +4852,7 @@ impl SdroxideApp {
         }
         let mut dismissed = false;
         let mut remember = false;
-        let resp = egui::Window::new("⚠  TRANSMIT LOCKOUT DISABLED")
+        let resp = egui::Window::new(tr!("frame-transmit-lockout-disabled"))
             .id(crate::layout::salted_id(ctx, "oob-tx-window"))
             .frame(crate::chrome::window_frame())
             .collapsible(false)
@@ -4675,30 +4862,21 @@ impl SdroxideApp {
                 crate::chrome::window_body_bg(ui);
                 ui.set_max_width(crate::layout::window_w(ctx, 430.0));
                 ui.label(
-                    RichText::new(
-                        "This engine was started with --oob-tx. The amateur-band lockout is \
-                         off: it will key the transmitter on any frequency the hardware \
-                         supports.",
-                    )
-                    .color(crate::theme::TEXT_STRONG())
-                    .size(13.0),
+                    RichText::new(tr!("frame-engine-was-started-oob-tx"))
+                        .color(crate::theme::TEXT_STRONG())
+                        .size(13.0),
                 );
                 ui.add_space(6.0);
                 ui.label(
-                    RichText::new(
-                        "Transmitting outside your licence is an offence in every country that \
-                         issues one. Only continue if you are authorised to use the frequencies \
-                         you are about to key on — a MARS/CAP or commercial licence, an \
-                         experimental permit, or a dummy load.",
-                    )
-                    .color(crate::theme::TEXT()),
+                    RichText::new(tr!("frame-transmitting-outside-your-licence-offence"))
+                        .color(crate::theme::TEXT()),
                 );
                 ui.add_space(10.0);
                 ui.horizontal(|ui| {
                     if crate::chrome::chip_accent(
                         ui,
                         false,
-                        RichText::new("  I UNDERSTAND  ").strong(),
+                        RichText::new(tr!("frame-i-understand")).strong(),
                         crate::theme::ALERT(),
                         crate::theme::TEXT_STRONG(),
                     )
@@ -4711,12 +4889,8 @@ impl SdroxideApp {
                     // stopped by this page every launch. Ticking it is itself
                     // an acknowledgement, so the window goes away with it.
                     if ui
-                        .checkbox(&mut self.ui_settings.oob_tx_dismissed, "Don't show again")
-                        .on_hover_text(
-                            "Remember this acknowledgement on this screen. The lockout is still \
-                             off while the engine runs with --oob-tx — this only stops the \
-                             warning from being shown again.",
-                        )
+                        .checkbox(&mut self.ui_settings.oob_tx_dismissed, tr!("frame-dont-show-again"))
+                        .on_hover_text(tr!("frame-dont-show-again-hint"))
                         .changed()
                     {
                         remember = true;
@@ -4725,7 +4899,7 @@ impl SdroxideApp {
                 });
                 ui.add_space(4.0);
                 ui.label(
-                    RichText::new("Restart without --oob-tx to put the lockout back.")
+                    RichText::new(tr!("frame-restart-without-oob-tx-put"))
                         .color(crate::theme::LINE_LIT())
                         .size(10.5),
                 );
@@ -4755,7 +4929,7 @@ impl SdroxideApp {
         }
         let mut confirm = false;
         let mut cancel = false;
-        let resp = egui::Window::new("⚠  11 m (CB) — NOT AN AMATEUR BAND")
+        let resp = egui::Window::new(tr!("frame-cb-window-title"))
             .id(crate::layout::salted_id(ctx, "cb-tx-confirm-window"))
             .frame(crate::chrome::window_frame())
             .collapsible(false)
@@ -4765,26 +4939,18 @@ impl SdroxideApp {
                 crate::chrome::window_body_bg(ui);
                 ui.set_max_width(crate::layout::window_w(ctx, 460.0));
                 ui.label(
-                    RichText::new("You are about to allow transmit on the 11 m band.")
+                    RichText::new(tr!("frame-cb-about-to-allow"))
                         .color(crate::theme::TEXT_STRONG())
                         .size(13.0),
                 );
                 ui.add_space(6.0);
                 ui.label(
-                    RichText::new(
-                        "11 m is not an amateur band. It is a separate radio service with its \
-                         own channels, modes, power limits and type-approved equipment, and \
-                         those differ from country to country. Transmitting there is subject to \
-                         the rules of the country you are operating from.",
-                    )
+                    RichText::new(tr!("frame-cb-not-amateur"))
                     .color(crate::theme::TEXT()),
                 );
                 ui.add_space(6.0);
                 ui.label(
-                    RichText::new(
-                        "Only continue if you know what your country allows on 27 MHz and you \
-                         are operating within it — you remain responsible for the transmission.",
-                    )
+                    RichText::new(tr!("frame-cb-only-continue"))
                     .color(crate::theme::TEXT()),
                 );
                 ui.add_space(10.0);
@@ -4792,7 +4958,7 @@ impl SdroxideApp {
                     if crate::chrome::chip_accent(
                         ui,
                         false,
-                        RichText::new("  I UNDERSTAND  ").strong(),
+                        RichText::new(tr!("frame-i-understand")).strong(),
                         crate::theme::ALERT(),
                         crate::theme::TEXT_STRONG(),
                     )
@@ -4800,7 +4966,7 @@ impl SdroxideApp {
                     {
                         confirm = true;
                     }
-                    if crate::chrome::chip(ui, false, "Cancel").clicked() {
+                    if crate::chrome::chip(ui, false, tr!("frame-cancel")).clicked() {
                         cancel = true;
                     }
                 });
@@ -4956,9 +5122,8 @@ impl SdroxideApp {
         self.ctrl.send_client_settings(profile.clone(), screen);
         self.client_settings_stored = Some(screen);
         self.client_settings_status = Some(match &profile {
-            Some(name) => format!("saved to the profile {name}"),
-            None => "saved as this station's default (the server has no password,                      so this is what every client gets)"
-                .to_string(),
+            Some(name) => tr!("frame-saved-to-profile", name = name),
+            None => tr!("frame-saved-as-default"),
         });
     }
 
@@ -5120,41 +5285,27 @@ impl SdroxideApp {
         egui::Modal::new(egui::Id::new("client-bindings-offer")).show(ctx, |ui| {
             ui.set_max_width(470.0);
             ui.heading(
-                RichText::new("This profile carries keyboard bindings")
+                RichText::new(tr!("frame-bindings-offer-title"))
                     .color(crate::theme::ALERT()),
             );
             ui.add_space(6.0);
             ui.label(match &offer.profile {
-                Some(name) => format!(
-                    "The profile you signed in as ({name}) stores keyboard and mouse \
-                     bindings on the server, and this browser is not using them. That is \
-                     the safe default — on a station other people share, the keyboard is \
-                     shared too, and one login adopting another's PTT or Space is a real \
-                     hazard."
-                ),
-                None => String::from(
-                    "This station's default profile stores keyboard and mouse bindings on \
-                     the server, and this browser is not using them. That is the safe \
-                     default — on a station other people share, the keyboard is shared \
-                     too, and one login adopting another's PTT or Space is a real hazard.",
-                ),
+                Some(name) => tr!("frame-bindings-offer-profile", name = name),
+                None => tr!("frame-bindings-offer-default"),
             });
             ui.add_space(6.0);
-            ui.label(
-                "Use them here, or leave them. Either way you will be told which, and \
-                 nothing is changed without you choosing.",
-            );
+            ui.label(tr!("frame-bindings-offer-choice"));
             ui.add_space(10.0);
             ui.horizontal(|ui| {
                 if ui
                     .button(
-                        RichText::new("Use this profile's bindings").color(crate::theme::ALERT()),
+                        RichText::new(tr!("frame-bindings-use")).color(crate::theme::ALERT()),
                     )
                     .clicked()
                 {
                     adopt = true;
                 }
-                if ui.button("Keep mine (and stop asking)").clicked() {
+                if ui.button(tr!("frame-bindings-keep-mine")).clicked() {
                     decline = true;
                 }
             });
@@ -5169,7 +5320,7 @@ impl SdroxideApp {
             self.input.persist();
             self.client_settings_from = Some(offer.profile);
             self.client_settings_status =
-                Some("using the keyboard bindings stored for this profile".into());
+                Some(tr!("frame-bindings-using-profile"));
             self.bindings_pending = None;
         } else if decline {
             // **"and stop asking" has to mean it.** Dropping the offer is not
@@ -5180,7 +5331,7 @@ impl SdroxideApp {
             self.ui_settings.client_bindings_declined = true;
             crate::app::persist::persist_ui_settings(&self.ui_settings);
             self.client_settings_status =
-                Some("keeping this device\'s own keyboard bindings; not asked again".into());
+                Some(tr!("frame-bindings-keeping-own"));
             self.bindings_pending = None;
         }
     }
@@ -5196,11 +5347,11 @@ impl SdroxideApp {
                 self.view.fft_size = stored.fft_size;
                 crate::app::persist::persist_ui_settings(&self.ui_settings);
                 self.client_settings_status =
-                    Some("back to the look stored for this profile".into());
+                    Some(tr!("frame-look-back-to-profile"));
             }
             None => {
                 self.client_settings_status =
-                    Some("no stored look for this profile yet — save one first".into());
+                    Some(tr!("frame-look-none-stored"));
             }
         }
     }
@@ -5437,15 +5588,15 @@ mod tests {
         let code = &src[..src.find("#[cfg(test)]").unwrap_or(src.len())];
         // The float's title bar carries all three: roll up, out, close.
         assert!(
-            code.contains("WINDOW — give this panel a window of its own"),
+            code.contains("frame-window-panel-hint"),
             "the floating panel has no way out to a real window"
         );
         assert!(
-            code.contains("Roll up — leave the title bar"),
+            code.contains("frame-roll-up-hint"),
             "the floating panel cannot be rolled up, so it costs the laptop its picture"
         );
         assert!(
-            code.contains("DOCK — put this panel back under the waterfall"),
+            code.contains("frame-dock-panel-hint"),
             "the floating panel has no way back to the pane"
         );
         // Its bar is ours, because egui has no hook for a fourth title-bar button.
@@ -5467,7 +5618,7 @@ mod tests {
         // And the docked pane's own way out to a float still exists in the
         // panels that carry it.
         assert!(
-            include_str!("panels/mod.rs").contains("FLOAT — lift this panel out"),
+            include_str!("panels/mod.rs").contains("panels-float-chip-hint"),
             "no panel can float any more"
         );
     }
@@ -6052,6 +6203,19 @@ mod tests {
         assert_eq!(bw.top() - clock.bottom(), 4.0, "the line sits under the clock");
         // The wider text sets the width, plus the pill's 12 pt of padding.
         assert_eq!(clock.width(), 222.0 + 12.0);
+    }
+
+    /// BAND TX: same width and edge as the other two, twice their height,
+    /// under the bandwidth line.
+    #[test]
+    fn the_band_tx_pill_is_double_height_under_the_bandwidth_line() {
+        let area = egui::Rect::from_min_size(egui::pos2(10.0, 20.0), egui::vec2(800.0, 400.0));
+        let (clock, bw, tx) =
+            super::panadapter_pill_stack(area, egui::vec2(221.0, 15.0), egui::vec2(222.0, 16.0));
+        assert_eq!(tx.width(), clock.width());
+        assert_eq!(tx.right(), clock.right());
+        assert_eq!(tx.height(), clock.height() * 2.0);
+        assert_eq!(tx.top() - bw.bottom(), 4.0);
     }
 
     /// On UTC the clock drops its local half and is narrower than the
@@ -6684,7 +6848,11 @@ mod public_sdr_dead_tests {
     fn a_failure_without_a_previous_pick_marks_nothing() {
         let mut last = None;
         let mut dead = std::collections::HashSet::new();
-        assert!(!charge_failed_public_sdr(Some("Interface change failed: timeout"), &mut last, &mut dead));
+        assert!(!charge_failed_public_sdr(
+            Some("Interface change failed: timeout"),
+            &mut last,
+            &mut dead
+        ));
         assert!(dead.is_empty());
     }
 }
@@ -6723,3 +6891,4 @@ mod detached_geometry_tests {
         assert!((pos.y - 40.0).abs() < 0.5);
     }
 }
+pub const TW_SESSION_QSOS: u64 = 1 << 51;

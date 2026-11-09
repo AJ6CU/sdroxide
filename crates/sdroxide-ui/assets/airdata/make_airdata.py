@@ -4,10 +4,18 @@
     python3 crates/sdroxide-ui/assets/airdata/make_airdata.py
     python3 crates/sdroxide-ui/assets/airdata/make_airdata.py --from ~/Downloads
 
-Writes two committed assets beside this script:
+    python3 crates/sdroxide-ui/assets/airdata/make_airdata.py --extras --from ~/Downloads
+
+Writes four committed assets beside this script:
 
     navaids.bin    every radio navigation aid in the world
     airports.bin   the large and medium airports
+    runways.bin    the open runways of those airports
+    freqs.bin      their published radio frequencies
+
+`--extras` rebuilds only `runways.bin`, `freqs.bin` and `wiki.bin` and leaves the other two
+alone, so a refresh of the frequencies does not rewrite 5 280 airports and 11 000
+navaids that did not change.
 
 **Source: OurAirports, which is public domain.** Their data repository carries
 the Unlicense — *"free and unencumbered software released into the public
@@ -21,6 +29,8 @@ Files, from <https://ourairports.com/data/> (mirrored on GitHub Pages):
 
     https://davidmegginson.github.io/ourairports-data/navaids.csv
     https://davidmegginson.github.io/ourairports-data/airports.csv
+    https://davidmegginson.github.io/ourairports-data/runways.csv
+    https://davidmegginson.github.io/ourairports-data/airport-frequencies.csv
 
 Nothing fetches at build time or at run time — this script is run by a person
 when the data wants refreshing, exactly like `make_earth_maps.py` beside the
@@ -53,6 +63,17 @@ variable so a reader can index a record without walking the file.
                   { ident[5] name[16] type u8 country[2] freq_khz u32 lat f32 lon f32 }
     airports.bin  "SDXAPT01" u16 count
                   { ident[8] name[28] iata[3] icao[4] type u8 lat f32 lon f32 elev_ft i16 }
+    runways.bin   "SDXRWY01" u32 date u32 count
+                  { ident[8] le[4] he[4] length_ft u16 width_ft u16 surface u8 lit u8 }
+    freqs.bin     "SDXFRQ01" u32 date u32 count
+                  { ident[8] kind u8 freq_khz u32 }
+
+The last two are keyed by the airport's `ident` (the first field of an airport
+record), not by its position, so they stay valid when `airports.bin` is
+rebuilt. `date` is the day the file was built, as `yyyymmdd`: frequencies change,
+and the airport card says how old the ones it shows are. Closed runways and
+heliport pads are left out; a runway with no published length is left out too.
+Frequencies are in kHz (118.005 MHz is 118 005) and de-duplicated per airport.
 
 Airport names get 28 bytes rather than 20 because the hover shows them, and 20
 cut **"Amsterdam Airport Schiphol"** to "Amsterdam Airport Sc" — a half-name on
@@ -69,6 +90,7 @@ from __future__ import annotations
 
 import csv
 import io
+import re
 import os
 import struct
 import sys
@@ -175,6 +197,139 @@ def build_airports() -> bytes:
     return out.getvalue()
 
 
+# Surface codes, in the order the reader numbers them. 0 is "not published".
+SURFACES = [
+    ("asp", 1), ("pem", 1), ("bit", 1), ("tar", 1),
+    ("con", 2),
+    ("turf", 3), ("gra", 3), ("grs", 3), ("sod", 3), ("gre", 3),
+    ("gvl", 4), ("grv", 4), ("coral", 4), ("mac", 4),
+    ("dirt", 5), ("earth", 5), ("soil", 5), ("clay", 5), ("sand", 5),
+    ("water", 6),
+]
+
+# Frequency kinds, most useful first; the card shows them in this order.
+FREQ_KINDS = ["TWR", "GND", "ATIS", "APP", "DEP", "CTAF", "UNIC", "CLD", "AFIS"]
+
+
+def surface_code(text: str) -> int:
+    t = (text or "").strip().lower()
+    for key, code in SURFACES:
+        if t.startswith(key):
+            return code
+    return 0
+
+
+def build_runways(idents: set, date: int) -> bytes:
+    rows = list(csv.DictReader(io.StringIO(fetch("runways.csv"))))
+    by_ident: dict = {}
+    for r in rows:
+        ident = r["airport_ident"]
+        length = int(number(r["length_ft"]))
+        if ident not in idents or r["closed"] == "1" or length <= 0:
+            continue
+        # A helipad has an "H1" end and no other.
+        if not r["he_ident"] and r["le_ident"].upper().startswith("H"):
+            continue
+        by_ident.setdefault(ident, []).append(r)
+    out = io.BytesIO()
+    body = io.BytesIO()
+    count = 0
+    for ident in sorted(by_ident):
+        for r in sorted(by_ident[ident], key=lambda r: -int(number(r["length_ft"]))):
+            body.write(fixed(ident, 8))
+            body.write(fixed(r["le_ident"], 4))
+            body.write(fixed(r["he_ident"], 4))
+            body.write(struct.pack("<H", min(65535, int(number(r["length_ft"])))))
+            body.write(struct.pack("<H", min(65535, int(number(r["width_ft"])))))
+            body.write(struct.pack("<B", surface_code(r["surface"])))
+            body.write(struct.pack("<B", 1 if r["lighted"] == "1" else 0))
+            count += 1
+    out.write(b"SDXRWY01")
+    out.write(struct.pack("<II", date, count))
+    out.write(body.getvalue())
+    sys.stderr.write(f"  {count} runways at {len(by_ident)} airports\n")
+    return out.getvalue()
+
+
+def build_freqs(idents: set, date: int) -> bytes:
+    rows = list(csv.DictReader(io.StringIO(fetch("airport-frequencies.csv"))))
+    by_ident: dict = {}
+    for r in rows:
+        ident = r["airport_ident"]
+        kind = r["type"].upper()
+        khz = int(round(number(r["frequency_mhz"]) * 1000))
+        if ident not in idents or kind not in FREQ_KINDS or khz <= 0:
+            continue
+        got = by_ident.setdefault(ident, [])
+        if (kind, khz) not in got:
+            got.append((kind, khz))
+    out = io.BytesIO()
+    body = io.BytesIO()
+    count = 0
+    for ident in sorted(by_ident):
+        for kind, khz in sorted(by_ident[ident], key=lambda k: FREQ_KINDS.index(k[0])):
+            body.write(fixed(ident, 8))
+            body.write(struct.pack("<B", FREQ_KINDS.index(kind)))
+            body.write(struct.pack("<I", khz))
+            count += 1
+    out.write(b"SDXFRQ01")
+    out.write(struct.pack("<II", date, count))
+    out.write(body.getvalue())
+    sys.stderr.write(f"  {count} frequencies at {len(by_ident)} airports\n")
+    return out.getvalue()
+
+
+def build_wiki(idents: set, date: int) -> bytes:
+    """`wiki.bin`: the Wikipedia article of each airport that has one.
+
+    Records are `{ident[8] lang[2] len u8 title[len]}`, the title as UTF-8 with
+    its percent-escapes undone and spaces as underscores. Only `xx.wikipedia.org`
+    links with a plain title are kept: anything the station would refuse to put
+    in a URL is dropped here too, so the table never promises a picture the
+    station will not ask for.
+    """
+    import urllib.parse
+
+    rows = list(csv.DictReader(io.StringIO(fetch("airports.csv"))))
+    body = io.BytesIO()
+    count = 0
+    for r in sorted(rows, key=lambda r: r["ident"]):
+        if r["ident"] not in idents or not r["wikipedia_link"]:
+            continue
+        m = re.fullmatch(r"https?://([a-z]{2})\.wikipedia\.org/wiki/([^?#]+)", r["wikipedia_link"].strip())
+        if not m:
+            continue
+        lang, title = m.group(1), urllib.parse.unquote(m.group(2)).replace(" ", "_")
+        raw = title.encode("utf-8")
+        if not 1 <= len(raw) <= 120 or re.search(r"[/\\%?#<>|\x00-\x1f]", title):
+            continue
+        body.write(fixed(r["ident"], 8))
+        body.write(lang.encode("ascii"))
+        body.write(struct.pack("<B", len(raw)))
+        body.write(raw)
+        count += 1
+    out = io.BytesIO()
+    out.write(b"SDXWIK01")
+    out.write(struct.pack("<II", date, count))
+    out.write(body.getvalue())
+    sys.stderr.write(f"  {count} Wikipedia articles\n")
+    return out.getvalue()
+
+
+def airport_idents() -> set:
+    """The idents of the airports `build_airports` keeps."""
+    rows = list(csv.DictReader(io.StringIO(fetch("airports.csv"))))
+    return {r["ident"] for r in rows if r["type"] in AIRPORT_TYPES and r["latitude_deg"]}
+
+
+def verify_dated(path: str, magic: bytes, size: int) -> None:
+    blob = open(path, "rb").read()
+    assert blob[:8] == magic, f"{path}: bad magic {blob[:8]!r}"
+    date, count = struct.unpack_from("<II", blob, 8)
+    assert len(blob) - 16 == count * size, f"{path}: {len(blob) - 16} bytes for {count} x {size}"
+    sys.stderr.write(f"  wrote {path}: {len(blob) / 1024:.0f} KiB, {count} records, {date}\n")
+
+
 def verify(path: str, magic: bytes, size: int, headers: int = 2) -> None:
     """Read it back the way the Rust reader will, and say what came out.
 
@@ -192,8 +347,24 @@ def verify(path: str, magic: bytes, size: int, headers: int = 2) -> None:
 def main() -> None:
     global LOCAL
     args = sys.argv[1:]
-    if args[:1] == ["--from"]:
-        LOCAL = os.path.expanduser(args[1]) if len(args) > 1 else "."
+    if args[:1] == ["--from"] and len(args) == 1:
+        LOCAL = "."
+    extras = "--extras" in args
+    if "--from" in args:
+        LOCAL = os.path.expanduser(args[args.index("--from") + 1])
+    import datetime
+
+    date = int(datetime.date.today().strftime("%Y%m%d"))
+    idents = airport_idents()
+    open(os.path.join(HERE, "runways.bin"), "wb").write(build_runways(idents, date))
+    open(os.path.join(HERE, "freqs.bin"), "wb").write(build_freqs(idents, date))
+    open(os.path.join(HERE, "wiki.bin"), "wb").write(build_wiki(idents, date))
+    # Record sizes: 8+4+4+2+2+1+1 and 8+1+4 (wiki.bin's are not fixed).
+    verify_dated(os.path.join(HERE, "runways.bin"), b"SDXRWY01", 22)
+    verify_dated(os.path.join(HERE, "freqs.bin"), b"SDXFRQ01", 13)
+    sys.stderr.write(f"  wrote wiki.bin: {os.path.getsize(os.path.join(HERE, 'wiki.bin')) / 1024:.0f} KiB\n")
+    if extras:
+        return
     navaids = build_navaids()
     airports = build_airports()
     open(os.path.join(HERE, "navaids.bin"), "wb").write(navaids)

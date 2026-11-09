@@ -100,7 +100,7 @@ fn caps() -> DeviceCaps {
 fn run(cmds: Vec<Command>, settle: Duration) -> Vec<Told> {
     let log = Arc::new(Mutex::new(Vec::new()));
     let src = PowerRig { center: 14_074_000.0, log: Arc::clone(&log) };
-    let mut h = start_engine(Box::new(src), caps(), EngineConfig::default());
+    let mut h = start_engine(Box::new(src), caps(), EngineConfig { tx_bands_open: true, ..EngineConfig::default() });
     let thread = h.thread.take();
     std::thread::sleep(Duration::from_millis(300));
     for c in cmds {

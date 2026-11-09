@@ -13,6 +13,7 @@ use eframe::egui::{self, RichText};
 use sdroxide_types::{Command, Mode, RxId, SignalReport, Sinpo, Sio, SwlEntry, Vfo};
 
 use crate::app::SdroxideApp;
+use crate::i18n::tr;
 use crate::app::persist::persist_swl_log;
 use crate::time::now_unix;
 
@@ -405,7 +406,7 @@ impl SdroxideApp {
         // The shell's window: an egui window or its own OS one, with the ⇱
         // WINDOW chip. Titled "SWL LOG" to match its top-strip chip.
         let open =
-            self.tool_window(ctx, "swl-log", "SWL LOG", [720.0, 520.0], self.show_swl, |me, ui| {
+            self.tool_window(ctx, "swl-log", &tr!("swl-title"), [720.0, 520.0], self.show_swl, |me, ui| {
                 me.swl_log_body(ctx, ui, cmds, &mut mark_sent)
             });
         self.show_swl = open;
@@ -450,7 +451,7 @@ impl SdroxideApp {
             )
             .on_hover_text(sdroxide_version::LONG_VERSION);
             ui.separator();
-            if crate::chrome::chip(ui, false, "+ NEW").clicked() {
+            if crate::chrome::chip(ui, false, tr!("swl-new")).clicked() {
                 let freq = self.on_air_freq_hz();
                 let mode = self.state.rx[0].mode;
                 let s = self.meters.map(|m| m.s_dbm);
@@ -462,26 +463,21 @@ impl SdroxideApp {
                 prefill_station(&mut form, &self.broadcast, &self.swl_log, freq, now_unix());
                 self.swl_edit = Some(form);
             }
-            if crate::chrome::chip(ui, false, "JOBS")
-                .on_hover_text("Scheduled recordings — record a band at a set time")
+            if crate::chrome::chip(ui, false, tr!("swl-jobs"))
+                .on_hover_text(tr!("swl-jobs-hint"))
                 .clicked()
             {
                 self.jobs.show = true;
             }
-            if crate::chrome::chip(ui, false, "SIG ID")
-                .on_hover_text(
-                    "What is on this dial? A guide to signals by frequency, mode and bandwidth",
-                )
+            if crate::chrome::chip(ui, false, tr!("swl-sigid"))
+                .on_hover_text(tr!("swl-sigid-hint"))
                 .clicked()
             {
                 self.signal_id.show = true;
             }
             let replay = self.state.replay;
-            if crate::chrome::chip(ui, replay, "REPLAY")
-                .on_hover_text(
-                    "Play the last two minutes instead of live — catch the station id \
-                 you just missed",
-                )
+            if crate::chrome::chip(ui, replay, tr!("swl-replay"))
+                .on_hover_text(tr!("swl-replay-hint"))
                 .clicked()
             {
                 cmds.push(Command::SetReplay(!replay));
@@ -490,8 +486,8 @@ impl SdroxideApp {
                 let selected =
                     self.swl_selected.and_then(|id| self.swl_log.iter().find(|e| e.id == id));
                 ui.add_enabled_ui(selected.is_some(), |ui| {
-                    if crate::chrome::chip(ui, false, "REPORT")
-                        .on_hover_text("Copy this reception as a report to send to the station")
+                    if crate::chrome::chip(ui, false, tr!("swl-report"))
+                        .on_hover_text(tr!("swl-report-hint"))
                         .clicked()
                         && let Some(e) = selected
                     {
@@ -520,18 +516,18 @@ impl SdroxideApp {
                 let reported = self.swl_log.iter().filter(|e| e.report_sent_unix.is_some()).count();
                 let qsl = self.swl_log.iter().filter(|e| e.qsl_received_unix.is_some()).count();
                 let pirates = self.swl_log.iter().filter(|e| e.pirate).count();
-                let mut stats = format!("{n} heard");
+                let mut stats = tr!("swl-stats-heard", n = n);
                 if reported > 0 {
-                    stats.push_str(&format!(" · {reported} reported"));
+                    stats.push_str(&format!(" · {}", tr!("swl-stats-reported", n = reported)));
                 }
                 if qsl > 0 {
-                    stats.push_str(&format!(" · {qsl} QSL"));
+                    stats.push_str(&format!(" · {}", tr!("swl-stats-qsl", n = qsl)));
                 }
                 if pirates > 0 {
-                    stats.push_str(&format!(" · {pirates} pirates"));
+                    stats.push_str(&format!(" · {}", tr!("swl-stats-pirates", n = pirates)));
                 }
                 ui.label(RichText::new(stats).size(11.0).color(crate::theme::gray(150)))
-                    .on_hover_text("The whole log — the Show filters do not change it");
+                    .on_hover_text(tr!("swl-stats-hint"));
             });
         });
         // The aerial, in the listener's own words, for the reception
@@ -539,23 +535,23 @@ impl SdroxideApp {
         // more often than a settings page is opened, and it is not a
         // property of the radio, so it does not ride the wire.
         ui.horizontal(|ui| {
-            ui.label(RichText::new("Antenna").size(11.0).color(crate::theme::gray(150)));
+            ui.label(RichText::new(tr!("swl-antenna")).size(11.0).color(crate::theme::gray(150)));
             crate::chrome::field(
                 ui,
                 egui::TextEdit::singleline(&mut self.swl_antenna)
                     .desired_width(240.0)
-                    .hint_text("Longwire 20 m, MLA-30 loop, mini-whip …"),
+                    .hint_text(tr!("swl-antenna-hint")),
             )
-            .on_hover_text("Goes on the reception report's Antenna: line");
+            .on_hover_text(tr!("swl-antenna-tip"));
         });
         // The listener's tone control: shelves on the demodulated
         // audio, in front of the speakers. Broadcast audio wants a
         // tone control the ham speech chain never needed.
         ui.horizontal(|ui| {
-            ui.label(RichText::new("Tone").size(11.0).color(crate::theme::gray(150)));
+            ui.label(RichText::new(tr!("swl-tone")).size(11.0).color(crate::theme::gray(150)));
             let mut tone = self.state.rx[0].tone;
             let before = tone;
-            crate::chrome::checkbox(ui, &mut tone.enabled, "on");
+            crate::chrome::checkbox(ui, &mut tone.enabled, &tr!("swl-tone-on"));
             let band = |ui: &mut egui::Ui, name: &str, b: &mut sdroxide_types::TxEqBand| {
                 ui.label(RichText::new(name).size(11.0));
                 ui.add(
@@ -565,9 +561,9 @@ impl SdroxideApp {
                         .suffix(" dB"),
                 );
             };
-            band(ui, "Bass", &mut tone.low);
-            band(ui, "Mid", &mut tone.mid);
-            band(ui, "Treble", &mut tone.high);
+            band(ui, &tr!("swl-tone-bass"), &mut tone.low);
+            band(ui, &tr!("swl-tone-mid"), &mut tone.mid);
+            band(ui, &tr!("swl-tone-treble"), &mut tone.high);
             if tone != before {
                 self.state.rx[0].tone = tone;
                 cmds.push(Command::SetRxTone(Box::new(tone)));
@@ -635,8 +631,7 @@ impl SdroxideApp {
             // Said rather than assumed: the clipboard is the fallback and the
             // operator has to know it is the fallback.
             self.swl_report_note =
-                Some("Report copied to the clipboard — paste it into your mail program. No mail handler could be opened."
-                    .into());
+                Some(tr!("swl-report-copied"));
         }
     }
 
@@ -656,41 +651,41 @@ impl SdroxideApp {
         days.reverse();
 
         ui.horizontal(|ui| {
-            ui.label(RichText::new("Show").size(11.0).color(crate::theme::gray(150)));
+            ui.label(RichText::new(tr!("swl-show")).size(11.0).color(crate::theme::gray(150)));
             crate::chrome::field(
                 ui,
                 egui::TextEdit::singleline(&mut self.swl_filter.find)
                     .desired_width(150.0)
-                    .hint_text("station, language, site …"),
+                    .hint_text(tr!("swl-find-hint")),
             )
-            .on_hover_text("Matches the station, language, transmitter site and notes");
+            .on_hover_text(tr!("swl-find-tip"));
             let band_text = self
                 .swl_filter
                 .band
                 .map(|b| b.label().to_string())
-                .unwrap_or_else(|| "All bands".into());
+                .unwrap_or_else(|| tr!("swl-all-bands"));
             egui::ComboBox::from_id_salt("swl-filter-band")
                 .width(74.0)
                 .selected_text(band_text)
                 .show_ui(ui, |ui| {
-                    ui.selectable_value(&mut self.swl_filter.band, None, "All bands");
+                    ui.selectable_value(&mut self.swl_filter.band, None, tr!("swl-all-bands"));
                     for b in &bands {
                         ui.selectable_value(&mut self.swl_filter.band, Some(*b), b.label());
                     }
                 });
-            let day_text = self.swl_filter.day.clone().unwrap_or_else(|| "All days".into());
+            let day_text = self.swl_filter.day.clone().unwrap_or_else(|| tr!("swl-all-days"));
             egui::ComboBox::from_id_salt("swl-filter-day")
                 .width(84.0)
                 .selected_text(day_text)
                 .show_ui(ui, |ui| {
-                    ui.selectable_value(&mut self.swl_filter.day, None, "All days");
+                    ui.selectable_value(&mut self.swl_filter.day, None, tr!("swl-all-days"));
                     for d in &days {
                         ui.selectable_value(&mut self.swl_filter.day, Some(d.clone()), d);
                     }
                 });
-            crate::chrome::checkbox(ui, &mut self.swl_filter.pirates_only, "Pirates only")
-                .on_hover_text("Only the unlicensed catches");
-            if self.swl_filter.active() && crate::chrome::chip(ui, false, "CLEAR").clicked() {
+            crate::chrome::checkbox(ui, &mut self.swl_filter.pirates_only, &tr!("swl-pirates-only"))
+                .on_hover_text(tr!("swl-pirates-only-tip"));
+            if self.swl_filter.active() && crate::chrome::chip(ui, false, tr!("decodes-clear")).clicked() {
                 self.swl_filter = SwlFilter::default();
             }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -699,7 +694,7 @@ impl SdroxideApp {
                 // not that. ADIF for a logger, CSV for a spreadsheet.
                 if ui
                     .add_enabled(n > 0, egui::Button::new("ADIF"))
-                    .on_hover_text("Save the whole log as ADIF — reception records, not contacts")
+                    .on_hover_text(tr!("swl-adif-tip"))
                     .clicked()
                 {
                     let adif = sdroxide_types::swl_log_to_adif(&self.swl_log);
@@ -707,7 +702,7 @@ impl SdroxideApp {
                 }
                 if ui
                     .add_enabled(n > 0, egui::Button::new("CSV"))
-                    .on_hover_text("Save the whole log as CSV, one row per reception")
+                    .on_hover_text(tr!("swl-csv-tip"))
                     .clicked()
                 {
                     let csv = sdroxide_types::swl_log_to_csv(&self.swl_log);
@@ -720,7 +715,7 @@ impl SdroxideApp {
                         .filter(|e| self.swl_filter.matches(e, &utc_text(e.heard_at_unix)[..10]))
                         .count();
                     ui.label(
-                        RichText::new(format!("{shown} of {n}"))
+                        RichText::new(tr!("swl-shown-of", shown = shown, n = n))
                             .size(11.0)
                             .color(crate::theme::gray(150)),
                     );
@@ -747,7 +742,7 @@ impl SdroxideApp {
             |ui| {
                 if rows.is_empty() {
                     ui.label(
-                        RichText::new("Nothing logged yet — tune a station and press + NEW.")
+                        RichText::new(tr!("swl-empty"))
                             .color(crate::theme::gray(150)),
                     );
                 }
@@ -793,8 +788,7 @@ impl SdroxideApp {
                             if !tip.is_empty() {
                                 tip.push('\n');
                             }
-                            tip.push_str("transmitted from ");
-                            tip.push_str(&e.site);
+                            tip.push_str(&tr!("swl-transmitted-from", site = e.site));
                         }
                         let station = ui.selectable_label(is_sel, RichText::new(label).monospace());
                         let station =
@@ -833,8 +827,10 @@ impl SdroxideApp {
                                 }
                                 tip.push_str(address);
                             }
-                            tip.push_str("\n(click to copy)");
-                            let label = if email.is_empty() { "addr" } else { "mail" };
+                            tip.push('\n');
+                            tip.push_str(&tr!("swl-click-to-copy"));
+                            let label =
+                                if email.is_empty() { tr!("swl-addr-btn") } else { tr!("swl-mail-btn") };
                             if ui.small_button(label).on_hover_text(tip).clicked() {
                                 let dest = if email.is_empty() { address } else { email };
                                 ui.ctx().copy_text(dest.to_string());
@@ -845,11 +841,11 @@ impl SdroxideApp {
                         // but always the same width, so the buttons after it do
                         // not jitter from row to row.
                         let (mark, ink) = if e.qsl_received_unix.is_some() {
-                            ("QSL", crate::theme::GREEN())
+                            ("QSL".to_string(), crate::theme::GREEN())
                         } else if e.report_sent_unix.is_some() {
-                            ("sent", crate::theme::gray(150))
+                            (tr!("swl-mark-sent"), crate::theme::gray(150))
                         } else {
-                            ("", crate::theme::gray(150))
+                            (String::new(), crate::theme::gray(150))
                         };
                         ui.add_sized(
                             [26.0, 14.0],
@@ -857,26 +853,23 @@ impl SdroxideApp {
                         );
                         if e.freq_hz > 0.0
                             && ui
-                                .small_button("rcl")
-                                .on_hover_text(
-                                    "Tune back to this frequency and mode — see if the station \
-                                     has returned",
-                                )
+                                .small_button(tr!("swl-recall"))
+                                .on_hover_text(tr!("swl-recall-tip"))
                                 .clicked()
                         {
                             recall = Some((e.freq_hz, e.mode));
                         }
-                        if ui.small_button("edit").clicked() {
+                        if ui.small_button(tr!("swl-edit")).clicked() {
                             edit = Some(e.id);
                         }
-                        if ui.small_button("del").clicked() {
+                        if ui.small_button(tr!("swl-del")).clicked() {
                             delete = Some(e.id);
                         }
                     });
                 }
                 if !rows.is_empty() && shown == 0 {
                     ui.label(
-                        RichText::new("No reception matches the filter — CLEAR shows them all.")
+                        RichText::new(tr!("swl-no-match"))
                             .color(crate::theme::gray(150)),
                     );
                 }
@@ -924,7 +917,7 @@ impl SdroxideApp {
                 .show(ui, |ui| {
                     ui.set_width(ui.available_width());
                     ui.label(
-                        RichText::new(if f.id == 0 { "NEW RECEPTION" } else { "EDIT RECEPTION" })
+                        RichText::new(if f.id == 0 { tr!("swl-form-new") } else { tr!("swl-form-edit") })
                             .size(11.0)
                             .strong()
                             .color(crate::theme::CYAN()),
@@ -933,23 +926,23 @@ impl SdroxideApp {
                     egui::Grid::new("swl-form").num_columns(4).spacing([10.0, 6.0]).show(
                         ui,
                         |ui| {
-                            ui.label("Station");
+                            ui.label(tr!("settings-station"));
                             crate::chrome::field(
                                 ui,
                                 egui::TextEdit::singleline(&mut f.station)
                                     .desired_width(220.0)
-                                    .hint_text("Radio Taiwan International"),
+                                    .hint_text(tr!("swl-station-hint")),
                             );
-                            ui.label("Language");
+                            ui.label(tr!("settings-ui-language"));
                             crate::chrome::field(
                                 ui,
                                 egui::TextEdit::singleline(&mut f.language)
                                     .desired_width(120.0)
-                                    .hint_text("English"),
+                                    .hint_text(tr!("swl-language-hint")),
                             );
                             ui.end_row();
 
-                            ui.label("Frequency");
+                            ui.label(tr!("settings-frequency"));
                             ui.horizontal(|ui| {
                                 crate::chrome::field(
                                     ui,
@@ -970,12 +963,12 @@ impl SdroxideApp {
                             // place it comes from is the schedule, which fills
                             // it in on LOG. It rides along on the saved entry
                             // and shows on the row's hover when it is known.
-                            ui.label("Received");
+                            ui.label(tr!("swl-received"));
                             crate::chrome::field(
                                 ui,
                                 egui::TextEdit::singleline(&mut f.recv_grid)
                                     .desired_width(90.0)
-                                    .hint_text("your grid"),
+                                    .hint_text(tr!("swl-received-hint")),
                             );
                             ui.end_row();
 
@@ -983,43 +976,41 @@ impl SdroxideApp {
                             // the schedule on LOG. Editable, because a schedule
                             // that has no address is no reason the listener
                             // cannot write one in.
-                            ui.label("E-mail");
+                            ui.label(tr!("swl-email"));
                             crate::chrome::field(
                                 ui,
                                 egui::TextEdit::singleline(&mut f.email)
                                     .desired_width(220.0)
-                                    .hint_text("reception reports"),
+                                    .hint_text(tr!("swl-email-hint")),
                             )
-                            .on_hover_text("Goes on the report's Send to: line");
-                            ui.label("Postal");
+                            .on_hover_text(tr!("swl-email-tip"));
+                            ui.label(tr!("swl-postal"));
                             crate::chrome::field(
                                 ui,
                                 egui::TextEdit::singleline(&mut f.address)
                                     .desired_width(220.0)
-                                    .hint_text("street, city, country"),
+                                    .hint_text(tr!("swl-postal-hint")),
                             )
-                            .on_hover_text(
-                                "The fallback report destination when there is no e-mail",
-                            );
+                            .on_hover_text(tr!("swl-postal-tip"));
                             ui.end_row();
 
-                            ui.label("Heard");
+                            ui.label(tr!("swl-heard"));
                             ui.horizontal(|ui| {
                                 ui.label(RichText::new(utc_text(f.heard_at)).monospace());
-                                if crate::chrome::chip(ui, false, "NOW").clicked() {
+                                if crate::chrome::chip(ui, false, tr!("schedule-now-chip")).clicked() {
                                     heard_now = true;
                                 }
                             });
-                            ui.label("S-meter");
+                            ui.label(tr!("swl-smeter"));
                             ui.label(match f.smeter_dbm {
                                 Some(db) => format!("{db:.0} dBm"),
                                 None => "—".into(),
                             });
                             ui.end_row();
 
-                            ui.label("Report");
+                            ui.label(tr!("swl-report-label"));
                             ui.horizontal(|ui| {
-                                let judged = crate::chrome::checkbox(ui, &mut f.judged, "judged");
+                                let judged = crate::chrome::checkbox(ui, &mut f.judged, &tr!("swl-judged"));
                                 if judged.clicked() && f.judged {
                                     // A ticked report starts filled in: the
                                     // strength is the one figure the meter can
@@ -1063,7 +1054,7 @@ impl SdroxideApp {
 
                             // The SWL's loop: *hear → report → await QSL*. Both
                             // steps are stamped now, easy to forget otherwise.
-                            ui.label("Report sent");
+                            ui.label(tr!("swl-report-sent"));
                             ui.horizontal(|ui| {
                                 let mut sent = f.report_sent_unix.is_some();
                                 if crate::chrome::checkbox(ui, &mut sent, "").changed() {
@@ -1073,13 +1064,13 @@ impl SdroxideApp {
                                     RichText::new(
                                         f.report_sent_unix
                                             .map(utc_text)
-                                            .unwrap_or_else(|| "not yet".into()),
+                                            .unwrap_or_else(|| tr!("swl-not-yet")),
                                     )
                                     .size(10.5)
                                     .color(crate::theme::gray(150)),
                                 );
                             });
-                            ui.label("QSL received");
+                            ui.label(tr!("swl-qsl-received"));
                             ui.horizontal(|ui| {
                                 let mut got = f.qsl_received_unix.is_some();
                                 if crate::chrome::checkbox(ui, &mut got, "").changed() {
@@ -1089,7 +1080,7 @@ impl SdroxideApp {
                                     RichText::new(
                                         f.qsl_received_unix
                                             .map(utc_text)
-                                            .unwrap_or_else(|| "awaiting".into()),
+                                            .unwrap_or_else(|| tr!("swl-awaiting")),
                                     )
                                     .size(10.5)
                                     .color(crate::theme::gray(150)),
@@ -1097,18 +1088,16 @@ impl SdroxideApp {
                             });
                             ui.end_row();
 
-                            ui.label("Notes");
+                            ui.label(tr!("swl-notes"));
                             crate::chrome::field(
                                 ui,
                                 egui::TextEdit::singleline(&mut f.notes)
                                     .desired_width(320.0)
-                                    .hint_text("programme notes"),
+                                    .hint_text(tr!("swl-notes-hint")),
                             );
                             ui.label("");
-                            crate::chrome::checkbox(ui, &mut f.pirate, "Pirate").on_hover_text(
-                                "An unlicensed broadcast — a station transmitting outside any \
-                                     allocation. The log marks it with a pirate flag.",
-                            );
+                            crate::chrome::checkbox(ui, &mut f.pirate, &tr!("swl-pirate"))
+                                .on_hover_text(tr!("swl-pirate-tip"));
                             ui.end_row();
                         },
                     );
@@ -1123,31 +1112,24 @@ impl SdroxideApp {
                     let usable = report_address_is_usable(&to);
                     let why = match (to.is_empty(), usable) {
                         (true, _) => {
-                            "This station has no email address — look it up in the SCHEDULE \
-                             window, or type one here, and this becomes available.\n\nA \
-                             reception report is a courtesy a station reads and answers with a \
-                             QSL card; without an address there is nowhere to send it."
+                            tr!("swl-mail-why-no-address")
                         }
                         (false, false) => {
-                            "That email address is not one address, so it is not \
-                             used — a report delivered to a stranger who never heard the station \
-                             is worse than none."
+                            tr!("swl-mail-why-bad-address")
                         }
                         (false, true) => {
-                            "Write the reception report and open it in your mail client.\n\nThe \
-                             picture and the soundclip are yours to attach there — this program \
-                             cannot put a file in a message."
+                            tr!("swl-mail-why-ok")
                         }
                     };
-                    let report = crate::chrome::chip(ui, usable, "MAIL REPORT…").on_hover_text(why);
+                    let report = crate::chrome::chip(ui, usable, tr!("swl-mail-report")).on_hover_text(why);
                     if usable && report.clicked() {
                         mail_report = true;
                     }
                     ui.horizontal(|ui| {
-                        if crate::chrome::chip(ui, true, "SAVE").clicked() {
+                        if crate::chrome::chip(ui, true, tr!("recjobs-save")).clicked() {
                             save = true;
                         }
-                        if crate::chrome::chip(ui, false, "CANCEL").clicked() {
+                        if crate::chrome::chip(ui, false, tr!("logbook-cancel")).clicked() {
                             cancel = true;
                         }
                     });

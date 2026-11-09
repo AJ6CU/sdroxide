@@ -79,6 +79,7 @@ jobs:
     outputs:
       combos: ${{ steps.pick.outputs.combos }}
       stamp: ${{ steps.pick.outputs.stamp }}
+      release: ${{ steps.pick.outputs.release }}
       diagnose: ${{ inputs.diagnose }}
     steps:
       - id: pick
@@ -247,6 +248,29 @@ jobs:
           echo "stamp=$stamp" >> "$GITHUB_OUTPUT"
           echo "build stamp: ${stamp:-<none, release>}"
 
+          # The version the tag itself names, which is what a release calls
+          # itself. The crate version cannot serve: it stays plain semver
+          # (`2.2.0`) and this fork tags fourth-point releases off it
+          # (`v2.2.3.5_brown`), so a build cut from that tag would report
+          # `2.2.0` to an operator who installed `2.2.3.5` — issue #354, and the
+          # reason every bug report opened with "which build is that".
+          #
+          # `nightly` is a tag too and is handled above; it is a build, not a
+          # release, so it carries a stamp and no release version. A tag whose
+          # name is not a version at all (a typo, a date) is left to the crate
+          # version rather than printed as one.
+          release=""
+          if [[ "$GITHUB_REF_TYPE" == "tag" && "$GITHUB_REF_NAME" != "nightly" ]]; then
+            release="${GITHUB_REF_NAME#v}"
+            release="${release%_brown}"
+            if [[ ! "$release" =~ ^[0-9]+(\.[0-9]+)*$ ]]; then
+              echo "::warning::tag $GITHUB_REF_NAME does not name a version; the build will report the crate version"
+              release=""
+            fi
+          fi
+          echo "release=$release" >> "$GITHUB_OUTPUT"
+          echo "release version: ${release:-<none>}"
+
   # Build the wasm web client once; every native build embeds the same dist.
   web:
     name: web client (wasm)
@@ -256,6 +280,7 @@ jobs:
     # it, rather than naming the release the nightly was cut from.
     env:
       SDROXIDE_BUILD: ${{ needs.targets.outputs.stamp }}
+      SDROXIDE_RELEASE: ${{ needs.targets.outputs.release }}
     steps:
       # The client compiles none of the vendored code, but cargo reads every
       # workspace member's manifest before building any of them, and
@@ -322,6 +347,7 @@ jobs:
     container: ${{ matrix.container }}
     env:
       SDROXIDE_BUILD: ${{ needs.targets.outputs.stamp }}
+      SDROXIDE_RELEASE: ${{ needs.targets.outputs.release }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.targets.outputs.combos) }}

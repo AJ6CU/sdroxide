@@ -677,3 +677,45 @@ fn a_retune_from_empty_dial_still_decodes_a_medium_station() {
         assert!(ber < 0.1, "{ber:.3} of blocks bad at bit phase {eighth}/8");
     }
 }
+
+/// The field report: some stations decoded and others showed NO SYNC with 93 %
+/// of blocks bad and a single group type repeated, until the page was reloaded
+/// — and then the same station decoded again. The decoder, not the signal, was
+/// holding something from the station before. A retune must hand the next
+/// station a decoder as good as a new one, whatever the previous station left
+/// in the carrier and timing loops, at either subcarrier phase.
+#[test]
+fn a_retune_hands_the_next_station_a_fresh_decoder() {
+    let rate = 240_000.0;
+    let first = broadcast(
+        rate,
+        6.0,
+        &programme(),
+        &Station { phase: SubPhase::Quadrature, noise: 0.05, ..Default::default() },
+    );
+    let second = broadcast(rate, 8.0, &programme(), &Station::default());
+    let mut demod = make_demod(Mode::Wfm, rate).expect("WFM has a demodulator");
+    run_on(&mut demod, &first);
+    // A stretch of junk in between, as an empty channel on the way across the dial.
+    run_on(&mut demod, &dead_air(rate));
+    demod.reset_rds();
+    let data = run_on(&mut demod, &second).expect("a snapshot from the second station");
+    assert!(data.sync, "no sync: {:.3} of blocks bad", data.stats.block_error_rate());
+    assert_eq!(data.ps.as_deref(), Some("SDROXIDE"));
+    assert!(data.stats.block_error_rate() < 0.1, "{:.3}", data.stats.block_error_rate());
+}
+
+/// Even with no retune notice at all (a dial moved by less than the engine
+/// reacts to, a CAT rig), a decoder that has been without sync for a while
+/// starts its loops afresh and finds the next station.
+#[test]
+fn a_decoder_left_without_sync_finds_a_station_that_arrives_later() {
+    let rate = 240_000.0;
+    let station = broadcast(rate, 10.0, &programme(), &Station { noise: 0.05, ..Default::default() });
+    let mut demod = make_demod(Mode::Wfm, rate).expect("WFM has a demodulator");
+    run_on(&mut demod, &dead_air(rate));
+    run_on(&mut demod, &dead_air(rate));
+    let data = run_on(&mut demod, &station).expect("a snapshot from the station");
+    assert!(data.sync, "no sync: {:.3} of blocks bad", data.stats.block_error_rate());
+    assert_eq!(data.ps.as_deref(), Some("SDROXIDE"));
+}

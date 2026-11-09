@@ -22,6 +22,7 @@
 //! screen are drawn dimmed rather than yanked — the row is how a mistaken press
 //! is taken back, and no new ones arrive to replace them.
 
+use crate::i18n::tr;
 use std::collections::HashSet;
 
 use sdroxide_types::Decode;
@@ -101,15 +102,7 @@ impl SdroxideApp {
     pub(in crate::app) fn ignored_hover(&self) -> String {
         let mut names: Vec<&str> = self.session_ignored.iter().map(String::as_str).collect();
         names.sort_unstable();
-        format!(
-            "Muted for this session: {}.\n\n\
-             A muted station is out of the decode list, does not sound the alerts, is not read \
-             out, and is never offered to auto mode as one to answer. Nothing is transmitted or \
-             uploaded on its behalf, and the list is forgotten when sdroxide closes — there is no \
-             stored copy, so nothing stays hidden after an evening's listening.\n\n\
-             Click to unmute them all, or press the − button on any one of their rows.",
-            names.join(", ")
-        )
+        tr!("ignore-muted-hover", names = names.join(", "))
     }
 }
 

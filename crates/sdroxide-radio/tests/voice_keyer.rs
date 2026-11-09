@@ -68,7 +68,7 @@ fn tx_caps(rate: f64) -> DeviceCaps {
 fn run(cmds: &[Command], settle: Duration) -> (bool, Option<sdroxide_types::VoiceStatus>) {
     let rate = 2_400_000.0;
     let src = MockSource { center: 14_200_000.0, rate };
-    let cfg = EngineConfig { tx_ham_only: false, ..Default::default() };
+    let cfg = EngineConfig { tx_bands_open: true, tx_ham_only: false, ..Default::default() };
     let mut h = start_engine(Box::new(src), tx_caps(rate), cfg);
     let thread = h.thread.take();
 

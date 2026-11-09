@@ -433,6 +433,65 @@ pub struct NetworkConfig {
     /// `SetNetworkConfig` whole.
     #[serde(default)]
     pub decode_udp: String,
+
+    // ── Dynamic DNS ──
+    /// The provider's **update URL**, exactly as it was issued — DuckDNS,
+    /// dynv6, No-IP, freedns and the rest all give one, with the token in it.
+    ///
+    /// **Empty is off, and empty is the default.** Nothing is started, no
+    /// request is made, and a station that does not want this never meets it:
+    /// the program works the same offline as it always has.
+    ///
+    /// It is a secret — the token is part of the address — so it is never
+    /// written to a log and the screen never shows it back.
+    /// Appended last, as the wire requires.
+    #[serde(default)]
+    pub dyndns_url: String,
+    /// How often that update goes out, in minutes. Held between 1 and 1440: a
+    /// provider asked more often than its own limit starts answering with
+    /// errors and eventually blocks the hostname, which is worse than being ten
+    /// minutes behind an address change.
+    /// Appended last, as the wire requires.
+    #[serde(default = "NetworkConfig::default_dyndns_minutes")]
+    pub dyndns_minutes: u32,
+
+    // ── QRZ card ──
+    /// Show a QRZ.com card (photo, name, age, address, locator, QSL) when the
+    /// pointer rests on a callsign in the waterfall, the decoders and the spot
+    /// lists. Off by default, and only ever active when the provider is QRZ and
+    /// its login is filled in ([`NetworkConfig::qrz_card_active`]).
+    ///
+    /// Held on the station and replayed to every screen, a browser included:
+    /// the lookup runs on the station, so one QRZ session serves all of them.
+    /// Appended last, as the wire requires.
+    #[serde(default)]
+    pub qrz_card: bool,
+}
+
+impl NetworkConfig {
+    /// The card is shown only for an operator who gave QRZ a login: the others
+    /// see nothing, make no request and have the switch greyed out.
+    pub fn qrz_card_ready(&self) -> bool {
+        self.lookup_provider == LookupProvider::Qrz
+            && !self.qrz.user.trim().is_empty()
+            && !self.qrz.password.trim().is_empty()
+    }
+
+    /// The switch is on **and** the login is there.
+    pub fn qrz_card_active(&self) -> bool {
+        self.qrz_card && self.qrz_card_ready()
+    }
+
+    /// Five minutes: often enough that an address change is invisible to a
+    /// listener, rare enough that no provider counts it as abuse.
+    pub fn default_dyndns_minutes() -> u32 {
+        5
+    }
+
+    /// The interval in force, clamped to what the providers tolerate.
+    pub fn dyndns_interval_minutes(&self) -> u32 {
+        self.dyndns_minutes.clamp(1, 1440)
+    }
 }
 
 impl Default for NetworkConfig {
@@ -473,7 +532,59 @@ impl Default for NetworkConfig {
             rbn2: RbnConfig::second(),
             wavelog: crate::WavelogConfig::default(),
             decode_udp: String::new(),
+            dyndns_url: String::new(),
+            dyndns_minutes: NetworkConfig::default_dyndns_minutes(),
+            qrz_card: false,
         }
+    }
+}
+
+#[cfg(test)]
+mod qrz_card_tests {
+    use super::*;
+
+    #[test]
+    fn the_card_needs_qrz_and_its_login() {
+        let mut c = NetworkConfig::default();
+        c.qrz_card = true;
+        assert!(!c.qrz_card_active(), "no provider: no card");
+        c.lookup_provider = LookupProvider::Qrz;
+        assert!(!c.qrz_card_active(), "no login: no card");
+        c.qrz.user = "F4XXX".into();
+        c.qrz.password = "secret".into();
+        assert!(c.qrz_card_active());
+        c.qrz_card = false;
+        assert!(!c.qrz_card_active(), "switch off: no card");
+        c.qrz_card = true;
+        c.lookup_provider = LookupProvider::HamQth;
+        assert!(!c.qrz_card_active(), "another provider: no card");
+    }
+
+    #[test]
+    fn the_switch_survives_the_wire_and_an_old_file() {
+        let mut cfg = NetworkConfig::default();
+        cfg.qrz_card = true;
+        let bytes = postcard::to_stdvec(&cfg).expect("encode");
+        let back: NetworkConfig = postcard::from_bytes(&bytes).expect("decode");
+        assert!(back.qrz_card);
+        let mut v = serde_json::to_value(NetworkConfig::default()).unwrap();
+        v.as_object_mut().unwrap().remove("qrz_card");
+        let old: NetworkConfig = serde_json::from_value(v).unwrap();
+        assert!(!old.qrz_card);
+    }
+
+    #[test]
+    fn a_card_with_a_photo_survives_the_wire() {
+        let mut i = crate::CallsignInfo::for_call("f4abc");
+        i.name = Some("Jean Dupont".into());
+        i.age = Some(58);
+        i.addr1 = Some("12 rue des Lilas".into());
+        i.qsl_lotw = true;
+        i.photo = Some(vec![0xFF, 0xD8, 0xFF, 0xD9]);
+        let bytes = postcard::to_stdvec(&i).expect("encode");
+        let back: crate::CallsignInfo = postcard::from_bytes(&bytes).expect("decode");
+        assert_eq!(back, i);
+        assert!(!back.is_empty());
     }
 }
 
@@ -501,6 +612,50 @@ mod decode_udp_tests {
         v.as_object_mut().unwrap().remove("decode_udp");
         let old: NetworkConfig = serde_json::from_value(v).unwrap();
         assert!(old.decode_udp.is_empty());
+    }
+}
+
+#[cfg(test)]
+mod dyndns_tests {
+    use super::*;
+
+    /// The update URL and its interval ride `SetNetworkConfig` whole, so they
+    /// are on the wire and postcard reads positionally: a value set here comes
+    /// back, an older `net.json` without them loads as **off**, and the
+    /// interval is clamped to what the providers tolerate rather than trusted.
+    #[test]
+    fn the_dynamic_dns_settings_survive_the_wire_and_default_to_off() {
+        let mut cfg = NetworkConfig::default();
+        cfg.dyndns_url = "https://www.duckdns.org/update?domains=x&token=y".into();
+        cfg.dyndns_minutes = 15;
+        let bytes = postcard::to_stdvec(&cfg).expect("encode");
+        let back: NetworkConfig = postcard::from_bytes(&bytes).expect("decode");
+        assert_eq!(back.dyndns_url, cfg.dyndns_url);
+        assert_eq!(back.dyndns_minutes, 15);
+        assert_eq!(back, cfg);
+
+        // Off by default, and a file written before the fields existed loads
+        // with them off.
+        assert!(NetworkConfig::default().dyndns_url.is_empty());
+        let mut v = serde_json::to_value(NetworkConfig::default()).unwrap();
+        v.as_object_mut().unwrap().remove("dyndns_url");
+        v.as_object_mut().unwrap().remove("dyndns_minutes");
+        let old: NetworkConfig = serde_json::from_value(v).unwrap();
+        assert!(old.dyndns_url.is_empty());
+        assert_eq!(old.dyndns_minutes, NetworkConfig::default_dyndns_minutes());
+    }
+
+    /// An interval nobody can keep is not sent: zero would be a request every
+    /// frame, a million a hostname that never updates.
+    #[test]
+    fn the_interval_is_held_to_what_a_provider_tolerates() {
+        let mut cfg = NetworkConfig::default();
+        cfg.dyndns_minutes = 0;
+        assert_eq!(cfg.dyndns_interval_minutes(), 1);
+        cfg.dyndns_minutes = 100_000;
+        assert_eq!(cfg.dyndns_interval_minutes(), 1440);
+        cfg.dyndns_minutes = 30;
+        assert_eq!(cfg.dyndns_interval_minutes(), 30);
     }
 }
 

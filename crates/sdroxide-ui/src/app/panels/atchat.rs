@@ -14,6 +14,7 @@
 //! election, roster ageing, ARQ — so this panel only reads
 //! [`sdroxide_types::AtChatStatus`] and pushes the `Command::AtChat*`.
 
+use crate::i18n::tr;
 use eframe::egui::{self, RichText};
 use sdroxide_types::{AtChatStatus, Command};
 
@@ -30,7 +31,7 @@ impl SdroxideApp {
         let st: Option<Box<AtChatStatus>> =
             self.digi_status.as_ref().and_then(|s| s.atchat.clone());
         let Some(st) = st else {
-            ui.label(RichText::new("starting the AtCHAT NET station…").weak());
+            ui.label(RichText::new(tr!("atchat-starting-atchat-net-station")).weak());
             return;
         };
         // On the virtual TCP channel nothing keys a transmitter, so sending a
@@ -72,9 +73,9 @@ impl SdroxideApp {
     /// Title, join state, role, master, carrier, and the virtual-channel field.
     fn atchat_header(&mut self, ui: &mut egui::Ui, cmds: &mut Vec<Command>, st: &AtChatStatus) {
         ui.horizontal_wrapped(|ui| {
-            ui.label(RichText::new("ATCHAT").size(11.0).strong().color(theme::CYAN()));
+            ui.label(RichText::new(tr!("atchat-atchat")).size(11.0).strong().color(theme::CYAN()));
             ui.label(
-                RichText::new("NET — multi-station keyboard & file")
+                RichText::new(tr!("atchat-net-multi-station-keyboard-file"))
                     .size(10.5)
                     .color(theme::CYAN_DIM()),
             );
@@ -83,9 +84,9 @@ impl SdroxideApp {
             // while joined, plain "REJOIN" once off. Clicking it drops the link
             // (state is kept) or rejoins — sometimes you just need to cycle.
             let (face, hover) = if st.connected {
-                (" ON NET ", "On the net — click to leave (state is kept; click again to rejoin)")
+                (tr!("atchat-net"), tr!("atchat-net-click-leave-state-kept"))
             } else {
-                (" REJOIN ", "Off the net — click to rejoin")
+                (tr!("atchat-rejoin"), tr!("atchat-off-net-click-rejoin"))
             };
             let resp = crate::chrome::chip_accent(
                 ui,
@@ -103,7 +104,7 @@ impl SdroxideApp {
             }
             resp.on_hover_text(hover);
             if !st.connected {
-                ui.label(RichText::new("off net").size(10.0).color(theme::YELLOW()));
+                ui.label(RichText::new(tr!("atchat-off-net")).size(10.0).color(theme::YELLOW()));
             }
 
             if let Some(role) = &st.role {
@@ -112,17 +113,21 @@ impl SdroxideApp {
                     "BACKUP" => theme::YELLOW(),
                     _ => theme::gray(140),
                 };
-                ui.label(RichText::new(role).size(10.5).strong().color(colour));
+                ui.label(RichText::new(match role.as_str() { "MASTER" => tr!("atchat-role-master"), "BACKUP" => tr!("atchat-role-backup"), other => other.to_string() }).size(10.5).strong().color(colour));
             }
             if let Some(m) = &st.master {
-                ui.label(RichText::new(format!("master {m}")).size(10.5).color(theme::gray(150)));
+                ui.label(
+                    RichText::new(tr!("atchat-master", value = m))
+                        .size(10.5)
+                        .color(theme::gray(150)),
+                );
             }
             if st.carrier {
-                ui.label(RichText::new("● CARRIER").size(10.5).color(theme::YELLOW()))
-                    .on_hover_text("Another station is transmitting — the channel is busy.");
+                ui.label(RichText::new(tr!("atchat-carrier")).size(10.5).color(theme::YELLOW()))
+                    .on_hover_text(tr!("atchat-another-station-transmitting-channel-busy"));
             }
             if st.keyed {
-                ui.label(RichText::new("● TX").size(10.5).strong().color(theme::ALERT()));
+                ui.label(RichText::new(tr!("atchat-tx")).size(10.5).strong().color(theme::ALERT()));
             }
 
             crate::chrome::row_tail(ui, |ui| {
@@ -130,7 +135,7 @@ impl SdroxideApp {
                     self.float_operating_panel();
                 }
                 if crate::chrome::chip(ui, self.show_digi_settings, RichText::new("⚙").size(9.5))
-                    .on_hover_text("Station callsign and the virtual-channel address")
+                    .on_hover_text(tr!("atchat-station-callsign-virtual-channel-address"))
                     .clicked()
                 {
                     self.show_digi_settings = !self.show_digi_settings;
@@ -142,16 +147,16 @@ impl SdroxideApp {
         // in for the RF path, for developing and testing without a radio.
         ui.horizontal_wrapped(|ui| {
             let on = self.digi_cfg_edit.atchat_virtual;
-            let resp = crate::chrome::chip(ui, on, RichText::new("VIRTUAL CHANNEL").size(10.0));
+            let resp = crate::chrome::chip(
+                ui,
+                on,
+                RichText::new(tr!("atchat-virtual-channel")).size(10.0),
+            );
             if resp.clicked() && self.digi_cfg_seeded {
                 self.digi_cfg_edit.atchat_virtual = !on;
                 cmds.push(Command::SetDigiConfig(self.digi_cfg_edit.clone()));
             }
-            resp.on_hover_text(
-                "Work the net over a TCP endpoint instead of the radio — a \
-                 channel_server-compatible loopback for radio-less development. \
-                 Off puts the station on the air.",
-            );
+            resp.on_hover_text(tr!("atchat-work-net-over-tcp-endpoint"));
             ui.add_enabled_ui(on, |ui| {
                 let r = crate::chrome::field(
                     ui,
@@ -213,18 +218,19 @@ impl SdroxideApp {
 
         // Roster strip — a click opens/focuses that station's DM tab.
         ui.horizontal_wrapped(|ui| {
-            ui.label(RichText::new("ROSTER").strong().size(10.5).color(theme::CYAN()));
+            ui.label(RichText::new(tr!("atchat-roster")).strong().size(10.5).color(theme::CYAN()));
             if st.roster.is_empty() {
-                ui.label(RichText::new("nobody heard yet").weak());
+                ui.label(RichText::new(tr!("atchat-nobody-heard-yet")).weak());
             }
             for r in &st.roster {
                 let colour = if r.status == "active" { theme::GREEN() } else { theme::gray(110) };
                 let face = RichText::new(&r.call).monospace().size(10.5).color(colour);
                 if ui
                     .add(egui::Label::new(face).sense(egui::Sense::click()))
-                    .on_hover_text(format!(
-                        "{} — last heard {:.0}s ago · click to open a direct-message tab",
-                        r.status, r.age_s
+                    .on_hover_text(tr!(
+                        "atchat-last-heard-s-ago-click",
+                        status = r.status,
+                        age_s = format!("{:.0}", r.age_s)
                     ))
                     .clicked()
                 {
@@ -254,9 +260,13 @@ impl SdroxideApp {
                 ui.set_max_width(strip_w);
                 ui.horizontal_wrapped(|ui| {
                     let chat_active = !self.atchat_show_log && self.atchat_chat_tab.is_none();
-                    if crate::chrome::chip(ui, chat_active, RichText::new(" CHAT ").size(10.5))
-                        .on_hover_text("The common channel — lines here go to everyone (ALL)")
-                        .clicked()
+                    if crate::chrome::chip(
+                        ui,
+                        chat_active,
+                        RichText::new(tr!("atchat-chat")).size(10.5),
+                    )
+                    .on_hover_text(tr!("atchat-common-channel-lines-here-go"))
+                    .clicked()
                     {
                         self.atchat_chat_tab = None;
                         self.atchat_show_log = false;
@@ -289,7 +299,7 @@ impl SdroxideApp {
                                 )
                                 .sense(egui::Sense::click()),
                             )
-                            .on_hover_text(format!("close the {peer} tab"))
+                            .on_hover_text(tr!("atchat-close-tab", peer = peer))
                             .clicked()
                         {
                             to_close = Some(peer.clone());
@@ -299,12 +309,9 @@ impl SdroxideApp {
                     if crate::chrome::chip(
                         ui,
                         self.atchat_show_log,
-                        RichText::new(" LOG ").size(10.5),
+                        RichText::new(tr!("atchat-log")).size(10.5),
                     )
-                    .on_hover_text(
-                        "The station's own on-air activity — master election, \
-                             roster ageing, ARQ retries",
-                    )
+                    .on_hover_text(tr!("atchat-station-s-own-air-activity"))
                     .clicked()
                     {
                         self.atchat_show_log = true;
@@ -337,7 +344,7 @@ impl SdroxideApp {
             .show(ui, |ui| {
                 if show_log {
                     if st.log.is_empty() {
-                        ui.label(RichText::new("No activity logged yet.").weak());
+                        ui.label(RichText::new(tr!("atchat-no-activity-logged-yet")).weak());
                     }
                     for line in &st.log {
                         ui.label(
@@ -359,7 +366,7 @@ impl SdroxideApp {
                     }
                     shown += 1;
                     let when = hms(c.when);
-                    let who = if c.own { "me".to_string() } else { c.from.clone() };
+                    let who = if c.own { tr!("atchat-me") } else { c.from.clone() };
                     let tag = format!("<{who}>");
                     let colour = if c.own { theme::GREEN() } else { theme::TEXT() };
                     ui.horizontal_wrapped(|ui| {
@@ -369,7 +376,7 @@ impl SdroxideApp {
                     });
                 }
                 if shown == 0 {
-                    ui.label(RichText::new("No messages yet.").weak());
+                    ui.label(RichText::new(tr!("atchat-no-messages-yet")).weak());
                 }
             });
 
@@ -393,8 +400,8 @@ impl SdroxideApp {
         // The line to type on — its destination is the active tab.
         let mut send = false;
         let hint = match &active {
-            None => "message to everyone (ALL)".to_string(),
-            Some(p) => format!("direct message to {p}"),
+            None => tr!("atchat-message-everyone-all").to_string(),
+            Some(p) => tr!("atchat-direct-message", value = p),
         };
         ui.horizontal(|ui| {
             let room = (ui.available_width() - 52.0).max(80.0);
@@ -408,7 +415,7 @@ impl SdroxideApp {
                 crate::chrome::chip_accent(
                     ui,
                     false,
-                    RichText::new(" SEND ").size(10.0).strong(),
+                    RichText::new(tr!("atchat-send")).size(10.0).strong(),
                     theme::GREEN(),
                     theme::INK_ON_CYAN(),
                 )
@@ -439,22 +446,28 @@ impl SdroxideApp {
     ) {
         let target = self.atchat_target();
         ui.horizontal_wrapped(|ui| {
-            ui.label(RichText::new("TRANSFERS").strong().size(10.5).color(theme::CYAN()));
+            ui.label(
+                RichText::new(tr!("atchat-transfers")).strong().size(10.5).color(theme::CYAN()),
+            );
             ui.label(
                 RichText::new(if target.is_empty() {
-                    "→ ALL".to_string()
+                    tr!("atchat-all").to_string()
                 } else {
                     format!("→ {target}")
                 })
                 .size(9.5)
                 .color(theme::gray(130)),
             )
-            .on_hover_text("A sent file follows the active chat tab");
+            .on_hover_text(tr!("atchat-sent-file-follows-active-chat"));
             crate::chrome::row_tail(ui, |ui| {
                 let clicked = tx_gated(ui, can_send, |ui| {
-                    crate::chrome::chip(ui, false, RichText::new(" SEND FILE ").size(10.0))
+                    crate::chrome::chip(
+                        ui,
+                        false,
+                        RichText::new(tr!("atchat-send-file")).size(10.0),
+                    )
                 })
-                .on_hover_text("Send a file or image over the air, block-CRC-ARQ")
+                .on_hover_text(tr!("atchat-send-file-image-over-air"))
                 .clicked();
                 // Native file picker only — the browser client has no
                 // filesystem dialog here, same as the log-import button.
@@ -476,7 +489,7 @@ impl SdroxideApp {
             .auto_shrink([false, false])
             .show(ui, |ui| {
                 if st.transfers.is_empty() {
-                    ui.label(RichText::new("nothing in flight").weak());
+                    ui.label(RichText::new(tr!("atchat-nothing-flight")).weak());
                 }
                 for t in &st.transfers {
                     let dir = if t.incoming { "◀" } else { "▶" };
@@ -499,13 +512,13 @@ impl SdroxideApp {
             });
 
         ui.add_space(6.0);
-        ui.label(RichText::new("IMAGES").strong().size(10.5).color(theme::CYAN()));
+        ui.label(RichText::new(tr!("atchat-images")).strong().size(10.5).color(theme::CYAN()));
 
         // Only the images, oldest first — the viewer walks this subset.
         let images: Vec<&sdroxide_types::AtChatFile> =
             st.files.iter().filter(|f| f.is_image).collect();
         if images.is_empty() {
-            ui.label(RichText::new("No images received.").weak());
+            ui.label(RichText::new(tr!("atchat-no-images-received")).weak());
             return;
         }
         if self.atchat_img_at >= images.len() {
@@ -549,7 +562,7 @@ impl SdroxideApp {
             }
             None => {
                 ui.label(
-                    RichText::new(format!("cannot display {}", f.path))
+                    RichText::new(tr!("atchat-cannot-display", path = f.path))
                         .size(10.0)
                         .color(theme::YELLOW()),
                 );

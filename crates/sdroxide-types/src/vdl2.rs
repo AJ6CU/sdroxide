@@ -139,13 +139,14 @@ pub const VDL2_MIN_RATE_HZ: f64 = 34_000.0;
 /// with. Not a refusal — a "this will do badly" sentence.
 pub const VDL2_GOOD_SPS: f64 = 3.0;
 
-/// Longest message log the decoder will keep, whatever the settings say.
-pub const VDL2_MESSAGE_MAX: u16 = 2000;
+/// Longest message log the decoder will keep, whatever the settings say
+/// ([`crate::MESSAGE_LOG_MAX`]).
+pub const VDL2_MESSAGE_MAX: u16 = crate::MESSAGE_LOG_MAX as u16;
 /// Longest station table the decoder will keep, whatever the settings say.
 pub const VDL2_STATION_MAX: u16 = 2000;
 
 /// Default for [`Vdl2Settings::max_messages`].
-pub const VDL2_MESSAGES: u16 = 500;
+pub const VDL2_MESSAGES: u16 = VDL2_MESSAGE_MAX;
 /// Default for [`Vdl2Settings::max_stations`].
 pub const VDL2_STATIONS: u16 = 300;
 /// Default for [`Vdl2Settings::drop_list_s`]. Ground stations beacon about once

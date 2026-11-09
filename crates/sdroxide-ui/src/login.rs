@@ -35,6 +35,7 @@
 //! that was perfectly good. That is issue #188's "it says the password is wrong
 //! and then connects anyway".
 
+use crate::i18n::tr;
 use std::collections::BTreeMap;
 #[cfg(target_arch = "wasm32")]
 use std::collections::BTreeSet;
@@ -599,18 +600,18 @@ fn card(
 ) {
     let field_h = if touch { 30.0 } else { 22.0 };
 
-    ui.label(RichText::new("SDR OXIDE").size(17.0).strong().color(crate::theme::CYAN()));
+    ui.label(RichText::new(tr!("login-sdr-oxide")).size(17.0).strong().color(crate::theme::CYAN()));
     ui.add_space(12.0);
 
     ui.add_enabled_ui(!checking, |ui| {
-        ui.label(RichText::new("Username").size(11.5).weak());
+        ui.label(RichText::new(tr!("login-username")).size(11.5).weak());
         let user = crate::chrome::field_sized(
             ui,
             [ui.available_width(), field_h],
             egui::TextEdit::singleline(&mut form.username),
         );
         ui.add_space(8.0);
-        ui.label(RichText::new("Password").size(11.5).weak());
+        ui.label(RichText::new(tr!("login-password")).size(11.5).weak());
         let pass = crate::chrome::field_sized(
             ui,
             [ui.available_width(), field_h],
@@ -641,7 +642,7 @@ fn card(
     // and keeps a copy of the password instead.
     #[cfg(target_arch = "wasm32")]
     {
-        ui.label(RichText::new("Remember this station").size(11.5).weak());
+        ui.label(RichText::new(tr!("login-remember-this-station")).size(11.5).weak());
         // One box rather than a choice of clock arithmetic. "Do not ask me
         // again" is a single decision, and how long it lasts is the station's
         // business; making the operator translate a duration into one of two
@@ -651,7 +652,7 @@ fn card(
             if ui
                 .checkbox(
                     &mut remember,
-                    RichText::new("REMEMBER ME").size(if touch { 13.0 } else { 11.5 }).strong(),
+                    RichText::new(tr!("login-remember-me")).size(if touch { 13.0 } else { 11.5 }).strong(),
                 )
                 .changed()
             {
@@ -660,11 +661,9 @@ fn card(
         });
         ui.label(
             RichText::new(if form.remember_cookie {
-                "This station keeps your sign-in, not this page — nothing to fill in on the \
-                 other radios, and nothing to forget when you leave."
+                tr!("login-this-station-keeps-your-sign-in")
             } else {
-                "Not this time: this browser forgets it when it closes, so you are asked again \
-                 next session and nothing about this sign-in is left on the device."
+                tr!("login-not-this-time-this-browser-forgets")
             })
             .size(10.5)
             .color(crate::theme::gray(140)),
@@ -672,16 +671,14 @@ fn card(
     }
     #[cfg(not(target_arch = "wasm32"))]
     {
-        let remember = crate::chrome::checkbox(ui, &mut form.remember, "Remember on this device");
+        let remember = crate::chrome::checkbox(ui, &mut form.remember, tr!("login-remember-device"));
         if !touch {
             remember.on_hover_text(
-                "Signs in without asking next time, and lets the 3D view's tab in without \
-                 asking at all. The password is kept in the clear, so leave this off on a machine \
-                 other people use.",
+                tr!("login-signs-without-asking-next-time"),
             );
         } else {
             ui.label(
-                RichText::new("Keeps the password on this device, in the clear.")
+                RichText::new(tr!("login-keeps-password-device-clear"))
                     .size(10.5)
                     .color(crate::theme::gray(140)),
             );
@@ -690,7 +687,7 @@ fn card(
 
     ui.add_space(12.0);
     ui.horizontal(|ui| {
-        let label = if checking { " CHECKING… " } else { " SIGN IN " };
+        let label = if checking { tr!("login-checking") } else { tr!("login-sign") };
         let button = crate::chrome::chip_accent(
             ui,
             false,
@@ -707,12 +704,9 @@ fn card(
     } else if checking {
         ui.add_space(10.0);
         ui.label(
-            RichText::new(
-                "A wrong password shuts the server's door for a few seconds, so this can take a \
-                 moment.",
-            )
-            .size(11.0)
-            .color(crate::theme::gray(140)),
+            RichText::new(tr!("login-wrong-password-shuts-server-s"))
+                .size(11.0)
+                .color(crate::theme::gray(140)),
         );
     }
 }

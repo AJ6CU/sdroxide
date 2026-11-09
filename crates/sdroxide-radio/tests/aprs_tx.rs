@@ -172,7 +172,7 @@ fn over_at(audio_mode: bool, rx_rate: f64, tx_rate: f64, cmds: Vec<Command>) -> 
     // a packet station counts its channel-access slots on — so an engine with
     // no audio sink is a station that can never decide to key.
     let (producer, _consumer) = rtrb::RingBuffer::<f32>::new(48_000);
-    let cfg = EngineConfig {
+    let cfg = EngineConfig { tx_bands_open: true,
         tx_ham_only: false,
         remember_session: false,
         audio: Some(AudioParams { producer, out_rate: 48_000.0 }),
@@ -531,7 +531,7 @@ fn radiated_for(rate: f64, cmds: Vec<Command>) -> Vec<Complex32> {
     let heard = Arc::new(Mutex::new(Radiated::default()));
     let src = TransmittingSdr { heard: Arc::clone(&heard), rate, rng: 0x2345_6789 };
     let (producer, _consumer) = rtrb::RingBuffer::<f32>::new(48_000);
-    let cfg = EngineConfig {
+    let cfg = EngineConfig { tx_bands_open: true,
         // The shipped default rather than the test-friendly one: an APRS
         // channel is inside an amateur band, so the lockout has no business
         // refusing it, and a station whose only radio is an SDR meets that

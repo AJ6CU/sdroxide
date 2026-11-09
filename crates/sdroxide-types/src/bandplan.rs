@@ -32,6 +32,7 @@
 //! explicit reload. Every entry point that reads the global also has a method
 //! on [`BandPlan`] taking it explicitly, which is what the tests use.
 
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{LazyLock, RwLock};
 
 use serde::{Deserialize, Serialize};
@@ -99,6 +100,53 @@ pub struct BandPlan {
     /// does no I/O: the loader prints them, and a bad row is dropped rather
     /// than allowed to take the whole file down with it.
     problems: Vec<String>,
+    /// Who the plan is for and who wrote it. Shown by the plan manager; it has
+    /// no say in any band edge, which is why [`PartialEq`] ignores it.
+    meta: PlanMeta,
+}
+
+/// What a plan file says about itself: a name for the manager's list, the
+/// country it is for and who made it. All optional — a file without the block
+/// loads as before and is listed under its file name.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct PlanMeta {
+    /// The name the manager shows, e.g. `Germany (NRW)`.
+    pub name: String,
+    /// The country, e.g. `Germany`. Free text.
+    pub country: String,
+    /// Who made the plan.
+    pub author: String,
+}
+
+impl PlanMeta {
+    /// Whether the file said nothing about itself.
+    pub fn is_empty(&self) -> bool {
+        self.name.is_empty() && self.country.is_empty() && self.author.is_empty()
+    }
+}
+
+/// One plan in the station's library, as the plan manager lists it. Built on the
+/// engine's machine from the files in its `bandplans` folder and announced to
+/// every client in the [`crate::StationConfig`] bundle.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PlanInfo {
+    /// The file's name without `.json`: what a command names the plan by.
+    pub file: String,
+    /// [`PlanMeta::name`], or the file name when the plan has none.
+    pub name: String,
+    /// [`PlanMeta::country`].
+    pub country: String,
+    /// [`PlanMeta::author`].
+    pub author: String,
+    /// Size of the file in bytes.
+    pub bytes: u32,
+    /// When the file was last written, in seconds since the Unix epoch; 0 when
+    /// the platform would not say.
+    pub modified: u64,
+    /// Whether the plan came with the program (it can be restored) rather than
+    /// from the operator.
+    pub shipped: bool,
 }
 
 impl Default for BandPlan {
@@ -117,6 +165,7 @@ impl BandPlan {
             r2: RegionPlan::iaru_default(Region::R2),
             r3: RegionPlan::iaru_default(Region::R3),
             problems: Vec::new(),
+            meta: PlanMeta::default(),
         }
     }
 
@@ -139,6 +188,43 @@ impl BandPlan {
     /// whether the station is on the shipped plan or the operator's own.
     pub fn is_default(&self) -> bool {
         *self == *DEFAULTS
+    }
+
+    /// What the plan says about itself (empty for the built-in tables).
+    pub fn meta(&self) -> &PlanMeta {
+        &self.meta
+    }
+
+    /// This plan with `meta` in place of what it had.
+    pub fn with_meta(mut self, meta: PlanMeta) -> BandPlan {
+        self.meta = meta;
+        self
+    }
+
+    /// A number that is the same for the same band edges, segments and windows
+    /// and (all but certainly) different for any other plan — the name, the
+    /// author and the complaints about the file do not count, exactly as in
+    /// [`PartialEq`].
+    ///
+    /// What lets a radio remember *which* plan its operator checked the band
+    /// lists against, so that the next start knows whether the plan moved while
+    /// the program was off. FNV-1a over the compact JSON of the file form: not
+    /// `DefaultHasher`, whose output is allowed to change between Rust versions
+    /// and would withdraw every confirmation on a compiler upgrade.
+    pub fn fingerprint(&self) -> u64 {
+        let file = PlanFile {
+            readme: Vec::new(),
+            meta: PlanMeta::default(),
+            ..PlanFile::from(self.clone())
+        };
+        let text = serde_json::to_string(&file).expect("a band plan always serialises");
+        let mut h: u64 = 0xcbf2_9ce4_8422_2325;
+        for b in text.bytes() {
+            h ^= u64::from(b);
+            h = h.wrapping_mul(0x0000_0100_0000_01b3);
+        }
+        // 0 is what a radio that never confirmed under any plan stores.
+        h.max(1)
     }
 
     /// This plan as the text of `bandplan.json`: megahertz, one row per line,
@@ -221,12 +307,34 @@ struct BandRow {
 }
 
 /// One sub-segment, in MHz.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize)]
 struct SegRow {
     lo_mhz: f64,
     hi_mhz: f64,
     /// `Cw`, `Digi`, `Phone`, `Beacon` or `All`.
     kind: SegmentKind,
+    /// Optional name for the waterfall strip in place of the kind's.
+    #[serde(default)]
+    label: Option<String>,
+}
+
+/// By hand for the one field that is optional in the file: `bandplan.json`
+/// leaves `label` out of a row that has none, rather than writing `null` on
+/// every line, but postcard is not self-describing and has to see every field,
+/// so on the wire it is always there.
+impl Serialize for SegRow {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        use serde::ser::SerializeStruct;
+        let with_label = self.label.is_some() || !s.is_human_readable();
+        let mut st = s.serialize_struct("SegRow", if with_label { 4 } else { 3 })?;
+        st.serialize_field("lo_mhz", &self.lo_mhz)?;
+        st.serialize_field("hi_mhz", &self.hi_mhz)?;
+        st.serialize_field("kind", &self.kind)?;
+        if with_label {
+            st.serialize_field("label", &self.label)?;
+        }
+        st.end()
+    }
 }
 
 /// One skimmer window, in MHz.
@@ -252,6 +360,9 @@ struct PlanFile {
     /// Ignored on load; written on seed so the file explains itself. JSON has
     /// no comments, so this is the next best thing.
     readme: Vec<String>,
+    /// Name, country and author. Appended after the readme so a reader sees who
+    /// the plan is for before the first row.
+    meta: PlanMeta,
     region1: RegionFile,
     region2: RegionFile,
     region3: RegionFile,
@@ -279,7 +390,8 @@ fn readme() -> Vec<String> {
          a row in any region and this file decides it everywhere, as it does for every other \
          band.",
         "segments: the sub-band plan drawn on the waterfall. kind is Cw, Digi, Phone, \
-         Beacon or All.",
+         Beacon or All; an optional label (\"label\": \"CONTEST\") names the block on the \
+         waterfall strip instead of the kind.",
         "psk_windows / rtty_windows: where the wideband skimmers listen. Narrow windows \
          cost less CPU than wide ones.",
         "Which region applies is the IARU region setting on the General tab \
@@ -306,6 +418,7 @@ impl From<BandPlan> for PlanFile {
         // adds it for the one destination that wants it.
         PlanFile {
             readme: Vec::new(),
+            meta: p.meta.clone(),
             region1: (&p.r1).into(),
             region2: (&p.r2).into(),
             region3: (&p.r3).into(),
@@ -330,7 +443,12 @@ impl From<&RegionPlan> for RegionFile {
             segments: r
                 .segments
                 .iter()
-                .map(|s| SegRow { lo_mhz: hz_to_mhz(s.lo), hi_mhz: hz_to_mhz(s.hi), kind: s.kind })
+                .map(|s| SegRow {
+                    lo_mhz: hz_to_mhz(s.lo),
+                    hi_mhz: hz_to_mhz(s.hi),
+                    kind: s.kind,
+                    label: s.label.map(str::to_owned),
+                })
                 .collect(),
             psk_windows: r.psk.iter().map(|&(lo, hi)| WindowRow::from_hz(lo, hi)).collect(),
             rtty_windows: r.rtty.iter().map(|&(lo, hi)| WindowRow::from_hz(lo, hi)).collect(),
@@ -392,6 +510,7 @@ const BANDS_ADDED_SINCE_THE_FILE: &[Band] = &[
     Band::Fm,
     Band::Air,
     Band::Mil,
+    Band::Ism868,
 ];
 
 impl TryFrom<PlanFile> for BandPlan {
@@ -416,7 +535,7 @@ impl TryFrom<PlanFile> for BandPlan {
                 plan.edges[i] = band.iaru_default_edges_in(region);
             }
         }
-        Ok(BandPlan { r1, r2, r3, problems })
+        Ok(BandPlan { r1, r2, r3, problems, meta: f.meta })
     }
 }
 
@@ -502,7 +621,13 @@ impl RegionPlan {
                 ));
                 continue;
             }
-            segments.push(Segment { lo, hi, kind: row.kind });
+            let label = row
+                .label
+                .as_deref()
+                .map(str::trim)
+                .filter(|l| !l.is_empty())
+                .map(crate::band_segments::intern_label);
+            segments.push(Segment { lo, hi, kind: row.kind, label });
         }
         // Sorted here rather than demanded of the file: the lookups walk this in
         // order and an operator adding a segment should not have to find the
@@ -666,9 +791,80 @@ static DEFAULTS: LazyLock<BandPlan> = LazyLock::new(BandPlan::iaru_defaults);
 /// reload — not in any loop.
 static INSTALLED: RwLock<Option<&'static BandPlan>> = RwLock::new(None);
 
-/// The band plan every lookup uses: the operator's `bandplan.json` once it has
-/// been installed, the built-in IARU tables until then.
+/// How many times the installed plan has become a *different* plan.
+///
+/// A radio's band lists are confirmed by its operator against one plan, and a
+/// station may run several radios in one process that all read the one plan:
+/// each engine keeps the number it last saw and, when it moves, withdraws its
+/// own confirmations. An atomic load per tick, like the shared-store check
+/// beside it.
+static REVISION: AtomicU64 = AtomicU64::new(0);
+
+/// The number of changes of plan so far in this process. See [`REVISION`].
+pub fn band_plan_revision() -> u64 {
+    REVISION.load(Ordering::SeqCst)
+}
+
+thread_local! {
+    /// The plan a radio runs *on its own*, for the thread that works for that
+    /// radio: its engine, and the screen's draw and event code for its tab.
+    ///
+    /// A radio at a multi-radio station may run a plan of its own (see
+    /// [`crate::RadioConfig::band_plan`]), while every band edge, transmit
+    /// lockout, waterfall strip and skimmer window in the program asks
+    /// [`band_plan`] without saying which radio it is for — hundreds of callers
+    /// that have no radio to name. So the answer depends on the thread: where
+    /// the thread has declared a plan of its own it gets that one, anywhere else
+    /// the station's. Nothing a radio does here can reach another radio, because
+    /// another radio's engine is another thread.
+    static THREAD_PLAN: std::cell::Cell<Option<&'static BandPlan>> =
+        const { std::cell::Cell::new(None) };
+}
+
+/// The band plan every lookup uses: the plan of the radio the calling thread
+/// works for if it has declared one ([`set_thread_band_plan`]), otherwise the
+/// station's.
 pub fn band_plan() -> &'static BandPlan {
+    THREAD_PLAN.with(std::cell::Cell::get).unwrap_or_else(station_band_plan)
+}
+
+/// A plan kept for the life of the program, so lookups can hand out `&'static`
+/// slices without an `Arc` in every signature — what [`set_band_plan`] does with
+/// the station's. One small allocation each time a radio's own plan *changes*,
+/// never per frame or per block.
+pub fn leak_band_plan(plan: BandPlan) -> &'static BandPlan {
+    Box::leak(Box::new(plan))
+}
+
+/// Declare the plan the calling thread's radio runs on its own, or `None` to
+/// follow the station's. See [`THREAD_PLAN`].
+pub fn set_thread_band_plan(plan: Option<&'static BandPlan>) {
+    THREAD_PLAN.with(|c| c.set(plan));
+}
+
+/// A thread's plan for the length of a scope: what a screen does around the draw
+/// and event code of one radio's tab, so that a split view with two radios on
+/// two plans draws each with its own. The previous declaration comes back when
+/// it is dropped.
+pub struct ThreadPlanGuard(Option<&'static BandPlan>);
+
+impl ThreadPlanGuard {
+    /// Run as the radio with `plan` (`None`: the station's) until dropped.
+    pub fn enter(plan: Option<&'static BandPlan>) -> ThreadPlanGuard {
+        ThreadPlanGuard(THREAD_PLAN.with(|c| c.replace(plan)))
+    }
+}
+
+impl Drop for ThreadPlanGuard {
+    fn drop(&mut self) {
+        THREAD_PLAN.with(|c| c.set(self.0));
+    }
+}
+
+/// The station's band plan, whatever radio the calling thread works for:
+/// the operator's choice once it has been installed, the built-in IARU tables
+/// until then.
+pub fn station_band_plan() -> &'static BandPlan {
     match INSTALLED.read() {
         Ok(g) => g.unwrap_or(&DEFAULTS),
         // A poisoned lock means a writer panicked mid-install. The built-in
@@ -686,6 +882,12 @@ pub fn band_plan() -> &'static BandPlan {
 /// rebuilt — but the waterfall's band strip caches per region, so a client that
 /// wants the strip to follow a *reload* has to clear that cache too.
 pub fn set_band_plan(plan: BandPlan) {
+    // Counted before the swap, against what is installed now: an announcement
+    // of the plan already in force (a client hearing it again, a second engine
+    // starting) is not a change and must not withdraw anybody's confirmation.
+    if station_band_plan() != &plan {
+        REVISION.fetch_add(1, Ordering::SeqCst);
+    }
     let leaked: &'static BandPlan = Box::leak(Box::new(plan));
     if let Ok(mut g) = INSTALLED.write() {
         *g = Some(leaked);
@@ -933,6 +1135,39 @@ mod tests {
         assert!(p.problems().is_empty(), "{:?}", p.problems());
     }
 
+    /// A segment's own label survives the file and the wire; a row without one
+    /// is written without the key, and a blank one counts as none.
+    #[test]
+    fn a_segment_label_is_optional_in_the_file_and_kept_on_the_wire() {
+        let p = parse(
+            r#"{"region1":{"bands":[{"band":"Cm3","lo_mhz":10000.0,"hi_mhz":10500.0}],
+                 "segments":[
+                    {"lo_mhz":10489.85,"hi_mhz":10489.87,"kind":"Phone","label":"Emergency"},
+                    {"lo_mhz":10489.87,"hi_mhz":10489.99,"kind":"Phone","label":"  "},
+                    {"lo_mhz":10489.65,"hi_mhz":10489.745,"kind":"Phone"}]},
+                "region2":{"bands":[{"band":"Cm3","lo_mhz":10000.0,"hi_mhz":10500.0}]},
+                "region3":{"bands":[{"band":"Cm3","lo_mhz":10000.0,"hi_mhz":10500.0}]}}"#,
+        );
+        let segs = p.region(Region::R1).segments();
+        assert_eq!(
+            segs.iter().map(|s| s.label).collect::<Vec<_>>(),
+            [None, Some("Emergency"), None]
+        );
+
+        let text = p.to_json_document();
+        assert_eq!(text.matches("\"label\"").count(), 1, "{text}");
+        assert!(text.contains(r#""kind": "Phone", "label": "Emergency"}"#), "{text}");
+        assert_eq!(serde_json::from_str::<BandPlan>(&text).expect("parse"), p);
+
+        let wire = postcard::to_allocvec(&p).expect("serialise");
+        assert_eq!(postcard::from_bytes::<BandPlan>(&wire).expect("deserialise"), p);
+        let plain = postcard::to_allocvec(&BandPlan::iaru_defaults()).expect("serialise");
+        assert_eq!(
+            postcard::from_bytes::<BandPlan>(&plain).expect("deserialise"),
+            BandPlan::iaru_defaults()
+        );
+    }
+
     /// A region with nothing in it is the one thing worth refusing: it would
     /// lock the operator out of every frequency they have.
     #[test]
@@ -964,5 +1199,81 @@ mod tests {
     #[test]
     fn the_uninstalled_plan_is_the_built_in_one() {
         assert!(band_plan().is_default());
+    }
+
+    fn narrowed() -> BandPlan {
+        serde_json::from_str(
+            r#"{"meta":{"name":"Narrow","country":"Nowhere","author":"Me"},
+                "region1":{"bands":[{"band":"M2","lo_mhz":144.0,"hi_mhz":144.4}]},
+                "region2":{"bands":[{"band":"M2","lo_mhz":144.0,"hi_mhz":148.0}]},
+                "region3":{"bands":[{"band":"M2","lo_mhz":144.0,"hi_mhz":148.0}]}}"#,
+        )
+        .expect("a valid plan")
+    }
+
+    /// The fingerprint is about the plan and nothing else: what the file calls
+    /// itself, who wrote it and what it got wrong do not move it, and any edge
+    /// does. A radio's confirmation is remembered against it.
+    #[test]
+    fn the_fingerprint_follows_the_plan_and_only_the_plan() {
+        let plan = narrowed();
+        assert_ne!(plan.fingerprint(), 0);
+        assert_eq!(plan.fingerprint(), plan.clone().fingerprint());
+
+        let renamed = plan.clone().with_meta(PlanMeta {
+            name: "Other name".into(),
+            country: "Elsewhere".into(),
+            author: "Someone else".into(),
+        });
+        assert_eq!(renamed.fingerprint(), plan.fingerprint(), "a name is not a plan");
+
+        // Through the file form and back, which is what a restart does.
+        let back: BandPlan = serde_json::from_str(&plan.to_json_document()).expect("parse");
+        assert_eq!(back.fingerprint(), plan.fingerprint());
+
+        assert_ne!(plan.fingerprint(), BandPlan::iaru_defaults().fingerprint());
+        let widened = serde_json::from_str::<BandPlan>(
+            &plan.to_json_document().replace("144.4", "144.5"),
+        )
+        .expect("parse");
+        assert_ne!(widened.fingerprint(), plan.fingerprint(), "one edge moved");
+    }
+
+    /// A file may say who it is for, and a file written before that existed
+    /// loads exactly as it did.
+    #[test]
+    fn the_meta_block_is_optional_and_survives_the_file_and_the_wire() {
+        let plan = narrowed();
+        assert_eq!(plan.meta().name, "Narrow");
+        assert_eq!(plan.meta().author, "Me");
+        assert!(!plan.meta().is_empty());
+
+        let text = plan.to_json_document();
+        assert!(text.contains("\"meta\""), "{text}");
+        let back: BandPlan = serde_json::from_str(&text).expect("parse");
+        assert_eq!(back.meta(), plan.meta());
+
+        let bytes = postcard::to_allocvec(&plan).expect("serialise");
+        let wire: BandPlan = postcard::from_bytes(&bytes).expect("deserialise");
+        assert_eq!(wire.meta(), plan.meta(), "the name rides the wire");
+
+        assert!(BandPlan::iaru_defaults().meta().is_empty());
+        let old: BandPlan = serde_json::from_str(
+            r#"{"region1":{"bands":[{"band":"M2","lo_mhz":144.0,"hi_mhz":146.0}]},
+                "region2":{"bands":[{"band":"M2","lo_mhz":144.0,"hi_mhz":148.0}]},
+                "region3":{"bands":[{"band":"M2","lo_mhz":144.0,"hi_mhz":148.0}]}}"#,
+        )
+        .expect("a file without meta loads");
+        assert!(old.meta().is_empty());
+        assert!(old.problems().is_empty());
+    }
+
+    /// Two plans with the same edges are the same plan whatever they are
+    /// called — the rule the wire's duplicate announcements rely on.
+    #[test]
+    fn meta_does_not_make_two_plans_different() {
+        let a = narrowed();
+        let b = a.clone().with_meta(PlanMeta::default());
+        assert_eq!(a, b);
     }
 }

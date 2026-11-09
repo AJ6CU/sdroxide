@@ -1,5 +1,5 @@
 //! The "PUBLIC SDRS" window: browse the receivers other people have published
-//! and open one as a radio.
+//! and add one as a radio of its own, named after its directory entry.
 //!
 //! Built on the same bones as [`crate::app::spots`], because it is the same
 //! problem — a long list from the internet, filter chips, a fuzzy search, and a
@@ -25,6 +25,7 @@
 //! is somebody else's for the moment. Being told which is far better than a
 //! connection that fails for no visible reason.
 
+use crate::i18n::tr;
 use eframe::egui::{self, RichText};
 use sdroxide_types::{Command, PublicSdrEntry, PublicSdrNetwork};
 
@@ -40,7 +41,7 @@ use crate::app::{RadioTabRequest, SdroxideApp};
 const MAX_ROWS: usize = 300;
 
 /// One receiver row: network badge, name, what it covers, how busy it is,
-/// where it is, and the two ways to take it.
+/// where it is, and the one way to take it: ADD AS RADIO.
 ///
 /// Columns are allocated rather than laid out by content, the way
 /// [`crate::app::spots`]'s rows are: a directory is a table, and a name that
@@ -54,10 +55,11 @@ fn entry_row(
     e: &PublicSdrEntry,
     distance_km: Option<f64>,
     dead: bool,
-) -> Option<PickAction> {
+    starred: bool,
+) -> Option<RowAction> {
     let blocked = e
         .blocked_reason()
-        .or_else(|| dead.then(|| "could not connect this session".to_string()));
+        .or_else(|| dead.then(|| tr!("publicsdr-could-not-connect")));
     let mut action = None;
     let dim = crate::theme::gray(if blocked.is_some() { 100 } else { 170 });
     let net_col = match e.network {
@@ -67,8 +69,9 @@ fn entry_row(
     };
     /// What the buttons (or the refusal text) need on the right.
     const ACTIONS_W: f32 = 172.0;
-    /// The five fixed columns ahead of the place, and the gaps between them.
-    const FIXED_W: f32 = 60.0 + 176.0 + 80.0 + 46.0 + 4.0 * 6.0;
+    /// The five fixed columns ahead of the place, and the gaps between them —
+    /// the star first, then the network, the name, the coverage and the users.
+    const FIXED_W: f32 = 20.0 + 60.0 + 176.0 + 80.0 + 46.0 + 5.0 * 6.0;
     /// The distance column, which is only drawn when a station grid is set.
     const DISTANCE_W: f32 = 56.0 + 6.0;
     /// Narrower than this and a place name is an ellipsis, which is worth less
@@ -92,6 +95,27 @@ fn entry_row(
                     )
                     .add(lbl);
                 };
+                // The star, before anything else: a receiver worth keeping is
+                // worth keeping even while it is full, so this is drawn for
+                // every row, blocked or not.
+                let (star, star_col, star_hint) = if starred {
+                    ("★", crate::theme::YELLOW(), tr!("publicsdr-unstar-receiver"))
+                } else {
+                    ("☆", crate::theme::gray(120), tr!("publicsdr-star-receiver"))
+                };
+                ui.allocate_ui(egui::vec2(20.0, 20.0), |ui| {
+                    if ui
+                        .add(
+                            egui::Button::new(RichText::new(star).size(13.0).color(star_col))
+                                .frame(false)
+                                .min_size(egui::vec2(18.0, 18.0)),
+                        )
+                        .on_hover_text(star_hint)
+                        .clicked()
+                    {
+                        action = Some(RowAction::Star);
+                    }
+                });
                 col(
                     ui,
                     60.0,
@@ -185,21 +209,23 @@ fn entry_row(
                             );
                         }
                         None => {
-                            if crate::chrome::chip(ui, false, "+ TAB")
-                                .on_hover_text("Open this receiver as a new radio, in its own tab")
+                            // One way to take a receiver: as a radio of its own,
+                            // named after its directory entry. The "USE" route
+                            // (this radio rebuilt as the receiver) is gone.
+                            // Why: HDZ 2026-11-04: "use und use new panel ist
+                            //      Quatsch, hier müsste rein 'add as radio', und
+                            //      gut ist". USE replaced a configured radio and
+                            //      needed a three-way confirmation for it (issue
+                            //      #254: an IC-9700 lost to one click); "+ TAB"
+                            //      did what this does, named after the
+                            //      interface. With the original tab strip the
+                            //      new radio is a new tab; with Panel Exchange
+                            //      it is one more under "Change radio".
+                            if crate::chrome::chip(ui, false, tr!("publicsdr-add-as-radio"))
+                                .on_hover_text(tr!("publicsdr-add-as-radio-tip"))
                                 .clicked()
                             {
-                                action = Some(PickAction::NewRadio);
-                            }
-                            if crate::chrome::chip(ui, false, "USE")
-                                .on_hover_text(
-                                    "Point *this* radio at the receiver, replacing whatever \
-                                     interface it is on now — asked again first, because that \
-                                     is a whole radio's worth of setting up",
-                                )
-                                .clicked()
-                            {
-                                action = Some(PickAction::ThisRadio);
+                                action = Some(RowAction::Add);
                             }
                         }
                     },
@@ -209,69 +235,111 @@ fn entry_row(
         .response
         // Everything that did not earn a column of its own: the address to
         // connect to, the antenna, and what the receiver says it is.
-        .on_hover_text(format!(
-            "{}\n{}\nantenna: {}\n{}",
-            e.address,
-            e.device,
-            if e.antenna.is_empty() { "not stated" } else { &e.antenna },
-            match e.snr_db {
-                Some(snr) => format!("noise-floor score {snr}"),
-                None => format!("up to {:.0} kHz of I/Q", e.max_iq_rate / 1e3),
-            },
+        .on_hover_text(tr!(
+            "publicsdr-antenna",
+            address = e.address,
+            device = e.device,
+            antenna =
+                if e.antenna.is_empty() { tr!("publicsdr-not-stated") } else { e.antenna.clone() },
+            e3 = match e.snr_db {
+                Some(snr) => tr!("publicsdr-noise-floor-score", snr = snr),
+                None => tr!("publicsdr-up-khz-i-q", khz = format!("{:.0}", e.max_iq_rate / 1e3)),
+            }
         ));
     ui.add_space(1.0);
     action
 }
 
-/// What a row's buttons asked for.
-#[derive(Clone, Copy, PartialEq)]
-enum PickAction {
-    NewRadio,
-    ThisRadio,
-}
-
-/// What the operator answered the **USE** confirmation with.
-#[derive(Debug, Clone, Copy, PartialEq)]
-enum Confirm {
-    /// Go ahead: this radio becomes the receiver.
-    Replace,
-    /// The way out that keeps both — the receiver arrives in a tab of its own
-    /// and the radio the operator is on is left alone.
-    NewTab,
-    Cancel,
-}
-
-/// The question **USE** asks before it replaces a configured radio, and the
-/// three answers to it.
+/// The placement rule of [`SdroxideApp::public_sdrs_docked_now`], pure so it can
+/// be pinned without a frame.
 ///
-/// Drawn across the top of the list rather than in a window of its own: the
-/// row that raised it is still on screen behind, and a second window over a
-/// list of eleven hundred rows would have to be dismissed before the operator
-/// could look at what they were about to lose.
-fn confirm_panel(ui: &mut egui::Ui, blurb: &str) -> Option<Confirm> {
-    let mut answer = None;
-    crate::chrome::red_panel(ui, |ui| {
-        ui.label(RichText::new(blurb).color(crate::theme::TEXT_STRONG()).size(12.0));
-        ui.add_space(4.0);
-        ui.horizontal(|ui| {
-            if crate::chrome::chip(ui, false, "REPLACE")
-                .on_hover_text("Point the radio you are on at this receiver")
-                .clicked()
-            {
-                answer = Some(Confirm::Replace);
-            }
-            if crate::chrome::chip(ui, false, "+ TAB INSTEAD")
-                .on_hover_text("Open the receiver as another radio and leave this one alone")
-                .clicked()
-            {
-                answer = Some(Confirm::NewTab);
-            }
-            if crate::chrome::chip(ui, false, "CANCEL").clicked() {
-                answer = Some(Confirm::Cancel);
-            }
-        });
-    });
-    answer
+/// * `open` — the list is open; `docked` — the operator chose the dock.
+/// * `rc_docked` — Radio Classic already holds the slot under the waterfall.
+///
+/// Docked only in a voice mode with no panel of its own (not CW, not a digital,
+/// ADS-B, VDL2, AIS, HFDL or DAB mode), off a phone, with the slot free.
+/// Anywhere else the list is a window, so opening it never does nothing.
+fn docked_under_waterfall(
+    open: bool,
+    docked: bool,
+    mode: sdroxide_types::Mode,
+    phone: bool,
+    rc_docked: bool,
+) -> bool {
+    open && docked && !phone && !rc_docked && !mode.has_bottom_panel() && mode != sdroxide_types::Mode::Cw
+}
+
+/// What a row asked for.
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum RowAction {
+    /// ADD AS RADIO: take this receiver as a radio of its own.
+    Add,
+    /// The star: keep it in MINE, or let it go.
+    Star,
+}
+
+/// Whether a receiver survives the chips: its network shown, available if that
+/// is asked for, covering the dial if that is, and **starred** if MINE is on.
+///
+/// A free function so the rule can be read and tested on its own; the star is
+/// matched by **address**, because that is what a connection is made to and
+/// what the two directories agree on — a receiver renamed by its operator keeps
+/// its star.
+fn passes_chips(
+    e: &PublicSdrEntry,
+    nets_shown: &[bool],
+    free_only: bool,
+    in_band: bool,
+    dial_hz: f64,
+    mine_only: bool,
+    favourites: &std::collections::HashSet<String>,
+) -> bool {
+    // Indexed by the network's own position in `ALL`, so adding one is a
+    // single edit there rather than an arm here that is easy to forget.
+    let net_on = PublicSdrNetwork::ALL
+        .iter()
+        .position(|n| *n == e.network)
+        .and_then(|i| nets_shown.get(i).copied())
+        .unwrap_or(true);
+    net_on
+        && (!free_only || e.blocked_reason().is_none())
+        && (!in_band || e.covers(dial_hz))
+        && (!mine_only || favourites.contains(&e.address))
+}
+
+/// The connection field in front of a picked receiver's row on the map view:
+/// ONLINE, SILENT, or CHECKING… until the answer is in; what answered (or why
+/// nothing did) on hover.
+// Why: HDZ 2026-11-04: "du trägst ja unten Infos ein, da könnte ein Feld für
+//      online/silent stehen".
+fn check_cell(ui: &mut egui::Ui, check: Option<&crate::publicsdr_map::Check>) {
+    use crate::publicsdr_map::Check;
+    /// Width of the field, in points: the longest word ("ÇEVRİMİÇİ", "PRÜFE…")
+    /// at 11 pt with a little air.
+    const W: f32 = 74.0;
+    // Not checked yet and on its way read the same: PRÜFE… without a tooltip.
+    let (text, colour, tip) = match check {
+        Some(Check::Answered { result: Ok(m), .. }) => {
+            (tr!("publicsdr-check-online"), crate::theme::GREEN(), Some(m.clone()))
+        }
+        Some(Check::Answered { result: Err(m), .. }) => {
+            (tr!("publicsdr-check-silent"), crate::theme::ALERT(), Some(m.clone()))
+        }
+        _ => (tr!("publicsdr-check-waiting"), crate::theme::gray(140), None),
+    };
+    // A fixed rect rather than a label, so the rows' columns line up whatever
+    // the word; 20 pt high like `entry_row`'s cells.
+    let (rect, resp) = ui.allocate_exact_size(egui::vec2(W, 20.0), egui::Sense::hover());
+    ui.painter().text(
+        rect.left_center() + egui::vec2(4.0, 0.0),
+        egui::Align2::LEFT_CENTER,
+        text,
+        egui::FontId::proportional(11.0),
+        colour,
+    );
+    if let Some(t) = tip {
+        resp.on_hover_text(t);
+    }
 }
 
 /// Rank what the chips let through against what is in the search box.
@@ -286,20 +354,27 @@ fn confirm_panel(ui: &mut egui::Ui, blurb: &str) -> Option<Confirm> {
 /// are dropped; the fuzzy matches are what is left when nothing does, which is
 /// where they earn their keep — a half-remembered name or a typo still finds
 /// the receiver.
+///
+/// The fallback keeps only *tight* fuzzy matches ([`crate::fuzzy::tight_terms`]).
+/// A loose subsequence over this long a haystack is an accident, not a near
+/// miss: `twente`, which no directory lists, came back as 181 unrelated
+/// receivers. A query that nothing carries literally or nearly now answers
+/// "no match", which is the truth.
 fn ranked<'a>(visible: &[&'a PublicSdrEntry], query: &str) -> Vec<(&'a PublicSdrEntry, i32)> {
-    let scored: Vec<(&PublicSdrEntry, i32, bool)> = visible
+    let scored: Vec<(&PublicSdrEntry, i32, bool, bool)> = visible
         .iter()
         .filter_map(|e| {
             let hay = e.haystack();
             let literal = crate::fuzzy::contains_terms(&hay, query);
-            crate::fuzzy::score_terms(&hay, query).map(|s| (*e, s, literal))
+            let near = literal || crate::fuzzy::tight_terms(&hay, query);
+            crate::fuzzy::score_terms(&hay, query).map(|s| (*e, s, literal, near))
         })
         .collect();
-    let any_literal = scored.iter().any(|&(_, _, literal)| literal);
+    let any_literal = scored.iter().any(|&(_, _, literal, _)| literal);
     let mut rows: Vec<(&PublicSdrEntry, i32)> = scored
         .into_iter()
-        .filter(|&(_, _, literal)| literal || !any_literal)
-        .map(|(e, score, _)| (e, score))
+        .filter(|&(_, _, literal, near)| if any_literal { literal } else { near })
+        .map(|(e, score, _, _)| (e, score))
         .collect();
     if !query.is_empty() {
         rows.sort_by_key(|r| std::cmp::Reverse(r.1));
@@ -318,35 +393,55 @@ impl SdroxideApp {
         let visible: Vec<&PublicSdrEntry> = entries
             .iter()
             .filter(|e| {
-                // Indexed by the network's own position in `ALL`, so adding
-                // one is a single edit there rather than an arm here that is
-                // easy to forget.
-                let net_on = PublicSdrNetwork::ALL
-                    .iter()
-                    .position(|n| *n == e.network)
-                    .and_then(|i| self.public_sdr_nets_shown.get(i).copied())
-                    .unwrap_or(true);
-                net_on
-                    && (!self.public_sdr_free_only || e.blocked_reason().is_none())
-                    && (!self.public_sdr_in_band || e.covers(dial_hz))
+                passes_chips(
+                    e,
+                    &self.public_sdr_nets_shown,
+                    self.public_sdr_free_only,
+                    self.public_sdr_in_band,
+                    dial_hz,
+                    self.public_sdr_mine_only,
+                    &self.public_sdr_favourites,
+                )
             })
             .collect();
         ranked(&visible, query)
     }
 
-    /// Browse the public-SDR directories and open one as a radio. The body
-    /// carries its three asks — refresh, a picked receiver, an answer to the
-    /// confirm panel — back to the tail.
-    pub(in crate::app) fn public_sdrs_window(
-        &mut self,
-        ctx: &egui::Context,
-        _cmds: &mut [Command],
-    ) {
+    /// Whether Public SDRs is drawn under the waterfall this frame, rather than
+    /// in a window.
+    ///
+    /// In: whether this is a phone-sized screen. Out: `true` when the list is
+    /// open, the operator chose the dock (Settings → UI, or the chip on the
+    /// list), and the slot under the waterfall is free: a voice mode with no
+    /// panel of its own, Radio Classic not in it, and room for it. Everywhere
+    /// else it is a window, so that opening it never does nothing — the same
+    /// rule Radio Classic follows (`panels::radio_classic::place`).
+    pub(in crate::app) fn public_sdrs_docked_now(&self, phone: bool) -> bool {
+        use crate::app::panels::radio_classic::{RadioClassicPlace, place};
+        let mode = self.state.rx[0].mode;
+        let rc_docked = place(
+            self.ui_settings.radio_classic_on,
+            self.show_radio_classic,
+            mode,
+            phone,
+        ) == RadioClassicPlace::Docked;
+        docked_under_waterfall(
+            self.show_public_sdrs,
+            self.ui_settings.public_sdr_docked,
+            mode,
+            phone,
+            rc_docked,
+        )
+    }
+
+    /// Ask for the directory the first time the list is open. Out: whether it
+    /// is open at all.
+    fn public_sdrs_begin(&mut self, ctx: &egui::Context) -> bool {
         if !self.show_public_sdrs {
             // Asked again the next time it opens, so a window reopened after an
             // hour is not showing an hour-old list.
             self.public_sdrs_asked = false;
-            return;
+            return false;
         }
         // The cached answer on first open, so the window paints at once; the
         // ⟳ chip is what goes to the network.
@@ -354,114 +449,183 @@ impl SdroxideApp {
             self.public_sdrs_asked = true;
             self.ask_device(ctx, sdroxide_types::DeviceProbe::PublicSdrs { refresh: false });
         }
+        true
+    }
 
+    /// Browse the public-SDR directories and open one as a radio, in a window.
+    /// Drawn only where the list is not docked under the waterfall.
+    pub(in crate::app) fn public_sdrs_window(
+        &mut self,
+        ctx: &egui::Context,
+        _cmds: &mut [Command],
+    ) {
+        if !self.public_sdrs_begin(ctx) {
+            return;
+        }
+        let phone = crate::layout::tier(ctx) == crate::layout::Tier::Phone;
+        if self.public_sdrs_docked_now(phone) {
+            return;
+        }
         let mut refresh = false;
-        let mut picked: Option<(PublicSdrEntry, PickAction)> = None;
-        let mut answer: Option<Confirm> = None;
+        let mut picked: Option<PublicSdrEntry> = None;
+        let mut star: Option<String> = None;
         let open = self.tool_window(
             ctx,
             "public-sdrs",
-            "PUBLIC SDRS",
+            &tr!("publicsdr-public-sdrs"),
             [980.0, 520.0],
             self.show_public_sdrs,
-            |me, ui| me.public_sdrs_body(ui, &mut refresh, &mut picked, &mut answer),
+            |me, ui| me.public_sdrs_body(ui, &mut refresh, &mut picked, &mut star),
         );
+        self.public_sdrs_finish(ctx, open, refresh, picked, star);
+    }
+
+    /// Public SDRs in the slot under the waterfall: a title strip with the way
+    /// back to a window and a close, then the same body the window has.
+    pub(in crate::app) fn public_sdrs_docked(&mut self, ui: &mut egui::Ui) {
+        let ctx = ui.ctx().clone();
+        if !self.public_sdrs_begin(&ctx) {
+            return;
+        }
+        let mut refresh = false;
+        let mut picked: Option<PublicSdrEntry> = None;
+        let mut star: Option<String> = None;
+        let mut open = true;
+        ui.horizontal(|ui| {
+            ui.label(
+                RichText::new(tr!("publicsdr-public-sdrs"))
+                    .color(crate::theme::CYAN())
+                    .size(12.0)
+                    .strong(),
+            );
+            crate::chrome::row_tail(ui, |ui| {
+                if ui.button("✕").on_hover_text(tr!("publicsdr-close-hint")).clicked() {
+                    open = false;
+                }
+            });
+        });
+        egui::Frame::new().show(ui, |ui| {
+            self.public_sdrs_body(ui, &mut refresh, &mut picked, &mut star);
+        });
+        self.public_sdrs_finish(&ctx, open, refresh, picked, star);
+    }
+
+    /// What the window or the dock asked for this frame, done once the body has
+    /// given `self` back: closing, a refresh, a star, a receiver taken.
+    fn public_sdrs_finish(
+        &mut self,
+        ctx: &egui::Context,
+        open: bool,
+        refresh: bool,
+        picked: Option<PublicSdrEntry>,
+        star: Option<String>,
+    ) {
         self.show_public_sdrs = open;
+        // Closed: the pick goes with the window, so the next opening does not
+        // show the last session's receivers with their last answers.
+        if !open {
+            self.public_sdr_map_state.picked.clear();
+        }
 
         if refresh {
             self.public_sdrs = None;
             self.ask_device(ctx, sdroxide_types::DeviceProbe::PublicSdrs { refresh: true });
         }
-        // The question, then the answer to it. Closing the window is a "no":
-        // an armed confirmation that outlived the list it was raised from
-        // would fire on whatever radio the operator had moved to by then.
-        if !open {
-            self.public_sdr_confirm = None;
-        }
-        if let Some(choice) = answer {
-            // Taken only once an answer is in — a `take` in the pattern would
-            // run on every frame the window is drawn and disarm the question
-            // before it could be read.
-            if let Some(entry) = self.public_sdr_confirm.take() {
-                match choice {
-                    Confirm::Replace => self.take_public_sdr(&entry, PickAction::ThisRadio),
-                    Confirm::NewTab => self.take_public_sdr(&entry, PickAction::NewRadio),
-                    Confirm::Cancel => {}
-                }
+        // A star, kept in the settings so it is there on the next start.
+        if let Some(address) = star {
+            if !self.public_sdr_favourites.remove(&address) {
+                self.public_sdr_favourites.insert(address);
             }
+            self.ui_settings.public_sdr_favourites =
+                self.public_sdr_favourites.iter().cloned().collect();
+            self.ui_settings.public_sdr_favourites.sort();
+            crate::app::persist::persist_ui_settings(&self.ui_settings);
         }
-        if let Some((entry, action)) = picked {
-            // A fresh press supersedes a question still on screen, whichever
-            // row it came from.
-            self.public_sdr_confirm = None;
-            match action {
-                // Nothing to lose only when there is no radio there to lose:
-                // an interface never chosen. Anything else — an address typed,
-                // a rig dialled, sound cards picked — is asked about first.
-                PickAction::ThisRadio if self.radio_is_configured() => {
-                    self.public_sdr_confirm = Some(Box::new(entry));
-                }
-                _ => self.take_public_sdr(&entry, action),
-            }
+        if let Some(entry) = picked {
+            self.take_public_sdr(&entry);
         }
     }
 
-    /// The public-SDR list's body, split out so the shell can draw it in a
-    /// window of its own.
+    /// The public-SDR window's body, split out so the shell can draw it in a
+    /// window of its own, or docked.
     fn public_sdrs_body(
         &mut self,
         ui: &mut egui::Ui,
         refresh: &mut bool,
-        picked: &mut Option<(PublicSdrEntry, PickAction)>,
-        answer: &mut Option<Confirm>,
+        picked: &mut Option<PublicSdrEntry>,
+        star: &mut Option<String>,
     ) {
         crate::chrome::window_body_bg(ui);
         let dial_hz = self.state.active_freq_hz();
         let my_pos = sdroxide_types::grid_to_latlon(&self.my_grid());
         let directory = self.public_sdrs.clone();
-        // Worked out before the list borrows `self`: it reads the roster and
-        // the radio's own configuration, neither of which the list does.
-        let blurb = self.public_sdr_confirm.as_deref().map(|e| self.replace_blurb(e));
-
-        if let Some(blurb) = &blurb {
-            *answer = confirm_panel(ui, blurb);
-            ui.add_space(6.0);
-        }
         ui.horizontal(|ui| {
+            // LIST | MAP: two views of the same filtered receivers. The
+            // chips right of them apply to both.
+            // Why: HDZ 2026-11-04: "eine Karte für die SDR-Stationen
+            //      dran machen".
+            if crate::chrome::chip(ui, !self.public_sdr_map, tr!("publicsdr-view-list"))
+                .clicked()
+            {
+                self.public_sdr_map = false;
+            }
+            if crate::chrome::chip(ui, self.public_sdr_map, tr!("publicsdr-view-map"))
+                .on_hover_text(tr!("publicsdr-view-map-tip"))
+                .clicked()
+            {
+                self.public_sdr_map = true;
+            }
+            ui.separator();
             for (i, net) in PublicSdrNetwork::ALL.iter().enumerate() {
-                if crate::chrome::chip(ui, self.public_sdr_nets_shown[i], net.label()).clicked() {
+                if crate::chrome::chip(ui, self.public_sdr_nets_shown[i], net.label())
+                    .clicked()
+                {
                     self.public_sdr_nets_shown[i] = !self.public_sdr_nets_shown[i];
                 }
             }
-            if crate::chrome::chip(ui, self.public_sdr_free_only, "AVAILABLE")
-                .on_hover_text(
-                    "Hide receivers that are full, and the ones whose operator has \
-                     not opened any channels to apps other than a browser",
-                )
-                .clicked()
+            if crate::chrome::chip(
+                ui,
+                self.public_sdr_free_only,
+                tr!("publicsdr-available"),
+            )
+            .on_hover_text(tr!("publicsdr-hide-receivers-are-full-ones"))
+            .clicked()
             {
                 self.public_sdr_free_only = !self.public_sdr_free_only;
             }
-            if crate::chrome::chip(ui, self.public_sdr_in_band, "IN BAND")
-                .on_hover_text("Only receivers that cover the current dial frequency")
+            if crate::chrome::chip(ui, self.public_sdr_mine_only, tr!("publicsdr-mine"))
+                .on_hover_text(tr!("publicsdr-mine-hint"))
+                .clicked()
+            {
+                self.public_sdr_mine_only = !self.public_sdr_mine_only;
+            }
+            if crate::chrome::chip(ui, self.public_sdr_in_band, tr!("publicsdr-band"))
+                .on_hover_text(tr!("publicsdr-only-receivers-cover-current-dial"))
                 .clicked()
             {
                 self.public_sdr_in_band = !self.public_sdr_in_band;
             }
-            if crate::chrome::chip(ui, self.public_sdr_low_bw, "LOW BW")
-                .on_hover_text(
-                    "Take a SpyServer in its low-bandwidth shape: a narrow I/Q window \
-                     that follows the dial plus the server's own band view, instead of \
-                     megabits of wideband I/Q. No effect on a KiwiSDR, which has only \
-                     the one shape.",
-                )
+            if crate::chrome::chip(ui, self.public_sdr_low_bw, tr!("publicsdr-low-bw"))
+                .on_hover_text(tr!("publicsdr-take-spyserver-low-bandwidth-shape"))
                 .clicked()
             {
                 self.public_sdr_low_bw = !self.public_sdr_low_bw;
             }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                if crate::chrome::chip(ui, false, "⟳ REFRESH")
-                    .on_hover_text("Fetch both directories again")
+                // Under the waterfall or in a window: the same switch as
+                // Settings → UI, where the operator already is.
+                let docked = self.ui_settings.public_sdr_docked;
+                let (glyph, hint) = if docked {
+                    ("↗", tr!("publicsdr-undock-hint"))
+                } else {
+                    ("⤓", tr!("publicsdr-dock-hint"))
+                };
+                if crate::chrome::chip(ui, docked, glyph).on_hover_text(hint).clicked() {
+                    self.ui_settings.public_sdr_docked = !docked;
+                    crate::app::persist::persist_ui_settings(&self.ui_settings);
+                }
+                if crate::chrome::chip(ui, false, tr!("publicsdr-refresh"))
+                    .on_hover_text(tr!("publicsdr-fetch-both-directories-again"))
                     .clicked()
                 {
                     *refresh = true;
@@ -475,11 +639,11 @@ impl SdroxideApp {
                 ui,
                 egui::TextEdit::singleline(&mut self.public_sdr_search)
                     .desired_width(240.0)
-                    .hint_text("name, place, antenna, band")
+                    .hint_text(tr!("publicsdr-name-place-antenna-band"))
                     .text_color(crate::theme::TEXT_STRONG()),
             );
             if !self.public_sdr_search.trim().is_empty()
-                && ui.button("✕").on_hover_text("Clear the search").clicked()
+                && ui.button("✕").on_hover_text(tr!("publicsdr-clear-search")).clicked()
             {
                 self.public_sdr_search.clear();
             }
@@ -490,10 +654,9 @@ impl SdroxideApp {
             ui.add_space(8.0);
             ui.label(
                 RichText::new(if self.probes_answered {
-                    "Fetching the receiver lists…"
+                    tr!("publicsdr-fetching-receiver-lists")
                 } else {
-                    "The machine this radio is attached to does not answer \
-                     device questions, so it cannot fetch the lists either."
+                    tr!("publicsdr-machine-radio-attached-does-not")
                 })
                 .color(crate::theme::gray(140)),
             );
@@ -514,9 +677,11 @@ impl SdroxideApp {
                 .collect::<Vec<_>>()
                 .join(" · ");
             ui.label(
-                RichText::new(format!(
-                    "{} receivers · {per_net} · fetched {age} ago",
-                    dir.entries.len(),
+                RichText::new(tr!(
+                    "publicsdr-receivers-fetched-ago",
+                    entries = dir.entries.len(),
+                    per_net = per_net,
+                    age = age
                 ))
                 .size(11.0)
                 .color(crate::theme::gray(150)),
@@ -528,15 +693,21 @@ impl SdroxideApp {
         ui.separator();
 
         let rows = self.public_sdr_rows(&dir.entries, dial_hz);
+        if self.public_sdr_map {
+            if let Some(e) = self.public_sdr_map_view(ui, &dir.entries, &rows, my_pos, star) {
+                *picked = Some(e);
+            }
+            return;
+        }
         if !self.public_sdr_search.trim().is_empty() || rows.len() > MAX_ROWS {
             let shown = rows.len().min(MAX_ROWS);
             let (text, colour) = match rows.len() {
-                0 => ("no match".to_string(), crate::theme::ALERT()),
+                0 => (tr!("publicsdr-no-match").to_string(), crate::theme::ALERT()),
                 n if n > MAX_ROWS => (
-                    format!("showing {shown} of {n} — search to narrow it"),
+                    tr!("publicsdr-showing-search-narrow", shown = shown, n = n),
                     crate::theme::YELLOW(),
                 ),
-                n => (format!("{n} match"), crate::theme::YELLOW()),
+                n => (tr!("publicsdr-match", n = n), crate::theme::YELLOW()),
             };
             ui.label(RichText::new(text).color(colour).size(10.0));
         }
@@ -544,220 +715,338 @@ impl SdroxideApp {
         egui::ScrollArea::vertical().auto_shrink([false, false]).show_themed(ui, |ui| {
             for (e, _) in rows.iter().take(MAX_ROWS) {
                 let km = match (my_pos, e.lat, e.lon) {
-                    (Some(me), Some(lat), Some(lon)) => {
-                        Some(sdroxide_types::distance_km(me, (f64::from(lat), f64::from(lon))))
-                    }
+                    (Some(me), Some(lat), Some(lon)) => Some(sdroxide_types::distance_km(
+                        me,
+                        (f64::from(lat), f64::from(lon)),
+                    )),
                     _ => None,
                 };
                 let dead = self.dead_public_sdrs.contains(&e.address);
-                if let Some(a) = entry_row(ui, e, km, dead) {
-                    *picked = Some(((*e).clone(), a));
+                let starred = self.public_sdr_favourites.contains(&e.address);
+                match entry_row(ui, e, km, dead, starred) {
+                    Some(RowAction::Add) => *picked = Some((*e).clone()),
+                    Some(RowAction::Star) => *star = Some(e.address.clone()),
+                    None => {}
                 }
             }
             if rows.is_empty() {
                 ui.add_space(8.0);
                 ui.label(
-                    RichText::new("nothing matches — try turning a filter chip back on")
+                    RichText::new(tr!("publicsdr-nothing-matches-try-turning-filter"))
                         .color(crate::theme::gray(120)),
                 );
             }
         });
     }
 
-    /// Whether this radio has an interface at all, which is what decides
-    /// whether **USE** has anything to destroy.
+    /// The MAP view: every receiver `rows` holds as a dot, and below the map
+    /// the receivers the last click picked, as list rows with ADD AS RADIO.
     ///
-    /// Reads the configuration if it has not been read yet: `radio_cfg` is
-    /// otherwise filled in only by opening the settings dialog, and whether
-    /// USE asks first must not depend on whether anybody has.
-    fn radio_is_configured(&mut self) -> bool {
-        if self.radio_cfg.is_none() {
-            self.radio_cfg = self.ctrl.radio_config();
+    /// In: the whole directory (picked receivers are looked up there, so a
+    /// pick survives a filter change), the filtered rows, home. Out: the
+    /// receiver whose ADD AS RADIO was pressed this frame.
+    /// Effect: the map fills the window less the rows below it; a status line
+    /// says how many filtered receivers have no position and so no dot.
+    /// Fails: none.
+    // Why: HDZ 2026-11-04: "eine Karte für die SDR-Stationen dran machen". The
+    //      rows below are the list's own (`entry_row`), so taking a receiver is
+    //      the same button in both views.
+    fn public_sdr_map_view(
+        &mut self,
+        ui: &mut egui::Ui,
+        all: &[PublicSdrEntry],
+        rows: &[(&PublicSdrEntry, i32)],
+        my_pos: Option<(f64, f64)>,
+        star: &mut Option<String>,
+    ) -> Option<PublicSdrEntry> {
+        use crate::publicsdr_map::{MAX_PICKED, key, show};
+        // Everything below stays inside the width the window has now. Outside
+        // a scroll area, a row that measures itself by what is free would
+        // otherwise widen the window a little every frame, until it filled
+        // the screen.
+        // Why: HDZ 2026-11-04: "dann rutscht der Kartenzoom, so dass die ganze
+        //      Bildschirmbreite langsam vollgemacht wird".
+        ui.set_max_width(ui.available_width());
+        // What the chips and the search let through, without the ranking the
+        // list needs: a map has no order.
+        let visible: Vec<&PublicSdrEntry> = rows.iter().map(|(e, _)| *e).collect();
+        // Said rather than hidden: a receiver with no position has no dot,
+        // and the operator should know the map is not the whole list.
+        let unplaced = visible.iter().filter(|e| e.lat.is_none() || e.lon.is_none()).count();
+        // The pick, looked up in the whole directory rather than in `rows`, so
+        // the rows stay while a chip or the search hides their dots.
+        let picked: Vec<&PublicSdrEntry> = self
+            .public_sdr_map_state
+            .picked
+            .iter()
+            .filter_map(|k| all.iter().find(|e| key(e) == *k))
+            .take(MAX_PICKED)
+            .collect();
+
+        // One status line, then the map, then one row per picked receiver
+        // (or a line saying how to pick). The window grows to hold the rows,
+        // so they need no share of the map's height.
+        ui.horizontal(|ui| {
+            // Names on the map, on or off. Here rather than in the chip row
+            // above, which LIST shares: a chip that appears and vanishes there
+            // would shift the filters under the pointer.
+            // Why: HDZ 2026-11-04: "gönn der Karte einen Toggle-Knopf 'Labels',
+            //      ich will nicht immer Labels sehen".
+            let st = &mut self.public_sdr_map_state;
+            if crate::chrome::chip(ui, !st.names_off, tr!("publicsdr-map-names"))
+                .on_hover_text(tr!("publicsdr-map-names-tip"))
+                .clicked()
+            {
+                st.names_off = !st.names_off;
+            }
+            if crate::chrome::chip(ui, !st.cities_off, tr!("publicsdr-map-cities"))
+                .on_hover_text(tr!("publicsdr-map-cities-tip"))
+                .clicked()
+            {
+                st.cities_off = !st.cities_off;
+            }
+            ui.label(
+                RichText::new(tr!(
+                    "publicsdr-map-status",
+                    shown = visible.len() - unplaced,
+                    unplaced = unplaced
+                ))
+                .size(10.0)
+                .color(crate::theme::gray(150)),
+            );
+        });
+        // The rows below the map first, as a bottom panel of the window, and
+        // the map in all the height that leaves: the window's size is the
+        // map's, in both directions, and nothing the map does feeds back into
+        // the window. The panel measures the rows before the map is laid out,
+        // so the map never takes their share and the window never grows.
+        // Why: HDZ 2026-11-07: "die Map-Begrenzung stößt in der Höhe an eine
+        //      Grenze, auch wenn keine Breite da wäre, und fortan kann ich nur
+        //      noch breiter werden, das ist sehr awkward als Fensterverhalten";
+        //      before that 2026-11-05: "die Karte rutscht in die Breite", the
+        //      loop a map sized from `available_height` started without the
+        //      panel.
+        // The map's return value (pick changed) is not needed: the rows are
+        // drawn from the pick every frame.
+        let mut take = None;
+        egui::Panel::bottom(ui.id().with("publicsdr_map_rows"))
+            .frame(egui::Frame::NONE)
+            .resizable(false)
+            .show_inside(ui, |ui| {
+                take = self.public_sdr_map_rows(ui, all, &picked, my_pos, star);
+            });
+        let h = ui.available_height().max(crate::publicsdr_map::MIN_HEIGHT);
+        show(ui, &mut self.public_sdr_map_state, &visible, my_pos, h);
+        take
+    }
+
+    /// The rows under the Public SDRs map: how to pick while nothing is, else
+    /// one row per picked receiver with its connection check and ADD AS
+    /// RADIO. Out: the receiver whose ADD was pressed.
+    fn public_sdr_map_rows(
+        &mut self,
+        ui: &mut egui::Ui,
+        all: &[PublicSdrEntry],
+        picked: &[&PublicSdrEntry],
+        my_pos: Option<(f64, f64)>,
+        star: &mut Option<String>,
+    ) -> Option<PublicSdrEntry> {
+        use crate::publicsdr_map::key;
+        ui.add_space(4.0);
+        // Nothing picked: say how to pick, and there is nothing to check.
+        if picked.is_empty() {
+            ui.label(
+                RichText::new(tr!("publicsdr-map-pick")).size(11.0).color(crate::theme::gray(130)),
+            );
+            return None;
         }
-        self.radio_cfg.as_ref().is_some_and(|c| c.backend != sdroxide_types::Backend::None)
-    }
+        // The picked receivers' connection checks: send the ones that fell
+        // due, and keep frames coming until every answer is in.
+        let now = crate::time::now_unix_f64();
+        let due = self.public_sdr_map_state.due_checks(now, &tr!("publicsdr-check-no-answer"));
+        // Asked of the machine with the radio on it, like every probe: it is
+        // the end that would hold the connection. The answer comes back
+        // through `apply_probe_answer` → `public_sdr_check_answered`.
+        for (k, address) in due {
+            if let Some(e) = all.iter().find(|e| key(e) == k) {
+                // `ask_device` wants the context while `ui` is borrowed.
+                let ctx = ui.ctx().clone();
+                self.ask_device(
+                    &ctx,
+                    sdroxide_types::DeviceProbe::PublicSdrCheck { network: e.network, address },
+                );
+            }
+        }
+        // Ten frames a second while a check is due or on its way: enough for
+        // the 500 ms delay to be kept and an answer to show at once.
+        if self.public_sdr_map_state.checks_pending() {
+            ui.ctx().request_repaint_after(std::time::Duration::from_millis(100));
+        }
 
-    /// What the confirmation says: which radio is about to become which
-    /// receiver, what that costs, and what it does not.
-    ///
-    /// Written out in full rather than left as "are you sure?", because the
-    /// two things an operator gets wrong here are both invisible otherwise —
-    /// that the tab goes on carrying its old name, and that the receiver's
-    /// published coverage becomes the dial's limit. Both were the report.
-    fn replace_blurb(&self, entry: &PublicSdrEntry) -> String {
-        let chip = self.radio_roster.iter().find(|c| c.id == self.radio_id);
-        let this = match chip {
-            Some(c) if !c.name.is_empty() => c.name.clone(),
-            Some(c) => c.default_name.clone(),
-            None => "this radio".to_string(),
-        };
-        let iface = self
-            .radio_cfg
-            .as_ref()
-            .map_or_else(|| "its interface".to_string(), |c| c.backend.label().to_string());
-        format!(
-            "Replace {this} with {}?\n\n\
-             {this} is on {iface}. Taking this receiver points the same tab at {} instead, \
-             renames it “{}”, and holds the dial to the {} the receiver \
-             publishes — nothing here transmits.\n\n\
-             The {iface} settings stay where they are, and so do the ranges stated for them: \
-             switching the interface back in Settings → Radio brings the radio back as it was.",
-            entry.name,
-            entry.address,
-            entry.name,
-            entry.range_label(),
-        )
-    }
-
-    /// Act on a picked receiver.
-    ///
-    /// Both routes go through [`PublicSdrEntry::radio_config`], so the same
-    /// receiver is configured identically however it was taken — otherwise
-    /// "open it in a tab" and "use it here" would drift into two subtly
-    /// different radios.
-    fn take_public_sdr(&mut self, entry: &PublicSdrEntry, action: PickAction) {
-        self.last_public_sdr_try = Some(entry.address.clone());
-        match action {
-            PickAction::ThisRadio => {
-                // Built on this radio's own configuration, so pointing it at a
-                // receiver keeps its converter offset, its audio devices and
-                // everything else the operator had set — and refused outright
-                // where there is none to build on, because the alternative is
-                // a *default* radio written over theirs. `radio_cfg` is filled
-                // in by opening the settings dialog, which nobody need ever
-                // have done.
-                if self.radio_cfg.is_none() {
-                    self.radio_cfg = self.ctrl.radio_config();
+        // One row per picked receiver: its connection field, then the list's
+        // own row with ADD AS RADIO. The first ADD pressed is the answer.
+        let mut take = None;
+        for e in picked.iter().copied() {
+            // Distance only where both ends have a position, as in the list.
+            let km = match (my_pos, e.lat, e.lon) {
+                (Some(me), Some(lat), Some(lon)) => {
+                    Some(sdroxide_types::distance_km(me, (f64::from(lat), f64::from(lon))))
                 }
-                let Some(base) = self.radio_cfg.clone() else {
-                    self.show_notice(
-                        "This radio's configuration has not arrived from the machine it is on \
-                         yet, so there is nothing to point at the receiver — take it with + TAB \
-                         instead."
-                            .into(),
-                    );
-                    return;
-                };
-                let cfg = entry.radio_config(&base, self.public_sdr_low_bw);
-                // The settings dialog edits its own copy of `radio_cfg` and
-                // writes it back whenever the two differ, so that copy has to
-                // move too — otherwise a dialog left open would push the radio
-                // that was here a moment ago straight back over this one. The
-                // typed range boxes go with it, for the same reason they are
-                // reseeded when the interface picker is used.
-                self.radio_cfg = Some(cfg.clone());
-                self.range_edit = None;
-                // ...and the same for where the antenna is, which the entry has
-                // just written: a dialog still showing "at the station" would
-                // put every reception report back in the operator's own square
-                // (issue #284).
-                self.rx_site_edit = None;
-                self.ctrl.set_radio_config(cfg);
-                self.ctrl.reopen_source();
-                // A tab named after the transceiver that used to be in it,
-                // now running somebody else's receiver on the other side of
-                // the world, is the half of issue #254 that no amount of
-                // correct range checking would have made sense of: the dial
-                // refused 144.8 MHz as out of range while the tab, its mode
-                // tag and its packet monitor all still said IC-9700. The
-                // confirmation says the rename is coming.
-                self.radio_tab_requests
-                    .push(RadioTabRequest::Rename { id: self.radio_id, name: entry.name.clone() });
-                // Where reports now go out from is worth one clause: it has
-                // changed under the operator, and silently getting it wrong is
-                // what issue #284 was.
-                let site = match entry.locator().as_str() {
-                    "" => " Its position is not published, so nothing it hears will be reported."
-                        .to_string(),
-                    g => format!(" Receptions will be reported from {g}."),
-                };
-                self.show_notice(format!("Pointing this radio at {}…{site}", entry.name));
-                self.show_public_sdrs = false;
-            }
-            PickAction::NewRadio => {
-                // A brand-new radio has none of this radio's settings, and
-                // should not inherit them: it is a different receiver.
-                let fresh = entry
-                    .radio_config(&sdroxide_types::RadioConfig::default(), self.public_sdr_low_bw);
-                self.radio_tab_requests.push(RadioTabRequest::Add {
-                    station: self.station_key(),
-                    preset: Some(Box::new(fresh)),
+                _ => None,
+            };
+            let check = self.public_sdr_map_state.checks.get(&key(e));
+            ui.horizontal(|ui| {
+                ui.spacing_mut().item_spacing.x = 4.0;
+                check_cell(ui, check);
+                // In a column of its own: `entry_row` ends with a gap meant to
+                // go below the row, and in this horizontal row it went to the
+                // right instead, widening the window by 5 pt every frame.
+                // Why: HDZ 2026-11-05: "beim anklicken eines symbols rutschte es
+                //      auf volle breite so pö a pö".
+                ui.vertical(|ui| {
+                    let dead = self.dead_public_sdrs.contains(&e.address);
+                    let starred = self.public_sdr_favourites.contains(&e.address);
+                    match entry_row(ui, e, km, dead, starred) {
+                        Some(RowAction::Add) => take = Some(e.clone()),
+                        Some(RowAction::Star) => *star = Some(e.address.clone()),
+                        None => {}
+                    }
                 });
-                self.show_notice(format!("Opening {} as another radio…", entry.name));
-            }
+            });
         }
+        take
+    }
+
+    /// File the answer to a map receiver check under its row.
+    ///
+    /// In: what `ProbeAnswer::PublicSdrCheck` carries. Effect: the waiting
+    /// check on that network and endpoint becomes ONLINE or SILENT
+    /// ([`crate::publicsdr_map::PublicSdrMapState::answered`]); an answer
+    /// nobody waits for is dropped. Fails: none.
+    // Why: a method here rather than a reach into the field from the settings
+    //      module, where answers arrive, so the map state stays private to
+    //      this window.
+    pub(in crate::app) fn public_sdr_check_answered(
+        &mut self,
+        network: PublicSdrNetwork,
+        address: &str,
+        result: &Result<String, String>,
+    ) {
+        self.public_sdr_map_state.answered(network, address, result, crate::time::now_unix_f64());
+    }
+
+    /// Add a picked receiver as a radio of its own, named after its entry.
+    ///
+    /// In: the directory entry. Effect: a [`RadioTabRequest::Add`] with the
+    /// receiver's whole configuration and its catalogue name, acted on by the
+    /// shell after the frame; a notice says it is on its way. The radio the
+    /// operator is on is left exactly as it was.
+    /// Fails: none here; a factory that cannot make the radio reports through
+    /// the shell's own notice.
+    // Why: HDZ 2026-11-04: "dabei wäre statt Kiwisdr … der Sendername aus dem
+    //      Katalog zu übernehmen". Without a name the radio was called after
+    //      its interface, so every public receiver read "Kiwisdr".
+    fn take_public_sdr(&mut self, entry: &PublicSdrEntry) {
+        self.last_public_sdr_try = Some(entry.address.clone());
+        // A brand-new radio has none of this radio's settings, and should not
+        // inherit them: it is a different receiver.
+        let fresh =
+            entry.radio_config(&sdroxide_types::RadioConfig::default(), self.public_sdr_low_bw);
+        self.radio_tab_requests.push(RadioTabRequest::Add {
+            station: self.station_key(),
+            preset: Some(Box::new(fresh)),
+            name: Some(radio_name(entry)),
+        });
+        self.show_notice(tr!("publicsdr-opening-another-radio", entry = entry.name));
+        // Done here: the receiver is a radio of its own now, and this window
+        // belongs to the radio it was opened from. Left open it would stay on
+        // that radio, with the receiver still picked.
+        // Why: HDZ 2026-11-04: "da die Karte von einem Radio aus geöffnet wird,
+        //      bleibt die Karte da dran kleben, obwohl wir ein neues Radio
+        //      anlegen … du solltest diese Map richtig schließen"; "da bleiben
+        //      die Radios stale".
+        self.show_public_sdrs = false;
+        self.public_sdr_map_state.picked.clear();
     }
 }
+
+/// The name a radio taken from the directory is given.
+///
+/// In: the directory entry. Out: [`catalogue_name`] of its published name; for
+/// a placeholder name ("anonymous", "unknown", empty — see [`is_placeholder`])
+/// the place where it is given, else the device and the host, as in
+/// `"AirspyOne 47.144.9.193"`.
+// Why: HDZ 2026-11-04: "die SpyServer sind alle anonymous, dann sollte wenigstens
+//      die IP als Name rein". Measured on the cached directory: 113 of 212
+//      SpyServers are "anonymous", 3 of those give a place. The device goes with
+//      the host so that a hundred of them can be told apart in "Change radio".
+//      The port is left off: it is 5555 almost everywhere.
+fn radio_name(entry: &PublicSdrEntry) -> String {
+    if !is_placeholder(&entry.name) {
+        return catalogue_name(&entry.name);
+    }
+    if !entry.location.trim().is_empty() {
+        return catalogue_name(&entry.location);
+    }
+    // Host without the port; a bracketed IPv6 literal keeps its brackets off.
+    let host = match entry.address.rsplit_once(':') {
+        Some((h, p)) if p.chars().all(|c| c.is_ascii_digit()) => h,
+        _ => entry.address.as_str(),
+    };
+    let host = host.trim_start_matches('[').trim_end_matches(']');
+    let device = entry.device.trim();
+    if device.is_empty() { host.to_string() } else { format!("{device} {host}") }
+}
+
+/// Whether a published name says nothing about the receiver: empty, or one of
+/// the words directories put there when the operator gave none (any case).
+fn is_placeholder(name: &str) -> bool {
+    let n = name.trim().to_ascii_lowercase();
+    n.is_empty() || matches!(n.as_str(), "anonymous" | "unknown" | "n/a" | "none")
+}
+
+/// The published name made fit for the strip: the entry's own name,
+/// with the decoration directory names carry at their ends removed and the
+/// length kept to what the strip shows whole.
+///
+/// In: the directory name, as published (`"######ZL2J 0-30 MHz SDR"`).
+/// Out: `"ZL2J 0-30 MHz SDR"`; at most [`NAME_MAX`] characters, cut at a word
+/// where there is one. An entry that is nothing but decoration keeps its name
+/// as published, so the radio is never nameless.
+// Why: operators pad their listing to sort first or to stand out ("######",
+//      "- ", "| "); the strip is where the name is read, and padding there is
+//      noise. Inner punctuation stays: "0 - 30 MHz | Svartklubbudden" is what
+//      the operator called it.
+fn catalogue_name(published: &str) -> String {
+    let trimmed = published.trim_matches(|c: char| !c.is_alphanumeric());
+    if trimmed.is_empty() {
+        return published.trim().to_string();
+    }
+    if trimmed.chars().count() <= NAME_MAX {
+        return trimmed.to_string();
+    }
+    let cut: String = trimmed.chars().take(NAME_MAX).collect();
+    // The cut already ends a word: keep it whole.
+    if trimmed.chars().nth(NAME_MAX).is_some_and(|c| c == ' ') {
+        return cut.trim_end_matches(|c: char| !c.is_alphanumeric()).to_string();
+    }
+    // Back to the last word boundary, unless that would leave too little.
+    // `rfind(' ')` is a byte index on an ASCII space, so the slice is safe.
+    match cut.rfind(' ') {
+        Some(i) if i >= NAME_MAX / 2 => {
+            cut[..i].trim_end_matches(|c: char| !c.is_alphanumeric()).to_string()
+        }
+        _ => cut,
+    }
+}
+
+/// Longest name [`catalogue_name`] gives a radio, in characters: about what the
+/// strip shows at 16 pt beside its buttons in half a laptop screen.
+const NAME_MAX: usize = 32;
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    /// The question the panel is drawn with in these tests. Its text does not
-    /// matter to what is being pinned, only that there is some.
-    const BLURB: &str = "Replace Radio 1 with Twente?";
-
-    /// Draw the same chips [`confirm_panel`] draws, in the same frame and the
-    /// same order, and report where the one named ended up.
-    ///
-    /// The panel returns the answer rather than the responses, so a press has
-    /// to be aimed by redrawing its layout. Keeping this beside it is the
-    /// point: a chip renamed in one and not the other stops the test dead
-    /// instead of quietly pressing nothing.
-    fn chip_pos(ui: &mut egui::Ui, label: &str) -> egui::Pos2 {
-        let mut at = egui::Pos2::ZERO;
-        crate::chrome::red_panel(ui, |ui| {
-            ui.label(RichText::new(BLURB).size(12.0));
-            ui.add_space(4.0);
-            ui.horizontal(|ui| {
-                for l in ["REPLACE", "+ TAB INSTEAD", "CANCEL"] {
-                    let r = crate::chrome::chip(ui, false, l);
-                    if l == label {
-                        at = r.rect.center();
-                    }
-                }
-            });
-        });
-        at
-    }
-
-    /// Press one of the confirmation's chips and report what the panel
-    /// answered. Two passes, the way `crate::app`'s own chip test does it: the
-    /// first tells egui where everything is, the second aims at it.
-    fn press(label: &str) -> Option<Confirm> {
-        let ctx = egui::Context::default();
-        let screen = egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(600.0, 300.0));
-        let mut at = egui::Pos2::ZERO;
-        ctx.run_ui(egui::RawInput { screen_rect: Some(screen), ..Default::default() }, |ui| {
-            at = chip_pos(ui, label);
-        })
-        .drop_without_applying_deltas();
-        assert_ne!(at, egui::Pos2::ZERO, "{label} is not one of the panel's chips");
-
-        let button = |pressed| egui::Event::PointerButton {
-            pos: at,
-            button: egui::PointerButton::Primary,
-            pressed,
-            modifiers: Default::default(),
-        };
-        let mut answer = None;
-        for events in [vec![egui::Event::PointerMoved(at), button(true)], vec![button(false)]] {
-            let input = egui::RawInput { screen_rect: Some(screen), events, ..Default::default() };
-            ctx.run_ui(input, |ui| answer = answer.or(confirm_panel(ui, BLURB)))
-                .drop_without_applying_deltas();
-        }
-        answer
-    }
-
-    /// Each of the three answers has to come back as itself. A confirmation
-    /// whose CANCEL replaced the radio anyway would be worse than none at all
-    /// — issue #254 is somebody losing a configured IC-9700 to one click.
-    #[test]
-    fn every_answer_to_the_use_confirmation_comes_back_as_itself() {
-        assert_eq!(press("REPLACE"), Some(Confirm::Replace));
-        assert_eq!(press("+ TAB INSTEAD"), Some(Confirm::NewTab));
-        assert_eq!(press("CANCEL"), Some(Confirm::Cancel));
-    }
 
     /// A receiver with just enough filled in for the search box to chew on.
     fn entry(name: &str, location: &str) -> PublicSdrEntry {
@@ -812,6 +1101,17 @@ mod tests {
         assert_eq!(rows[0].0.name, "R7KJG SDR", "the closest one first");
     }
 
+    /// ...and a query that nothing carries literally or nearly answers nothing:
+    /// letters that merely fall in order across a long description are not a
+    /// near miss (`twente`, a WebSDR no directory lists, returned 181 rows).
+    #[test]
+    fn a_query_only_scattered_letters_match_answers_nothing() {
+        let entries =
+            [entry("0-30 MHz SDR", "South Wenatchee, WA"), entry("80m Dipole", "Chichester UK")];
+        let visible: Vec<&PublicSdrEntry> = entries.iter().collect();
+        assert!(ranked(&visible, "twente").is_empty());
+    }
+
     /// An empty box is not a query at all: every row the chips let through
     /// stays, in the order the directory gave them.
     #[test]
@@ -823,17 +1123,175 @@ mod tests {
         assert_eq!(rows[0].0.name, "R7KJG SDR");
     }
 
-    /// ...and a panel nobody has pressed answers nothing, or the question
-    /// would answer itself on the frame it was raised.
+    /// Proves: a directory name loses the padding at its ends and keeps what
+    /// the operator wrote inside it ([`catalogue_name`]).
     #[test]
-    fn an_unpressed_confirmation_answers_nothing() {
+    fn a_catalogue_name_loses_its_padding_and_keeps_its_words() {
+        assert_eq!(catalogue_name("######ZL2J 0-30 MHz SDR"), "ZL2J 0-30 MHz SDR");
+        assert_eq!(catalogue_name("- 0-30MHz HF SDR PLONSK-"), "0-30MHz HF SDR PLONSK");
+        assert_eq!(catalogue_name("0 - 30 MHz | Svartklubbudden"), "0 - 30 MHz | Svartklubbudden");
+        // Nothing but decoration: kept as published rather than emptied.
+        assert_eq!(catalogue_name(" ### "), "###");
+    }
+
+    /// Proves: a SpyServer listed as "anonymous" is named after its place where
+    /// it gives one, else after its device and host ([`radio_name`]).
+    #[test]
+    fn an_anonymous_receiver_is_named_after_its_place_or_its_host() {
+        let mut e = entry("anonymous", "");
+        e.device = "AirspyOne".into();
+        e.address = "47.144.9.193:5555".into();
+        assert_eq!(radio_name(&e), "AirspyOne 47.144.9.193");
+        e.address = "[2001:db8::1]:5555".into();
+        assert_eq!(radio_name(&e), "AirspyOne 2001:db8::1");
+        e.location = "Ventura, California".into();
+        assert_eq!(radio_name(&e), "Ventura, California");
+        // A real name is kept, whatever else the entry says.
+        e.name = "######ZL2J 0-30 MHz SDR".into();
+        assert_eq!(radio_name(&e), "ZL2J 0-30 MHz SDR");
+    }
+
+    /// Proves: a long name is cut to [`NAME_MAX`] at a word, never mid-word
+    /// when a word boundary is in reach.
+    #[test]
+    fn a_long_catalogue_name_is_cut_at_a_word() {
+        let n = catalogue_name("0,5-30 MHz SDR, Bad Münstereifel Eifel Germany active loop");
+        assert!(n.chars().count() <= NAME_MAX, "{n}");
+        assert_eq!(n, "0,5-30 MHz SDR, Bad Münstereifel");
+    }
+
+    /// One receiver, for the chip tests: only the fields the chips look at
+    /// are worth filling.
+    fn receiver(address: &str, name: &str) -> PublicSdrEntry {
+        // The directories' own lists are the fixtures' source of truth; this
+        // fills only what the chips and the row read.
+        PublicSdrEntry {
+            network: PublicSdrNetwork::KiwiSdr,
+            name: name.to_string(),
+            location: "Somewhere".into(),
+            antenna: String::new(),
+            device: "KiwiSDR".into(),
+            address: address.to_string(),
+            lat: None,
+            lon: None,
+            grid: String::new(),
+            min_hz: 0.0,
+            max_hz: 30_000_000.0,
+            users: 0,
+            max_users: 4,
+            api_channels: Some(1),
+            max_iq_rate: 12_000.0,
+            full_control: true,
+            session_limit_min: 0,
+            snr_db: None,
+        }
+    }
+
+    /// **A star is kept by address, not by name.** The operator renames a
+    /// receiver and keeps it; the address is what a connection is made to and
+    /// what the directories agree on.
+    #[test]
+    fn a_starred_receiver_is_kept_by_address_when_it_is_renamed() {
+        let starred = receiver("kiwi.example.org:8073", "Old name");
+        let renamed = receiver("kiwi.example.org:8073", "A new name, typed today");
+        let other = receiver("other.example.org:8073", "Old name");
+        let mut favourites = std::collections::HashSet::new();
+        favourites.insert("kiwi.example.org:8073".to_string());
+        // Built from the list itself: a fourth network added there must not
+        // quietly turn the "chip off" assertion below into a no-op.
+        let nets = vec![true; PublicSdrNetwork::ALL.len()];
+        let mine =
+            |e: &PublicSdrEntry| passes_chips(e, &nets, false, false, 0.0, true, &favourites);
+        assert!(mine(&starred), "the starred address");
+        assert!(mine(&renamed), "the same address under another name");
+        assert!(!mine(&other), "a different receiver that happens to share a name");
+    }
+
+    /// MINE is a filter and nothing else: with it off, an unstarred receiver is
+    /// still offered, and the other chips keep working beside it.
+    #[test]
+    fn mine_only_narrows_to_the_stars_and_nothing_else() {
+        let starred = receiver("a.example.org:8073", "A");
+        let plain = receiver("b.example.org:8073", "B");
+        let mut favourites = std::collections::HashSet::new();
+        favourites.insert("a.example.org:8073".to_string());
+        let nets = vec![true; PublicSdrNetwork::ALL.len()];
+        assert!(passes_chips(&plain, &nets, false, false, 0.0, false, &favourites));
+        assert!(!passes_chips(&plain, &nets, false, false, 0.0, true, &favourites));
+        assert!(passes_chips(&starred, &nets, false, false, 0.0, true, &favourites));
+        // A network chip switched off still wins over a star.
+        let nets_off = vec![false; PublicSdrNetwork::ALL.len()];
+        assert!(!passes_chips(&starred, &nets_off, false, false, 0.0, true, &favourites));
+    }
+
+    /// The row draws with and without a star, and pressing nothing asks for
+    /// nothing — the star must not fire on the frame it is drawn.
+    #[test]
+    fn a_row_draws_with_and_without_a_star_and_answers_nothing_untouched() {
         let ctx = egui::Context::default();
-        let screen = egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(600.0, 300.0));
-        let mut answer = Some(Confirm::Replace);
-        ctx.run_ui(egui::RawInput { screen_rect: Some(screen), ..Default::default() }, |ui| {
-            answer = confirm_panel(ui, BLURB);
-        })
-        .drop_without_applying_deltas();
-        assert_eq!(answer, None);
+        let screen = egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(980.0, 400.0));
+        for starred in [false, true] {
+            let e = receiver("kiwi.example.org:8073", "Twente");
+            let mut action = Some(RowAction::Star);
+            ctx.run_ui(egui::RawInput { screen_rect: Some(screen), ..Default::default() }, |ui| {
+                action = entry_row(ui, &e, Some(120.0), false, starred);
+            })
+            .drop_without_applying_deltas();
+            assert_eq!(action, None, "an untouched row asked for something (starred={starred})");
+        }
+    }
+
+    /// **The star is on the row**, filled or empty as the answer says — a
+    /// column that draws nothing would still pass a test that only asked
+    /// whether the row was drawn.
+    #[test]
+    fn the_star_is_drawn_and_filled_only_for_a_starred_receiver() {
+        fn glyphs(shapes: &[egui::Shape], out: &mut Vec<String>) {
+            for shape in shapes {
+                match shape {
+                    egui::Shape::Text(t) => out.push(t.galley.text().to_string()),
+                    egui::Shape::Vec(v) => glyphs(v, out),
+                    _ => {}
+                }
+            }
+        }
+        let ctx = egui::Context::default();
+        let screen = egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(980.0, 400.0));
+        for (starred, want) in [(false, "☆"), (true, "★")] {
+            let e = receiver("kiwi.example.org:8073", "Twente");
+            let output = ctx.run_ui(
+                egui::RawInput { screen_rect: Some(screen), ..Default::default() },
+                |ui| {
+                    entry_row(ui, &e, None, false, starred);
+                },
+            );
+            let mut text = Vec::new();
+            let shapes: Vec<egui::Shape> = output.shapes.iter().map(|c| c.shape.clone()).collect();
+            // The frame's textures are never uploaded here, and a debug build
+            // asserts when a delta is dropped unhandled — which is how this
+            // test passed in release and failed in debug (review, 2026-11-04).
+            output.drop_without_applying_deltas();
+            glyphs(&shapes, &mut text);
+            assert!(
+                text.iter().any(|t| t.contains(want)),
+                "the {want} is not on the row (starred={starred}): {text:?}"
+            );
+        }
+    }
+
+    /// **The dock is a choice, honoured only where the slot is free.** Closed or
+    /// not chosen: a window. A phone, CW, a digital mode or Radio Classic in the
+    /// slot: a window. A plain voice mode with the dock chosen: docked.
+    #[test]
+    fn public_sdrs_docks_only_in_a_voice_mode_with_the_slot_free() {
+        use sdroxide_types::Mode;
+        let d = |open, docked, mode, phone, rc| docked_under_waterfall(open, docked, mode, phone, rc);
+        assert!(d(true, true, Mode::Usb, false, false), "voice, chosen, free");
+        assert!(!d(false, true, Mode::Usb, false, false), "closed");
+        assert!(!d(true, false, Mode::Usb, false, false), "not chosen: a window");
+        assert!(!d(true, true, Mode::Usb, true, false), "a phone has no room");
+        assert!(!d(true, true, Mode::Usb, false, true), "Radio Classic holds the slot");
+        assert!(!d(true, true, Mode::Cw, false, false), "CW has its own panel");
+        assert!(!d(true, true, Mode::Ft8, false, false), "a digital mode has its own panel");
     }
 }

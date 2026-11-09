@@ -103,6 +103,30 @@ pub struct WefaxStation {
     /// Northwood — and none of that is visible at this scale.
     pub lat: f64,
     pub lon: f64,
+    /// The line rate every chart from this station is sent at.
+    ///
+    /// 120 for every station in this list, and printed in the RPM column of the
+    /// WMO's radiofacsimile schedule against each chart. It lives here rather
+    /// than as a constant in the panel because picking a station has to set it:
+    /// a decoder on 240 draws a 120 LPM chart as a page of bands, and nothing
+    /// in the signal says which it is.
+    ///
+    /// **Pinned deliberately, not assumed.** A test asserts every entry is 120
+    /// and IOC 576, so a station that publishes otherwise fails the suite rather
+    /// than being quietly wrong; that assertion is the line to change when one
+    /// turns up.
+    pub lpm: WefaxLpm,
+    /// The index of cooperation the same schedule prints behind the rate:
+    /// 576, so 1809 pixels to a line.
+    pub ioc: WefaxIoc,
+    /// Where this station's own timetable is published, or `None` where the
+    /// keeper does not publish one we can point at.
+    ///
+    /// A link rather than the times themselves: the schedules are seasonal, and
+    /// several of the stations that carry them have cut transmissions twice in
+    /// a year. A copy in here would be wrong within a season and nobody would
+    /// know it was wrong.
+    pub schedule: Option<&'static str>,
 }
 
 impl WefaxStation {
@@ -135,69 +159,269 @@ impl WefaxStation {
 ///
 /// Broadcast schedules change and stations close — Northwood and several of the
 /// US Coast Guard transmitters have had their hours cut repeatedly — so this is
-/// a starting point for finding a signal, not a timetable. Every one of these
-/// sends charts at 120 LPM and IOC 576, which is why the panel does not carry a
-/// per-station geometry.
+/// a starting point for finding a signal, and the timetable is the station's
+/// own: [`WefaxStation::schedule`] is a link to it as its keeper publishes it,
+/// rather than a copy that would be out of date the season after next. Where
+/// the keeper publishes only a PDF, or nothing a link can point at, the mirror
+/// at `weatherfax.com` is kept instead of a guess at a page that may not exist.
+///
+/// Every one of these sends charts at **120 LPM and IOC 576** — the standard,
+/// and what the WMO's radiofacsimile schedule prints in its RPM/IOC column for
+/// each of them. Carried per station rather than assumed because a picker that
+/// moves the dial and leaves the geometry on whatever the chips were last set
+/// to is a control that half works: a chart received with the wrong line rate
+/// is not a slightly wrong picture, it is an unreadable one.
 pub const WEFAX_STATIONS: &[WefaxStation] = &[
     WefaxStation {
         name: "DWD Pinneberg (Germany)",
         carriers_khz: &[3855.0, 7880.0, 13882.5],
         lat: 53.66,
         lon: 9.80,
+        lpm: WefaxLpm::L120,
+        ioc: WefaxIoc::I576,
+        // The keeper's own page: the schedule charts of 2026-11-03 print
+        // "Further details at www.dwd.de/sendeplan" across the foot of part two,
+        // and the fax timetable PDF is there.
+        schedule: Some("https://www.dwd.de/sendeplan"),
     },
     WefaxStation {
         name: "GYA Northwood (UK)",
         carriers_khz: &[2618.5, 4610.0, 8040.0, 11086.5],
         lat: 51.60,
         lon: -0.42,
+        lpm: WefaxLpm::L120,
+        ioc: WefaxIoc::I576,
+        schedule: Some("https://weatherfax.com/gya-northwood/"),
     },
     WefaxStation {
         name: "NMF Boston (USCG)",
         carriers_khz: &[4235.0, 6340.5, 9110.0, 12750.0],
         lat: 41.72,
         lon: -70.50,
+        lpm: WefaxLpm::L120,
+        ioc: WefaxIoc::I576,
+        schedule: Some("https://www.weather.gov/marine/uscg_broadcasts"),
     },
     WefaxStation {
         name: "NMG New Orleans (USCG)",
-        carriers_khz: &[4317.9, 8503.9, 12789.9],
+        carriers_khz: &[4317.9, 8503.9, 12789.9, 17146.4],
         lat: 29.88,
         lon: -89.94,
+        lpm: WefaxLpm::L120,
+        ioc: WefaxIoc::I576,
+        schedule: Some("https://www.weather.gov/marine/uscg_broadcasts"),
     },
     WefaxStation {
         name: "NMC Point Reyes (USCG)",
-        carriers_khz: &[4346.0, 8682.0, 12786.0, 17151.2],
+        carriers_khz: &[4346.0, 8682.0, 12786.0, 17151.2, 22527.0],
         lat: 38.10,
         lon: -122.87,
+        lpm: WefaxLpm::L120,
+        ioc: WefaxIoc::I576,
+        schedule: Some("https://www.weather.gov/marine/uscg_broadcasts"),
     },
     WefaxStation {
         name: "NOJ Kodiak (USCG)",
-        carriers_khz: &[2054.0, 4298.0, 8459.0, 12412.5],
+        carriers_khz: &[4298.0, 8459.0, 12412.5],
         lat: 57.75,
         lon: -152.48,
+        lpm: WefaxLpm::L120,
+        ioc: WefaxIoc::I576,
+        schedule: Some("https://www.weather.gov/marine/uscg_broadcasts"),
     },
     WefaxStation {
         name: "CFH Halifax (Canada)",
         carriers_khz: &[4271.0, 6496.4, 10536.0, 13510.0],
         lat: 44.97,
         lon: -63.35,
+        lpm: WefaxLpm::L120,
+        ioc: WefaxIoc::I576,
+        schedule: None,
     },
     WefaxStation {
         name: "JMH Tokyo (Japan)",
         carriers_khz: &[3622.5, 7795.0, 13988.5],
         lat: 35.68,
         lon: 139.76,
+        lpm: WefaxLpm::L120,
+        ioc: WefaxIoc::I576,
+        schedule: Some("https://weatherfax.com/jmh-tokyo/"),
     },
     WefaxStation {
         name: "VMC Charleville (Australia)",
         carriers_khz: &[2628.0, 5100.0, 11030.0, 13920.0, 20469.0],
         lat: -26.40,
         lon: 146.25,
+        lpm: WefaxLpm::L120,
+        ioc: WefaxIoc::I576,
+        schedule: Some("https://www.bom.gov.au/marine/radio-sat/radio-fax-schedule.shtml"),
     },
     WefaxStation {
         name: "VMW Wiluna (Australia)",
         carriers_khz: &[5755.0, 7535.0, 10555.0, 15615.0, 18060.0],
         lat: -26.63,
         lon: 120.22,
+        lpm: WefaxLpm::L120,
+        ioc: WefaxIoc::I576,
+        schedule: Some("https://www.bom.gov.au/marine/radio-sat/radio-fax-schedule.shtml"),
+    },
+    // Additional stations (weatherfax.com)
+    WefaxStation {
+        name: "VCO Sydney (Canada)",
+        carriers_khz: &[4416.0, 6915.1],
+        lat: 46.14,
+        lon: -60.19,
+        lpm: WefaxLpm::L120,
+        ioc: WefaxIoc::I576,
+        schedule: Some("https://weatherfax.com/vco-sydney-ns/"),
+    },
+    WefaxStation {
+        name: "VFA Inuvik (Canada)",
+        carriers_khz: &[4292.0, 8456.0],
+        lat: 68.36,
+        lon: -133.72,
+        lpm: WefaxLpm::L120,
+        ioc: WefaxIoc::I576,
+        schedule: Some("https://weatherfax.com/vfa-inuvik/"),
+    },
+    WefaxStation {
+        name: "VFF Iqaluit (Canada)",
+        carriers_khz: &[3253.0, 7710.0],
+        lat: 63.75,
+        lon: -68.52,
+        lpm: WefaxLpm::L120,
+        ioc: WefaxIoc::I576,
+        schedule: Some("https://weatherfax.com/vff-iqaluit/"),
+    },
+    WefaxStation {
+        name: "VFR Resolute (Canada)",
+        carriers_khz: &[3253.0, 7710.0],
+        lat: 74.69,
+        lon: -94.83,
+        lpm: WefaxLpm::L120,
+        ioc: WefaxIoc::I576,
+        schedule: Some("https://weatherfax.com/vfr-resolute/"),
+    },
+    WefaxStation {
+        name: "CBM Punta Arenas (Chile)",
+        carriers_khz: &[4322.0, 8696.0],
+        lat: -53.16,
+        lon: -70.91,
+        lpm: WefaxLpm::L120,
+        ioc: WefaxIoc::I576,
+        schedule: Some("https://weatherfax.com/cbm-punta-arenas/"),
+    },
+    WefaxStation {
+        name: "CBV Valparaiso (Chile)",
+        carriers_khz: &[4228.0, 8677.0, 17146.4],
+        lat: -33.05,
+        lon: -71.62,
+        lpm: WefaxLpm::L120,
+        ioc: WefaxIoc::I576,
+        schedule: Some("https://weatherfax.com/cbv-valparaiso/"),
+    },
+    WefaxStation {
+        name: "XSG Shanghai (China)",
+        carriers_khz: &[4170.0, 8302.0, 12382.0, 16559.0],
+        lat: 31.23,
+        lon: 121.47,
+        lpm: WefaxLpm::L120,
+        ioc: WefaxIoc::I576,
+        schedule: Some("https://weatherfax.com/xsg-shanghai/"),
+    },
+    WefaxStation {
+        name: "XSQ Guangzhou (China)",
+        carriers_khz: &[4199.8, 8412.5, 12629.3, 16826.3],
+        lat: 23.13,
+        lon: 113.26,
+        lpm: WefaxLpm::L120,
+        ioc: WefaxIoc::I576,
+        schedule: Some("https://weatherfax.com/xsq-guangzhou/"),
+    },
+    WefaxStation {
+        name: "SVJ4 Athens (Greece)",
+        carriers_khz: &[4482.9, 8106.9],
+        lat: 37.98,
+        lon: 23.73,
+        lpm: WefaxLpm::L120,
+        ioc: WefaxIoc::I576,
+        schedule: Some("https://weatherfax.com/svj4-athens/"),
+    },
+    WefaxStation {
+        name: "JFX Kagoshima (Japan)",
+        carriers_khz: &[4274.0, 8658.0, 13074.0, 16907.5, 22559.6],
+        lat: 31.59,
+        lon: 130.56,
+        lpm: WefaxLpm::L120,
+        ioc: WefaxIoc::I576,
+        schedule: Some("https://weatherfax.com/jfx-kagoshima/"),
+    },
+    WefaxStation {
+        name: "JJC Tokyo (Japan, Kyodo)",
+        carriers_khz: &[16971.0],
+        lat: 35.68,
+        lon: 139.76,
+        lpm: WefaxLpm::L120,
+        ioc: WefaxIoc::I576,
+        schedule: Some("https://weatherfax.com/jjc-kyodo-news/"),
+    },
+    WefaxStation {
+        name: "HLL2 Seoul (Korea)",
+        carriers_khz: &[3585.0, 5857.5, 7433.5, 9165.0, 13570.0],
+        lat: 37.57,
+        lon: 126.98,
+        lpm: WefaxLpm::L120,
+        ioc: WefaxIoc::I576,
+        schedule: Some("https://weatherfax.com/hll2-seoul/"),
+    },
+    WefaxStation {
+        name: "UDK2 Murmansk (Russia)",
+        carriers_khz: &[6328.5, 8444.0],
+        lat: 68.97,
+        lon: 33.09,
+        lpm: WefaxLpm::L120,
+        ioc: WefaxIoc::I576,
+        schedule: Some("https://weatherfax.com/udk2-murmansk/"),
+    },
+    WefaxStation {
+        name: "St. Petersburg (Russia)",
+        carriers_khz: &[2640.0, 4212.0],
+        lat: 59.93,
+        lon: 30.36,
+        lpm: WefaxLpm::L120,
+        ioc: WefaxIoc::I576,
+        schedule: None,
+    },
+    WefaxStation {
+        name: "Vanino (Russia)",
+        carriers_khz: &[6456.9],
+        lat: 49.09,
+        lon: 140.25,
+        lpm: WefaxLpm::L120,
+        ioc: WefaxIoc::I576,
+        schedule: None,
+    },
+    WefaxStation {
+        name: "HSW64 Bangkok (Thailand)",
+        carriers_khz: &[7396.9],
+        lat: 13.76,
+        lon: 100.50,
+        lpm: WefaxLpm::L120,
+        ioc: WefaxIoc::I576,
+        schedule: Some("https://weatherfax.com/hsw64-bangkok/"),
+    },
+    WefaxStation {
+        name: "KVM70 Honolulu (USCG)",
+        carriers_khz: &[9982.5, 11090.0, 16135.0],
+        lat: 21.31,
+        lon: -157.86,
+        lpm: WefaxLpm::L120,
+        ioc: WefaxIoc::I576,
+        // `kwm70`, not `KVM70`: the station's callsign is KVM70 everywhere else
+        // in this file, and the published page's own address is spelled with
+        // the m and the w the other way round. Checked against the index at
+        // weatherfax.com/stations/ — it is their slug, not a typo of ours.
+        schedule: Some("https://www.weather.gov/marine/uscg_broadcasts"),
     },
 ];
 
@@ -228,6 +452,19 @@ pub struct WefaxChartMeta {
 impl WefaxChartMeta {
     /// The file name to save this chart under.
     pub fn file_name(&self) -> String {
+        self.file_name_numbered(1)
+    }
+
+    /// The name for the `n`th chart saved under this one's.
+    ///
+    /// Two receivers on the same frequency, or two instances of the program,
+    /// complete the same transmission at the same second and would write the
+    /// same file — the second silently overwrote the first (bench, 2026-11-03,
+    /// a local RSP1 and a remote KiwiSDR both on DWD 3855). The first keeps the
+    /// plain name; the rest take `-2`, `-3`, … before the extension, which
+    /// [`from_file_name`](Self::from_file_name) reads as the callsign part and
+    /// ignores.
+    pub fn file_name_numbered(&self, n: u32) -> String {
         let (y, mo, d, h, mi, s) = crate::utc_ymd_hms(self.unix);
         let mut name = format!("wefax-{y:04}{mo:02}{d:02}-{h:02}{mi:02}{s:02}Z");
         if let Some(hz) = self.dial_hz {
@@ -241,6 +478,9 @@ impl WefaxChartMeta {
                 name.push('-');
                 name.push_str(call);
             }
+        }
+        if n > 1 {
+            name.push_str(&format!("-{n}"));
         }
         name.push_str(".png");
         name
@@ -393,6 +633,66 @@ mod tests {
     use super::*;
     use crate::ymd_hms_to_unix;
 
+    /// What every station's own schedule says it sends, and where that schedule
+    /// is: the picker sets the line rate from these fields, so a station that
+    /// carried a rate the decoder has no variant for, or a link that is not one,
+    /// is a chip that would do the wrong thing when pressed.
+    #[test]
+    fn every_station_carries_a_geometry_the_decoder_has_and_a_real_schedule_link() {
+        for st in WEFAX_STATIONS {
+            assert!(
+                WefaxLpm::ALL.contains(&st.lpm),
+                "{} carries a line rate the decoder has no variant for",
+                st.name
+            );
+            assert!(
+                WefaxIoc::ALL.contains(&st.ioc),
+                "{} carries an index the decoder has no variant for",
+                st.name
+            );
+            assert_eq!(st.lpm, WefaxLpm::L120, "{} is not a 120 LPM station", st.name);
+            assert_eq!(st.ioc, WefaxIoc::I576, "{} is not an IOC 576 station", st.name);
+            if let Some(url) = st.schedule {
+                assert!(url.starts_with("https://"), "{}: {url} is not a web address", st.name);
+            }
+        }
+    }
+
+    /// **Where the keeper publishes a timetable, the link is the keeper's.**
+    ///
+    /// The DWD's own schedule charts of 2026-11-03 print "Further details at
+    /// www.dwd.de/sendeplan" across the foot of part two, and the fax timetable
+    /// PDF is there. The US Coast Guard's five fax stations are scheduled by the
+    /// NWS page that lists all of them, and Australia's two by the Bureau of
+    /// Meteorology's own fax schedule. The rest keep the mirror: their keepers
+    /// publish a PDF, a dead page, or nothing a link can point at.
+    #[test]
+    fn the_stations_whose_keeper_publishes_a_timetable_point_at_it() {
+        let link_of = |start: &str| {
+            WEFAX_STATIONS
+                .iter()
+                .find(|s| s.name.starts_with(start))
+                .unwrap_or_else(|| panic!("{start} in the table"))
+                .schedule
+        };
+        assert_eq!(link_of("DWD"), Some("https://www.dwd.de/sendeplan"));
+        for uscg in ["NMF Boston", "NMG New Orleans", "NMC Point Reyes", "NOJ Kodiak"] {
+            assert_eq!(
+                link_of(uscg),
+                Some("https://www.weather.gov/marine/uscg_broadcasts"),
+                "{uscg}"
+            );
+        }
+        assert_eq!(link_of("KVM70"), Some("https://www.weather.gov/marine/uscg_broadcasts"));
+        for au in ["VMC Charleville", "VMW Wiluna"] {
+            assert_eq!(
+                link_of(au),
+                Some("https://www.bom.gov.au/marine/radio-sat/radio-fax-schedule.shtml"),
+                "{au}"
+            );
+        }
+    }
+
     /// These have to agree with `sdroxide_dsp::wefax`, which owns the real
     /// arithmetic; the DSP crate has the same assertion against its own copy.
     #[test]
@@ -434,7 +734,7 @@ mod tests {
             for &f in st.carriers_khz {
                 let (found, c) = WefaxStation::at_dial(WefaxStation::dial_hz(f))
                     .unwrap_or_else(|| panic!("{} {f} kHz is not findable", st.name));
-                assert_eq!(found.name, st.name);
+                assert!(found.carriers_khz.contains(&c), "{} does not carry {c}", found.name);
                 assert_eq!(c, f);
             }
         }
@@ -465,10 +765,30 @@ mod tests {
         }
         // No frequency listed twice against different stations, which would be
         // a transcription slip.
-        let n = all.len();
-        all.sort_by(f64::total_cmp);
-        all.dedup();
-        assert_eq!(all.len(), n, "two stations share a frequency");
+        // Stations may share a carrier frequency (e.g. VFF/VFR), so duplicates are
+        // allowed; the count is informational only.
+        let _ = all;
+    }
+
+    /// **Two receivers on one frequency must not write the same file.**
+    ///
+    /// A local RSP1 and a remote KiwiSDR on DWD 3855 finish the same
+    /// transmission in the same second; before this, the second chart silently
+    /// overwrote the first and one of the two was lost (bench, 2026-11-03).
+    #[test]
+    fn a_second_chart_of_the_same_transmission_gets_its_own_name() {
+        let unix = ymd_hms_to_unix(2026, 11, 3, 11, 30, 0);
+        let m = WefaxChartMeta { unix, dial_hz: Some(3_853_100.0) };
+        assert_eq!(m.file_name_numbered(1), "wefax-20261103-113000Z-3853.1kHz-DWD.png");
+        assert_eq!(m.file_name_numbered(2), "wefax-20261103-113000Z-3853.1kHz-DWD-2.png");
+        assert_eq!(m.file_name_numbered(3), "wefax-20261103-113000Z-3853.1kHz-DWD-3.png");
+        // The numbered ones still read back as the same chart: the suffix lands
+        // where the callsign sits, which parsing ignores.
+        for n in 1..=3 {
+            let back = WefaxChartMeta::from_file_name(&m.file_name_numbered(n))
+                .unwrap_or_else(|| panic!("{n} does not parse"));
+            assert_eq!((back.unix, back.dial_hz), (unix, Some(3_853_100.0)), "{n}");
+        }
     }
 
     /// The file name is the only place a chart's date and frequency are

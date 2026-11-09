@@ -107,10 +107,17 @@ impl UsbAudioSource {
                 // rather than left to a log line, because the stream runs: the
                 // waterfall comes up carrying whatever the *default* card hears,
                 // which looks like a working radio and is not this one.
-                let status = s.swap.as_ref().map(|sw| {
+                // A renamed card (same hardware, new ALSA card id) is used as-is:
+                // no warning, no "Apply" step. Only a genuinely missing card is
+                // reported, so the operator is not nagged on every USB
+                // re-enumeration.
+                let status = s.swap.as_ref().and_then(|sw| {
+                    if sw.reason == sdroxide_audio::SwapReason::Renamed {
+                        return None;
+                    }
                     let msg = format!("Radio receive device: {}", sw.sentence());
                     tracing::warn!("{msg}");
-                    msg
+                    Some(msg)
                 });
                 (Some(s), c, rate, status)
             }
@@ -134,10 +141,13 @@ impl UsbAudioSource {
             sdroxide_types::AudioRouting::Both,
         ) {
             Ok((o, p)) => {
-                let status = o.swap.as_ref().map(|sw| {
+                let status = o.swap.as_ref().and_then(|sw| {
+                    if sw.reason == sdroxide_audio::SwapReason::Renamed {
+                        return None;
+                    }
                     let msg = format!("Radio transmit device: {}", sw.sentence());
                     tracing::warn!("{msg}");
-                    msg
+                    Some(msg)
                 });
                 (Some((o, p)), status)
             }
@@ -268,6 +278,32 @@ impl IqSource for UsbAudioSource {
 
     fn open_status(&self) -> Option<String> {
         self.status.clone()
+    }
+
+    fn renamed_rx(&self) -> Option<String> {
+        self.in_stream
+            .as_ref()
+            .and_then(|s| s.swap.as_ref())
+            .and_then(|sw| {
+                if sw.reason == sdroxide_audio::SwapReason::Renamed {
+                    Some(sw.opened.clone())
+                } else {
+                    None
+                }
+            })
+    }
+
+    fn renamed_tx(&self) -> Option<String> {
+        self.out
+            .as_ref()
+            .and_then(|(o, _)| o.swap.as_ref())
+            .and_then(|sw| {
+                if sw.reason == sdroxide_audio::SwapReason::Renamed {
+                    Some(sw.opened.clone())
+                } else {
+                    None
+                }
+            })
     }
 
     fn needs_reopen(&self) -> bool {

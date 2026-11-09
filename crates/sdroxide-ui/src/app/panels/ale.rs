@@ -5,6 +5,7 @@ use eframe::egui::{self, RichText};
 use sdroxide_types::AleStatus;
 
 use crate::app::SdroxideApp;
+use crate::i18n::tr;
 use crate::theme::ThemedScroll;
 
 impl SdroxideApp {
@@ -19,7 +20,7 @@ impl SdroxideApp {
             ui.label(RichText::new("ALE").size(11.0).strong().color(crate::theme::CYAN()));
             if let Some(st) = &st {
                 ui.label(
-                    RichText::new(format!("{} words", st.total))
+                    RichText::new(tr!("ale-words-count", n = st.total))
                         .size(11.0)
                         .color(crate::theme::gray(150)),
                 );
@@ -32,15 +33,12 @@ impl SdroxideApp {
             ui,
             |ui| {
                 let Some(st) = &st else {
-                    ui.label(RichText::new("Waiting for audio…").weak());
+                    ui.label(RichText::new(tr!("ale-waiting-audio")).weak());
                     return;
                 };
                 if st.messages.is_empty() {
                     ui.label(
-                        RichText::new(
-                            "No words yet. Tune an ALE channel (e.g. 8992 or 11175 kHz USB) \
-                             and wait for a call.",
-                        )
+                        RichText::new(tr!("ale-no-words-yet"))
                         .weak(),
                     );
                 }
