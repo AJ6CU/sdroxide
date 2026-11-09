@@ -23,7 +23,6 @@ const WINDOW_SIZE: [f32; 2] = [780.0, 600.0];
 
 /// Temp-memory keys that carry the panel's chips from the places that have no
 /// access to the app (the experimental bench in the mode menu) to the frame.
-const AVAILABLE_KEY: &str = "meshtastic-available";
 const OPEN_KEY: &str = "meshtastic-open";
 const TOGGLE_KEY: &str = "meshtastic-toggle";
 
@@ -161,11 +160,8 @@ pub(in crate::app) fn tx_refusal_text(why: MeshTxRefusal, hz: f64) -> String {
 }
 
 /// Publish what the chips outside the app need to know this frame.
-pub(in crate::app) fn publish(ctx: &egui::Context, available: bool, open: bool) {
-    ctx.data_mut(|d| {
-        d.insert_temp(egui::Id::new(AVAILABLE_KEY), available);
-        d.insert_temp(egui::Id::new(OPEN_KEY), open);
-    });
+pub(in crate::app) fn publish(ctx: &egui::Context, open: bool) {
+    ctx.data_mut(|d| d.insert_temp(egui::Id::new(OPEN_KEY), open));
 }
 
 /// Whether a chip asked to open or close the window since the last call.
@@ -173,19 +169,10 @@ pub(in crate::app) fn take_toggle(ctx: &egui::Context) -> bool {
     ctx.data_mut(|d| d.remove_temp::<bool>(egui::Id::new(TOGGLE_KEY))).unwrap_or(false)
 }
 
-/// The chip of the experimental bench. Nothing is drawn while the panel is
-/// switched off in the settings.
+/// The chip of the experimental bench.
 pub(in crate::app) fn bench_chip(ui: &mut egui::Ui) {
     let ctx = ui.ctx().clone();
-    let (available, open) = ctx.data(|d| {
-        (
-            d.get_temp::<bool>(egui::Id::new(AVAILABLE_KEY)).unwrap_or(false),
-            d.get_temp::<bool>(egui::Id::new(OPEN_KEY)).unwrap_or(false),
-        )
-    });
-    if !available {
-        return;
-    }
+    let open = ctx.data(|d| d.get_temp::<bool>(egui::Id::new(OPEN_KEY)).unwrap_or(false));
     if crate::chrome::chip(ui, open, tr!("meshtastic-title"))
         .on_hover_text(tr!("meshtastic-bench-hint"))
         .clicked()
@@ -195,20 +182,17 @@ pub(in crate::app) fn bench_chip(ui: &mut egui::Ui) {
 }
 
 impl super::SdroxideApp {
-    /// Apply the chips' request and the settings switch, then draw the window.
+    /// Apply the bench chip's request, then draw the window. Open or closed is
+    /// the `TW_MESHTASTIC` bit of Settings, Detachable, like every tool window.
     pub(in crate::app) fn meshtastic_window(
         &mut self,
         ctx: &egui::Context,
         cmds: &mut Vec<Command>,
     ) {
-        let available = self.ui_settings.meshtastic_panel;
-        if take_toggle(ctx) && available {
+        if take_toggle(ctx) {
             self.show_meshtastic = !self.show_meshtastic;
         }
-        if !available {
-            self.show_meshtastic = false;
-        }
-        publish(ctx, available, self.show_meshtastic);
+        publish(ctx, self.show_meshtastic);
         if !self.show_meshtastic {
             return;
         }
@@ -527,6 +511,19 @@ impl super::SdroxideApp {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The panel was once hidden behind a switch in the Interface tab that
+    /// nobody found: no chip, no row in Settings, Detachable. It is a tool
+    /// window like the others, listed there and with its chips always drawn.
+    #[test]
+    fn the_panel_is_listed_in_the_detachable_tab_and_has_no_hidden_switch() {
+        let settings = include_str!("settings/mod.rs");
+        assert!(settings.contains("crate::app::frame::TW_MESHTASTIC"));
+        let extras = include_str!("extras.rs");
+        assert!(!extras.contains("meshtastic_panel"));
+        assert!(!settings.contains("meshtastic_panel"));
+        assert!(!include_str!("settings/ui_tab.rs").contains("meshtastic_panel"));
+    }
 
     #[test]
     fn eu_868_long_fast_has_the_one_default_slot() {

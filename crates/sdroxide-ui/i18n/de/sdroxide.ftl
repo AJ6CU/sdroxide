@@ -9543,10 +9543,6 @@ meshtastic-bench-hint = Öffnet das Meshtastic-Fenster: der LoRa-Mesh-Verkehr ei
 
 extras-meshtastic-hint = Meshtastic: der LoRa-Mesh-Verkehr eines Kanals, die gehörten Knoten und die Pakete.
 
-settings-ui-meshtastic-on = Panel anzeigen
-
-settings-ui-meshtastic-hint = Fügt die Meshtastic-Schaltflächen dem Extras-Fenster und der experimentellen Bank des Modusmenüs hinzu und erlaubt das Öffnen des Fensters. Das Fenster dockt im Hauptfenster an oder wechselt mit der Schaltfläche der Titelleiste in ein eigenes. Ausschalten schließt das Fenster; der Empfänger stoppt über den Schalter des Fensters.
-
 meshtastic-message = Nachricht
 
 meshtastic-message-hint = Text für alle im Kanal (höchstens 200 Byte)

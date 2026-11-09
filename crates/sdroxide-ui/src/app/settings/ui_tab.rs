@@ -221,15 +221,6 @@ pub(in crate::app) fn settings_ui_tab(
             }
         }
 
-        // Meshtastic is a tool window too (docked in the viewport or sent to its
-        // own window with the title-bar chip), but off until asked for: the
-        // switch decides whether its chips and window exist at all. Also in the
-        // browser, which has the window docked only.
-        ui.label(tr!("settings-ui-window-label", module = tr!("meshtastic-title")));
-        crate::chrome::checkbox(ui, &mut cfg.meshtastic_panel, tr!("settings-ui-meshtastic-on"))
-            .on_hover_text(tr!("settings-ui-meshtastic-hint"));
-        ui.end_row();
-
         ui.label(tr!("settings-ui-frame-rate"));
         ComboBox::from_id_salt("ui-fps")
             .selected_text(format!("{fps} fps", fps = cfg.frame_rate_fps))

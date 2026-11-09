@@ -9543,10 +9543,6 @@ meshtastic-bench-hint = Abre a janela Meshtastic: o tráfego da malha LoRa de um
 
 extras-meshtastic-hint = Meshtastic: o tráfego da malha LoRa de um canal, os nós ouvidos e os pacotes.
 
-settings-ui-meshtastic-on = Mostrar o painel
-
-settings-ui-meshtastic-hint = Adiciona os botões do Meshtastic à janela Extras e à bancada experimental do menu de modos e permite abrir a janela. A janela se acopla à principal ou vai para a sua com o botão da barra de título. Desligar fecha a janela; o receptor para pelo interruptor da própria janela.
-
 meshtastic-message = Mensagem
 
 meshtastic-message-hint = Texto para todos no canal (no máximo 200 bytes)

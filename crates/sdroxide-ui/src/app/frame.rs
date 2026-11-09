@@ -1920,6 +1920,7 @@ impl eframe::App for SdroxideApp {
         sync!(self.show_memories, TW_MEMORIES);
         sync!(self.show_extras, TW_EXTRAS);
         sync!(self.show_aircraft, TW_AIRCRAFT);
+        sync!(self.show_meshtastic, TW_MESHTASTIC);
         sync!(self.show_radio_classic, TW_RADIO_CLASSIC);
         sync!(self.show_rds, TW_RDS);
         sync!(self.show_drm, TW_DRM);
@@ -2077,6 +2078,11 @@ impl eframe::App for SdroxideApp {
             self.ui_settings.tool_windows_open |= TW_AIRCRAFT;
         } else {
             self.ui_settings.tool_windows_open &= !TW_AIRCRAFT;
+        }
+        if self.show_meshtastic {
+            self.ui_settings.tool_windows_open |= TW_MESHTASTIC;
+        } else {
+            self.ui_settings.tool_windows_open &= !TW_MESHTASTIC;
         }
         if self.show_rds {
             self.ui_settings.tool_windows_open |= TW_RDS;
@@ -6892,3 +6898,4 @@ mod detached_geometry_tests {
     }
 }
 pub const TW_SESSION_QSOS: u64 = 1 << 51;
+pub const TW_MESHTASTIC: u64 = 1 << 52;

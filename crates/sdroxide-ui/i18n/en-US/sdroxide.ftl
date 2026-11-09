@@ -9570,10 +9570,6 @@ meshtastic-bench-hint = Open the Meshtastic window: the LoRa mesh traffic of one
 
 extras-meshtastic-hint = Meshtastic: the LoRa mesh traffic of one channel, the nodes heard and the packets.
 
-settings-ui-meshtastic-on = Show the panel
-
-settings-ui-meshtastic-hint = Adds the Meshtastic chips to the Extras window and to the experimental bench of the mode menu, and lets the window open. The window docks in the main one or goes to its own with the title-bar button. Switching it off closes the window; the receiver stops from the window's own switch.
-
 meshtastic-message = Message
 
 meshtastic-message-hint = Text for everyone on the channel (200 bytes at most)

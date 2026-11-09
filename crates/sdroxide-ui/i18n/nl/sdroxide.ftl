@@ -9551,10 +9551,6 @@ meshtastic-bench-hint = Opent het Meshtastic-venster: het LoRa-meshverkeer van �
 
 extras-meshtastic-hint = Meshtastic: het LoRa-meshverkeer van één kanaal, de gehoorde knooppunten en de pakketten.
 
-settings-ui-meshtastic-on = Paneel tonen
-
-settings-ui-meshtastic-hint = Voegt de Meshtastic-knoppen toe aan het Extras-venster en aan de experimentele bank van het modusmenu en laat het venster openen. Het venster dockt in het hoofdvenster of gaat met de knop in de titelbalk naar een eigen venster. Uitzetten sluit het venster; de ontvanger stopt met de schakelaar van het venster zelf.
-
 meshtastic-message = Bericht
 
 meshtastic-message-hint = Tekst voor iedereen op het kanaal (maximaal 200 bytes)
