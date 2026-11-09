@@ -227,11 +227,14 @@ impl SdroxideApp {
                 let face = RichText::new(&r.call).monospace().size(10.5).color(colour);
                 if ui
                     .add(egui::Label::new(face).sense(egui::Sense::click()))
-                    .on_hover_text(tr!(
-                        "atchat-last-heard-s-ago-click",
-                        status = r.status,
-                        age_s = format!("{:.0}", r.age_s)
-                    ))
+                    .on_hover_ui(|ui| {
+                        ui.label(tr!(
+                            "atchat-last-heard-s-ago-click",
+                            status = r.status,
+                            age_s = format!("{:.0}", r.age_s)
+                        ));
+                        crate::callsign_card::section(ui, &r.call);
+                    })
                     .clicked()
                 {
                     if !self.atchat_dm_tabs.iter().any(|p| p == &r.call) {

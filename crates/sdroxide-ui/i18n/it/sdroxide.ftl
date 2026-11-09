@@ -9610,3 +9610,7 @@ sat-rig-rx = RX RADIO
 sat-rig-tx = TX RADIO
 
 topbar-sat-locked-vfo-a-downlink-b-uplink = Bloccato su un satellite: il VFO A è il downlink e il VFO B l'uplink fino alla fine del blocco
+
+qrzcard-photo-loading = Caricamento foto…
+
+qrzcard-no-photo = Scheda senza foto

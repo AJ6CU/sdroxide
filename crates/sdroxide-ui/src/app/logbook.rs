@@ -779,7 +779,7 @@ impl SdroxideApp {
                 ui.set_min_height(22.0);
                 ui.horizontal(|ui| {
                     ui.spacing_mut().item_spacing.x = 8.0;
-                    let col = |ui: &mut egui::Ui, w: f32, lbl: egui::Label| {
+                    let col = |ui: &mut egui::Ui, w: f32, lbl: egui::Label| -> egui::Response {
                         let (rect, _) =
                             ui.allocate_exact_size(egui::vec2(w, 20.0), egui::Sense::hover());
                         let mut c = ui.new_child(
@@ -787,7 +787,7 @@ impl SdroxideApp {
                                 .max_rect(rect)
                                 .layout(egui::Layout::left_to_right(egui::Align::Center)),
                         );
-                        c.add(lbl);
+                        c.add(lbl)
                     };
                     let gray = crate::theme::gray(150);
                     col(
@@ -797,16 +797,20 @@ impl SdroxideApp {
                             RichText::new(time_str(r.start_utc)).monospace().size(12.0).color(gray),
                         ),
                     );
-                    col(
-                        ui,
-                        92.0,
-                        egui::Label::new(
-                            RichText::new(&r.call)
-                                .size(14.0)
-                                .strong()
-                                .color(crate::theme::TEXT_STRONG()),
-                        )
-                        .truncate(),
+                    // The QRZ card of the station, where the log shows its call.
+                    crate::callsign_card::on_hover(
+                        col(
+                            ui,
+                            92.0,
+                            egui::Label::new(
+                                RichText::new(&r.call)
+                                    .size(14.0)
+                                    .strong()
+                                    .color(crate::theme::TEXT_STRONG()),
+                            )
+                            .truncate(),
+                        ),
+                        &r.call,
                     );
                     col(
                         ui,

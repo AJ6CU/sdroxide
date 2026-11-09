@@ -256,6 +256,15 @@ impl SdroxideApp {
                         dist,
                         if r.final_msg.is_empty() { "—".into() } else { r.final_msg.clone() },
                     ];
+                    // The QRZ card of the station, over its callsign cell (the
+                    // third column: number, time, call).
+                    let call_x = rect.left() + widths[0] + widths[1];
+                    let call_cell =
+                        egui::Rect::from_min_size(egui::pos2(call_x, rect.top()), egui::vec2(widths[2], row_h));
+                    crate::callsign_card::on_hover(
+                        ui.interact(call_cell, ui.id().with(("qso-call", idx)), egui::Sense::hover()),
+                        &r.call,
+                    );
                     let mut x = rect.left();
                     for (i, text) in cells.iter().enumerate() {
                         let cell = egui::Rect::from_min_size(egui::pos2(x, rect.top()), egui::vec2(widths[i], row_h));

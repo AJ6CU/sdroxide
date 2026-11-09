@@ -256,7 +256,7 @@ impl SdroxideApp {
                     for q in mine.iter().rev().take(200) {
                         let (_, _, _, h, mi, _) = sdroxide_types::utc_ymd_hms(q.start_utc);
                         ui.label(format!("{h:02}{mi:02}"));
-                        ui.label(&q.call);
+                        crate::callsign_card::on_hover(ui.label(&q.call), &q.call);
                         ui.label(&q.band);
                         ui.label(&q.mode);
                         ui.label(&q.srx_string);

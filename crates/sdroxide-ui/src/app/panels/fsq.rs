@@ -518,7 +518,10 @@ impl SdroxideApp {
                     if ui.button(tr!("fsq-to-button")).clicked() {
                         *set_target = Some(c.call.clone());
                     }
-                    ui.label(RichText::new(&c.call).monospace().strong());
+                    crate::callsign_card::on_hover(
+                        ui.label(RichText::new(&c.call).monospace().strong()),
+                        &c.call,
+                    );
                     if crate::chrome::field(
                         ui,
                         egui::TextEdit::singleline(&mut c.name)

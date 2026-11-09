@@ -9612,3 +9612,7 @@ sat-rig-rx = RX RADIO
 sat-rig-tx = TX RADIO
 
 topbar-sat-locked-vfo-a-downlink-b-uplink = Verrouillé sur un satellite : le VFO A est la descente et le VFO B la montée jusqu'à la fin du verrouillage
+
+qrzcard-photo-loading = Photo en cours…
+
+qrzcard-no-photo = Fiche sans photo
