@@ -9554,10 +9554,6 @@ meshtastic-bench-hint = Ouvre la fenêtre Meshtastic : le trafic du réseau mail
 
 extras-meshtastic-hint = Meshtastic : le trafic du réseau maillé LoRa d'un canal, les nœuds entendus et les paquets.
 
-settings-ui-meshtastic-on = Afficher le panneau
-
-settings-ui-meshtastic-hint = Ajoute les puces Meshtastic à la fenêtre Extras et au banc expérimental du menu des modes, et autorise l'ouverture de la fenêtre. La fenêtre s'ancre dans la principale ou passe dans la sienne avec le bouton de la barre de titre. La couper ferme la fenêtre ; le récepteur s'arrête avec l'interrupteur de la fenêtre.
-
 meshtastic-message = Message
 
 meshtastic-message-hint = Texte pour tous sur le canal (200 octets au plus)

@@ -9491,10 +9491,6 @@ meshtastic-bench-hint = Meshtasticウィンドウを開きます：1つのチャ
 
 extras-meshtastic-hint = Meshtastic：1つのチャンネルのLoRaメッシュ通信、受信したノードとパケット。
 
-settings-ui-meshtastic-on = パネルを表示
-
-settings-ui-meshtastic-hint = ExtrasウィンドウとモードメニューのExperimental欄にMeshtasticのチップを追加し、ウィンドウを開けるようにします。ウィンドウはメインに結合するか、タイトルバーのボタンで別ウィンドウにできます。オフにするとウィンドウが閉じます。受信機の停止はウィンドウ内のスイッチで行います。
-
 meshtastic-message = メッセージ
 
 meshtastic-message-hint = チャンネルの全員へ送る文章（最大200バイト）

@@ -9481,10 +9481,6 @@ meshtastic-bench-hint = 打开 Meshtastic 窗口：一个信道上的 LoRa 网�
 
 extras-meshtastic-hint = Meshtastic：一个信道上的 LoRa 网状网络流量、收到的节点和数据包。
 
-settings-ui-meshtastic-on = 显示面板
-
-settings-ui-meshtastic-hint = 在“附加”窗口和模式菜单的实验区添加 Meshtastic 按钮，并允许打开该窗口。窗口可停靠在主窗口，或用标题栏按钮移到独立窗口。关闭此项会关闭窗口；接收器需用窗口内的开关停止。
-
 meshtastic-message = 消息
 
 meshtastic-message-hint = 发给信道上所有人的文字（最多 200 字节）

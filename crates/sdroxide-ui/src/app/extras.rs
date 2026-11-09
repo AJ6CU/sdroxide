@@ -273,28 +273,15 @@ impl super::SdroxideApp {
             if wx.clicked() {
                 self.show_wxsat = !self.show_wxsat;
             }
-            // Where the settings have not switched the panel on, its slot is
-            // left empty like the spare ones below, so the window keeps its size.
-            if self.ui_settings.meshtastic_panel {
-                let mesh = crate::chrome::chip_sized(
-                    ui,
-                    self.show_meshtastic,
-                    "MESHTASTIC",
-                    egui::vec2(SLOT_W, SLOT_H),
-                )
-                .on_hover_text(tr!("extras-meshtastic-hint"));
-                if mesh.clicked() {
-                    self.show_meshtastic = !self.show_meshtastic;
-                }
-            } else {
-                let (rect, _) =
-                    ui.allocate_exact_size(egui::vec2(SLOT_W, SLOT_H), egui::Sense::hover());
-                ui.painter().rect_stroke(
-                    rect,
-                    3.0,
-                    egui::Stroke::new(1.0, crate::theme::gray(60)),
-                    egui::StrokeKind::Inside,
-                );
+            let mesh = crate::chrome::chip_sized(
+                ui,
+                self.show_meshtastic,
+                "MESHTASTIC",
+                egui::vec2(SLOT_W, SLOT_H),
+            )
+            .on_hover_text(tr!("extras-meshtastic-hint"));
+            if mesh.clicked() {
+                self.show_meshtastic = !self.show_meshtastic;
             }
             let rc_active = self.radio_classic_active();
             let rc = crate::chrome::chip_sized(ui, rc_active, tr!("topbar-radio"), egui::vec2(SLOT_W, SLOT_H))

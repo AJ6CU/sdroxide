@@ -4053,6 +4053,7 @@ impl SdroxideApp {
                     (tr!("settings-tool-window-memories").to_string(), crate::app::frame::TW_MEMORIES),
                     (tr!("extras-title"), crate::app::frame::TW_EXTRAS),
                     (tr!("pane-aircraft"), crate::app::frame::TW_AIRCRAFT),
+                    (tr!("meshtastic-title"), crate::app::frame::TW_MESHTASTIC),
                     (tr!("rc-radio-classic"), crate::app::frame::TW_RADIO_CLASSIC),
                     ("RDS".to_string(), crate::app::frame::TW_RDS),
                     ("DRM".to_string(), crate::app::frame::TW_DRM),

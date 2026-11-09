@@ -9543,10 +9543,6 @@ meshtastic-bench-hint = Meshtastic penceresini açar: tek bir kanalın LoRa ağ 
 
 extras-meshtastic-hint = Meshtastic: tek bir kanalın LoRa ağ trafiği, duyulan düğümler ve paketler.
 
-settings-ui-meshtastic-on = Paneli göster
-
-settings-ui-meshtastic-hint = Meshtastic düğmelerini Ekstralar penceresine ve mod menüsünün deneysel bölümüne ekler ve pencerenin açılmasına izin verir. Pencere ana pencereye yerleşir veya başlık çubuğu düğmesiyle kendi penceresine geçer. Kapatmak pencereyi kapatır; alıcı pencerenin kendi anahtarıyla durur.
-
 meshtastic-message = Mesaj
 
 meshtastic-message-hint = Kanaldaki herkes için metin (en fazla 200 bayt)
