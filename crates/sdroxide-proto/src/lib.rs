@@ -2362,8 +2362,14 @@ use sdroxide_types::{
 /// set the tone on VFO B, and `TxState` gains `rig_keyed: bool` last, the rig
 /// transmitting under its own control. Both cross the link inside postcard
 /// structs. `PROTO_VERSION` 288 → 289, `VERSION_BYTE` 0x6C → 0x6D.
-pub const PROTO_VERSION: u16 = 289;
-const VERSION_BYTE: u8 = 0x6D;
+///
+/// v290: **the profile no longer carries the interface language.** PR #579 is
+/// reverted: [`sdroxide_types::ClientScreen`] loses `language` (added in v282),
+/// so the layout of `ClientScreen`, which rides `ClientMsg::SetClientSettings`
+/// and `ServerMsg::ClientSettings` whole, changes again.
+/// `PROTO_VERSION` 289 → 290, `VERSION_BYTE` 0x6D → 0x6E.
+pub const PROTO_VERSION: u16 = 290;
+const VERSION_BYTE: u8 = 0x6E;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -4759,7 +4765,7 @@ mod tests {
     /// and the rig's own keying the end of `TxState`; the version is pinned.
     #[test]
     fn the_sat_lock_tone_and_the_rig_keyed_flag_round_trip() {
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (289, 0x6D));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (290, 0x6E));
         let cfg = sdroxide_types::SatLockConfig {
             norad_id: 25544,
             ctcss_hz: Some(67.0),

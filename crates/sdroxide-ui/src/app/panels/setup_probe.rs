@@ -45,7 +45,7 @@ mod probe {
         // client's own choice (`set_language(self.applied_language)`), so a call
         // to the loader alone is overwritten on the first frame.
         app.ui_settings.language = language;
-        crate::i18n::set_language(language, &ctx);
+        crate::i18n::set_language(language);
         app.state.rx[0].mode = sdroxide_types::Mode::Ft8;
         app.show_digi_settings = true;
         app.digi_cfg_edit.my_call = "F4NRM".into();
