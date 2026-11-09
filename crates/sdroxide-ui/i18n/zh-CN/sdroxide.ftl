@@ -5299,8 +5299,6 @@ recjobs-kind-iq = I/Q
 
 recjobs-kind-both = 两者
 
-panels-sensitivity = 灵敏度
-
 navtex-hunting = 搜索中
 
 navtex-hunting-hint =
@@ -5312,11 +5310,8 @@ navtex-hunting-hint =
 
     还请记住，NAVTEX 是按时间表发送的，而不是对话：海岸电台每四小时发送十分钟，所以大部分时间安静是正常的。您必须在电台的发送时刻收听。而且 518 kHz 只在夜间才活跃，白天波段安静并不意味着解码器坏了。
 
-navtex-sensitivity-hint =
-    灵敏度：解码器锁定并保持信号的难易程度。
-navtex-auto-hint = 恢复为参考阈值 (0)。启用时高亮显示。
 
-navtex-tune-dial-usb-below-channel = 在此调谐拨盘（USB，比信道低 1.710 kHz）。
+navtex-tune-dial-usb-below-channel = 在此调谐拨盘（USB，比信道低 1.700 kHz）。
 
 settings-audio-your-audio = 您的音频
 
@@ -9573,3 +9568,13 @@ wefax-revert-auto-slant-hint = 撤销此图的自动倾斜校正：时钟微调�
 qrzcard-no-account = 未登记 QRZ.com 账户 -
 
 qrzcard-account-link = 查看账户状态
+
+navtex-other-frequencies = NAVTEX 与海岸电台频率
+
+navtex-other-frequencies-hint = 已公布的 NAVTEX 列表中的全部频率，按地区排列。选择后会按上边带调谐拨盘。标有 CW 的条目是莫尔斯气象通报，本解码器无法读取。
+
+navtex-freq-cw = CW 模式
+
+navtex-freq-international = 国际，英语
+
+navtex-freq-national = 国内，当地语言

@@ -5363,8 +5363,6 @@ recjobs-kind-iq = I/Q
 
 recjobs-kind-both = Both
 
-panels-sensitivity = Sensitivity
-
 navtex-hunting = hunting
 
 navtex-hunting-hint =
@@ -5376,12 +5374,8 @@ navtex-hunting-hint =
     
     Also remember NAVTEX is a timetable, not a conversation: a coast station sends for ten minutes every four hours, so silence is normal most of the time. You have to be listening when your station is due. And 518 kHz only comes alive at night — a quiet daytime band is not a broken decoder.
 
-navtex-sensitivity-hint =
-    Sensitivity — how readily the decoder locks onto and keeps a signal.
-    
-navtex-auto-hint = Returns to the reference thresholds (0). Highlighted while active.
 
-navtex-tune-dial-usb-below-channel = Tune the dial here (USB, 1.710 kHz below the channel).
+navtex-tune-dial-usb-below-channel = Tune the dial here (USB, 1.700 kHz below the channel).
 
 settings-audio-your-audio = Your audio
 
@@ -9662,3 +9656,13 @@ wefax-revert-auto-slant-hint = Undo the automatic slant correction on this chart
 qrzcard-no-account = No QRZ.com account registered -
 
 qrzcard-account-link = see the account status
+
+navtex-other-frequencies = NAVTEX AND COAST STATION FREQUENCIES
+
+navtex-other-frequencies-hint = Every frequency of the published NAVTEX list, by region. Picking one tunes the dial for upper sideband. The entries marked CW are Morse weather bulletins, which this decoder does not read.
+
+navtex-freq-cw = CW mode
+
+navtex-freq-international = international, in English
+
+navtex-freq-national = national, in the local language

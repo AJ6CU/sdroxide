@@ -5361,8 +5361,6 @@ recjobs-kind-iq = I/Q
 
 recjobs-kind-both = İkisi
 
-panels-sensitivity = Hassasiyet
-
 navtex-hunting = aranıyor
 
 navtex-hunting-hint =
@@ -5374,11 +5372,8 @@ navtex-hunting-hint =
 
     Ayrıca NAVTEX'in bir sohbet değil, bir tarife olduğunu unutmayın: bir kıyı istasyonu her dört saatte on dakika yayın yapar, bu yüzden çoğu zaman sessizlik normaldir. İstasyonunuzun sırası geldiğinde dinliyor olmalısınız. Ayrıca 518 kHz yalnızca geceleri canlanır — sessiz bir gündüz bandı bozuk bir çözücü anlamına gelmez.
 
-navtex-sensitivity-hint =
-    Hassasiyet — çözücünün bir sinyale ne kadar kolay kilitlenip onu ne kadar iyi tuttuğu.
-navtex-auto-hint = Referans eşiklere (0) döner. Etkinken vurgulanır.
 
-navtex-tune-dial-usb-below-channel = Kadranı buraya ayarlayın (USB, kanalın 1.710 kHz altı).
+navtex-tune-dial-usb-below-channel = Kadranı buraya ayarlayın (USB, kanalın 1.700 kHz altı).
 
 settings-audio-your-audio = Sesiniz
 
@@ -9635,3 +9630,13 @@ wefax-revert-auto-slant-hint = Bu haritadaki otomatik eğim düzeltmesini geri a
 qrzcard-no-account = Kayıtlı QRZ.com hesabı yok -
 
 qrzcard-account-link = hesap durumuna bak
+
+navtex-other-frequencies = NAVTEX VE KIYI İSTASYONU FREKANSLARI
+
+navtex-other-frequencies-hint = Yayımlanan NAVTEX listesindeki tüm frekanslar, bölgeye göre. Birini seçmek kadranı üst yan bant için ayarlar. CW işaretli girişler Mors hava bültenleridir; bu çözücü onları okumaz.
+
+navtex-freq-cw = CW modu
+
+navtex-freq-international = uluslararası, İngilizce
+
+navtex-freq-national = ulusal, yerel dilde
