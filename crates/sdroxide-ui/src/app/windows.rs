@@ -590,7 +590,7 @@ impl SdroxideApp {
                     .on_hover_text(tr!("windows-write-list-out-chirp-csv"))
                     .clicked()
                 {
-                    let csv = sdroxide_types::memories_to_chirp_csv(&self.memories);
+                    let csv = sdroxide_types::memories_to_chirp_csv(&self.memories, &self.mem_folders);
                     crate::download::save("sdroxide-memories.csv", csv.as_bytes());
                 }
                 // Every channel at once, for a list imported by the hundred

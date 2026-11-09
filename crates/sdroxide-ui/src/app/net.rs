@@ -413,7 +413,7 @@ impl SdroxideApp {
         };
         let text = loaded.text;
         let parsed =
-            catch_unwind(AssertUnwindSafe(|| sdroxide_types::chirp_csv_to_memories(&text)));
+            catch_unwind(AssertUnwindSafe(|| sdroxide_types::chirp_csv_to_filed_memories(&text)));
         let Ok((channels, skipped)) = parsed else {
             self.push_net_log(tr!("net-channel-import-failed-file-could").to_string());
             return;
@@ -425,7 +425,9 @@ impl SdroxideApp {
             return;
         }
         let n = channels.len();
-        cmds.push(Command::ImportMemories(channels));
+        // With the folder names the file carries (issue #623): the engine
+        // finds or creates each folder, an id from a file would mean nothing.
+        cmds.push(Command::ImportMemoriesFiled(channels));
         let skipped = match skipped {
             0 => String::new(),
             n => tr!("net-line-s-skipped", n = n),

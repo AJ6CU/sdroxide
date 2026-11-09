@@ -149,10 +149,44 @@ fn a_channel_list_is_imported_once_however_often_it_is_offered() {
     let cleared = memories(&h.event_rx, 1);
     assert_eq!(cleared[0].name, "fresh");
 
+    // Issue #623: a list that names folders is filed into them. "Brown" and
+    // "brown" are one folder, an empty name is the top level, and the folder
+    // is made once, not once a channel.
+    let mk = |name: &str, hz: f64| MemoryChannel {
+        name: name.into(),
+        freq_hz: hz,
+        ..cleared[0].clone()
+    };
+    send(Command::ImportMemoriesFiled(vec![
+        (mk("a", 7_194_000.0), Some("Brown".into())),
+        (mk("b", 7_195_000.0), Some(" brown ".into())),
+        (mk("c", 7_196_000.0), None),
+        (mk("d", 7_197_000.0), Some("Other".into())),
+    ]));
+    let deadline = Instant::now() + Duration::from_secs(5);
+    let (mut filed, mut folders) = (Vec::new(), Vec::new());
+    while Instant::now() < deadline && (filed.len() < 5 || folders.len() < 2) {
+        match h.event_rx.recv_timeout(Duration::from_millis(100)) {
+            Ok(RadioEvent::Memories(m)) => filed = m,
+            Ok(RadioEvent::MemoryFolders(f)) => folders = f,
+            _ => {}
+        }
+    }
+    assert_eq!(folders.len(), 2, "one folder per distinct name: {folders:?}");
+    let in_folder = |name: &str| {
+        let m = filed.iter().find(|m| m.name == name).unwrap();
+        m.folder.and_then(|id| folders.iter().find(|f| f.id == id)).map(|f| f.name.clone())
+    };
+    assert_eq!(in_folder("a").as_deref(), Some("Brown"));
+    assert_eq!(in_folder("b").as_deref(), Some("Brown"));
+    assert_eq!(in_folder("c"), None);
+    assert_eq!(in_folder("d").as_deref(), Some("Other"));
+
     // And it is on disk, not merely announced.
     drop(h);
     let _ = thread.map(|t| t.join());
     let saved = sdroxide_config::load_memories();
-    assert_eq!(saved.len(), 1);
+    assert_eq!(saved.len(), 5);
+    assert_eq!(sdroxide_config::load_memory_folders().len(), 2);
     let _ = std::fs::remove_dir_all(&root);
 }

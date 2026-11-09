@@ -2,7 +2,7 @@
 
 Working queue. Rules in AGENTS.md. Last updated 2026-11-08.
 
-State: `main` at crate 2.3.0, PROTO_VERSION 289 (0x6D). Latest release v2.2.3.6.5_brown (pre-release); full release 2.3.0_brown due 2026-11-06 18:00 UTC. Open PRs: 0 (re-measured 2026-11-08). Open issues: 10 (re-measured 2026-11-07).
+State: `main` at crate 2.3.0, PROTO_VERSION 292 (0x70). Latest release v2.2.3.6.5_brown (pre-release); full release 2.3.0_brown due 2026-11-06 18:00 UTC. Open PRs: 0 (re-measured 2026-11-08). Open issues: 10 (re-measured 2026-11-07).
 
 ## Task tracking rules
 
@@ -154,6 +154,7 @@ Everything else that was in this list has been merged or closed since â€” s
 - AppImage â€” beslissing nodig.
 
 ## Recently done
+- 2026-11-09 — #623 a memory list exported to CSV lost its folders (added by kvenl, owned by Claude): the CHIRP CSV carried no folder, so every channel came back at the top level. The export now has a `Folder` column (the folder's **name**; CHIRP ignores unknown columns) and the import files each channel into the folder of that name, found without regard to case or created once. A channel already stored stays where it is. New `Command::ImportMemoriesFiled` (appended): `PROTO_VERSION` 291 → 292 (`0x70`), postcard round trip; engine test on a real `memories.json`/folders file; no new message to translate. An older file without the column still reads, filed nowhere.
 - 2026-11-09 — #553 HL2 (P1/P2) lost EP6/DDC datagrams at 48 and 96 ksps (added by DK8JV, owned by Claude): Wireshark showed every datagram reaching the NIC, so the loss was in our read — a 2 ms `SO_RCVTIMEO` on Windows. P1 and P2 now read on their own blocking thread (`net::start_receiver`, #626); P1 fills sequence gaps with silence and the logs show the clock, largest gap, loop and EP2 timing (#600). Confirmed by DK8JV on a real HL2.
 - 2026-11-09 — #616 RSPduo start-up note removed (added by drdatapi, owned by Claude): the `(_, DuoMode::Split)` arm of `status_note()` (`src/sdrplay_source.rs`) pushed "Running on the RSPduo's tuner N … 2.000 Msps" at every tuner start in the correct "second radio" setup; it is now empty (the info stays in the log and the manual). No wire change, no message to translate. **Not run on a real RSPduo.**
 - 2026-11-09 — Meshtastic, PR 5/5 (#611; added by F4NRM, owned by Claude): send a text from the panel (message field, Send…, confirmation) through the ordinary TX path; the TX band list stays the single rule. New band **ISM868** (863–870 MHz, SRD) in the transmit list, to be ticked and confirmed like the others; EU 433 via 70 cm, US via 33 cm. Duty-cycle tracker per region (1 % EU 868, 10 % EU 433), node id kept in `meshtastic.json`, typed refusals, 20 messages in eleven languages. `PROTO_VERSION` 287 → 288 (`0x6C`). **Checked on generated IQ only, never over the air.** `radio_config` test already fails on `main` (RX list migration).
