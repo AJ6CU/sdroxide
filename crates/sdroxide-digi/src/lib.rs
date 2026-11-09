@@ -266,6 +266,10 @@ pub trait DigiEngine: Send {
     /// Weather fax: shift the line alignment by whole pixels, to straighten a
     /// chart whose phasing pulse was missed.
     fn wefax_nudge(&mut self, _pixels: i32) {}
+
+    /// Weather fax: undo the auto-slant on the picture in progress. The trim
+    /// goes back to the operator's own and stays there for this page.
+    fn wefax_revert_slant(&mut self) {}
     /// RIFP: queue a composed image (interleaved RGB) and start transmitting.
     /// The controller encodes, chunks and frames it per the operator's config.
     fn set_rifp_image(&mut self, _rgb: Vec<u8>, _w: u16, _h: u16) {}

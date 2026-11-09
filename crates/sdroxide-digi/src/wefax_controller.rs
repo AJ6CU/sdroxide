@@ -284,12 +284,13 @@ impl DigiEngine for WefaxController {
                     let (slant_ppm, phasing_lines) = self.rx.slant_correction();
                     tracing::info!(
                         "wefax: page finished — {lines} lines, ended by {}, slant {slant_ppm:+.1} \
-                         ppm from {phasing_lines} phasing lines",
+                         ppm from {phasing_lines} phasing lines{}",
                         if by_tone {
                             "the stop tone"
                         } else {
                             "the operator, a fade or the length limit"
-                        }
+                        },
+                        if self.rx.slant_reverted() { ", auto-slant reverted" } else { "" }
                     );
                     self.emit_image();
                     self.status_dirty = true;
@@ -360,8 +361,18 @@ impl DigiEngine for WefaxController {
         self.rx.set_lpm(to_lpm(cfg.wefax_lpm));
         self.rx.set_auto_start(cfg.wefax_auto_start);
         self.rx.set_auto_stop(cfg.wefax_auto_stop);
-        self.rx.set_slant_ppm(cfg.wefax_slant_ppm);
+        // Only when the operator's own trim moved: any other setting sends the
+        // whole config again, and that must not throw away what the auto-slant
+        // measured for the page in progress.
+        if cfg.wefax_slant_ppm != self.cfg.wefax_slant_ppm {
+            self.rx.set_slant_ppm(cfg.wefax_slant_ppm);
+        }
         self.cfg = cfg;
+        self.status_dirty = true;
+    }
+
+    fn wefax_revert_slant(&mut self) {
+        self.rx.revert_slant();
         self.status_dirty = true;
     }
 

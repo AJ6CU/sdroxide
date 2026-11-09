@@ -9575,3 +9575,7 @@ meshtastic-float-hint = パネルをウォーターフォールの上に浮か�
 meshtastic-dock-hint = パネルをウォーターフォールの下に戻します。
 
 meshtastic-tune-mode-hint = 無線機はワイドFMにも切り替わり、スピーカーと録音にチャンネルの信号が届きます。終了するとモードは元に戻ります。
+
+wefax-revert-auto-slant = 傾き補正を戻す
+
+wefax-revert-auto-slant-hint = このチャートの自動傾き補正を取り消します。クロック調整はここで設定した値に戻り、次のチャートまで自動補正はオフのままです。すでに受信した行は変わりません。

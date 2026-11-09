@@ -9627,3 +9627,7 @@ meshtastic-float-hint = Das Fenster als schwebendes Fenster über das Wasserfall
 meshtastic-dock-hint = Das Fenster wieder unter dem Wasserfall-Diagramm andocken.
 
 meshtastic-tune-mode-hint = Das Funkgerät wird auch auf Breitband-FM gestellt, damit Lautsprecher und Aufnahme das Kanalsignal haben; beim Beenden kommt der Modus zurück.
+
+wefax-revert-auto-slant = Neigung zurücksetzen
+
+wefax-revert-auto-slant-hint = Macht die automatische Neigungskorrektur dieser Karte rückgängig: Der Takt-Trimm kehrt auf den hier eingestellten Wert zurück, die automatische Korrektur bleibt bis zur nächsten Karte aus. Bereits empfangene Zeilen bleiben unverändert.

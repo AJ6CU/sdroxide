@@ -2381,8 +2381,12 @@ use sdroxide_types::{
 /// list with the folder name of each channel, so a CSV exported with its
 /// folders imports into them. A v291 station does not know the variant.
 /// `PROTO_VERSION` 291 → 292, `VERSION_BYTE` 0x6F → 0x70.
-pub const PROTO_VERSION: u16 = 292;
-const VERSION_BYTE: u8 = 0x70;
+///
+/// v293: **weather fax: undo the auto-slant.** [`sdroxide_types::Command`]
+/// gains `WefaxRevertSlant`, appended, with no payload. A v292 station does
+/// not know the variant. `PROTO_VERSION` 292 → 293, `VERSION_BYTE` 0x70 → 0x71.
+pub const PROTO_VERSION: u16 = 293;
+const VERSION_BYTE: u8 = 0x71;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -3689,7 +3693,7 @@ mod tests {
             ServerMsg::TxRefused(w, hz) => assert_eq!((w, hz), (why, 7_074_000.0)),
             _ => panic!("TxRefused did not round-trip"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (292, 0x70));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (293, 0x71));
         // v280: the CB refusal is a new tail variant of `TxBlock`; the ones
         // before it keep their positions.
         let cb = ServerMsg::TxRefused(sdroxide_types::TxBlock::CbOff, 27_185_000.0);
@@ -3745,7 +3749,7 @@ mod tests {
             }
             other => panic!("the answer did not round-trip: {other:?}"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (292, 0x70));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (293, 0x71));
     }
 
     /// v286: the QRZ card rides `CallsignResult` — photo, age and all.
@@ -3766,7 +3770,7 @@ mod tests {
             ServerMsg::CallsignResult(back) => assert_eq!(back, info),
             other => panic!("the card did not round-trip: {other:?}"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (292, 0x70));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (293, 0x71));
     }
 
     /// The VOR read-out rides the wire whole, locked or not, and the message is
@@ -4525,6 +4529,24 @@ mod tests {
         assert_eq!(decode::<ClientMsg>(&encode(&msg).unwrap()).unwrap(), msg);
     }
 
+    /// v293: the revert of the weather fax auto-slant is the last variant of
+    /// `Command`, so the ones before it keep their positions.
+    #[test]
+    fn the_wefax_revert_slant_is_appended_last() {
+        let last = encode(&ClientMsg::Command(Command::WefaxRevertSlant)).unwrap();
+        let before = encode(&ClientMsg::Command(Command::ImportMemoriesFiled(vec![]))).unwrap();
+        assert_eq!(last[0], 0x71);
+        // `before` is the version, the message and variant tags, then the empty
+        // list's length byte; `last` is the same tags with the variant one on.
+        // The variant number is a varint: its low byte is one more, the rest
+        // is the same.
+        let (n, m) = (last.len(), before.len());
+        assert_eq!(n, m - 1, "a bare variant has no payload");
+        assert_eq!(last[2], before[2] + 1, "must directly follow ImportMemoriesFiled");
+        assert_eq!(last[3..], before[3..m - 1]);
+        assert_eq!(decode::<ClientMsg>(&last).unwrap(), ClientMsg::Command(Command::WefaxRevertSlant));
+    }
+
     /// The band plan library crosses the wire: the three commands, the list the
     /// station announces and the name of the plan it runs, and the fingerprint a
     /// radio keeps beside its confirmed band lists. Filled rather than left at
@@ -4805,7 +4827,7 @@ mod tests {
     /// and the rig's own keying the end of `TxState`; the version is pinned.
     #[test]
     fn the_sat_lock_tone_and_the_rig_keyed_flag_round_trip() {
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (292, 0x70));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (293, 0x71));
         let cfg = sdroxide_types::SatLockConfig {
             norad_id: 25544,
             ctcss_hz: Some(67.0),

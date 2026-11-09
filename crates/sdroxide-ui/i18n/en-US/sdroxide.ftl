@@ -9654,3 +9654,7 @@ meshtastic-float-hint = Lift the panel out into a floating window over the water
 meshtastic-dock-hint = Dock the panel back under the waterfall.
 
 meshtastic-tune-mode-hint = The radio is also put in wide FM, so the loudspeaker and the recorder have the channel's signal; leaving puts the mode back.
+
+wefax-revert-auto-slant = Revert slant
+
+wefax-revert-auto-slant-hint = Undo the automatic slant correction on this chart: the clock trim goes back to the value set here and the automatic correction stays off until the next chart. Lines already received are not changed.

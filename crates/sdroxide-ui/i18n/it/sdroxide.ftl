@@ -9636,3 +9636,7 @@ meshtastic-float-hint = Sposta il pannello in una finestra mobile sopra il water
 meshtastic-dock-hint = Riaggancia il pannello sotto il waterfall.
 
 meshtastic-tune-mode-hint = La radio passa anche in FM larga, così altoparlante e registratore hanno il segnale del canale; uscendo il modo viene ripristinato.
+
+wefax-revert-auto-slant = Annulla inclinazione
+
+wefax-revert-auto-slant-hint = Annulla la correzione automatica dell'inclinazione su questa carta: la regolazione dell'orologio torna al valore impostato qui e la correzione automatica resta disattivata fino alla carta successiva. Le righe già ricevute non cambiano.

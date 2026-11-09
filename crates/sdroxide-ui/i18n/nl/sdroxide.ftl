@@ -9635,3 +9635,7 @@ meshtastic-float-hint = Haal het paneel los in een zwevend venster boven de wate
 meshtastic-dock-hint = Zet het paneel weer vast onder de waterval.
 
 meshtastic-tune-mode-hint = De radio gaat ook naar brede FM, zodat de luidspreker en de recorder het kanaalsignaal krijgen; bij het verlaten komt de modus terug.
+
+wefax-revert-auto-slant = Scheefstand herstellen
+
+wefax-revert-auto-slant-hint = Maakt de automatische scheefstandcorrectie van deze kaart ongedaan: de klokcorrectie gaat terug naar de hier ingestelde waarde en de automatische correctie blijft uit tot de volgende kaart. Reeds ontvangen regels veranderen niet.

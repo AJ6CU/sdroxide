@@ -1551,6 +1551,13 @@ pub enum Command {
     ///
     /// Appended for the usual reason — postcard numbers variants by position.
     ImportMemoriesFiled(Vec<(crate::MemoryChannel, Option<String>)>),
+
+    /// Weather fax: undo the auto-slant on the picture in progress. The line
+    /// clock goes back to the operator's own trim and the auto-slant stays off
+    /// until the next page; lines already drawn are not touched.
+    ///
+    /// Appended for the usual reason — postcard numbers variants by position.
+    WefaxRevertSlant,
 }
 
 /// What a [`Command::GetKnownCalls`] was answered with.

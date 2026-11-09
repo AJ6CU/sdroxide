@@ -9627,3 +9627,7 @@ meshtastic-float-hint = Paneli şelalenin üzerinde kayan bir pencereye çıkar.
 meshtastic-dock-hint = Paneli şelalenin altına geri yerleştir.
 
 meshtastic-tune-mode-hint = Telsiz ayrıca geniş FM'ye alınır; hoparlör ve kayıt cihazı kanalın sinyalini alır. Çıkınca mod geri gelir.
+
+wefax-revert-auto-slant = Eğimi geri al
+
+wefax-revert-auto-slant-hint = Bu haritadaki otomatik eğim düzeltmesini geri alır: saat ayarı burada girilen değere döner ve otomatik düzeltme sonraki haritaya kadar kapalı kalır. Daha önce alınan satırlar değişmez.

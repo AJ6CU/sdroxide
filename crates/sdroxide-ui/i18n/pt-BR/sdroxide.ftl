@@ -9627,3 +9627,7 @@ meshtastic-float-hint = Destacar o painel em uma janela flutuante sobre o waterf
 meshtastic-dock-hint = Acoplar o painel de volta sob o waterfall.
 
 meshtastic-tune-mode-hint = O rádio também vai para FM larga, para que o alto-falante e o gravador tenham o sinal do canal; ao sair, o modo volta.
+
+wefax-revert-auto-slant = Desfazer inclinação
+
+wefax-revert-auto-slant-hint = Desfaz a correção automática de inclinação nesta carta: o ajuste do relógio volta ao valor definido aqui e a correção automática fica desligada até a próxima carta. As linhas já recebidas não mudam.
