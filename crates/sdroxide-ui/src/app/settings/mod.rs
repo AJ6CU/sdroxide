@@ -1059,7 +1059,7 @@ fn band_plan_table(
                 // Listening bands (LW, MW, SW, FM, AIR, MIL) are always open,
                 // and so is everything in SWL mode.
                 let reach = band_reached(caps, *band);
-                let always = swl || band.is_listen_service();
+                let always = swl || band.rx_always_open();
                 let on_rx = reach && (always || listed_rx.contains(band));
                 let mut choice_rx = on_rx;
                 ui.add_enabled_ui(reach && !always, |ui| {

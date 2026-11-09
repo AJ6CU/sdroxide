@@ -9551,3 +9551,17 @@ sonde-card-click-to-listen = 点击频率即可收听
 sonde-type-all = 所有类型
 
 sonde-type-hover = 查找某一类探空仪：选择后开始扫描，窗口会在频段内移动，直到听到该类型。只列出并绘制该类型。
+
+meshtastic-preset-auto = 自动
+
+meshtastic-preset-auto-hint = 同时监听所有预设（从 ShortTurbo 到 LongSlow）。不知道网络使用哪一个时无需选择。
+
+meshtastic-freq-hint = 频道频率，精确到千赫。适用于不使用该地区标准频道的网络。松开时生效。
+
+meshtastic-close-hint = 关闭 Meshtastic 面板。接收器会一直运行，直到你将其关闭。
+
+meshtastic-float-hint = 将面板取出为悬浮在瀑布图上方的窗口。
+
+meshtastic-dock-hint = 将面板重新停靠到瀑布图下方。
+
+meshtastic-tune-mode-hint = 电台同时切换到宽带调频，使扬声器和录音获得该频道的信号；退出时模式会恢复。

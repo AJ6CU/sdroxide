@@ -385,6 +385,16 @@ impl Band {
         matches!(self, Band::Lw | Band::Mw | Band::Sw | Band::Fm | Band::Air | Band::Mil)
     }
 
+    /// Whether the receive band list never refuses this band: the listening
+    /// services, and the 868 MHz licence-free band. That one exists for the
+    /// *transmit* list (a licence-free device is keyed by choice); listening to
+    /// it was open before it had a name of its own (DAB, ISM receivers, Meshtastic
+    /// all sit there), and a receive list written before the band existed must
+    /// not shut them out.
+    pub fn rx_always_open(self) -> bool {
+        self.is_listen_service() || self == Band::Ism868
+    }
+
     /// The modes that make sense on this band, or `None` when the band takes
     /// any of them.
     ///

@@ -791,6 +791,9 @@ pub struct SdroxideApp {
     /// operator has pressed Send and is being asked to confirm it.
     meshtastic_draft: String,
     meshtastic_confirming: bool,
+    /// The channel frequency being dragged in the MESHTASTIC window, in MHz;
+    /// `None` until touched. Sent to the station when the drag ends.
+    meshtastic_freq_mhz: Option<f64>,
     /// HFDL: the aircraft plot table and the map's pan/zoom and selection. Its
     /// own table rather than the decode log's, so an aircraft stays on the map
     /// after its earliest decodes have scrolled out of the log.
@@ -2413,6 +2416,7 @@ impl SdroxideApp {
             meshtastic_keys: None,
             meshtastic_draft: String::new(),
             meshtastic_confirming: false,
+            meshtastic_freq_mhz: None,
             hfdl_map: crate::hfdl_map::HfdlMapState::default(),
             sonde_map: crate::sonde_map::SondeMapState::default(),
             sonde_online: crate::sonde_online::Online::default(),

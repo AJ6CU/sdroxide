@@ -149,7 +149,7 @@ fn status_where(
 }
 
 fn on() -> MeshtasticSettings {
-    MeshtasticSettings { enabled: true, ..Default::default() }
+    MeshtasticSettings { enabled: true, preset: "LongFast".into(), ..Default::default() }
 }
 
 #[test]
@@ -267,10 +267,11 @@ fn a_restore_point_sent_by_a_client_is_ignored() {
     assert_eq!(s.meshtastic.restore.unwrap().dial_hz, 14_200_000.0);
 }
 
-/// The receive band list is the operator's: the receiver reads it, says so
-/// when it refuses the channel, and leaves the list and the dial alone.
+/// The 868 band is never shut by the receive band list, confirmed or not: a
+/// list that does not name it must not keep the receiver idle (that locked the
+/// VFO and the tuning whenever the panel moved to 868).
 #[test]
-fn an_unconfirmed_receive_list_keeps_the_receiver_idle_and_says_so() {
+fn an_unconfirmed_receive_list_never_shuts_the_868_band() {
     isolate_config();
     let go = Arc::new(AtomicBool::new(true));
     let mut h = start_engine(
@@ -289,17 +290,13 @@ fn an_unconfirmed_receive_list_keeps_the_receiver_idle_and_says_so() {
     h.cmd_tx.send(Command::SetMeshtasticConfig(on())).unwrap();
 
     let mut state = None;
-    let st = status_where(&h, Duration::from_secs(5), &mut state, |s| s.refused.is_some());
+    let refused = status_where(&h, Duration::from_secs(3), &mut state, |s| s.refused.is_some());
     let state = state.expect("the engine should publish state");
     drop(h.cmd_tx);
     if let Some(t) = thread {
         let _ = t.join();
     }
-    let st = st.expect("an idle status that names the refusal");
-    assert_eq!(st.refused, Some(RxBlock::Unconfirmed));
-    assert!(st.in_window);
-    assert_eq!(st.frames, 0, "a refused channel is never decoded");
-    // The receiver is on and the radio was not moved by it.
+    assert!(refused.is_none(), "868 is not refused: {refused:?}");
     assert!(state.meshtastic.enabled);
     assert_eq!(state.center_hz, CHANNEL_HZ);
 }

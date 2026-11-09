@@ -8091,7 +8091,7 @@ impl RadioConfig {
     /// own and is covered by a confirmed list.
     pub fn rx_band_allowed(&self, band: Band) -> bool {
         !self.rx_lock_active()
-            || band.is_listen_service()
+            || band.rx_always_open()
             || (self.rx_bands_confirmed
                 && (band == Band::Gen
                     || self.rx_band_enable.as_ref().is_some_and(|bands| bands.contains(&band))))
@@ -8119,7 +8119,7 @@ impl RadioConfig {
     /// (the gaps between them) are open once the list is confirmed.
     pub fn rx_block_reason(&self, dial_hz: f64) -> Option<RxBlock> {
         let band = Band::containing(dial_hz);
-        if !self.rx_lock_active() || band.is_listen_service() {
+        if !self.rx_lock_active() || band.rx_always_open() {
             return None;
         }
         if !self.rx_bands_confirmed {
@@ -9823,6 +9823,23 @@ mod tests {
         }
         assert!(c.rx_band_allowed(Band::M40));
         assert!(!c.rx_lock_active());
+    }
+
+    /// The 868 MHz band was given a name for the transmit list. Receiving
+    /// there (DAB, ISM receivers, Meshtastic) was open before, and a confirmed
+    /// receive list written before the band existed does not name it: the dial
+    /// must not be refused (the VFO stood still on 868.9 and 869.525 MHz).
+    #[test]
+    fn the_868_band_is_never_shut_to_receive() {
+        let c = rx_list(&[], true);
+        for hz in [863_000_000.0, 868_900_000.0, 869_525_000.0, 869_999_000.0] {
+            assert_eq!(c.rx_block_reason(hz), None, "{hz}");
+        }
+        assert!(c.rx_band_allowed(Band::Ism868));
+        // The list still decides for the amateur bands next to it.
+        assert!(c.rx_block_reason(433_500_000.0).is_some());
+        assert!(!Band::Ism868.is_listen_service());
+        assert!(Band::Ism868.rx_always_open());
     }
 
     #[test]

@@ -9561,3 +9561,17 @@ sonde-card-click-to-listen = 周波数をクリックして受信
 sonde-type-all = すべてのタイプ
 
 sonde-type-hover = ゾンデの種類を指定して探します。選ぶとスキャンが始まり、その種類が受信できるまでウィンドウをバンド内で動かします。その種類だけが一覧と地図に表示されます。
+
+meshtastic-preset-auto = 自動
+
+meshtastic-preset-auto-hint = すべてのプリセットを同時に受信します（ShortTurbo から LongSlow まで）。ネットワークがどれを使っているか分からなくても選ぶ必要はありません。
+
+meshtastic-freq-hint = チャンネル周波数（kHz 単位）。地域のスロットを使わないネットワーク向けです。離したときに適用されます。
+
+meshtastic-close-hint = Meshtastic パネルを閉じます。受信機は、オフにするまで動き続けます。
+
+meshtastic-float-hint = パネルをウォーターフォールの上に浮かぶウィンドウとして切り離します。
+
+meshtastic-dock-hint = パネルをウォーターフォールの下に戻します。
+
+meshtastic-tune-mode-hint = 無線機はワイドFMにも切り替わり、スピーカーと録音にチャンネルの信号が届きます。終了するとモードは元に戻ります。

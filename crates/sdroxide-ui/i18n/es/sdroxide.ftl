@@ -9612,3 +9612,17 @@ sonde-card-click-to-listen = Haga clic en la frecuencia para escuchar
 sonde-type-all = Todos los tipos
 
 sonde-type-hover = Buscar un tipo de sonda: al elegir uno empieza el escaneo, que mueve la ventana por la banda hasta oír ese tipo. Solo ese tipo se lista y se dibuja.
+
+meshtastic-preset-auto = Auto
+
+meshtastic-preset-auto-hint = Escucha todos los preajustes a la vez (de ShortTurbo a LongSlow). No hay que elegir cuando no se sabe cuál usa la red.
+
+meshtastic-freq-hint = Frecuencia del canal, al kilohercio. Para una red que no usa las ranuras de la región. Se aplica al soltar.
+
+meshtastic-close-hint = Cerrar el panel de Meshtastic. El receptor sigue funcionando hasta que lo apague.
+
+meshtastic-float-hint = Sacar el panel a una ventana flotante sobre la cascada.
+
+meshtastic-dock-hint = Volver a acoplar el panel bajo la cascada.
+
+meshtastic-tune-mode-hint = La radio pasa también a FM ancha, para que el altavoz y el grabador tengan la señal del canal; al salir se restaura el modo.

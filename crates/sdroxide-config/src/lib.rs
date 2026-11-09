@@ -2199,8 +2199,27 @@ pub fn save_wxsat_config(cfg: &sdroxide_types::WxsatSettings) -> Result<(), Conf
 /// and where the radio was before the lane tuned it (`meshtastic.json`). Kept
 /// on the station, so every client sees the same settings and the dial comes
 /// back whichever one turned the receiver on.
+///
+/// The preset is "Auto" by default, so that an operator who does not know which
+/// preset the network runs hears it anyway. A file written while the default was
+/// still LongFast holds that name without the operator ever having chosen it:
+/// once, it is turned into Auto (a marker file records that it was done, so a
+/// later deliberate choice of LongFast is kept).
 pub fn load_meshtastic_config() -> sdroxide_types::MeshtasticSettings {
-    load_json::<sdroxide_types::MeshtasticSettings>("meshtastic.json").sane()
+    let mut cfg = load_json::<sdroxide_types::MeshtasticSettings>("meshtastic.json").sane();
+    if let Ok(dir) = config_dir() {
+        let marker = dir.join("meshtastic-auto-default");
+        if !marker.exists() {
+            if cfg.preset == "LongFast" {
+                cfg.preset = sdroxide_types::MESH_DEFAULT_PRESET.to_string();
+                if let Err(e) = save_meshtastic_config(&cfg) {
+                    tracing::warn!("saving meshtastic.json: {e}");
+                }
+            }
+            let _ = std::fs::write(&marker, b"");
+        }
+    }
+    cfg
 }
 
 pub fn save_meshtastic_config(

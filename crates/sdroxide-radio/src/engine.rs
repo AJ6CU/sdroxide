@@ -34,7 +34,9 @@ use sdroxide_dsp::{
     make_demod, make_modulator,
 };
 use sdroxide_hfdl::HfdlController;
-use sdroxide_meshtastic::controller::{MeshtasticController, lane_rate_hz, preset_of};
+use sdroxide_meshtastic::controller::{
+    MeshtasticController, lane_bw_hz, lane_name, lane_rate_for, preset_of,
+};
 use sdroxide_sonde::SondeBank;
 use sdroxide_wxsat::WxsatLane;
 use sdroxide_ism::{IsmAction, IsmController};
@@ -13685,7 +13687,7 @@ impl Engine {
             self.state.center_hz,
             rate,
             cfg.frequency_hz,
-            f64::from(preset_of(cfg).bw_hz),
+            f64::from(lane_bw_hz(cfg)),
         );
         (in_window, self.rx_band_refusal(cfg.frequency_hz))
     }
@@ -13694,15 +13696,14 @@ impl Engine {
     /// at the lane rate of the current preset.
     fn build_mesh_lane(&mut self) {
         let cfg = &self.state.meshtastic;
-        let preset = preset_of(cfg);
-        let rate = lane_rate_hz(preset);
+        let rate = lane_rate_for(cfg);
         let mut ddc = Ddc::new(self.state.sample_rate, rate);
         ddc.set_offset_hz(cfg.frequency_hz - self.state.center_hz);
         let out_rate = ddc.out_rate();
         self.mesh_rs = ComplexResampler::new(out_rate, rate);
         self.mesh_ddc = Some(ddc);
         self.mesh_in_rate = self.state.sample_rate;
-        self.mesh_preset = preset.name;
+        self.mesh_preset = lane_name(cfg);
         self.mesh_buf.clear();
         self.mesh_res_buf.clear();
     }
@@ -13751,9 +13752,8 @@ impl Engine {
         if self.mesh_ddc.is_none() {
             return;
         }
-        let preset = preset_of(&self.state.meshtastic);
         if (self.state.sample_rate - self.mesh_in_rate).abs() >= 1.0
-            || preset.name != self.mesh_preset
+            || lane_name(&self.state.meshtastic) != self.mesh_preset
         {
             self.build_mesh_lane();
             info!(preset = self.mesh_preset, "meshtastic window rebuilt");
@@ -18423,7 +18423,7 @@ impl Engine {
 
     /// [`Self::rx_band_refusal`] for a band chosen by name (a band button).
     fn rx_band_refusal_for(&self, band: Band) -> Option<sdroxide_types::RxBlock> {
-        if !self.rx_bands_enforced || self.rx_swl || band.is_listen_service() {
+        if !self.rx_bands_enforced || self.rx_swl || band.rx_always_open() {
             return None;
         }
         if !self.rx_bands_confirmed {

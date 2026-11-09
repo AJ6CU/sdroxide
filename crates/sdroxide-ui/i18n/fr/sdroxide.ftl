@@ -9624,3 +9624,17 @@ sonde-card-click-to-listen = Cliquez sur la fréquence pour écouter
 sonde-type-all = Tous les types
 
 sonde-type-hover = Chercher un type de sonde : en choisir un lance le scan, qui déplace la fenêtre sur la bande jusqu'à entendre ce type. Seul ce type est listé et dessiné.
+
+meshtastic-preset-auto = Auto
+
+meshtastic-preset-auto-hint = Écoute tous les préréglages à la fois (de ShortTurbo à LongSlow). Rien à choisir quand on ne sait pas lequel utilise le réseau.
+
+meshtastic-freq-hint = Fréquence du canal, au kilohertz près. Pour un réseau qui n'utilise pas les créneaux de la région. Appliquée quand vous relâchez.
+
+meshtastic-close-hint = Fermer le panneau Meshtastic. Le récepteur continue jusqu'à ce que vous l'arrêtiez.
+
+meshtastic-float-hint = Sortir le panneau dans une fenêtre flottante au-dessus du waterfall.
+
+meshtastic-dock-hint = Remettre le panneau sous le waterfall.
+
+meshtastic-tune-mode-hint = La radio passe aussi en FM large, pour que le haut-parleur et l'enregistreur aient le signal du canal ; en quittant, le mode revient.
