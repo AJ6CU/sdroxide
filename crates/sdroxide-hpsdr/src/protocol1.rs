@@ -30,7 +30,7 @@ use std::sync::atomic::Ordering;
 use std::time::{Duration, Instant};
 
 use crate::net::{
-    Ctrl, MAX_FILL_DATAGRAMS, RxStats, SeqTracker, ThreadCtx, board_has_lna_gain,
+    Ctrl, MAX_FILL_DATAGRAMS, RxMsg, RxStats, SeqTracker, ThreadCtx, board_has_lna_gain,
     board_is_hermes_lite, hex_head, lna_gain_code, push_iq,
 };
 use crate::protocol2::be24_to_f32;
@@ -631,6 +631,17 @@ pub(crate) fn run(ctx: ThreadCtx) {
     let _ = socket.send_to(&start_command(true), dest);
     tracing::debug!("HPSDR P1: sent priming EP2 datagrams + run command; awaiting EP6 stream");
 
+    // From here the socket is read by a thread of its own (see
+    // `net::spawn_receiver`).
+    let (datagrams, _stop_rx_on_exit) = match crate::net::start_receiver(&socket, "hpsdr-p1-rx") {
+        Ok(r) => r,
+        Err(e) => {
+            ptt_line.store(false, Ordering::Relaxed);
+            stop_stream(&socket, dest, radio, conn_id, &format!("receive thread: {e}"));
+            return;
+        }
+    };
+
     let mut rx_scratch: Vec<f32> = Vec::with_capacity(FLOATS_PER_DATAGRAM);
     let mut tx_scratch: Vec<f32> = Vec::with_capacity(FLOATS_PER_DATAGRAM);
     let mut next_ep2 = Instant::now();
@@ -740,9 +751,13 @@ pub(crate) fn run(ctx: ThreadCtx) {
             }
         }
 
-        // 2) One inbound datagram (EP6 RX I/Q).
-        match socket.recv_from(&mut buf) {
-            Ok((n, _src)) => {
+        // 2) One inbound datagram (EP6 RX I/Q), from the receive thread. Waits no
+        //    longer than the next EP2 is due, and never more than 2 ms so the
+        //    control channel and the overload loop below keep their pace.
+        let wait = next_ep2.saturating_duration_since(Instant::now()).min(Duration::from_millis(2));
+        match datagrams.recv_timeout(wait) {
+            Ok(RxMsg::Datagram(buf, _src)) => {
+                let n = buf.len();
                 rx_scratch.clear();
                 if let Some(info) = decode_ep6(&buf[..n], &mut rx_scratch) {
                     if invert_spectrum {
@@ -909,12 +924,15 @@ pub(crate) fn run(ctx: ThreadCtx) {
                     }
                 }
             }
-            Err(ref e)
-                if e.kind() == std::io::ErrorKind::WouldBlock
-                    || e.kind() == std::io::ErrorKind::TimedOut => {}
-            Err(e) => {
+            Err(crossbeam_channel::RecvTimeoutError::Timeout) => {}
+            Ok(RxMsg::Failed(e)) => {
                 ptt_line.store(false, Ordering::Relaxed);
                 stop_stream(&socket, dest, radio, conn_id, &format!("recv error: {e}"));
+                return;
+            }
+            Err(crossbeam_channel::RecvTimeoutError::Disconnected) => {
+                ptt_line.store(false, Ordering::Relaxed);
+                stop_stream(&socket, dest, radio, conn_id, "receive thread ended");
                 return;
             }
         }
