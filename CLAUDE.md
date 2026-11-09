@@ -43,10 +43,7 @@ not finished.
 ### Adding a language
 
 Languages are the folders under `crates/sdroxide-ui/i18n/` (one per tag, the
-steps are in its `README.md`), plus one line in `LANGUAGES` in
-`crates/sdroxide-ui/src/i18n.rs` (the web client embeds English only and
-fetches the others, so it cannot list them from the folders; a test fails if
-the two disagree). **The list of
+steps are in its `README.md`); no Rust list has to change. **The list of
 languages is also written in this file (above) and in `AGENTS.md`, and the
 agent of the other contributor reads only `AGENTS.md`.** So a change that adds
 (or removes) a language must, in the same PR:

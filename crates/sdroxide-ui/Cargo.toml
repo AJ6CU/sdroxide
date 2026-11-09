@@ -89,7 +89,7 @@ i18n-embed-fl = "0.10.1"
 # For `FluentValue`, the type a message's arguments are passed as. The version
 # i18n-embed itself uses.
 fluent = "0.17.0"
-rust-embed = { version = "8.12.0", features = ["debug-embed", "include-exclude"] }
+rust-embed = { version = "8.12.0", features = ["debug-embed"] }
 # The operating system's language list — or the browser's, with `js` — for an
 # operator who has not picked one.
 sys-locale = { version = "0.3.2", features = ["js"] }

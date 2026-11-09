@@ -885,7 +885,7 @@ impl eframe::App for SdroxideApp {
         }
         if self.applied_language != self.ui_settings.language {
             self.applied_language = self.ui_settings.language;
-            crate::i18n::set_language(self.applied_language, &ctx);
+            crate::i18n::set_language(self.applied_language);
             ctx.request_repaint();
         }
         // The panadapter and skimmer font sizes need no visuals rewrite —
