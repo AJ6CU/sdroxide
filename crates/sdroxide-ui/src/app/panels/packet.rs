@@ -168,7 +168,9 @@ impl SdroxideApp {
                         let who = RichText::new(format!("{}>{}{via}", h.from, h.to))
                             .monospace()
                             .color(colour);
-                        if ui.add(egui::Label::new(who).sense(egui::Sense::click())).clicked()
+                        let who_resp = ui.add(egui::Label::new(who).sense(egui::Sense::click()));
+                        let who_resp = crate::callsign_card::on_hover(who_resp, &h.from);
+                        if who_resp.clicked()
                             && !h.sent
                             && !h.from.is_empty()
                         {

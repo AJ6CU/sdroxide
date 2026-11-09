@@ -9616,3 +9616,7 @@ sat-rig-rx = RX РАДИО
 sat-rig-tx = TX РАДИО
 
 topbar-sat-locked-vfo-a-downlink-b-uplink = Захват спутника: VFO A — нисходящая линия, VFO B — восходящая, пока захват не снят
+
+qrzcard-photo-loading = Загрузка фото…
+
+qrzcard-no-photo = Карточка без фото

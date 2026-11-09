@@ -4583,13 +4583,13 @@ impl SdroxideApp {
                 // without them there is nothing to ask, and nothing is asked.
                 ui.add_space(4.0);
                 let card_ready = io.net_edit.qrz_card_ready();
+                // On by default: the stored flag says "off", so a station that
+                // never touched it shows the card.
                 ui.add_enabled_ui(card_ready, |ui| {
-                    crate::chrome::checkbox(
-                        ui,
-                        &mut io.net_edit.qrz_card,
-                        tr!("qrzcard-switch"),
-                    )
-                    .on_hover_text(tr!("qrzcard-switch-hint"));
+                    let mut on = !io.net_edit.qrz_card_off;
+                    crate::chrome::checkbox(ui, &mut on, tr!("qrzcard-switch"))
+                        .on_hover_text(tr!("qrzcard-switch-hint"));
+                    io.net_edit.qrz_card_off = !on;
                 });
                 if !card_ready {
                     ui.label(

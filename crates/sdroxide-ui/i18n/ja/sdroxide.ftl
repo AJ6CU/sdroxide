@@ -9549,3 +9549,7 @@ sat-rig-rx = 無線機RX
 sat-rig-tx = 無線機TX
 
 topbar-sat-locked-vfo-a-downlink-b-uplink = 衛星にロック中：ロックが終わるまで、VFO Aはダウンリンク、VFO Bはアップリンクです
+
+qrzcard-photo-loading = 写真を読み込み中…
+
+qrzcard-no-photo = 写真なしの記録

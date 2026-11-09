@@ -9600,3 +9600,7 @@ sat-rig-rx = RX EQUIPO
 sat-rig-tx = TX EQUIPO
 
 topbar-sat-locked-vfo-a-downlink-b-uplink = Bloqueado en un satélite: el VFO A es el enlace descendente y el VFO B el ascendente hasta que termine el bloqueo
+
+qrzcard-photo-loading = Cargando foto…
+
+qrzcard-no-photo = Ficha sin foto

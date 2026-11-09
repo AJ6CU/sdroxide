@@ -806,15 +806,18 @@ fn wspr_row(ui: &mut egui::Ui, s: &WsprSpot, home: Option<(f64, f64)>, now: i64)
                         ),
                     ),
                 );
-                row_cell(
-                    ui,
-                    74.0,
-                    WSPR_ROW_H,
-                    false,
-                    egui::Label::new(
-                        RichText::new(who).size(11.0).strong().color(crate::theme::TEXT_STRONG()),
-                    )
-                    .truncate(),
+                crate::callsign_card::on_hover(
+                    row_cell(
+                        ui,
+                        74.0,
+                        WSPR_ROW_H,
+                        false,
+                        egui::Label::new(
+                            RichText::new(who).size(11.0).strong().color(crate::theme::TEXT_STRONG()),
+                        )
+                        .truncate(),
+                    ),
+                    who,
                 );
                 row_cell(
                     ui,

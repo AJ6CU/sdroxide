@@ -2368,8 +2368,15 @@ use sdroxide_types::{
 /// so the layout of `ClientScreen`, which rides `ClientMsg::SetClientSettings`
 /// and `ServerMsg::ClientSettings` whole, changes again.
 /// `PROTO_VERSION` 289 → 290, `VERSION_BYTE` 0x6D → 0x6E.
-pub const PROTO_VERSION: u16 = 290;
-const VERSION_BYTE: u8 = 0x6E;
+///
+/// v291: **the QRZ card, second round.** [`sdroxide_types::CallsignInfo`] gains
+/// `photo_pending`, `native_text` and `note` at its tail (it rides
+/// `ServerMsg::CallsignResult` whole), and [`sdroxide_types::NetworkConfig`]
+/// gains `qrz_card_off` at its tail (it rides `SetNetworkConfig` whole): the
+/// card is now on by default and this is how it is switched off.
+/// `PROTO_VERSION` 290 → 291, `VERSION_BYTE` 0x6E → 0x6F.
+pub const PROTO_VERSION: u16 = 291;
+const VERSION_BYTE: u8 = 0x6F;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -3676,7 +3683,7 @@ mod tests {
             ServerMsg::TxRefused(w, hz) => assert_eq!((w, hz), (why, 7_074_000.0)),
             _ => panic!("TxRefused did not round-trip"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (286, 0x6A));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (291, 0x6F));
         // v280: the CB refusal is a new tail variant of `TxBlock`; the ones
         // before it keep their positions.
         let cb = ServerMsg::TxRefused(sdroxide_types::TxBlock::CbOff, 27_185_000.0);
@@ -3732,7 +3739,7 @@ mod tests {
             }
             other => panic!("the answer did not round-trip: {other:?}"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (286, 0x6A));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (291, 0x6F));
     }
 
     /// v286: the QRZ card rides `CallsignResult` — photo, age and all.
@@ -3745,12 +3752,15 @@ mod tests {
         info.class = Some("Novice".into());
         info.qsl_lotw = true;
         info.photo = Some(vec![0xFF, 0xD8, 0xFF, 0xD9]);
+        info.photo_pending = true;
+        info.native_text = Some("山东省淄博市".into());
+        info.note = Some("subscription needed".into());
         let bytes = encode(&ServerMsg::CallsignResult(info.clone())).unwrap();
         match decode::<ServerMsg>(&bytes).unwrap() {
             ServerMsg::CallsignResult(back) => assert_eq!(back, info),
             other => panic!("the card did not round-trip: {other:?}"),
         }
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (286, 0x6A));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (291, 0x6F));
     }
 
     /// The VOR read-out rides the wire whole, locked or not, and the message is
@@ -4765,7 +4775,7 @@ mod tests {
     /// and the rig's own keying the end of `TxState`; the version is pinned.
     #[test]
     fn the_sat_lock_tone_and_the_rig_keyed_flag_round_trip() {
-        assert_eq!((PROTO_VERSION, VERSION_BYTE), (290, 0x6E));
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (291, 0x6F));
         let cfg = sdroxide_types::SatLockConfig {
             norad_id: 25544,
             ctcss_hz: Some(67.0),

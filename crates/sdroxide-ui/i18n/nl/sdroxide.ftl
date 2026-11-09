@@ -9609,3 +9609,7 @@ sat-rig-rx = RX ZENDER
 sat-rig-tx = TX ZENDER
 
 topbar-sat-locked-vfo-a-downlink-b-uplink = Vergrendeld op een satelliet: VFO A is de downlink en VFO B de uplink tot het slot eindigt
+
+qrzcard-photo-loading = Foto laden…
+
+qrzcard-no-photo = Kaart zonder foto

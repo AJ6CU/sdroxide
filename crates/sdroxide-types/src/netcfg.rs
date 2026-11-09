@@ -466,6 +466,14 @@ pub struct NetworkConfig {
     /// Appended last, as the wire requires.
     #[serde(default)]
     pub qrz_card: bool,
+    /// The QRZ card is **on by default** for an operator with a QRZ login: this
+    /// is the way to switch it off. It replaces [`NetworkConfig::qrz_card`],
+    /// which defaulted to off and was saved as `false` by every station, so it
+    /// could not tell "never chosen" from "chose off" (kept only so the wire
+    /// layout does not move; nothing reads it).
+    /// Appended last, as the wire requires.
+    #[serde(default)]
+    pub qrz_card_off: bool,
 }
 
 impl NetworkConfig {
@@ -479,7 +487,7 @@ impl NetworkConfig {
 
     /// The switch is on **and** the login is there.
     pub fn qrz_card_active(&self) -> bool {
-        self.qrz_card && self.qrz_card_ready()
+        !self.qrz_card_off && self.qrz_card_ready()
     }
 
     /// Five minutes: often enough that an address change is invisible to a
@@ -535,6 +543,7 @@ impl Default for NetworkConfig {
             dyndns_url: String::new(),
             dyndns_minutes: NetworkConfig::default_dyndns_minutes(),
             qrz_card: false,
+            qrz_card_off: false,
         }
     }
 }
@@ -546,16 +555,15 @@ mod qrz_card_tests {
     #[test]
     fn the_card_needs_qrz_and_its_login() {
         let mut c = NetworkConfig::default();
-        c.qrz_card = true;
         assert!(!c.qrz_card_active(), "no provider: no card");
         c.lookup_provider = LookupProvider::Qrz;
         assert!(!c.qrz_card_active(), "no login: no card");
         c.qrz.user = "F4XXX".into();
         c.qrz.password = "secret".into();
-        assert!(c.qrz_card_active());
-        c.qrz_card = false;
-        assert!(!c.qrz_card_active(), "switch off: no card");
-        c.qrz_card = true;
+        assert!(c.qrz_card_active(), "provider and login: on by default");
+        c.qrz_card_off = true;
+        assert!(!c.qrz_card_active(), "switched off: no card");
+        c.qrz_card_off = false;
         c.lookup_provider = LookupProvider::HamQth;
         assert!(!c.qrz_card_active(), "another provider: no card");
     }
@@ -563,14 +571,17 @@ mod qrz_card_tests {
     #[test]
     fn the_switch_survives_the_wire_and_an_old_file() {
         let mut cfg = NetworkConfig::default();
-        cfg.qrz_card = true;
+        cfg.qrz_card_off = true;
         let bytes = postcard::to_stdvec(&cfg).expect("encode");
         let back: NetworkConfig = postcard::from_bytes(&bytes).expect("decode");
-        assert!(back.qrz_card);
+        assert!(back.qrz_card_off);
+        // A file written before the switch existed, or by the first version of
+        // the card (`qrz_card: false` for everyone), reads as "on".
         let mut v = serde_json::to_value(NetworkConfig::default()).unwrap();
-        v.as_object_mut().unwrap().remove("qrz_card");
+        v.as_object_mut().unwrap().remove("qrz_card_off");
         let old: NetworkConfig = serde_json::from_value(v).unwrap();
-        assert!(!old.qrz_card);
+        assert!(!old.qrz_card_off);
+        assert!(!old.qrz_card, "the old field is ignored");
     }
 
     #[test]

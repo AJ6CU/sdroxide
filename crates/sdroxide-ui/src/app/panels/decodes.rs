@@ -1515,12 +1515,16 @@ impl SdroxideApp {
                     match &s.dx_call {
                         Some(dx) => {
                             ui.horizontal(|ui| {
-                                ui.label(
+                                let dx_resp = ui.label(
                                     RichText::new(dx)
                                         .size(17.0)
                                         .strong()
                                         .color(crate::theme::TEXT_STRONG()),
                                 );
+                                // The QRZ card of the station being worked.
+                                if crate::callsign_card::applies(ui.ctx(), dx) {
+                                    dx_resp.on_hover_ui(|ui| crate::callsign_card::section(ui, dx));
+                                }
                                 if let Some(g) = &s.dx_grid {
                                     ui.label(
                                         RichText::new(g).size(13.0).color(crate::theme::CYAN_DIM()),
@@ -1607,18 +1611,17 @@ impl SdroxideApp {
                 for c in &fox_queue {
                     let col =
                         if c.working { crate::theme::GREEN() } else { crate::theme::gray(150) };
-                    ui.label(RichText::new(&c.call).size(11.5).strong().color(col)).on_hover_text(
-                        format!(
-                            "{} · {:+} dB{}",
-                            if c.working {
-                                tr!("decodes-being-worked")
-                            } else {
-                                String::from("waiting")
-                            },
-                            c.snr_db,
-                            c.grid.as_deref().map(|g| format!(" · {g}")).unwrap_or_default(),
-                        ),
+                    let c_resp = ui.label(RichText::new(&c.call).size(11.5).strong().color(col));
+                    let c_text = format!(
+                        "{} · {:+} dB{}",
+                        if c.working { tr!("decodes-being-worked") } else { String::from("waiting") },
+                        c.snr_db,
+                        c.grid.as_deref().map(|g| format!(" · {g}")).unwrap_or_default(),
                     );
+                    c_resp.on_hover_ui(|ui| {
+                        ui.label(c_text);
+                        crate::callsign_card::section(ui, &c.call);
+                    });
                 }
             });
         }
@@ -1640,14 +1643,17 @@ impl SdroxideApp {
                     // The one going next is the one worth reading first.
                     let col = if i == 0 { crate::theme::GREEN() } else { crate::theme::gray(150) };
                     if crate::chrome::chip(ui, false, RichText::new(&q.call).size(11.5).color(col))
-                        .on_hover_text(tr!(
-                            "decodes-db-hz-click-remove",
-                            waiting = if i == 0 { tr!("decodes-queue-next") } else { tr!("decodes-queue-waiting") },
-                            snr_db = format!("{:+}", q.snr_db),
-                            audio_hz = format!("{:.0}", q.audio_hz),
-                            unwrap_or_default =
-                                q.grid.as_deref().map(|g| format!(" · {g}")).unwrap_or_default()
-                        ))
+                        .on_hover_ui(|ui| {
+                            ui.label(tr!(
+                                "decodes-db-hz-click-remove",
+                                waiting = if i == 0 { tr!("decodes-queue-next") } else { tr!("decodes-queue-waiting") },
+                                snr_db = format!("{:+}", q.snr_db),
+                                audio_hz = format!("{:.0}", q.audio_hz),
+                                unwrap_or_default =
+                                    q.grid.as_deref().map(|g| format!(" · {g}")).unwrap_or_default()
+                            ));
+                            crate::callsign_card::section(ui, &q.call);
+                        })
                         .clicked()
                     {
                         cmds.push(Command::DigiQueueRemove(q.call.clone()));

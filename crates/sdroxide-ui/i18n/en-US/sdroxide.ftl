@@ -9494,7 +9494,7 @@ wxsat-waiting-lrpt = No picture yet. Meteor LRPT is digital: the picture starts 
 
 wxsat-searching-frame = Looking for the frame sync
 
-qrzcard-loading = Looking up QRZ…
+qrzcard-loading = Searching QRZ.com…
 
 qrzcard-not-found = Not found on QRZ.
 
@@ -9628,3 +9628,7 @@ sat-rig-rx = RIG RX
 sat-rig-tx = RIG TX
 
 topbar-sat-locked-vfo-a-downlink-b-uplink = Locked to a satellite: VFO A is the downlink and VFO B the uplink until the lock ends
+
+qrzcard-photo-loading = Loading photo…
+
+qrzcard-no-photo = Record without photo

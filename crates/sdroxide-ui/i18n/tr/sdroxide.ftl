@@ -9601,3 +9601,7 @@ sat-rig-rx = TELSİZ RX
 sat-rig-tx = TELSİZ TX
 
 topbar-sat-locked-vfo-a-downlink-b-uplink = Bir uyduya kilitli: kilit bitene kadar VFO A iniş hattı, VFO B yükseliş hattıdır
+
+qrzcard-photo-loading = Fotoğraf yükleniyor…
+
+qrzcard-no-photo = Fotoğrafsız kayıt

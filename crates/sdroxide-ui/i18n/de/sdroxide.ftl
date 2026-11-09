@@ -9601,3 +9601,7 @@ sat-rig-rx = RX FUNKGERÄT
 sat-rig-tx = TX FUNKGERÄT
 
 topbar-sat-locked-vfo-a-downlink-b-uplink = Auf einen Satelliten gesperrt: VFO A ist der Downlink und VFO B der Uplink, bis die Sperre endet
+
+qrzcard-photo-loading = Foto wird geladen…
+
+qrzcard-no-photo = Eintrag ohne Foto

@@ -9601,3 +9601,7 @@ sat-rig-rx = RX RÁDIO
 sat-rig-tx = TX RÁDIO
 
 topbar-sat-locked-vfo-a-downlink-b-uplink = Travado em um satélite: o VFO A é o downlink e o VFO B o uplink até a trava terminar
+
+qrzcard-photo-loading = Carregando foto…
+
+qrzcard-no-photo = Ficha sem foto

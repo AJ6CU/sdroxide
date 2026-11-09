@@ -703,11 +703,14 @@ impl SdroxideApp {
                         ui.horizontal_wrapped(|ui| {
                             ui.spacing_mut().item_spacing.x = 4.0;
                             let colour = if t.sent { theme::GREEN() } else { theme::CYAN_DIM() };
-                            ui.label(
-                                RichText::new(format!("{}>{}{via}", t.from, t.to))
-                                    .monospace()
-                                    .size(10.0)
-                                    .color(colour),
+                            crate::callsign_card::on_hover(
+                                ui.label(
+                                    RichText::new(format!("{}>{}{via}", t.from, t.to))
+                                        .monospace()
+                                        .size(10.0)
+                                        .color(colour),
+                                ),
+                                &t.from,
                             );
                             ui.label(RichText::new(&t.kind).size(9.0).weak());
                             ui.label(RichText::new(&t.info).monospace().size(10.0));
@@ -781,7 +784,10 @@ impl SdroxideApp {
                         } else {
                             (format!("{}→{}", m.from, m.to), theme::gray(150))
                         };
-                        ui.label(RichText::new(who).monospace().size(10.5).color(colour));
+                        crate::callsign_card::on_hover(
+                            ui.label(RichText::new(who).monospace().size(10.5).color(colour)),
+                            if ours { &m.to } else { &m.from },
+                        );
                         ui.label(RichText::new(&m.text).size(10.5));
                         if ours {
                             // Words, not symbols. The packaged font has no

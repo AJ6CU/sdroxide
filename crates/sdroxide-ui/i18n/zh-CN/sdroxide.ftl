@@ -9539,3 +9539,7 @@ sat-rig-rx = 电台接收
 sat-rig-tx = 电台发射
 
 topbar-sat-locked-vfo-a-downlink-b-uplink = 已锁定卫星：锁定结束前，VFO A为下行，VFO B为上行
+
+qrzcard-photo-loading = 正在加载照片…
+
+qrzcard-no-photo = 无照片的记录

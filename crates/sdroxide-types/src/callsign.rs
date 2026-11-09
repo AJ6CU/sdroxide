@@ -58,6 +58,20 @@ pub struct CallsignInfo {
     /// it crosses the link cheaply. `None` when QRZ has none or the card is off.
     #[serde(default)]
     pub photo: Option<Vec<u8>>,
+    /// QRZ has a picture for this operator and the station is still fetching it:
+    /// the card says so instead of "no photo". The record is sent twice — first
+    /// without the picture (`true`), then with it (`false`).
+    #[serde(default)]
+    pub photo_pending: bool,
+    /// The place as the operator wrote it, when it was in another script and the
+    /// station turned the fields above into English. `None` when nothing was
+    /// translated.
+    #[serde(default)]
+    pub native_text: Option<String>,
+    /// What QRZ itself said instead of a full record (for example that a
+    /// subscription is needed for the complete data).
+    #[serde(default)]
+    pub note: Option<String>,
 }
 
 impl CallsignInfo {
