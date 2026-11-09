@@ -9579,3 +9579,7 @@ meshtastic-tune-mode-hint = 無線機はワイドFMにも切り替わり、ス�
 wefax-revert-auto-slant = 傾き補正を戻す
 
 wefax-revert-auto-slant-hint = このチャートの自動傾き補正を取り消します。クロック調整はここで設定した値に戻り、次のチャートまで自動補正はオフのままです。すでに受信した行は変わりません。
+
+qrzcard-no-account = QRZ.com アカウントが未登録 -
+
+qrzcard-account-link = アカウントの状態を見る

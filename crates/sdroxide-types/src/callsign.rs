@@ -72,6 +72,11 @@ pub struct CallsignInfo {
     /// subscription is needed for the complete data).
     #[serde(default)]
     pub note: Option<String>,
+    /// QRZ cut the record short because the account has no XML subscription
+    /// (or no valid login): the card says so in one short line instead of
+    /// QRZ's own sentence. Appended last, as the wire requires.
+    #[serde(default)]
+    pub limited: bool,
 }
 
 impl CallsignInfo {

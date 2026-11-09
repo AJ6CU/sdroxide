@@ -9640,3 +9640,7 @@ meshtastic-tune-mode-hint = La radio passa anche in FM larga, così altoparlante
 wefax-revert-auto-slant = Annulla inclinazione
 
 wefax-revert-auto-slant-hint = Annulla la correzione automatica dell'inclinazione su questa carta: la regolazione dell'orologio torna al valore impostato qui e la correzione automatica resta disattivata fino alla carta successiva. Le righe già ricevute non cambiano.
+
+qrzcard-no-account = Nessun account QRZ.com registrato -
+
+qrzcard-account-link = vedi lo stato dell'account

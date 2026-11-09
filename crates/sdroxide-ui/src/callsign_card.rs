@@ -40,8 +40,22 @@ struct Entry {
     seen: f64,
 }
 
+/// The card floating over the waterfall: anchored where the pointer first met
+/// the callsign, so it does not follow the pointer and its link can be clicked.
+struct Float {
+    call: String,
+    pos: egui::Pos2,
+    /// Where it was drawn last frame, to know whether the pointer is on it.
+    rect: Option<egui::Rect>,
+}
+
 #[derive(Default)]
 struct State {
+    /// The callsign under the pointer on the waterfall: `(raw, pointer, time)`.
+    hover: Option<(String, egui::Pos2, f64)>,
+    float: Option<Float>,
+    /// The card's "see the account" link was clicked: open the settings page.
+    open_account: bool,
     active: bool,
     cache: HashMap<String, Entry>,
     /// `call -> egui time it was asked for`.
@@ -194,19 +208,85 @@ pub fn on_hover(resp: egui::Response, raw: &str) -> egui::Response {
     }
 }
 
-/// A tooltip at the pointer with the card in it, for a painter-drawn box that
-/// has no widget of its own to hang a hover on: pass the response of the
-/// widget the box was drawn on, and say whether the pointer is on the box.
+/// Say that the pointer is on a painter-drawn box showing a callsign (the
+/// waterfall's boxes have no widget of their own to hang a hover on): pass the
+/// response of the widget the box was drawn on, and whether the pointer is on
+/// the box. Nothing is drawn here: [`show_floating`] draws **one** card a frame,
+/// so a callsign painted twice (as a decode and as a spot) cannot stack two.
 pub fn tooltip(resp: &egui::Response, hovered: bool, raw: &str) {
     // Not while the waterfall is being dragged or zoomed: the card would follow
     // the pointer across the whole band.
     if !hovered || resp.dragged() || !is_active(&resp.ctx) || base_call(raw).is_none() {
         return;
     }
-    egui::Tooltip::for_widget(resp).at_pointer().gap(4.0).show(|ui| {
-        ui.set_max_width(300.0);
-        section(ui, raw);
-    });
+    let Some(p) = resp.ctx.input(|i| i.pointer.hover_pos()) else { return };
+    let now = resp.ctx.input(|i| i.time);
+    if let Ok(mut s) = hub(&resp.ctx).0.lock() {
+        s.hover = Some((raw.to_string(), p, now));
+    }
+}
+
+/// Seconds a pointer may be off a waterfall callsign (on its way to the card)
+/// before the card goes.
+const GRACE_S: f64 = 0.45;
+
+/// Draw the card of the waterfall callsign under the pointer, once a frame, at
+/// the end of it. The card is anchored where the pointer first met the callsign
+/// and stays while the pointer is on the callsign or on the card, so the link in
+/// it can be reached and clicked.
+pub fn show_floating(ctx: &egui::Context) {
+    let h = hub(ctx);
+    let now = ctx.input(|i| i.time);
+    let pointer = ctx.input(|i| i.pointer.hover_pos());
+    let (call, pos) = {
+        let Ok(mut s) = h.0.lock() else { return };
+        if !s.active {
+            s.float = None;
+            s.hover = None;
+            return;
+        }
+        let hover = s.hover.clone();
+        let on_box = hover.as_ref().filter(|(_, _, t)| now - *t < 0.15);
+        if let Some((raw, p, _)) = on_box {
+            if s.float.as_ref().map(|f| f.call.as_str()) != Some(raw.as_str()) {
+                s.float = Some(Float { call: raw.clone(), pos: *p + egui::vec2(6.0, 10.0), rect: None });
+            }
+        } else {
+            let on_card = pointer
+                .zip(s.float.as_ref().and_then(|f| f.rect))
+                .is_some_and(|(p, r)| r.expand(4.0).contains(p));
+            let recent = hover.as_ref().is_some_and(|(_, _, t)| now - *t < GRACE_S);
+            if !on_card && !recent {
+                s.float = None;
+            }
+        }
+        match s.float.as_ref() {
+            Some(f) => (f.call.clone(), f.pos),
+            None => return,
+        }
+    };
+    let out = egui::Area::new(egui::Id::new("qrz-card-float"))
+        .order(egui::Order::Tooltip)
+        .fixed_pos(pos)
+        .interactable(true)
+        .show(ctx, |ui| {
+            egui::Frame::popup(ui.style()).show(ui, |ui| {
+                ui.set_max_width(300.0);
+                section(ui, &call);
+            });
+        });
+    if let Ok(mut s) = h.0.lock() {
+        if let Some(f) = s.float.as_mut() {
+            f.rect = Some(out.response.rect);
+        }
+    }
+    // The pointer may be resting: look again before the grace runs out.
+    ctx.request_repaint_after(std::time::Duration::from_millis(150));
+}
+
+/// Whether the card's "account" link was clicked since the last call.
+pub fn take_open_account(ctx: &egui::Context) -> bool {
+    hub(ctx).0.lock().map(|mut s| std::mem::take(&mut s.open_account)).unwrap_or(false)
 }
 
 fn load_photo(ctx: &egui::Context, call: &str, bytes: &[u8]) -> Option<egui::TextureHandle> {
@@ -344,13 +424,38 @@ fn card(ui: &mut egui::Ui, call: &str, i: &CallsignInfo, tex: Option<&egui::Text
     if !qsl.is_empty() {
         ui.label(RichText::new(format!("QSL: {}", qsl.join(", "))).size(11.0).color(dim));
     }
-    if let Some(n) = &i.note {
+    if i.limited {
+        // One short line, not QRZ's own sentence; the link goes to where the
+        // account is set.
+        ui.horizontal_wrapped(|ui| {
+            ui.spacing_mut().item_spacing.x = 3.0;
+            let grey = crate::theme::gray(130);
+            ui.label(RichText::new(tr!("qrzcard-no-account")).size(10.5).italics().color(grey));
+            let r = ui
+                .add(egui::Label::new(
+                    RichText::new(tr!("qrzcard-account-link")).size(10.5).italics().underline().color(grey),
+                ).sense(egui::Sense::click()))
+                .on_hover_cursor(egui::CursorIcon::PointingHand);
+            if r.clicked() {
+                if let Ok(mut s) = hub(ui.ctx()).0.lock() {
+                    s.open_account = true;
+                }
+            }
+        });
+    } else if let Some(n) = &i.note {
         ui.label(RichText::new(n).size(10.0).italics().color(crate::theme::gray(125)));
     }
-    ui.hyperlink_to(
-        RichText::new(format!("QRZ.com/db/{call}")).size(10.0).color(Color32::from_gray(140)),
-        format!("https://www.qrz.com/db/{call}"),
-    );
+    // The page opens in a new tab (on the web) or the browser (on the desktop);
+    // never in the window the program runs in, which a web client would lose.
+    let url = format!("https://www.qrz.com/db/{call}");
+    let r = ui
+        .add(egui::Label::new(
+            RichText::new(format!("↗ QRZ.com/db/{call}")).size(10.0).underline().color(Color32::from_gray(150)),
+        ).sense(egui::Sense::click()))
+        .on_hover_cursor(egui::CursorIcon::PointingHand);
+    if r.clicked() {
+        crate::download::open_external(&url);
+    }
 }
 
 #[cfg(test)]
@@ -372,6 +477,34 @@ mod tests {
         assert_eq!(base_call("?"), None);
         assert_eq!(base_call(""), None);
         assert_eq!(base_call("ABC"), None, "no digit, no call");
+    }
+
+    /// A callsign painted twice (decode and spot) is one card, anchored where
+    /// the pointer met it, and it outlives the pointer by the grace so the
+    /// pointer can reach it.
+    #[test]
+    fn one_card_floats_for_a_callsign_painted_twice_and_stays_for_the_grace() {
+        let ctx = egui::Context::default();
+        set_active(&ctx, true);
+        let frame = |t: f64| {
+            let raw = egui::RawInput { time: Some(t), ..Default::default() };
+            ctx.run_ui(raw, |ui| show_floating(ui.ctx())).textures_delta.clear();
+        };
+        let pt = egui::pos2(100.0, 100.0);
+        let h = hub(&ctx);
+        // The same callsign reported twice in one frame.
+        for _ in 0..2 {
+            h.0.lock().unwrap().hover = Some(("F4ABC".into(), pt, 1.0));
+        }
+        frame(1.0);
+        let float = |h: &Hub| h.0.lock().unwrap().float.as_ref().map(|f| (f.call.clone(), f.pos));
+        assert_eq!(float(&h), Some(("F4ABC".to_string(), pt + egui::vec2(6.0, 10.0))));
+        // The pointer moved on a little: the card stays, where it was.
+        frame(1.3);
+        assert_eq!(float(&h).map(|f| f.1), Some(pt + egui::vec2(6.0, 10.0)));
+        // Gone for good: the card goes.
+        frame(2.0);
+        assert_eq!(float(&h), None);
     }
 
     #[test]
