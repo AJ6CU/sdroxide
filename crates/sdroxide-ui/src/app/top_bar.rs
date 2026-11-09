@@ -6696,7 +6696,7 @@ impl SdroxideApp {
         // off this button. "FFT" not "VIEW": the box has to fit the desktop
         // strip — "VIEW" measures ten points wider and was what pushed the
         // display box, and with it the strip, onto a third row.
-        let fft_btn = chip_stretched(ui, false, view, extra)
+        let fft_btn = chip_stretched(ui, self.view.fft_size != 4096, view, extra)
             .on_hover_text(tr!("topbar-fft-chip-hint"));
         let fft_id = egui::Popup::default_response_id(&fft_btn);
         let now = ui.input(|i| i.time);
