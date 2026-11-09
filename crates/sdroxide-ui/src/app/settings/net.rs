@@ -806,15 +806,36 @@ async fn post_broadcast_import(peer: Option<&str>, data: &[u8]) -> Result<String
         .dyn_into::<web_sys::Response>()
         .map_err(|_| "response".to_string())?;
 
-    if resp.status() != 200 {
-        return Err(format!("HTTP {}", resp.status()));
-    }
     let text = wasm_bindgen_futures::JsFuture::from(resp.text().map_err(|_| "text".to_string())?)
         .await
         .map_err(|_| "text".to_string())?
         .as_string()
         .unwrap_or_default();
-    Ok(text)
+    // ⛔ Never show the body as it comes: a station that does not know the route
+    // answers 200 with its own web page, and that page ended up in the panel.
+    // Only a JSON answer from the import route is believed.
+    let json: Option<serde_json::Value> = serde_json::from_str(&text).ok();
+    if resp.status() != 200 {
+        let why = json
+            .as_ref()
+            .and_then(|j| j.get("error"))
+            .and_then(|e| e.as_str())
+            .map(str::to_string)
+            .unwrap_or_else(|| format!("HTTP {}", resp.status()));
+        return Err(why);
+    }
+    let json = json.ok_or_else(|| "the station did not answer the import".to_string())?;
+    let n = json.get("stations").and_then(|n| n.as_u64()).unwrap_or(0) as usize;
+    match json.get("kind").and_then(|k| k.as_str()) {
+        Some("schedule") => Ok(tr!(
+            "settings-net-schedule-imported",
+            source = json.get("source").and_then(|s| s.as_str()).unwrap_or(""),
+            season = json.get("season").and_then(|s| s.as_str()).unwrap_or(""),
+            n = n
+        )),
+        Some("list") => Ok(tr!("settings-net-stations-imported", n = n)),
+        _ => Err("the station did not answer the import".to_string()),
+    }
 }
 
 impl crate::app::SdroxideApp {

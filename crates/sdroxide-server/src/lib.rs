@@ -765,6 +765,11 @@ pub async fn serve(params: ServerParams) -> Result<(), ServerError> {
     get(broadcast_schedule::get_route).post(broadcast_schedule::post_import_route)
         .layer(axum::extract::DefaultBodyLimit::max(broadcast_schedule::MAX_BODY_BYTES)),
 )
+.route(
+    "/broadcast-schedule/import",
+    axum::routing::post(broadcast_schedule::post_import_route)
+        .layer(axum::extract::DefaultBodyLimit::max(broadcast_schedule::MAX_BODY_BYTES)),
+)
         // Where a browser trades its password for a signed cookie, and gives
         // it back. Both are plain HTTP because a cookie is a response header
         // and the socket handshake's headers are spent before the sign-in
@@ -811,6 +816,10 @@ fn is_root_route(path: &str) -> bool {
     match path {
         "/ws" | "/solar-ws" | "/radios" | "/aircraft-history" | "/aircraft-export"
         | "/aircraft-online" | "/aircraft-photo" | "/aircraft-watch" => true,
+        // The schedule and the browser's import of a file. The second has a
+        // directory in it, so without being named here it read as a file under
+        // a prefix and was answered with the web page (`/import`).
+        "/broadcast-schedule" | "/broadcast-schedule/import" => true,
         // Whatever follows is the question, and a bad one is the endpoint's to
         // refuse with a 400, not the static handler's to answer with a page.
         _ if path
@@ -1707,6 +1716,19 @@ mod proxy_prefix_tests {
         assert_eq!(strip_proxy_prefix("/sdroxide/ws/latest"), Some("/latest".to_string()));
         // …and the real one still resolves through a prefix that is itself /ws.
         assert_eq!(strip_proxy_prefix("/ws/ws/3"), Some("/ws/3".to_string()));
+    }
+
+    /// The browser's file import posts to a two-level path. It is an endpoint,
+    /// not "a file called `import` under a prefix": it was rewritten to
+    /// `/import` and answered with the station's own web page.
+    #[test]
+    fn the_schedule_import_is_an_endpoint_not_a_file() {
+        assert_eq!(strip_proxy_prefix("/broadcast-schedule"), None);
+        assert_eq!(strip_proxy_prefix("/broadcast-schedule/import"), None);
+        assert_eq!(
+            strip_proxy_prefix("/sdroxide/broadcast-schedule/import"),
+            Some("/broadcast-schedule/import".to_string())
+        );
     }
 
     /// The picture of the open card is an endpoint too, behind any prefix.
