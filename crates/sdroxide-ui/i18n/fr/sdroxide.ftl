@@ -5358,8 +5358,6 @@ recjobs-kind-iq = I/Q
 
 recjobs-kind-both = Les deux
 
-panels-sensitivity = Sensibilité
-
 navtex-hunting = recherche
 
 navtex-hunting-hint =
@@ -5371,19 +5369,8 @@ navtex-hunting-hint =
     
     N'oubliez pas non plus que NAVTEX suit un horaire, ce n'est pas une conversation : une station côtière émet dix minutes toutes les quatre heures, le silence est donc normal la plupart du temps. Il faut écouter au moment où votre station doit émettre. Et le 518 kHz ne s'anime que la nuit — une bande silencieuse de jour n'est pas un décodeur en panne.
 
-navtex-sensitivity-hint =
-    Sensibilité — la facilité avec laquelle le décodeur s'accroche à un signal et le garde.
-    
-    Auto utilise les seuils de référence (0), le comportement livré d'origine.
-    
-    + accepte un signal plus faible ou plus bruité ; − attend un signal plus propre avant de déclarer la synchronisation, ce qui évite de lire du bruit comme des caractères.
-    
-    Ce n'est pas le volume : NAVTEX est de la FSK, les gris viennent des tons et non de la force du signal.
 
-
-navtex-auto-hint = Revient aux seuils de référence (0). Mis en évidence quand actif.
-
-navtex-tune-dial-usb-below-channel = Accorde le cadran ici (USB, 1,710 kHz sous le canal).
+navtex-tune-dial-usb-below-channel = Accorde le cadran ici (USB, 1,700 kHz sous le canal).
 
 settings-audio-your-audio = Votre audio
 
@@ -9646,3 +9633,13 @@ wefax-revert-auto-slant-hint = Annule la correction automatique d'inclinaison su
 qrzcard-no-account = Pas de compte QRZ.com enregistré -
 
 qrzcard-account-link = voir l'état du compte
+
+navtex-other-frequencies = FRÉQUENCES NAVTEX ET STATIONS CÔTIÈRES
+
+navtex-other-frequencies-hint = Toutes les fréquences de la liste NAVTEX publiée, par région. En choisir une accorde le cadran pour la bande latérale supérieure. Les entrées marquées CW sont des bulletins météo en Morse, que ce décodeur ne lit pas.
+
+navtex-freq-cw = mode CW
+
+navtex-freq-international = international, en anglais
+
+navtex-freq-national = national, dans la langue du pays

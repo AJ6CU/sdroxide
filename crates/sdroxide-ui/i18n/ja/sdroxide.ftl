@@ -5309,8 +5309,6 @@ recjobs-kind-iq = I/Q
 
 recjobs-kind-both = 両方
 
-panels-sensitivity = 感度
-
 navtex-hunting = 探索中
 
 navtex-hunting-hint =
@@ -5322,11 +5320,8 @@ navtex-hunting-hint =
 
     また、NAVTEXは会話ではなく時刻表で運用されます。海岸局は4時間ごとに10分間送信するので、ほとんどの時間は無音で正常です。局の送信時刻に合わせて受信する必要があります。さらに518 kHzは夜間にしか開けません。昼間に静かなのはデコーダーの故障ではありません。
 
-navtex-sensitivity-hint =
-    感度 — デコーダーが信号にどれだけ捉えやすく、保持しやすいか。
-navtex-auto-hint = 基準しきい値（0）に戻します。有効な間は強調表示されます。
 
-navtex-tune-dial-usb-below-channel = ここにダイヤルを合わせます（USB、チャンネルより1.710 kHz下）。
+navtex-tune-dial-usb-below-channel = ここにダイヤルを合わせます（USB、チャンネルより1.700 kHz下）。
 
 settings-audio-your-audio = お使いのオーディオ
 
@@ -9583,3 +9578,13 @@ wefax-revert-auto-slant-hint = このチャートの自動傾き補正を取り�
 qrzcard-no-account = QRZ.com アカウントが未登録 -
 
 qrzcard-account-link = アカウントの状態を見る
+
+navtex-other-frequencies = NAVTEX・海岸局の周波数
+
+navtex-other-frequencies-hint = 公開されている NAVTEX 一覧の全周波数（地域別）。選ぶと上側波帯用にダイヤルを合わせます。CW と記された項目はモールスの気象通報で、このデコーダーでは読めません。
+
+navtex-freq-cw = CW モード
+
+navtex-freq-international = 国際（英語）
+
+navtex-freq-national = 国内（現地語）

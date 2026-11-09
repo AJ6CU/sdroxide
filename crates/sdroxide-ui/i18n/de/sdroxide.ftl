@@ -5347,8 +5347,6 @@ recjobs-kind-iq = I/Q
 
 recjobs-kind-both = Beides
 
-panels-sensitivity = Empfindlichkeit
-
 navtex-hunting = Suche
 
 navtex-hunting-hint =
@@ -5360,19 +5358,8 @@ navtex-hunting-hint =
     
     Bedenken Sie auch: NAVTEX folgt einem Fahrplan und ist kein Gespräch — eine Küstenfunkstelle sendet alle vier Stunden zehn Minuten lang, Stille ist also meistens normal. Sie müssen zuhören, wenn Ihre Station an der Reihe ist. Und 518 kHz wird nur nachts lebendig — ein ruhiges Band am Tag ist kein defekter Decoder.
 
-navtex-sensitivity-hint =
-    Empfindlichkeit — wie bereitwillig der Decoder ein Signal aufnimmt und hält.
-    
-    Auto verwendet die Referenzschwellen (0), das Verhalten im Auslieferungszustand.
-    
-    + akzeptiert ein schwächeres oder verrauschteres Signal; − wartet auf ein saubereres, bevor Synchronisation gemeldet wird, wodurch Rauschen nicht als Zeichen gelesen wird.
-    
-    Keine Lautstärke: NAVTEX ist FSK, die Graustufen stammen aus den Tönen, nicht aus der Signalstärke.
 
-
-navtex-auto-hint = Kehrt zu den Referenzschwellen (0) zurück. Hervorgehoben, solange aktiv.
-
-navtex-tune-dial-usb-below-channel = Stellt die Frequenz hier ein (USB, 1,710 kHz unter dem Kanal).
+navtex-tune-dial-usb-below-channel = Stellt die Frequenz hier ein (USB, 1,700 kHz unter dem Kanal).
 
 settings-audio-your-audio = Ihr Audio
 
@@ -9635,3 +9622,13 @@ wefax-revert-auto-slant-hint = Macht die automatische Neigungskorrektur dieser K
 qrzcard-no-account = Kein QRZ.com-Konto hinterlegt -
 
 qrzcard-account-link = Kontostatus ansehen
+
+navtex-other-frequencies = NAVTEX- UND KÜSTENFUNK-FREQUENZEN
+
+navtex-other-frequencies-hint = Alle Frequenzen der veröffentlichten NAVTEX-Liste, nach Region. Die Auswahl stellt die Frequenz für das obere Seitenband ein. Die mit CW markierten Einträge sind Wetterberichte in Morse, die dieser Decoder nicht liest.
+
+navtex-freq-cw = CW-Modus
+
+navtex-freq-international = international, auf Englisch
+
+navtex-freq-national = national, in der Landessprache

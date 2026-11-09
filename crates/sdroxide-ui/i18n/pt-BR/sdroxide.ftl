@@ -5361,8 +5361,6 @@ recjobs-kind-iq = I/Q
 
 recjobs-kind-both = Ambos
 
-panels-sensitivity = Sensibilidade
-
 navtex-hunting = procurando
 
 navtex-hunting-hint =
@@ -5374,11 +5372,8 @@ navtex-hunting-hint =
 
     Lembre-se também de que o NAVTEX é uma grade horária, não uma conversa: uma estação costeira transmite por dez minutos a cada quatro horas, então o silêncio é normal na maior parte do tempo. É preciso estar escutando quando sua estação estiver programada. E os 518 kHz só ganham vida à noite — uma banda quieta de dia não é um decodificador quebrado.
 
-navtex-sensitivity-hint =
-    Sensibilidade — com que facilidade o decodificador sincroniza com o sinal e o mantém.
-navtex-auto-hint = Volta aos limiares de referência (0). Destacado enquanto ativo.
 
-navtex-tune-dial-usb-below-channel = Sintonize o dial aqui (USB, 1,710 kHz abaixo do canal).
+navtex-tune-dial-usb-below-channel = Sintonize o dial aqui (USB, 1,700 kHz abaixo do canal).
 
 settings-audio-your-audio = Seu áudio
 
@@ -9635,3 +9630,13 @@ wefax-revert-auto-slant-hint = Desfaz a correção automática de inclinação n
 qrzcard-no-account = Nenhuma conta QRZ.com cadastrada -
 
 qrzcard-account-link = ver o estado da conta
+
+navtex-other-frequencies = FREQUÊNCIAS NAVTEX E ESTAÇÕES COSTEIRAS
+
+navtex-other-frequencies-hint = Todas as frequências da lista NAVTEX publicada, por região. Escolher uma sintoniza o dial para banda lateral superior. As entradas marcadas CW são boletins meteorológicos em Morse, que este decodificador não lê.
+
+navtex-freq-cw = modo CW
+
+navtex-freq-international = internacional, em inglês
+
+navtex-freq-national = nacional, no idioma local

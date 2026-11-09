@@ -5359,8 +5359,6 @@ recjobs-kind-iq = I/Q
 
 recjobs-kind-both = Beide
 
-panels-sensitivity = Gevoeligheid
-
 navtex-hunting = zoeken
 
 navtex-hunting-hint =
@@ -5372,19 +5370,8 @@ navtex-hunting-hint =
     
     Bedenk ook dat NAVTEX een dienstregeling is, geen gesprek: een kuststation zendt elke vier uur tien minuten lang, dus stilte is meestal normaal. Je moet luisteren als jouw station aan de beurt is. En 518 kHz komt pas 's nachts tot leven — een stille dagband is geen kapotte decoder.
 
-navtex-sensitivity-hint =
-    Gevoeligheid — hoe snel de decoder een signaal vastpakt en vasthoudt.
-    
-    Auto gebruikt de referentiedrempels (0), het gedrag zoals geleverd.
-    
-    + accepteert een zwakker of ruiziger signaal; − wacht op een schoner signaal voordat sync wordt gemeld, wat voorkomt dat ruis als tekens wordt gelezen.
-    
-    Geen volume: NAVTEX is FSK, dus de grijstinten komen van de tonen, niet van de signaalsterkte.
 
-
-navtex-auto-hint = Keert terug naar de referentiedrempels (0). Gemarkeerd zolang actief.
-
-navtex-tune-dial-usb-below-channel = Stem de dial hier af (USB, 1.710 kHz onder het kanaal).
+navtex-tune-dial-usb-below-channel = Stem de dial hier af (USB, 1.700 kHz onder het kanaal).
 
 settings-audio-your-audio = Jouw audio
 
@@ -9643,3 +9630,13 @@ wefax-revert-auto-slant-hint = Maakt de automatische scheefstandcorrectie van de
 qrzcard-no-account = Geen QRZ.com-account ingesteld -
 
 qrzcard-account-link = bekijk de accountstatus
+
+navtex-other-frequencies = NAVTEX- EN KUSTSTATIONFREQUENTIES
+
+navtex-other-frequencies-hint = Alle frequenties van de gepubliceerde NAVTEX-lijst, per regio. Een keuze stemt de dial af voor de bovenzijband. De met CW gemarkeerde regels zijn weerberichten in morse, die deze decoder niet leest.
+
+navtex-freq-cw = CW-modus
+
+navtex-freq-international = internationaal, in het Engels
+
+navtex-freq-national = nationaal, in de landstaal

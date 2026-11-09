@@ -50,7 +50,9 @@ pub fn digi_has_log(status: &DigiStatus) -> bool {
     !status.text_rx.trim().is_empty()
         || status.acars.as_ref().is_some_and(|a| !a.messages.is_empty())
         || status.dsc.as_ref().is_some_and(|d| !d.messages.is_empty())
-        || status.navtex.as_ref().is_some_and(|n| !n.messages.is_empty())
+        || status.navtex.as_ref().is_some_and(|n| {
+            !n.messages.is_empty() || n.live.is_some() || !n.text.trim().is_empty()
+        })
         || status.uvpacket.as_ref().is_some_and(|u| !u.frames.is_empty())
         || status.jtty.as_ref().is_some_and(|j| !j.messages.is_empty())
         || !status.fsq_messages.is_empty()
@@ -232,18 +234,38 @@ fn acars_csv(a: &AcarsStatus) -> String {
     out
 }
 
+/// Everything the NAVTEX panel is showing: the messages filed, the one still
+/// arriving, and the monitor text.
+///
+/// It used to be the filed messages only, so a bulletin that never got its
+/// `ZCZC` — the usual case on a weak signal, and the one worth keeping a copy
+/// of to puzzle over — could not be saved at all. The message in progress is
+/// a row like the others, since the columns are the same and its body says
+/// where it stops; the monitor text follows as it was received, line breaks
+/// and all, because it has no columns to put it in.
 fn navtex_text(n: &NavtexStatus) -> String {
-    let mut out = String::from("utc\tstation\tkind\tserial\tlost\ttext\n");
-    for m in &n.messages {
-        out.push_str(&format!(
-            "{}\t{}\t{}\t{}\t{}\t{}\n",
-            stamp(m.at),
-            m.station,
-            m.kind,
-            m.serial,
-            m.lost,
-            tsv(&m.text)
-        ));
+    let mut out = String::new();
+    if !n.messages.is_empty() || n.live.is_some() {
+        out.push_str("utc\tstation\tkind\tserial\tlost\ttext\n");
+        for m in n.messages.iter().chain(n.live.as_ref()) {
+            out.push_str(&format!(
+                "{}\t{}\t{}\t{}\t{}\t{}\n",
+                stamp(m.at),
+                m.station,
+                m.kind,
+                m.serial,
+                m.lost,
+                tsv(&m.text)
+            ));
+        }
+    }
+    if !n.text.trim().is_empty() {
+        if !out.is_empty() {
+            out.push('\n');
+        }
+        out.push_str("monitor\n");
+        out.push_str(n.text.trim_end());
+        out.push('\n');
     }
     out
 }
@@ -543,6 +565,46 @@ mod tests {
             assert!(name.ends_with(suffix), "{:?}: saved as {name}", st.mode);
             assert!(!text.trim().is_empty(), "{:?}: an empty file", st.mode);
         }
+    }
+
+    /// NAVTEX with no message filed still has something to save: the monitor
+    /// text, and the message that is arriving. The chip used to stay grey
+    /// until a whole `ZCZC … NNNN` had been copied, which on a weak signal is
+    /// never — and that is the copy an operator wants to keep (F4NRM).
+    #[test]
+    fn navtex_saves_the_monitor_and_the_message_in_progress() {
+        use sdroxide_types::{Mode, NavtexMessage, NavtexStatus};
+        let mut st = DigiStatus::idle(sdroxide_types::DigiConfig::default());
+        st.mode = Mode::Navtex;
+        st.navtex = Some(NavtexStatus::default());
+        assert!(!digi_has_log(&st), "an empty panel offered to save nothing");
+
+        st.navtex = Some(NavtexStatus {
+            text: "VISIBILITA BUONA\r\nTENDENZA: SUDEST 6\r\n".into(),
+            ..Default::default()
+        });
+        assert!(digi_has_log(&st), "monitor text alone left the SAVE chip grey");
+        let (name, text) = digi_log(&st).expect("something to save");
+        assert_eq!(name, "sdroxide-navtex-log.txt");
+        assert!(text.starts_with("monitor\n"), "{text}");
+        assert!(text.contains("VISIBILITA BUONA\r\nTENDENZA: SUDEST 6"), "{text}");
+
+        st.navtex = Some(NavtexStatus {
+            live: Some(NavtexMessage {
+                station: 'B',
+                kind: 'E',
+                serial: 22,
+                text: "BERMUDA RADIO".into(),
+                at: 1_700_000_000,
+                complete: false,
+                lost: 0,
+            }),
+            ..Default::default()
+        });
+        assert!(digi_has_log(&st), "a message in progress left the SAVE chip grey");
+        let (_, text) = digi_log(&st).expect("something to save");
+        assert!(text.starts_with("utc\tstation\tkind\tserial\tlost\ttext\n"), "{text}");
+        assert!(text.contains("\tB\tE\t22\t0\tBERMUDA RADIO"), "{text}");
     }
 
     /// FSQ messages carry no time, so the file must not invent one: the column
