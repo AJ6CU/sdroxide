@@ -521,6 +521,7 @@ fn a_satellite_lock_switches_the_band_decoder_to_the_uplink_band() {
                 inverting: true,
             }),
             doppler: false,
+            ctcss_hz: None,
             rotator: false,
         }))))
         .unwrap();

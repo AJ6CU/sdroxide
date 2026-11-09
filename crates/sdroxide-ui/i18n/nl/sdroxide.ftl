@@ -3180,7 +3180,6 @@ sat-downlink-mhz = DOWNLINK (MHz)
 sat-uplink-mhz = UPLINK (MHz)
 sat-mode = MODUS
 sat-tune = TUNE
-sat-set-dial-mode-link-no = Stel afstemming en modus in op deze link — geen vergrendeling, geen correctie
 sat-locked = {" "}VERGRENDELD{" "}
 sat-lock = {" "}VERGRENDELEN{" "}
 sat-track-satellite-doppler-correction-rx = Volg deze satelliet: dopplercorrectie op RX en TX, transponder-gekoppelde uplink, en de 3D-weergave volgt hem
@@ -9596,3 +9595,15 @@ meshtastic-tx-rails = De zender weigerde te zenden: zie de zendmelding voor de r
 rx-bands-swl-note = De SWL-modus staat aan voor deze radio: er is geen ontvangstvergrendeling. Alle banden kunnen worden afgestemd.
 
 rx-bands-always-open = Luisterbanden (en de SWL-modus) staan altijd open voor ontvangst.
+
+sat-tune-link-both-vfos = Zet de afstemming, de andere VFO en de modus op deze verbinding — de downlink op deze VFO, de uplink op de andere; een vergrendeling op deze satelliet volgt mee
+
+sat-move-lock = {" "}VERPLAATS SLOT{" "}
+
+sat-locked-other-link-move-lock = Op deze satelliet vergrendeld via een andere verbinding: verplaats het slot naar deze — met uplink, toon en Doppler
+
+sat-rig-rx = RX ZENDER
+
+sat-rig-tx = TX ZENDER
+
+topbar-sat-locked-vfo-a-downlink-b-uplink = Vergrendeld op een satelliet: VFO A is de downlink en VFO B de uplink tot het slot eindigt

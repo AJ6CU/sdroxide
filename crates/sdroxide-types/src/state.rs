@@ -249,6 +249,12 @@ pub struct TxState {
     /// sends a wild figure gets a sane one back.
     #[serde(default)]
     pub cessb_db: f32,
+    /// The rig is transmitting under its own control (its microphone, a foot
+    /// switch, its VOX) rather than sdroxide's `ptt`. Status only, reported by
+    /// a CAT rig that answers the transmit read; what a satellite lock's
+    /// readout uses to show the uplink while the operator talks.
+    #[serde(default)]
+    pub rig_keyed: bool,
 }
 
 /// The most controlled-envelope compression the control offers, in decibels.

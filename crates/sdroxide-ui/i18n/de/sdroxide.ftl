@@ -3175,7 +3175,6 @@ sat-downlink-mhz = DOWNLINK (MHz)
 sat-uplink-mhz = UPLINK (MHz)
 sat-mode = BETRIEBSART
 sat-tune = ABSTIMMEN
-sat-set-dial-mode-link-no = Skala und Betriebsart auf diese Verbindung setzen — keine Verfolgung, keine Korrektur
 sat-locked = {" "}EINGERASTET{" "}
 sat-lock = {" "}EINRASTEN{" "}
 sat-track-satellite-doppler-correction-rx = Diesen Satelliten verfolgen: Doppler-Korrektur auf Empfang und Senden, auf den Transponder abgebildeter Uplink, und die 3D-Ansicht folgt ihm
@@ -9588,3 +9587,15 @@ meshtastic-tx-rails = Der Sender hat das Tasten verweigert: den Grund nennt die 
 rx-bands-swl-note = Der SWL-Modus ist für dieses Funkgerät aktiv: Es gibt keine Empfangssperre. Alle Bänder können abgestimmt werden.
 
 rx-bands-always-open = Hörbänder (und der SWL-Modus) sind für den Empfang immer offen.
+
+sat-tune-link-both-vfos = Stellt Frequenz, das andere VFO und die Betriebsart auf diese Verbindung ein — den Downlink auf diesem VFO, den Uplink auf dem anderen; eine Sperre auf diesem Satelliten folgt ihr
+
+sat-move-lock = {" "}SPERRE VERSETZEN{" "}
+
+sat-locked-other-link-move-lock = Auf diesen Satelliten über eine andere Verbindung gesperrt: Sperre auf diese Verbindung versetzen — mit Uplink, Ton und Doppler
+
+sat-rig-rx = RX FUNKGERÄT
+
+sat-rig-tx = TX FUNKGERÄT
+
+topbar-sat-locked-vfo-a-downlink-b-uplink = Auf einen Satelliten gesperrt: VFO A ist der Downlink und VFO B der Uplink, bis die Sperre endet

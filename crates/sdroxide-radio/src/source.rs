@@ -183,6 +183,33 @@ pub trait IqSource: Send {
         0.0
     }
 
+    /// Set VFO B's frequency (CAT rigs only). No-op on non-CAT front ends.
+    fn set_vfo_b_freq(&mut self, _hz: f64) {}
+
+    /// Switch the rig's split on (CAT rigs only). No-op on non-CAT front ends.
+    fn split_on(&mut self) {}
+
+    /// Switch the rig's split off (CAT rigs only). No-op on non-CAT front ends.
+    fn split_off(&mut self) {}
+
+    /// Set VFO B's mode (CAT rigs only). No-op on non-CAT front ends.
+    fn set_vfo_b_mode(&mut self, _mode: sdroxide_types::Mode) {}
+
+    /// Set CTCSS tone on VFO B (CAT rigs only). No-op on non-CAT front ends.
+    fn set_vfo_b_ctcss(&mut self, _tone_hz: f64) {}
+
+    /// Tell the source whether SAT split is on (so tx_begin skips the freq
+    /// write). No-op on non-CAT front ends.
+    fn set_sat_split_on(&mut self, _on: bool) {}
+
+    /// Whether this source commands a CAT transceiver's own VFOs and split —
+    /// a CAT rig on its own, or one paired with a panadapter receiver. Where it
+    /// does, a satellite lock and SPLIT run on the rig's split (VFO B the
+    /// transmit frequency) rather than borrowing the dial for each over.
+    fn controls_rig_split(&self) -> bool {
+        false
+    }
+
     /// Blocking read. Returns the number of samples written to `buf`;
     /// 0 means a timeout (caller should just retry).
     fn read(&mut self, buf: &mut [Complex32]) -> Result<usize>;

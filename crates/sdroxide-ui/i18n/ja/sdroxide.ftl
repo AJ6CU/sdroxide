@@ -3158,7 +3158,6 @@ sat-downlink-mhz = ダウンリンク（MHz）
 sat-uplink-mhz = アップリンク（MHz）
 sat-mode = モード
 sat-tune = 同調
-sat-set-dial-mode-link-no = ダイヤルとモードをこのリンクに設定します。ロックも補正もしません
 sat-locked = {" "}ロック中{" "}
 sat-lock = {" "}ロック{" "}
 sat-track-satellite-doppler-correction-rx = この衛星を追跡します。RX と TX のドップラー補正、トランスポンダーにマップされたアップリンク、3D ビューもそれに従います
@@ -9536,3 +9535,15 @@ meshtastic-tx-rails = 送信機が送信状態になりませんでした。理�
 rx-bands-swl-note = この無線機は SWL モードです。受信ロックはありません。どのバンドにも同調できます。
 
 rx-bands-always-open = リスニング用バンド（および SWL モード）は常に受信できます。
+
+sat-tune-link-both-vfos = ダイヤル、もう一方のVFO、モードをこのリンクに設定します — ダウンリンクをこのVFOに、アップリンクをもう一方に。この衛星のロックも移動します
+
+sat-move-lock = {" "}ロック移動{" "}
+
+sat-locked-other-link-move-lock = この衛星は別のリンクでロック中です：ロックをこのリンクに移動します — アップリンク、トーン、ドップラーも含みます
+
+sat-rig-rx = 無線機RX
+
+sat-rig-tx = 無線機TX
+
+topbar-sat-locked-vfo-a-downlink-b-uplink = 衛星にロック中：ロックが終わるまで、VFO Aはダウンリンク、VFO Bはアップリンクです

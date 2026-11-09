@@ -3154,7 +3154,6 @@ sat-downlink-mhz = 下行（MHz）
 sat-uplink-mhz = 上行（MHz）
 sat-mode = 模式
 sat-tune = 调谐
-sat-set-dial-mode-link-no = 将表盘和模式设为此链路——不锁定，不校正
 sat-locked = {" "}已锁定{" "}
 sat-lock = {" "}锁定{" "}
 sat-track-satellite-doppler-correction-rx = 跟踪此卫星：对接收和发射进行多普勒校正，上行按转发器映射，三维视图随之跟随
@@ -9526,3 +9525,15 @@ meshtastic-tx-rails = 发射机拒绝发射：原因见发射提示信息。
 rx-bands-swl-note = 此电台已启用 SWL 模式：没有接收锁定，可以调谐到任何波段。
 
 rx-bands-always-open = 收听波段（以及 SWL 模式）始终可以接收。
+
+sat-tune-link-both-vfos = 将频率、另一个VFO和模式设为此链路——下行在此VFO，上行在另一个VFO；此卫星上的锁定会随之移动
+
+sat-move-lock = {" "}移动锁定{" "}
+
+sat-locked-other-link-move-lock = 已通过另一条链路锁定此卫星：将锁定移到这一条——包括上行、亚音和多普勒
+
+sat-rig-rx = 电台接收
+
+sat-rig-tx = 电台发射
+
+topbar-sat-locked-vfo-a-downlink-b-uplink = 已锁定卫星：锁定结束前，VFO A为下行，VFO B为上行

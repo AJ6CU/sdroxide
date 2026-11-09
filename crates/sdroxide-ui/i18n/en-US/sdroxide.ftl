@@ -3182,7 +3182,6 @@ sat-downlink-mhz = DOWNLINK (MHz)
 sat-uplink-mhz = UPLINK (MHz)
 sat-mode = MODE
 sat-tune = TUNE
-sat-set-dial-mode-link-no = Set the dial and mode to this link — no lock, no correction
 sat-locked = {" "}LOCKED{" "}
 sat-lock = {" "}LOCK ON{" "}
 sat-track-satellite-doppler-correction-rx = Track this satellite: Doppler correction on RX and TX, transponder-mapped uplink, and the 3D view follows it
@@ -9614,3 +9613,15 @@ meshtastic-tx-rails = The transmitter refused to key up: see the transmit messag
 rx-bands-swl-note = SWL mode is on for this radio: there is no receive lock. Every band can be tuned.
 
 rx-bands-always-open = Listening bands (and SWL mode) are always open for reception.
+
+sat-tune-link-both-vfos = Set the dial, the other VFO and the mode to this link — the downlink on this VFO, the uplink on the other; a lock on this satellite moves to it
+
+sat-move-lock = {" "}MOVE LOCK{" "}
+
+sat-locked-other-link-move-lock = Locked to this satellite on another link: move the lock to this one — its uplink, its tone and its Doppler
+
+sat-rig-rx = RIG RX
+
+sat-rig-tx = RIG TX
+
+topbar-sat-locked-vfo-a-downlink-b-uplink = Locked to a satellite: VFO A is the downlink and VFO B the uplink until the lock ends

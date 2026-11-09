@@ -2356,8 +2356,14 @@ use sdroxide_types::{
 /// [`sdroxide_types::MeshtasticStatus`] gains `tx_refused`, `tx_busy`,
 /// `tx_sent`, `tx_used_ms` and `tx_budget_ms` at its tail.
 /// `PROTO_VERSION` 287 → 288, `VERSION_BYTE` 0x6B → 0x6C.
-pub const PROTO_VERSION: u16 = 288;
-const VERSION_BYTE: u8 = 0x6C;
+///
+/// v289: **SAT lock on a CAT rig's split.** `SatLockConfig` (carried by
+/// `Command::SetSatLock`) gains `ctcss_hz: Option<f64>` last, so a CAT rig can
+/// set the tone on VFO B, and `TxState` gains `rig_keyed: bool` last, the rig
+/// transmitting under its own control. Both cross the link inside postcard
+/// structs. `PROTO_VERSION` 288 → 289, `VERSION_BYTE` 0x6C → 0x6D.
+pub const PROTO_VERSION: u16 = 289;
+const VERSION_BYTE: u8 = 0x6D;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtoError {
@@ -4747,5 +4753,32 @@ mod tests {
     fn rejects_wrong_version_byte() {
         assert!(matches!(decode::<ClientMsg>(&[0x7f, 0, 0]), Err(ProtoError::Version(0x7f))));
         assert!(matches!(decode::<ClientMsg>(&[]), Err(ProtoError::Empty)));
+    }
+
+    /// v289: the satellite lock's CTCSS tone rides the end of `SatLockConfig`,
+    /// and the rig's own keying the end of `TxState`; the version is pinned.
+    #[test]
+    fn the_sat_lock_tone_and_the_rig_keyed_flag_round_trip() {
+        assert_eq!((PROTO_VERSION, VERSION_BYTE), (289, 0x6D));
+        let cfg = sdroxide_types::SatLockConfig {
+            norad_id: 25544,
+            ctcss_hz: Some(67.0),
+            ..Default::default()
+        };
+        let msg = ClientMsg::Command(Command::SetSatLock(Some(Box::new(cfg.clone()))));
+        match decode::<ClientMsg>(&encode(&msg).unwrap()).unwrap() {
+            ClientMsg::Command(Command::SetSatLock(Some(back))) => assert_eq!(*back, cfg),
+            _ => panic!("SetSatLock did not round-trip"),
+        }
+        // No tone encodes as one byte less than a tone: the field is the tail.
+        let none = sdroxide_types::SatLockConfig { ctcss_hz: None, ..cfg.clone() };
+        let (a, b) = (
+            encode(&ClientMsg::Command(Command::SetSatLock(Some(Box::new(none))))).unwrap(),
+            encode(&msg).unwrap(),
+        );
+        assert!(b.len() > a.len());
+        let tx = sdroxide_types::TxState { rig_keyed: true, ..Default::default() };
+        let back: sdroxide_types::TxState = postcard::from_bytes(&postcard::to_allocvec(&tx).unwrap()).unwrap();
+        assert!(back.rig_keyed);
     }
 }

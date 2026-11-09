@@ -3180,7 +3180,6 @@ sat-downlink-mhz = DOWNLINK (MHz)
 sat-uplink-mhz = UPLINK (MHz)
 sat-mode = MODE
 sat-tune = ACCORD
-sat-set-dial-mode-link-no = Régler le cadran et le mode sur cette liaison — ni verrouillage, ni correction
 sat-locked = {" "}VERROUILLÉ{" "}
 sat-lock = {" "}VERROUILLER{" "}
 sat-track-satellite-doppler-correction-rx = Suivre ce satellite : correction Doppler en RX et TX, liaison montante selon le répéteur, et la vue 3D le suit
@@ -9599,3 +9598,15 @@ meshtastic-tx-rails = L'émetteur a refusé de passer en émission : voyez le me
 rx-bands-swl-note = Le mode SWL est actif pour cette radio : il n'y a pas de verrou en réception. Toutes les bandes peuvent être écoutées.
 
 rx-bands-always-open = Les bandes d'écoute (et le mode SWL) sont toujours ouvertes en réception.
+
+sat-tune-link-both-vfos = Règle le cadran, l'autre VFO et le mode sur ce lien — la descente sur ce VFO, la montée sur l'autre ; un verrouillage sur ce satellite le suit
+
+sat-move-lock = {" "}DÉPLACER{" "}
+
+sat-locked-other-link-move-lock = Verrouillé sur ce satellite par un autre lien : déplace le verrouillage sur celui-ci — sa montée, sa tonalité et son Doppler
+
+sat-rig-rx = RX RADIO
+
+sat-rig-tx = TX RADIO
+
+topbar-sat-locked-vfo-a-downlink-b-uplink = Verrouillé sur un satellite : le VFO A est la descente et le VFO B la montée jusqu'à la fin du verrouillage

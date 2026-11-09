@@ -820,7 +820,8 @@ impl IqSource for EladSource {
                 | sdroxide_cat::CatUpdate::RflW(_)
                 | sdroxide_cat::CatUpdate::Squelch(_)
                 | sdroxide_cat::CatUpdate::RxAntenna(_)
-                | sdroxide_cat::CatUpdate::Signal(_) => {}
+                | sdroxide_cat::CatUpdate::Signal(_)
+                | sdroxide_cat::CatUpdate::Split(_) => {}
             }
         }
         out

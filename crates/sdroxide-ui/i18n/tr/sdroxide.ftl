@@ -3182,7 +3182,6 @@ sat-downlink-mhz = AŞAĞI BAĞLANTI (MHz)
 sat-uplink-mhz = YUKARI BAĞLANTI (MHz)
 sat-mode = MOD
 sat-tune = AYARLA
-sat-set-dial-mode-link-no = Skalayı ve modu bu bağlantıya ayarlayın — kilit yok, düzeltme yok
 sat-locked = {" "}KİLİTLİ{" "}
 sat-lock = {" "}KİLİTLE{" "}
 sat-track-satellite-doppler-correction-rx = Bu uyduyu izleyin: RX ve TX'te Doppler düzeltmesi, transponder eşleşmeli yukarı bağlantı ve 3B görünüm onu izler
@@ -9588,3 +9587,15 @@ meshtastic-tx-rails = Verici yayına geçmeyi reddetti: nedeni yayın mesajında
 rx-bands-swl-note = Bu telsiz için SWL modu açık: alma kilidi yok. Her banda ayarlanabilir.
 
 rx-bands-always-open = Dinleme bantları (ve SWL modu) alma için her zaman açıktır.
+
+sat-tune-link-both-vfos = Kadranı, diğer VFO'yu ve modu bu bağlantıya ayarlar — iniş hattı bu VFO'da, yükseliş hattı diğerinde; bu uydudaki kilit ona geçer
+
+sat-move-lock = {" "}KİLİDİ TAŞI{" "}
+
+sat-locked-other-link-move-lock = Bu uyduya başka bir bağlantıyla kilitli: kilidi buna taşı — yükseliş hattı, tonu ve Doppler'i ile
+
+sat-rig-rx = TELSİZ RX
+
+sat-rig-tx = TELSİZ TX
+
+topbar-sat-locked-vfo-a-downlink-b-uplink = Bir uyduya kilitli: kilit bitene kadar VFO A iniş hattı, VFO B yükseliş hattıdır

@@ -3182,7 +3182,6 @@ sat-downlink-mhz = DESCIDA (MHz)
 sat-uplink-mhz = SUBIDA (MHz)
 sat-mode = MODO
 sat-tune = SINTONIZAR
-sat-set-dial-mode-link-no = Define o dial e o modo para este enlace — sem travamento, sem correção
 sat-locked = {" "}TRAVADO{" "}
 sat-lock = {" "}TRAVAR{" "}
 sat-track-satellite-doppler-correction-rx = Rastreia este satélite: correção Doppler no RX e no TX, subida mapeada no transponder, e a visão 3D o acompanha
@@ -9588,3 +9587,15 @@ meshtastic-tx-rails = O transmissor se recusou a transmitir: veja a mensagem de 
 rx-bands-swl-note = O modo SWL está ativo neste rádio: não há bloqueio de recepção. Qualquer banda pode ser sintonizada.
 
 rx-bands-always-open = As bandas de escuta (e o modo SWL) estão sempre abertas para recepção.
+
+sat-tune-link-both-vfos = Ajusta o dial, o outro VFO e o modo para este enlace — o downlink neste VFO, o uplink no outro; um travamento neste satélite passa para ele
+
+sat-move-lock = {" "}MOVER TRAVA{" "}
+
+sat-locked-other-link-move-lock = Travado neste satélite por outro enlace: mova a trava para este — com o uplink, o tom e o Doppler
+
+sat-rig-rx = RX RÁDIO
+
+sat-rig-tx = TX RÁDIO
+
+topbar-sat-locked-vfo-a-downlink-b-uplink = Travado em um satélite: o VFO A é o downlink e o VFO B o uplink até a trava terminar
