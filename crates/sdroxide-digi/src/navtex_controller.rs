@@ -44,12 +44,26 @@ const TEXT_CAP: usize = 8_000;
 /// not append to it.
 const BODY_CAP: usize = 20_000;
 
-fn sensitivity(cfg: &DigiConfig) -> i8 {
-    if cfg.navtex_rx_auto {
-        0
-    } else {
-        cfg.navtex_rx_sensitivity
+/// Whether `text` ends with `mark` — `ZCZC` or `NNNN` — allowing one of the
+/// four characters to be a lost one (`*`).
+///
+/// The two sequences are the whole of the framing, and a single character
+/// lost in either used to cost the message: an opener with a hole in it left
+/// the broadcast in the loose text, never filed, and a closer with one ran
+/// the message on into the next. Only a *lost* character is forgiven, not a
+/// wrong one: `Z*ZC` is an opener nothing else could have been, `ZAZC` is
+/// not.
+fn ends_with_mark(text: &str, mark: &str) -> bool {
+    let mut tail = text.chars().rev();
+    let mut holes = 0;
+    for want in mark.chars().rev() {
+        match tail.next() {
+            Some(c) if c == want => {}
+            Some('*') => holes += 1,
+            _ => return false,
+        }
     }
+    holes <= 1
 }
 
 pub struct NavtexController {
@@ -81,7 +95,6 @@ impl NavtexController {
     ) -> Self {
         let mut rx = NavtexRx::new(tap_rate);
         rx.set_reverse(cfg.navtex_reverse);
-        rx.set_sensitivity(sensitivity(&cfg));
         let mut ctrl = NavtexController {
             cfg,
             rx,
@@ -159,7 +172,7 @@ impl NavtexController {
                     .unwrap_or(self.text.len());
                 self.text.drain(..cut);
             }
-            if self.text.ends_with("ZCZC") {
+            if ends_with_mark(&self.text, "ZCZC") {
                 self.live = Some(NavtexMessage {
                     station: '?',
                     kind: '?',
@@ -199,7 +212,10 @@ impl NavtexController {
 
         let do_close;
         let reopen;
-        if msg.text.ends_with("NNNN") {
+        // Both marks are four one-byte characters, with or without a hole.
+        if msg.station != '?' && ends_with_mark(&msg.text, "NNNN") {
+            let holes = msg.text[msg.text.len() - 4..].matches('*').count() as u32;
+            msg.lost = msg.lost.saturating_sub(holes);
             msg.text.truncate(msg.text.len() - 4);
             msg.complete = true;
             do_close = true;
@@ -207,9 +223,11 @@ impl NavtexController {
         } else if msg.text.len() > BODY_CAP {
             do_close = true;
             reopen = false;
-        } else if msg.text.ends_with("ZCZC") && msg.text.len() > 4 {
+        } else if ends_with_mark(&msg.text, "ZCZC") && msg.text.len() > 4 {
             // A second opener inside an open message: the previous closing
             // sequence was lost. Drop it out of the body and reopen.
+            let holes = msg.text[msg.text.len() - 4..].matches('*').count() as u32;
+            msg.lost = msg.lost.saturating_sub(holes);
             msg.text.truncate(msg.text.len() - 4);
             do_close = true;
             reopen = true;
@@ -390,7 +408,6 @@ impl DigiEngine for NavtexController {
         // phase cannot keep producing garbage on a quiet channel.
         self.rx = NavtexRx::new(self.tap_rate);
         self.rx.set_reverse(self.cfg.navtex_reverse);
-        self.rx.set_sensitivity(sensitivity(&self.cfg));
         self.status_dirty = true;
         self.save_messages();
     }
@@ -414,12 +431,10 @@ impl DigiEngine for NavtexController {
             self.rx.set_reverse(cfg.navtex_reverse);
             self.status_dirty = true;
         }
-        if cfg.navtex_rx_sensitivity != self.cfg.navtex_rx_sensitivity
-            || cfg.navtex_rx_auto != self.cfg.navtex_rx_auto
-        {
-            self.rx.set_sensitivity(sensitivity(&cfg));
-            self.status_dirty = true;
-        }
+        // `navtex_rx_sensitivity` and `navtex_rx_auto` are still in the
+        // config, because taking a field out of it is a wire change, and are
+        // read by nothing: the receiver decides for itself whether a signal
+        // is there.
         self.cfg = cfg;
     }
 }
@@ -568,6 +583,31 @@ mod tests {
         assert_eq!(s.messages.len(), 2, "text={:?} live={:?}", s.text, s.live);
         assert_eq!(s.messages[0].serial, 1, "{:?}", s.messages);
         assert_eq!(s.messages[1].serial, 2, "{:?}", s.messages);
+    }
+
+    /// One character lost in the opening or the closing sequence does not cost
+    /// the message. Both used to: `Z*ZC` left the broadcast unfiled in the
+    /// loose text, and `NN*N` ran it on into whatever came next.
+    #[test]
+    fn a_hole_in_the_opening_or_closing_sequence_still_frames_the_message() {
+        let mut c = ctrl();
+        c.pending.push_str("Z*ZC FA12\r\nGALE WARNING\r\nNN*N\r\n");
+        c.frame();
+        let s = c.navtex_status();
+        assert_eq!(s.messages.len(), 1, "text={:?} live={:?}", s.text, s.live);
+        let m = &s.messages[0];
+        assert_eq!((m.station, m.kind, m.serial), ('F', 'A', 12));
+        assert!(m.complete, "the closing sequence with a hole was not seen");
+        assert_eq!(m.text.trim(), "GALE WARNING");
+        assert_eq!(m.lost, 0, "the hole in the closing sequence was counted against the body");
+        assert!(s.live.is_none());
+
+        // A wrong character is not a lost one: this is not an opener.
+        let mut c = ctrl();
+        c.pending.push_str("ZAZC FA12 GALE WARNING NNNN");
+        c.frame();
+        assert!(c.navtex_status().messages.is_empty());
+        assert!(!ends_with_mark("Z**C", "ZCZC"), "two holes is not a mark");
     }
 
     /// A broadcast whose closing `NNNN` was lost must not swallow the next one:
