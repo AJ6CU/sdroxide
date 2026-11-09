@@ -9600,3 +9600,15 @@ topbar-sat-locked-vfo-a-downlink-b-uplink = Bloqueado en un satélite: el VFO A 
 qrzcard-photo-loading = Cargando foto…
 
 qrzcard-no-photo = Ficha sin foto
+
+sonde-card-listen-hover = Haga clic para sintonizar la radio en este canal: el dial va allí y el decodificador lo escucha en exclusiva.
+
+sonde-card-decoding = Decodificada por esta radio
+
+sonde-card-waiting = Escuchando en este canal, nada decodificado todavía
+
+sonde-card-click-to-listen = Haga clic en la frecuencia para escuchar
+
+sonde-type-all = Todos los tipos
+
+sonde-type-hover = Buscar un tipo de sonda: al elegir uno empieza el escaneo, que mueve la ventana por la banda hasta oír ese tipo. Solo ese tipo se lista y se dibuja.

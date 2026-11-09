@@ -9601,3 +9601,15 @@ topbar-sat-locked-vfo-a-downlink-b-uplink = Travado em um satélite: o VFO A é 
 qrzcard-photo-loading = Carregando foto…
 
 qrzcard-no-photo = Ficha sem foto
+
+sonde-card-listen-hover = Clique para sintonizar o rádio neste canal: o dial vai para lá e o decodificador escuta só ele.
+
+sonde-card-decoding = Decodificada por este rádio
+
+sonde-card-waiting = Escutando neste canal, nada decodificado ainda
+
+sonde-card-click-to-listen = Clique na frequência para ouvir
+
+sonde-type-all = Todos os tipos
+
+sonde-type-hover = Procurar um tipo de sonda: escolher um inicia a varredura, que move a janela pela faixa até ouvir esse tipo. Só esse tipo é listado e desenhado.

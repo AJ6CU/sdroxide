@@ -162,6 +162,53 @@ pub fn place_ok(lat: f64, lon: f64) -> bool {
     lat.is_finite() && lon.is_finite() && lat.abs() <= 90.0 && lon.abs() <= 180.0
 }
 
+/// A serial fit to put in an address: letters, digits, `-` and `_`, at most 32.
+pub fn serial_ok(serial: &str) -> bool {
+    !serial.is_empty()
+        && serial.len() <= 32
+        && serial.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_'))
+}
+
+/// The address of one sonde's flight so far (every frame SondeHub holds).
+pub fn flight_url(serial: &str) -> Option<String> {
+    serial_ok(serial).then(|| format!("https://api.v2.sondehub.org/sonde/{serial}"))
+}
+
+/// The most points of a flight kept: the track is a line on a map, not data.
+pub const FLIGHT_MAX_POINTS: usize = 600;
+
+/// One sonde's flight as SondeHub answers (an array of frames, each with
+/// `datetime`, `lat`, `lon`): the places in time order, thinned to at most
+/// [`FLIGHT_MAX_POINTS`] with the first and last kept. A frame without a place
+/// on Earth is left out; nonsense gives nothing.
+pub fn parse_flight(json: &str) -> Vec<(f64, f64)> {
+    let Ok(serde_json::Value::Array(frames)) = serde_json::from_str::<serde_json::Value>(json)
+    else {
+        return Vec::new();
+    };
+    let mut pts: Vec<(i64, f64, f64)> = frames
+        .iter()
+        .filter_map(|v| {
+            let lat = v.get("lat")?.as_f64()?;
+            let lon = v.get("lon")?.as_f64()?;
+            if !place_ok(lat, lon) {
+                return None;
+            }
+            Some((parse_time(v.get("datetime")?.as_str()?)?, lat, lon))
+        })
+        .collect();
+    pts.sort_by_key(|p| p.0);
+    pts.dedup_by_key(|p| p.0);
+    let n = pts.len();
+    if n <= FLIGHT_MAX_POINTS {
+        return pts.into_iter().map(|(_, a, b)| (a, b)).collect();
+    }
+    (0..FLIGHT_MAX_POINTS)
+        .map(|i| pts[i * (n - 1) / (FLIGHT_MAX_POINTS - 1)])
+        .map(|(_, a, b)| (a, b))
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -200,6 +247,49 @@ mod tests {
         assert!(parse("[]").is_empty());
         assert!(parse("<html>").is_empty());
         assert!(parse(r#"{"a": {"serial": "A", "lat": 95.0, "lon": 0.0, "datetime": "2026-01-01T00:00:00Z"}}"#).is_empty());
+    }
+
+    #[test]
+    fn a_flight_is_read_in_time_order_and_a_bad_frame_is_left_out() {
+        let j = r#"[
+          {"datetime": "2026-11-05T10:00:20Z", "lat": 49.0, "lon": 5.0},
+          {"datetime": "2026-11-05T10:00:00Z", "lat": 48.0, "lon": 4.0},
+          {"datetime": "2026-11-05T10:00:10Z", "lat": 95.0, "lon": 4.5},
+          {"datetime": "2026-11-05T10:00:10Z", "lat": 48.5, "lon": 4.5, "alt": 1000},
+          {"lat": 1.0, "lon": 1.0}
+        ]"#;
+        assert_eq!(parse_flight(j), vec![(48.0, 4.0), (48.5, 4.5), (49.0, 5.0)]);
+        assert!(parse_flight("").is_empty() && parse_flight("{}").is_empty());
+    }
+
+    #[test]
+    fn a_long_flight_is_thinned_and_keeps_both_ends() {
+        let frames: Vec<String> = (0..5000)
+            .map(|i| {
+                format!(
+                    r#"{{"datetime": "2026-11-05T{:02}:{:02}:{:02}Z", "lat": {}, "lon": 2.0}}"#,
+                    i / 3600,
+                    i / 60 % 60,
+                    i % 60,
+                    10.0 + i as f64 / 1000.0
+                )
+            })
+            .collect();
+        let v = parse_flight(&format!("[{}]", frames.join(",")));
+        assert_eq!(v.len(), FLIGHT_MAX_POINTS);
+        assert_eq!(v[0].0, 10.0);
+        assert!((v[v.len() - 1].0 - 14.999).abs() < 1e-9);
+    }
+
+    #[test]
+    fn only_a_plain_serial_gets_an_address() {
+        assert_eq!(
+            flight_url("W4871102").as_deref(),
+            Some("https://api.v2.sondehub.org/sonde/W4871102")
+        );
+        for bad in ["", "A/../B", "a b", "x?y=1", &"A".repeat(33)] {
+            assert!(flight_url(bad).is_none(), "{bad}");
+        }
     }
 
     #[test]

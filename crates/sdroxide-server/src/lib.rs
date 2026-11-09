@@ -743,6 +743,7 @@ pub async fn serve(params: ServerParams) -> Result<(), ServerError> {
         .route("/radios", get(radios_route))
         .route("/solar-ws", get(solar::ws_route))
         .route("/sonde-online", get(sonde_online::route))
+        .route("/sonde-track", get(sonde_online::track_route))
         .route("/aircraft-info/{icao}", get(aircraft::info_route))
         .route("/aircraft-photo", axum::routing::delete(aircraft::photo_release))
         .route(

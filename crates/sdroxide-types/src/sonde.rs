@@ -64,6 +64,18 @@ impl SondeSettings {
         self.frequency_hz = self.frequency_hz.clamp(SONDE_BAND_HZ.0, SONDE_BAND_HZ.1);
         self
     }
+
+    /// The settings after the operator moved the dial to `dial_hz`, or `None`
+    /// when the channel stays. With the decoder on and one channel (no scan) the
+    /// dial and the channel are two controls for one thing, as in HFDL: tuning
+    /// the dial onto a sonde in the band must make the lane decode *that*
+    /// signal, not sit on the channel box's old value while the operator hears
+    /// packets and nothing is decoded.
+    pub fn following_dial(&self, dial_hz: f64) -> Option<SondeSettings> {
+        let in_band = (SONDE_BAND_HZ.0..=SONDE_BAND_HZ.1).contains(&dial_hz);
+        (self.enabled && !self.scan && in_band && (self.frequency_hz - dial_hz).abs() >= 1.0)
+            .then_some(SondeSettings { frequency_hz: dial_hz, ..*self })
+    }
 }
 
 /// One point of a sonde's flight.
@@ -137,6 +149,18 @@ pub struct SondeStatus {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_channel_follows_the_dial_only_when_one_channel_is_decoded_in_the_band() {
+        let on = SondeSettings { enabled: true, frequency_hz: 402_700_000.0, scan: false };
+        let moved = on.following_dial(401_002_000.0).expect("follows");
+        assert_eq!(moved.frequency_hz, 401_002_000.0);
+        assert!(moved.enabled && !moved.scan);
+        assert!(on.following_dial(402_700_000.4).is_none(), "already there");
+        assert!(on.following_dial(145_500_000.0).is_none(), "outside the band");
+        assert!(SondeSettings { enabled: false, ..on }.following_dial(401e6).is_none());
+        assert!(SondeSettings { scan: true, ..on }.following_dial(401e6).is_none());
+    }
 
     #[test]
     fn only_a_window_on_the_band_is_worth_decoding() {

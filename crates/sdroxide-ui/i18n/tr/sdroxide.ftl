@@ -9601,3 +9601,15 @@ topbar-sat-locked-vfo-a-downlink-b-uplink = Bir uyduya kilitli: kilit bitene kad
 qrzcard-photo-loading = Fotoğraf yükleniyor…
 
 qrzcard-no-photo = Fotoğrafsız kayıt
+
+sonde-card-listen-hover = Telsizi bu kanala ayarlamak için tıklayın: kadran oraya gider ve çözücü yalnızca onu dinler.
+
+sonde-card-decoding = Bu telsiz tarafından çözülüyor
+
+sonde-card-waiting = Bu kanalı dinliyor, henüz bir şey çözülmedi
+
+sonde-card-click-to-listen = Dinlemek için frekansa tıklayın
+
+sonde-type-all = Tüm türler
+
+sonde-type-hover = Tek bir sonda türünü ara: seçmek taramayı başlatır, tarama bu tür duyulana dek pencereyi bant boyunca kaydırır. Yalnızca bu tür listelenir ve çizilir.

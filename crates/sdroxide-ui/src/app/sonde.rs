@@ -14,6 +14,22 @@ use sdroxide_types::{Command, SONDE_BAND_HZ, SondeSettings, SondeTrack};
 use crate::app::{SdroxideApp, sonde_card};
 use crate::sonde_map::{self, Phase};
 
+/// The types the picker offers (the decoders' own names: not translated).
+pub(in crate::app) const TYPES: &[&str] = &[
+    "RS41", "DFM", "M10", "M20", "iMet", "iMet-54", "MRZ", "LMS6", "MTS01", "Mk2a", "Meisei",
+];
+
+/// Whether a mode owns the panel under the waterfall (or parks the receiver
+/// elsewhere): the SONDE view has no mode of its own, so the dock would stay
+/// on that mode's panel, APRS stations under a sonde map.
+fn holds_the_dock(mode: sdroxide_types::Mode) -> bool {
+    mode.has_bottom_panel()
+        || mode.is_wideband_lane()
+        || mode.is_hfdl()
+        || mode.is_aprs()
+        || mode.is_packet()
+}
+
 /// The commands the SONDE button sends: leave a mode that holds the front end
 /// elsewhere, switch the decoder on if it is off and bring the dial to its
 /// channel, so the channel is inside the sample window.
@@ -28,7 +44,7 @@ pub(in crate::app) fn button_commands(
     mode: sdroxide_types::Mode,
 ) -> Vec<Command> {
     let mut out = Vec::new();
-    if mode.is_wideband_lane() || mode.is_hfdl() {
+    if holds_the_dock(mode) {
         out.push(Command::SetModeListen {
             rx: sdroxide_types::RxId::Main,
             mode: sdroxide_types::Mode::Nfm,
@@ -39,6 +55,58 @@ pub(in crate::app) fn button_commands(
     }
     out.push(Command::SetVfo { vfo, hz: cfg.frequency_hz });
     out
+}
+
+/// What a click on a card's frequency sends: the decoder on one channel (the
+/// scan off, or it would look elsewhere) and the dial on that channel, so the
+/// operator hears it and the lane decodes it. The same mode rule as the button.
+pub(in crate::app) fn listen_commands(
+    cfg: &SondeSettings,
+    vfo: sdroxide_types::Vfo,
+    mode: sdroxide_types::Mode,
+    hz: f64,
+) -> Vec<Command> {
+    let next = SondeSettings { enabled: true, frequency_hz: hz, scan: false };
+    let mut out = Vec::new();
+    if holds_the_dock(mode) {
+        out.push(Command::SetModeListen {
+            rx: sdroxide_types::RxId::Main,
+            mode: sdroxide_types::Mode::Nfm,
+        });
+    }
+    if next != *cfg {
+        out.push(Command::SetSondeConfig(next));
+    }
+    out.push(Command::SetVfo { vfo, hz });
+    out
+}
+
+/// What a card says about the radio's part in it.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(in crate::app) enum Listen {
+    /// The radio is on some other channel: a click will bring it here.
+    Elsewhere,
+    /// On this channel, no frame of this sonde yet.
+    Waiting,
+    /// On this channel and frames of this sonde are coming in.
+    Decoding,
+}
+
+/// Where the radio stands for a card on `card_hz`: on its channel (within
+/// 5 kHz, the width of a sonde) with the decoder on, and whether a frame of
+/// that sonde was heard in the last 30 s.
+pub(in crate::app) fn listen_state(
+    cfg: &SondeSettings,
+    card_hz: f64,
+    heard_age_s: Option<i64>,
+) -> Listen {
+    if !cfg.enabled || cfg.scan || (cfg.frequency_hz - card_hz).abs() > 5_000.0 {
+        return Listen::Elsewhere;
+    }
+    match heard_age_s {
+        Some(a) if a < 30 => Listen::Decoding,
+        _ => Listen::Waiting,
+    }
 }
 
 /// The map never gets less than this many points of height; under it the
@@ -71,11 +139,18 @@ enum CardAct {
     Close,
     Detach,
     Attach,
+    /// The frequency was clicked: listen there.
+    Listen(f64),
 }
 
 /// Draw a card: its title, the buttons, then the rows in two blocks side by
 /// side (half the height of one long column).
-fn draw_card(ui: &mut egui::Ui, card: &sonde_card::Card, detached: bool) -> CardAct {
+fn draw_card(
+    ui: &mut egui::Ui,
+    card: &sonde_card::Card,
+    detached: bool,
+    listen: Listen,
+) -> CardAct {
     let mut act = CardAct::None;
     ui.horizontal_wrapped(|ui| {
         ui.label(RichText::new(&card.title).size(12.0).strong());
@@ -98,6 +173,40 @@ fn draw_card(ui: &mut egui::Ui, card: &sonde_card::Card, detached: bool) -> Card
             }
         }
     });
+    if let Some(hz) = card.freq_hz {
+        ui.horizontal(|ui| {
+            let ink = match listen {
+                Listen::Decoding => crate::theme::GREEN(),
+                _ => ui.visuals().strong_text_color(),
+            };
+            let b = ui
+                .add(egui::Button::new(
+                    RichText::new(format!("{:.3} MHz", hz / 1e6)).size(26.0).strong().color(ink),
+                ))
+                .on_hover_text(tr!("sonde-card-listen-hover"));
+            if b.clicked() {
+                act = CardAct::Listen(hz);
+            }
+            let (text, ink) = match listen {
+                Listen::Decoding => (tr!("sonde-card-decoding"), crate::theme::GREEN()),
+                Listen::Waiting => (tr!("sonde-card-waiting"), crate::theme::YELLOW()),
+                Listen::Elsewhere => (tr!("sonde-card-click-to-listen"), crate::theme::gray(150)),
+            };
+            ui.label(RichText::new(text).size(11.0).color(ink));
+        });
+    }
+    if let Some((lat, lon, alt)) = card.place {
+        let alt = alt.map_or(String::new(), |a| format!("   {a:.0} m"));
+        ui.label(
+            RichText::new(format!(
+                "{}: {}{alt}",
+                tr!("sonde-card-position"),
+                super::aircraft_card::fmt_position(lat, lon)
+            ))
+            .size(13.0)
+            .strong(),
+        );
+    }
     let (left, right) = card_halves(&card.rows);
     ui.columns(2, |cols| {
         for (i, rows) in [left, right].into_iter().enumerate() {
@@ -130,7 +239,13 @@ impl SdroxideApp {
             Some(s) => (s.running, Some(s.level_dbfs), s.frames),
             None => (false, None, 0),
         };
-        let sondes: Vec<SondeTrack> = status.map(|s| s.sondes).unwrap_or_default();
+        let mut sondes: Vec<SondeTrack> = status.map(|s| s.sondes).unwrap_or_default();
+        let filter = self.sonde_map.type_filter;
+        if let Some(f) = filter {
+            sondes.retain(|s| crate::sonde_map::type_matches(f, &s.model));
+        }
+        // A sonde heard lately keeps a scan where it is.
+        let busy = sondes.iter().any(|s| now - s.last_unix < crate::sonde_map::SCAN_HOLD_S);
 
         ui.horizontal_wrapped(|ui| {
             let (txt, ink) = if running {
@@ -161,9 +276,45 @@ impl SdroxideApp {
             }
             ui.checkbox(&mut cfg.scan, RichText::new(tr!("sonde-scan")).size(11.0))
                 .on_hover_text(tr!("sonde-scan-hover"));
+            // A type to look for: choosing one starts the scan, which walks
+            // the window across the band until that kind of sonde is heard.
+            let shown = filter.map_or_else(|| tr!("sonde-type-all"), str::to_string);
+            let mut picked: Option<Option<&'static str>> = None;
+            egui::ComboBox::from_id_salt("sonde_type")
+                .selected_text(RichText::new(shown).size(11.0))
+                .show_ui(ui, |ui| {
+                    if ui.selectable_label(filter.is_none(), tr!("sonde-type-all")).clicked() {
+                        picked = Some(None);
+                    }
+                    for t in TYPES {
+                        if ui.selectable_label(filter == Some(*t), *t).clicked() {
+                            picked = Some(Some(*t));
+                        }
+                    }
+                })
+                .response
+                .on_hover_text(tr!("sonde-type-hover"));
+            if let Some(choice) = picked {
+                self.sonde_map.type_filter = choice;
+                if choice.is_some() {
+                    cfg.enabled = true;
+                    cfg.scan = true;
+                    self.sonde_map.stepper.restart();
+                }
+            }
         });
         if !cfg.enabled {
             ui.label(RichText::new(tr!("sonde-off-note")).size(11.0).color(crate::theme::YELLOW()));
+        }
+        // The scan walks the window over the band while nothing is heard: a
+        // window narrower than the band otherwise sits on one stretch for ever.
+        let scanning = cfg.enabled && cfg.scan && self.state.sample_rate > 0.0;
+        if self.sonde_map.stepper.due(now, scanning, busy) {
+            let hz = crate::sonde_map::next_scan_centre(self.state.center_hz, self.state.sample_rate);
+            if (hz - self.state.center_hz).abs() >= 1.0 {
+                cmds.push(Command::SetCenter(hz));
+                cmds.push(Command::SetVfo { vfo: self.state.active_vfo, hz });
+            }
         }
         if cfg != self.state.sonde {
             cmds.push(Command::SetSondeConfig(cfg));
@@ -177,6 +328,8 @@ impl SdroxideApp {
         let home = self.hfdl_home_for_maps();
         let peer = self.ctrl.peer_url();
         self.sonde_online.tick(ui.ctx(), home, now, peer.as_deref());
+        let want = self.sonde_map.selected.clone().filter(|_| self.sonde_online.on);
+        self.sonde_map.flight.tick(ui.ctx(), want.as_deref(), now, peer.as_deref());
         ui.horizontal_wrapped(|ui| {
             ui.checkbox(&mut self.sonde_online.on, RichText::new(tr!("sonde-online")).size(11.0))
                 .on_hover_text(tr!("sonde-online-hover"));
@@ -213,7 +366,7 @@ impl SdroxideApp {
         // The card is not part of the scrolling page: it is pinned beside its
         // sonde on the map, or a window of its own.
         let ctx = ui.ctx().clone();
-        self.sonde_card_view(&ctx, &sondes, home, now);
+        self.sonde_card_view(&ctx, cmds, &sondes, home, now);
     }
 
     fn sonde_scroll_body(
@@ -225,11 +378,21 @@ impl SdroxideApp {
         map_h: f32,
         now: i64,
     ) {
+        let hub: Vec<_> = match self.sonde_map.type_filter {
+            Some(f) => self
+                .sonde_online
+                .sondes
+                .iter()
+                .filter(|o| crate::sonde_map::type_matches(f, &o.model))
+                .cloned()
+                .collect(),
+            None => self.sonde_online.sondes.clone(),
+        };
         let clicked = crate::sonde_map::show(
             ui,
             &mut self.sonde_map,
             sondes,
-            &self.sonde_online.sondes,
+            &hub,
             home,
             now,
             night,
@@ -298,6 +461,7 @@ impl SdroxideApp {
     fn sonde_card_view(
         &mut self,
         ctx: &egui::Context,
+        cmds: &mut Vec<Command>,
         sondes: &[SondeTrack],
         home: Option<(f64, f64)>,
         now: i64,
@@ -319,13 +483,23 @@ impl SdroxideApp {
         if !live {
             sonde_card::mark_stale(&mut card);
         }
+        let heard = radio.map(|s| now - s.last_unix);
+        let listen = card
+            .freq_hz
+            .map_or(Listen::Elsewhere, |hz| listen_state(&self.state.sonde, hz, heard));
         let act = if self.sonde_map.detached {
-            self.sonde_card_window(ctx, &card)
+            self.sonde_card_window(ctx, &card, listen)
         } else {
-            self.sonde_card_pinned(ctx, &card)
+            self.sonde_card_pinned(ctx, &card, listen)
         };
         match act {
             CardAct::None => {}
+            CardAct::Listen(hz) => cmds.extend(listen_commands(
+                &self.state.sonde,
+                self.state.active_vfo,
+                self.state.rx[0].mode,
+                hz,
+            )),
             CardAct::Close => self.sonde_map.deselect(),
             CardAct::Detach => self.sonde_map.detached = true,
             CardAct::Attach => self.sonde_map.detached = false,
@@ -333,7 +507,12 @@ impl SdroxideApp {
     }
 
     /// The card over the map, beside its sonde, kept inside the map.
-    fn sonde_card_pinned(&mut self, ctx: &egui::Context, card: &sonde_card::Card) -> CardAct {
+    fn sonde_card_pinned(
+        &mut self,
+        ctx: &egui::Context,
+        card: &sonde_card::Card,
+        listen: Listen,
+    ) -> CardAct {
         let Some(bounds) = self.sonde_map.bounds else { return CardAct::None };
         let anchor = self.sonde_map.anchor.unwrap_or(bounds.center());
         let size = self.sonde_map.card_size.unwrap_or(egui::vec2(CARD_W, 230.0));
@@ -346,7 +525,7 @@ impl SdroxideApp {
                 egui::Frame::popup(ui.style())
                     .show(ui, |ui| {
                         ui.set_max_width(CARD_W);
-                        draw_card(ui, card, false)
+                        draw_card(ui, card, false, listen)
                     })
                     .inner
             });
@@ -355,7 +534,12 @@ impl SdroxideApp {
     }
 
     /// The card as a window the operator can move off the map and resize.
-    fn sonde_card_window(&mut self, ctx: &egui::Context, card: &sonde_card::Card) -> CardAct {
+    fn sonde_card_window(
+        &mut self,
+        ctx: &egui::Context,
+        card: &sonde_card::Card,
+        listen: Listen,
+    ) -> CardAct {
         let mut open = true;
         let mut window = egui::Window::new(card.title.clone())
             .id(egui::Id::new("sonde-card-window"))
@@ -367,7 +551,7 @@ impl SdroxideApp {
         }
         let act = window
             .show(ctx, |ui| {
-                egui::ScrollArea::vertical().show(ui, |ui| draw_card(ui, card, true)).inner
+                egui::ScrollArea::vertical().show(ui, |ui| draw_card(ui, card, true, listen)).inner
             })
             .and_then(|r| r.inner)
             .unwrap_or(CardAct::None);
@@ -440,7 +624,7 @@ mod tests {
     fn the_button_leaves_the_aviation_modes_before_it_retunes() {
         use sdroxide_types::Mode;
         let on = SondeSettings { enabled: true, ..SondeSettings::default() };
-        for mode in [Mode::Adsb, Mode::Vdl2, Mode::Hfdl, Mode::Ais, Mode::Dab] {
+        for mode in [Mode::Adsb, Mode::Vdl2, Mode::Hfdl, Mode::Ais, Mode::Dab, Mode::Aprs] {
             let cmds = button_commands(&on, sdroxide_types::Vfo::A, mode);
             assert!(
                 matches!(cmds[0], Command::SetModeListen { mode: Mode::Nfm, .. }),
@@ -450,6 +634,46 @@ mod tests {
         }
         let cmds = button_commands(&on, sdroxide_types::Vfo::A, Mode::Usb);
         assert!(matches!(cmds[0], Command::SetVfo { .. }), "other modes are left alone");
+    }
+
+    #[test]
+    fn a_click_on_a_cards_frequency_decodes_and_tunes_that_channel_without_a_scan() {
+        use sdroxide_types::Mode;
+        let scanning =
+            SondeSettings { enabled: true, frequency_hz: 402_700_000.0, scan: true };
+        let cmds = listen_commands(&scanning, sdroxide_types::Vfo::A, Mode::Usb, 401_002_000.0);
+        assert!(matches!(
+            cmds[0],
+            Command::SetSondeConfig(c) if c.enabled && !c.scan && c.frequency_hz == 401_002_000.0
+        ));
+        assert!(matches!(cmds[1], Command::SetVfo { hz, .. } if hz == 401_002_000.0));
+        assert_eq!(cmds.len(), 2);
+        // Already there and decoding: only the dial.
+        let there = SondeSettings { enabled: true, frequency_hz: 401_002_000.0, scan: false };
+        let cmds = listen_commands(&there, sdroxide_types::Vfo::A, Mode::Nfm, 401_002_000.0);
+        assert_eq!(cmds.len(), 1);
+        // From APRS the dock under the waterfall is left, as the button does.
+        let cmds = listen_commands(&there, sdroxide_types::Vfo::A, Mode::Aprs, 401_002_000.0);
+        assert!(matches!(cmds[0], Command::SetModeListen { mode: Mode::Nfm, .. }));
+    }
+
+    #[test]
+    fn the_card_says_whether_the_radio_is_on_the_channel_and_hearing_it() {
+        let on = SondeSettings { enabled: true, frequency_hz: 401_002_000.0, scan: false };
+        assert_eq!(listen_state(&on, 401_002_500.0, None), Listen::Waiting);
+        assert_eq!(listen_state(&on, 401_002_500.0, Some(5)), Listen::Decoding);
+        assert_eq!(listen_state(&on, 401_002_500.0, Some(120)), Listen::Waiting);
+        assert_eq!(listen_state(&on, 405_000_000.0, Some(5)), Listen::Elsewhere);
+        assert_eq!(listen_state(&SondeSettings { scan: true, ..on }, 401e6, Some(1)), Listen::Elsewhere);
+        assert_eq!(listen_state(&SondeSettings { enabled: false, ..on }, 401e6, Some(1)), Listen::Elsewhere);
+    }
+
+    #[test]
+    fn every_type_the_picker_offers_is_a_decoder_that_exists() {
+        for t in TYPES {
+            assert!(!t.is_empty());
+        }
+        assert_eq!(TYPES.len(), 11, "one per decoder in sdroxide-sonde on main");
     }
 
     #[test]

@@ -9601,3 +9601,15 @@ topbar-sat-locked-vfo-a-downlink-b-uplink = Auf einen Satelliten gesperrt: VFO A
 qrzcard-photo-loading = Foto wird geladen…
 
 qrzcard-no-photo = Eintrag ohne Foto
+
+sonde-card-listen-hover = Klicken, um das Funkgerät auf diesen Kanal abzustimmen: Die Frequenz springt dorthin und der Decoder hört nur diesen Kanal.
+
+sonde-card-decoding = Von diesem Funkgerät dekodiert
+
+sonde-card-waiting = Hört auf diesem Kanal, noch nichts dekodiert
+
+sonde-card-click-to-listen = Frequenz anklicken, um zuzuhören
+
+sonde-type-all = Alle Typen
+
+sonde-type-hover = Nach einem Sondentyp suchen: Die Auswahl startet den Suchlauf, der das Fenster über das Band bewegt, bis dieser Typ gehört wird. Nur dieser Typ wird aufgelistet und gezeichnet.
