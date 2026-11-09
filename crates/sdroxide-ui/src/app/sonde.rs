@@ -17,6 +17,7 @@ use crate::sonde_map::{self, Phase};
 /// The types the picker offers (the decoders' own names: not translated).
 pub(in crate::app) const TYPES: &[&str] = &[
     "RS41", "DFM", "M10", "M20", "iMet", "iMet-54", "MRZ", "LMS6", "MTS01", "Mk2a", "Meisei",
+    "C34/C50", "Weathex", "CF06/HT03",
 ];
 
 /// Whether a mode owns the panel under the waterfall (or parks the receiver
@@ -673,7 +674,7 @@ mod tests {
         for t in TYPES {
             assert!(!t.is_empty());
         }
-        assert_eq!(TYPES.len(), 11, "one per decoder in sdroxide-sonde on main");
+        assert_eq!(TYPES.len(), 14, "one per `SondeModel` in sdroxide-sonde (14)");
     }
 
     #[test]
