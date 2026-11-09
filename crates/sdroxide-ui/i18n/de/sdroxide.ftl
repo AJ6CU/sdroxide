@@ -9613,3 +9613,17 @@ sonde-card-click-to-listen = Frequenz anklicken, um zuzuhören
 sonde-type-all = Alle Typen
 
 sonde-type-hover = Nach einem Sondentyp suchen: Die Auswahl startet den Suchlauf, der das Fenster über das Band bewegt, bis dieser Typ gehört wird. Nur dieser Typ wird aufgelistet und gezeichnet.
+
+meshtastic-preset-auto = Auto
+
+meshtastic-preset-auto-hint = Hört alle Voreinstellungen gleichzeitig ab (von ShortTurbo bis LongSlow). Nichts auszuwählen, wenn man nicht weiß, welche das Netz nutzt.
+
+meshtastic-freq-hint = Kanalfrequenz, auf das Kilohertz genau. Für ein Netz, das nicht die Slots der Region nutzt. Wird beim Loslassen übernommen.
+
+meshtastic-close-hint = Meshtastic-Fenster schließen. Der Empfänger läuft weiter, bis Sie ihn ausschalten.
+
+meshtastic-float-hint = Das Fenster als schwebendes Fenster über das Wasserfall-Diagramm legen.
+
+meshtastic-dock-hint = Das Fenster wieder unter dem Wasserfall-Diagramm andocken.
+
+meshtastic-tune-mode-hint = Das Funkgerät wird auch auf Breitband-FM gestellt, damit Lautsprecher und Aufnahme das Kanalsignal haben; beim Beenden kommt der Modus zurück.

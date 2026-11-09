@@ -9613,3 +9613,17 @@ sonde-card-click-to-listen = Clique na frequência para ouvir
 sonde-type-all = Todos os tipos
 
 sonde-type-hover = Procurar um tipo de sonda: escolher um inicia a varredura, que move a janela pela faixa até ouvir esse tipo. Só esse tipo é listado e desenhado.
+
+meshtastic-preset-auto = Auto
+
+meshtastic-preset-auto-hint = Escuta todas as predefinições ao mesmo tempo (de ShortTurbo a LongSlow). Nada a escolher quando não se sabe qual a rede usa.
+
+meshtastic-freq-hint = Frequência do canal, ao quilohertz. Para uma rede que não usa os slots da região. Aplicada ao soltar.
+
+meshtastic-close-hint = Fechar o painel Meshtastic. O receptor continua funcionando até você desligá-lo.
+
+meshtastic-float-hint = Destacar o painel em uma janela flutuante sobre o waterfall.
+
+meshtastic-dock-hint = Acoplar o painel de volta sob o waterfall.
+
+meshtastic-tune-mode-hint = O rádio também vai para FM larga, para que o alto-falante e o gravador tenham o sinal do canal; ao sair, o modo volta.

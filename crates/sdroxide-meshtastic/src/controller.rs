@@ -25,15 +25,99 @@ use crate::decoders::Decoded;
 use crate::demod::{DecoderConfig, LoraDecoder};
 use crate::keys::KeySet;
 use crate::packet::decode_frame;
-use crate::protocol::{DEFAULT_PRESET, Preset, port};
+use crate::protocol::{DEFAULT_PRESET, PRESETS, Preset, port};
 
 /// The lane runs at this multiple of the preset's bandwidth. Two keeps the
 /// channel edges clear of the decimation filter's roll-off.
 pub const LANE_OVERSAMPLE: u32 = 2;
 
-/// The preset a setting names, the default one when the name is unknown.
+/// The preset name that means "listen for all of them at once".
+pub const AUTO_PRESET: &str = "Auto";
+
+/// The widest bandwidth of any preset: the automatic lane is cut for it, and
+/// the narrower presets are decimated from it.
+pub const AUTO_LANE_BW_HZ: u32 = 500_000;
+
+/// Whether the settings ask for every preset to be tried at once.
+pub fn is_auto(settings: &MeshtasticSettings) -> bool {
+    settings.preset.eq_ignore_ascii_case(AUTO_PRESET)
+}
+
+/// The preset a setting names, the default one when the name is unknown. In
+/// automatic mode this is the default preset too: it is what the channel slots
+/// and a message sent from here are worked out from.
 pub fn preset_of(settings: &MeshtasticSettings) -> &'static Preset {
     crate::protocol::lookup_preset(&settings.preset).unwrap_or(DEFAULT_PRESET)
+}
+
+/// The sample rate of the lane these settings need.
+pub fn lane_rate_for(settings: &MeshtasticSettings) -> f64 {
+    if is_auto(settings) {
+        f64::from(AUTO_LANE_BW_HZ * LANE_OVERSAMPLE)
+    } else {
+        lane_rate_hz(preset_of(settings))
+    }
+}
+
+/// The bandwidth the lane has to hold whole.
+pub fn lane_bw_hz(settings: &MeshtasticSettings) -> u32 {
+    if is_auto(settings) { AUTO_LANE_BW_HZ } else { preset_of(settings).bw_hz }
+}
+
+/// A name for the lane's shape: it changes exactly when the lane has to be
+/// rebuilt because of the preset.
+pub fn lane_name(settings: &MeshtasticSettings) -> &'static str {
+    if is_auto(settings) { "AUTO" } else { preset_of(settings).name }
+}
+
+/// A low-pass and decimating filter for one narrower channel cut out of the
+/// automatic lane. Polyphase in effect: it only computes the outputs it keeps.
+struct Decimator {
+    factor: usize,
+    taps: Vec<f32>,
+    buf: Vec<Complex32>,
+    pos: usize,
+}
+
+impl Decimator {
+    /// `cutoff` is the pass-band edge in cycles per input sample.
+    fn new(factor: usize, cutoff: f64) -> Self {
+        let n = 32 * factor + 1;
+        let mid = (n - 1) as f64 / 2.0;
+        let mut taps: Vec<f32> = (0..n)
+            .map(|i| {
+                let x = i as f64 - mid;
+                let sinc = if x == 0.0 {
+                    2.0 * cutoff
+                } else {
+                    (2.0 * std::f64::consts::PI * cutoff * x).sin() / (std::f64::consts::PI * x)
+                };
+                let w = 0.54 - 0.46 * (2.0 * std::f64::consts::PI * i as f64 / (n - 1) as f64).cos();
+                (sinc * w) as f32
+            })
+            .collect();
+        let sum: f32 = taps.iter().sum();
+        taps.iter_mut().for_each(|t| *t /= sum);
+        Decimator { factor, taps, buf: Vec::new(), pos: n - 1 }
+    }
+
+    fn process(&mut self, input: &[Complex32], out: &mut Vec<Complex32>) {
+        self.buf.extend_from_slice(input);
+        let n = self.taps.len();
+        while self.pos < self.buf.len() {
+            let mut acc = Complex32::new(0.0, 0.0);
+            for (k, t) in self.taps.iter().enumerate() {
+                acc += self.buf[self.pos - k] * *t;
+            }
+            out.push(acc);
+            self.pos += self.factor;
+        }
+        let drop = self.pos - (n - 1);
+        if drop <= self.buf.len() {
+            self.buf.drain(..drop);
+            self.pos = n - 1;
+        }
+    }
 }
 
 /// The sample rate of the lane a preset needs.
@@ -132,6 +216,63 @@ fn decoder_for(preset: &Preset) -> Option<LoraDecoder> {
     })
 }
 
+/// What listens on the lane: one demodulator for the chosen preset, or, in
+/// automatic mode, one for every (spreading factor, bandwidth) pair of the
+/// presets, each fed from the same wide lane through its own decimator.
+struct Rx {
+    name: &'static str,
+    chains: Vec<(LoraDecoder, Option<Decimator>)>,
+    scratch: Vec<Complex32>,
+}
+
+impl Rx {
+    fn new(cfg: &MeshtasticSettings) -> Option<Rx> {
+        let name = lane_name(cfg);
+        let mut chains = Vec::new();
+        if is_auto(cfg) {
+            let mut seen: Vec<(u8, u32)> = Vec::new();
+            for p in &PRESETS {
+                if seen.contains(&(p.sf, p.bw_hz)) {
+                    continue;
+                }
+                seen.push((p.sf, p.bw_hz));
+                let factor = (AUTO_LANE_BW_HZ / p.bw_hz).max(1) as usize;
+                let decim = (factor > 1).then(|| {
+                    // The half-power point sits at three quarters of the
+                    // bandwidth: the chirp's edges (half the bandwidth either
+                    // side of the carrier) stay in the flat part, and the
+                    // stop band starts about where the new Nyquist is.
+                    let cutoff = f64::from(p.bw_hz) * 0.75 / f64::from(AUTO_LANE_BW_HZ * LANE_OVERSAMPLE);
+                    Decimator::new(factor, cutoff)
+                });
+                chains.push((decoder_for(p)?, decim));
+            }
+        } else {
+            chains.push((decoder_for(preset_of(cfg))?, None));
+        }
+        Some(Rx { name, chains, scratch: Vec::new() })
+    }
+
+    fn feed(&mut self, block: &[Complex32]) -> Vec<crate::demod::LoraFrame> {
+        let mut frames = Vec::new();
+        for (decoder, decim) in &mut self.chains {
+            match decim {
+                Some(d) => {
+                    self.scratch.clear();
+                    d.process(block, &mut self.scratch);
+                    frames.extend(decoder.feed(&self.scratch));
+                }
+                None => frames.extend(decoder.feed(block)),
+            }
+        }
+        frames
+    }
+
+    fn preamble_locks(&self) -> u64 {
+        self.chains.iter().map(|(d, _)| d.stats().preamble_locks).sum()
+    }
+}
+
 /// The nodes heard and the packet log, and what a packet changes in them.
 #[derive(Default)]
 struct Book {
@@ -219,9 +360,8 @@ fn run(
     res_tx: Sender<MeshtasticStatus>,
 ) {
     let mut cfg = cfg;
-    let mut preset = preset_of(&cfg);
-    let Some(mut decoder) = decoder_for(preset) else {
-        tracing::error!(preset = preset.name, "meshtastic demodulator could not start");
+    let Some(mut rx) = Rx::new(&cfg) else {
+        tracing::error!(preset = lane_name(&cfg), "meshtastic demodulator could not start");
         return;
     };
     let mut keys = keys_of(&cfg);
@@ -235,12 +375,10 @@ fn run(
         select! {
             recv(ctl_rx) -> msg => match msg {
                 Ok(Ctl::Config(next)) => {
-                    let next_preset = preset_of(&next);
-                    if next_preset.name != preset.name {
-                        if let Some(d) = decoder_for(next_preset) {
-                            locks_before += decoder.stats().preamble_locks;
-                            decoder = d;
-                            preset = next_preset;
+                    if lane_name(&next) != rx.name {
+                        if let Some(new_rx) = Rx::new(&next) {
+                            locks_before += rx.preamble_locks();
+                            rx = new_rx;
                         }
                     }
                     if next.keys != cfg.keys {
@@ -257,7 +395,7 @@ fn run(
                     level = if level == f32::MIN { block_level } else { 0.8 * level + 0.2 * block_level };
                     let mut heard = false;
                     if cfg.enabled {
-                        for f in decoder.feed(&samples) {
+                        for f in rx.feed(&samples) {
                             if !f.crc_ok {
                                 crc_bad += 1;
                                 heard = true;
@@ -299,7 +437,7 @@ fn run(
                             in_window: true,
                             refused: None,
                             level_dbfs: level,
-                            preambles: locks_before + decoder.stats().preamble_locks,
+                            preambles: locks_before + rx.preamble_locks(),
                             frames,
                             crc_bad,
                             nodes,
@@ -324,7 +462,7 @@ mod tests {
     use crate::protocol::{BROADCAST_NODE, DEFAULT_PSK};
 
     fn on() -> MeshtasticSettings {
-        MeshtasticSettings { enabled: true, ..Default::default() }
+        MeshtasticSettings { enabled: true, preset: "LongFast".into(), ..Default::default() }
     }
 
     fn wait_for(
@@ -489,6 +627,88 @@ mod tests {
         feed(&c, &iq);
         let s = wait_for(&c, |s| s.frames >= 1).expect("a status arrives");
         assert_eq!(s.log[0].text.as_deref(), Some("fast"));
+    }
+
+    /// A text of `preset`, as IQ at the automatic lane's 1 MS/s.
+    fn air_on_the_auto_lane(preset: &str, from: u32, text: &str) -> Vec<Complex32> {
+        let p = crate::protocol::lookup_preset(preset).unwrap();
+        let header =
+            Header { to: BROADCAST_NODE, from, packet_id: from, flags: 0x62, ..Default::default() };
+        let data = Data {
+            portnum: port::TEXT_MESSAGE,
+            payload: text.as_bytes().to_vec(),
+            ..Default::default()
+        };
+        let frame = build_frame(header, p.channel_name, &DEFAULT_PSK, &data).unwrap();
+        let mut tx = TxParams::meshtastic(p.sf, p.cr, p.bw_hz);
+        tx.os = (AUTO_LANE_BW_HZ * LANE_OVERSAMPLE / p.bw_hz) as usize;
+        let pad = vec![Complex32::new(0.0, 0.0); 8 * (1usize << p.sf) * tx.os];
+        let mut iq = pad.clone();
+        iq.extend(modulate(&frame, &tx));
+        iq.extend(pad);
+        iq
+    }
+
+    #[test]
+    fn the_automatic_mode_decodes_several_presets_on_one_wide_lane() {
+        let auto = MeshtasticSettings { preset: "Auto".into(), ..on() };
+        assert!(is_auto(&auto));
+        assert_eq!(lane_rate_for(&auto), 1_000_000.0);
+        assert_eq!(lane_rate_for(&on()), 500_000.0);
+        let c = MeshtasticController::new(auto);
+        let sent = [("LongFast", 11, "long fast"), ("ShortFast", 12, "short fast")];
+        for (preset, from, text) in sent {
+            // Paced: a debug build cannot take a 1 MS/s lane at full speed, and
+            // a full queue drops blocks.
+            for chunk in air_on_the_auto_lane(preset, from, text).chunks(4096) {
+                c.on_rx_iq(chunk);
+                std::thread::sleep(std::time::Duration::from_millis(2));
+            }
+        }
+        let s = wait_for(&c, |s| s.frames >= 2).expect("a status arrives");
+        assert_eq!((s.frames, s.crc_bad), (2, 0));
+        let mut texts: Vec<_> = s.log.iter().filter_map(|e| e.text.clone()).collect();
+        texts.sort();
+        assert_eq!(texts, ["long fast", "short fast"]);
+    }
+
+    /// The slowest preset, at a quarter of the lane's bandwidth, and the
+    /// fastest, at all of it, through the same bank.
+    #[test]
+    fn the_bank_decodes_the_narrowest_and_the_widest_preset() {
+        let auto = MeshtasticSettings { preset: "Auto".into(), ..on() };
+        for preset in ["ShortTurbo", "LongSlow"] {
+            let mut rx = Rx::new(&auto).unwrap();
+            let mut got = 0;
+            for chunk in air_on_the_auto_lane(preset, 5, "x").chunks(4096) {
+                got += rx.feed(chunk).iter().filter(|f| f.crc_ok).count();
+            }
+            assert_eq!(got, 1, "{preset}");
+        }
+    }
+
+    #[test]
+    fn the_decimator_keeps_a_tone_in_the_channel_and_drops_one_outside() {
+        let (n, f) = (20_000usize, 4usize);
+        let tone = |hz: f64| -> Vec<Complex32> {
+            (0..n)
+                .map(|i| {
+                    let ph = 2.0 * std::f64::consts::PI * hz * i as f64 / 1e6;
+                    Complex32::new(ph.cos() as f32, ph.sin() as f32)
+                })
+                .collect()
+        };
+        let power = |v: &[Complex32]| v[v.len() / 2..].iter().map(|c| c.norm_sqr()).sum::<f32>() / (v.len() / 2) as f32;
+        // 125 kHz channel: its edge is at 62.5 kHz, the new Nyquist at 125 kHz.
+        let mut d = Decimator::new(f, 125_000.0 * 0.75 / 1e6);
+        let mut inside = Vec::new();
+        d.process(&tone(60_000.0), &mut inside);
+        let mut d = Decimator::new(f, 125_000.0 * 0.75 / 1e6);
+        let mut outside = Vec::new();
+        d.process(&tone(300_000.0), &mut outside);
+        assert!(power(&inside) > 0.8, "in-channel {}", power(&inside));
+        assert!(power(&outside) < 0.01, "out-of-channel {}", power(&outside));
+        assert_eq!(inside.len(), (n - 32 * f) / f);
     }
 
     #[test]

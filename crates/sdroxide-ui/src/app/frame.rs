@@ -1444,6 +1444,13 @@ impl eframe::App for SdroxideApp {
         // it (`band_menu_fill`), and the narrow dock is not also drawn.
         let cur_mode = self.state.rx[0].mode;
         let center_empty = !self.center_has_content(cur_mode);
+        // The Meshtastic panel, docked: a strip across the bottom of the main
+        // window, under the waterfall and the mode's own panel, whatever the
+        // mode. Taken off the bottom first, so the column below it takes the
+        // rest.
+        if self.show_meshtastic && !self.ui_settings.meshtastic_floating {
+            self.meshtastic_dock_panel(ui, &mut cmds);
+        }
         // A docked band/mode selector takes a column off the right of the
         // panadapter before either draws. Shown here, after the top bar and the
         // notices, so the column sits beside the waterfall rather than under the

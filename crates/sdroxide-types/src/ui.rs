@@ -1641,6 +1641,11 @@ pub struct UiSettings {
     /// arrangement and nothing else.
     #[serde(default)]
     pub classic_sections: String,
+    /// The Meshtastic panel floats over the waterfall instead of sitting under
+    /// it. Off by default: opened, the panel docks in the main window below the
+    /// waterfall, and the chip in its header lifts it out.
+    #[serde(default)]
+    pub meshtastic_floating: bool,
 }
 
 /// One section of the Classic UI column — the units the operator drags into the
@@ -2042,6 +2047,7 @@ impl Default for UiSettings {
             tool_windows_repaired: 0,
             session_qso_sort: 0,
             session_qso_sort_desc: true,
+            meshtastic_floating: false,
         }
     }
 }

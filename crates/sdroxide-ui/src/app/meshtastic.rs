@@ -17,7 +17,10 @@ use eframe::egui::{self, RichText};
 use sdroxide_meshtastic::protocol::{
     PRESETS, Preset, REGIONS, Region, lookup_preset, lookup_region, port_name,
 };
-use sdroxide_types::{Command, MeshTxRefusal, MeshtasticSettings, MeshtasticStatus, RxBlock};
+use sdroxide_types::{
+    Command, MESH_BAND_HZ, MeshTxRefusal, MeshtasticSettings, MeshtasticStatus, Mode, RxBlock,
+    RxId,
+};
 
 const WINDOW_SIZE: [f32; 2] = [780.0, 600.0];
 
@@ -78,13 +81,22 @@ pub(in crate::app) fn with_default_channel(
     }
 }
 
+/// Whether the settings ask for every preset to be listened for at once.
+fn is_auto(cfg: &MeshtasticSettings) -> bool {
+    cfg.preset.eq_ignore_ascii_case("auto")
+}
+
 /// The commands "Listen here" sends: switch the receiver on with the channel,
-/// then bring the dial to it. The first goes first so that the engine notes
-/// where the radio was before the tune moves it; the second is the ordinary
-/// tune, which the receive band list gates like any other.
+/// put the radio in a wide-FM listening mode, then bring the dial to the
+/// channel. The first goes first so that the engine notes where the radio was
+/// (dial and mode) before anything moves it; the mode is what gives the
+/// loudspeaker and the recorder a signal to work on (the decoder reads the
+/// samples, not the audio, so it does not depend on it); the tune is the
+/// ordinary one, which the receive band list gates like any other.
 pub(in crate::app) fn tune_commands(cfg: &MeshtasticSettings) -> Vec<Command> {
     vec![
         Command::SetMeshtasticConfig(MeshtasticSettings { enabled: true, ..cfg.clone() }),
+        Command::SetModeListen { rx: RxId::Main, mode: Mode::Wfm },
         Command::TuneWidebandTo(cfg.frequency_hz),
     ]
 }
@@ -193,7 +205,9 @@ impl super::SdroxideApp {
             self.show_meshtastic = !self.show_meshtastic;
         }
         publish(ctx, self.show_meshtastic);
-        if !self.show_meshtastic {
+        // Docked, the panel is drawn by the layout, under the waterfall
+        // (`meshtastic_dock_panel`); only a floating one is a window.
+        if !self.show_meshtastic || !self.ui_settings.meshtastic_floating {
             return;
         }
         let mut out = Vec::new();
@@ -203,16 +217,84 @@ impl super::SdroxideApp {
             &tr!("meshtastic-title"),
             WINDOW_SIZE,
             true,
-            |me, ui| me.meshtastic_body(ui, &mut out),
+            |me, ui| me.meshtastic_body(ui, &mut out, true),
         );
         cmds.extend(out);
         self.show_meshtastic = open;
     }
 
-    fn meshtastic_body(&mut self, ui: &mut egui::Ui, cmds: &mut Vec<Command>) {
+    /// The panel docked in the main window, below the waterfall: a resizable
+    /// strip with the title, the chip that lifts it out into a floating window
+    /// and the one that closes it.
+    pub(in crate::app) fn meshtastic_dock_panel(
+        &mut self,
+        ui: &mut egui::Ui,
+        cmds: &mut Vec<Command>,
+    ) {
+        let max_h = (ui.available_height() * 0.8).max(160.0);
+        let mut close = false;
+        egui::Panel::bottom(crate::layout::salted_id(ui.ctx(), "meshtastic-dock"))
+            .resizable(true)
+            .default_size(300.0_f32.min(max_h))
+            .size_range(120.0..=max_h)
+            .frame(
+                egui::Frame::new()
+                    .fill(crate::theme::PANEL())
+                    .inner_margin(egui::Margin::symmetric(9, 7)),
+            )
+            .show(ui, |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new(tr!("meshtastic-title"))
+                            .size(11.0)
+                            .strong()
+                            .color(crate::theme::CYAN()),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if crate::chrome::chip(ui, false, "×")
+                            .on_hover_text(tr!("meshtastic-close-hint"))
+                            .clicked()
+                        {
+                            close = true;
+                        }
+                        if crate::chrome::chip_window_icon(ui, crate::chrome::WindowIcon::Out)
+                            .on_hover_text(tr!("meshtastic-float-hint"))
+                            .clicked()
+                        {
+                            self.ui_settings.meshtastic_floating = true;
+                            crate::app::persist::persist_ui_settings(&self.ui_settings);
+                        }
+                    });
+                });
+                egui::ScrollArea::vertical().id_salt("meshtastic-dock-scroll").show(ui, |ui| {
+                    self.meshtastic_body(ui, cmds, false);
+                });
+            });
+        if close {
+            self.show_meshtastic = false;
+        }
+    }
+
+    fn meshtastic_body(&mut self, ui: &mut egui::Ui, cmds: &mut Vec<Command>, floating: bool) {
         let cfg = self.state.meshtastic.clone();
         let mut edit = cfg.clone();
         let mut tune = false;
+
+        // A floating panel carries the way back under the waterfall; the docked
+        // one has the way out in its own header.
+        if floating {
+            ui.horizontal(|ui| {
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if crate::chrome::chip_window_icon(ui, crate::chrome::WindowIcon::In)
+                        .on_hover_text(tr!("meshtastic-dock-hint"))
+                        .clicked()
+                    {
+                        self.ui_settings.meshtastic_floating = false;
+                        crate::app::persist::persist_ui_settings(&self.ui_settings);
+                    }
+                });
+            });
+        }
 
         ui.horizontal_wrapped(|ui| {
             ui.checkbox(&mut edit.enabled, tr!("meshtastic-receive"));
@@ -223,7 +305,11 @@ impl super::SdroxideApp {
                 .show_ui(ui, |ui| {
                     for r in &REGIONS {
                         if ui.selectable_label(region_of(&edit).name == r.name, r.name).clicked() {
+                            let auto = is_auto(&edit);
                             edit = with_default_channel(&edit, r, preset_of(&edit));
+                            if auto {
+                                edit.preset = "Auto".to_string();
+                            }
                             tune = true;
                         }
                     }
@@ -231,11 +317,27 @@ impl super::SdroxideApp {
 
             ui.label(tr!("meshtastic-preset"));
             egui::ComboBox::from_id_salt("meshtastic-preset")
-                .selected_text(preset_of(&edit).channel_name)
+                .selected_text(if is_auto(&edit) {
+                    tr!("meshtastic-preset-auto")
+                } else {
+                    preset_of(&edit).channel_name.to_string()
+                })
                 .show_ui(ui, |ui| {
+                    // Every preset at once: the lane is cut for the widest and
+                    // each preset reads its own part of it.
+                    if ui
+                        .selectable_label(is_auto(&edit), tr!("meshtastic-preset-auto"))
+                        .on_hover_text(tr!("meshtastic-preset-auto-hint"))
+                        .clicked()
+                    {
+                        edit.preset = "Auto".to_string();
+                    }
                     for p in &PRESETS {
                         if ui
-                            .selectable_label(preset_of(&edit).name == p.name, p.channel_name)
+                            .selectable_label(
+                                !is_auto(&edit) && preset_of(&edit).name == p.name,
+                                p.channel_name,
+                            )
                             .clicked()
                         {
                             edit = with_default_channel(&edit, region_of(&edit), p);
@@ -256,14 +358,41 @@ impl super::SdroxideApp {
                             .clicked()
                         {
                             edit.frequency_hz = *hz;
+                            self.meshtastic_freq_mhz = None;
                             tune = true;
                         }
                     }
                 });
 
+            // Any frequency, for a network that runs off the region's slots.
+            // Applied when the drag or the typing ends, not on every step.
+            let mut mhz = self.meshtastic_freq_mhz.unwrap_or(edit.frequency_hz / 1e6);
+            let r = ui
+                .add(
+                    egui::DragValue::new(&mut mhz)
+                        .range(MESH_BAND_HZ.0 / 1e6..=MESH_BAND_HZ.1 / 1e6)
+                        .speed(0.0125)
+                        .fixed_decimals(4)
+                        .suffix(" MHz"),
+                )
+                .on_hover_text(tr!("meshtastic-freq-hint"));
+            if r.changed() {
+                self.meshtastic_freq_mhz = Some(mhz);
+            }
+            if (r.drag_stopped() || r.lost_focus()) && self.meshtastic_freq_mhz.is_some() {
+                // To the kilohertz: the lane is as wide as 62 to 500 kHz.
+                edit.frequency_hz = (mhz * 1e3).round() * 1e3;
+                self.meshtastic_freq_mhz = None;
+                tune = true;
+            }
+
             if ui
                 .button(tr!("meshtastic-tune"))
-                .on_hover_text(tr!("meshtastic-tune-hint"))
+                .on_hover_text(format!(
+                    "{}\n{}",
+                    tr!("meshtastic-tune-hint"),
+                    tr!("meshtastic-tune-mode-hint")
+                ))
                 .clicked()
             {
                 tune = true;
@@ -557,9 +686,13 @@ mod tests {
     #[test]
     fn listening_switches_the_lane_on_before_it_moves_the_dial() {
         let cmds = tune_commands(&MeshtasticSettings::default());
-        assert_eq!(cmds.len(), 2);
+        assert_eq!(cmds.len(), 3);
         assert!(matches!(&cmds[0], Command::SetMeshtasticConfig(c) if c.enabled));
-        assert!(matches!(cmds[1], Command::TuneWidebandTo(f) if f == 869_525_000.0));
+        // A mode with audio: the radio is not left in DAB, ADS-B or a data mode
+        // that has none for this channel, which silenced the speaker and left
+        // the recorder with an empty file.
+        assert!(matches!(cmds[1], Command::SetModeListen { mode: Mode::Wfm, .. }));
+        assert!(matches!(cmds[2], Command::TuneWidebandTo(f) if f == 869_525_000.0));
     }
 
     #[test]

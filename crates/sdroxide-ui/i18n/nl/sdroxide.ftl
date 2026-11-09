@@ -9621,3 +9621,17 @@ sonde-card-click-to-listen = Klik op de frequentie om te luisteren
 sonde-type-all = Alle typen
 
 sonde-type-hover = Zoek één type sonde: een keuze start de scan, die het venster over de band verschuift tot dat type te horen is. Alleen dat type wordt getoond en getekend.
+
+meshtastic-preset-auto = Auto
+
+meshtastic-preset-auto-hint = Luistert naar alle voorinstellingen tegelijk (van ShortTurbo tot LongSlow). Niets te kiezen als je niet weet welke het netwerk gebruikt.
+
+meshtastic-freq-hint = Kanaalfrequentie, tot op de kilohertz. Voor een netwerk dat de slots van de regio niet gebruikt. Wordt toegepast als je loslaat.
+
+meshtastic-close-hint = Sluit het Meshtastic-paneel. De ontvanger blijft werken tot je hem uitzet.
+
+meshtastic-float-hint = Haal het paneel los in een zwevend venster boven de waterval.
+
+meshtastic-dock-hint = Zet het paneel weer vast onder de waterval.
+
+meshtastic-tune-mode-hint = De radio gaat ook naar brede FM, zodat de luidspreker en de recorder het kanaalsignaal krijgen; bij het verlaten komt de modus terug.

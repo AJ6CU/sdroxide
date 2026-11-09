@@ -9640,3 +9640,17 @@ sonde-card-click-to-listen = Click the frequency to listen
 sonde-type-all = All types
 
 sonde-type-hover = Look for one type of sonde: choosing one starts the scan, which moves the window across the band until that type is heard. Only that type is listed and drawn.
+
+meshtastic-preset-auto = Auto
+
+meshtastic-preset-auto-hint = Listen for every preset at once (from ShortTurbo to LongSlow). Nothing to choose when you do not know which one the network runs.
+
+meshtastic-freq-hint = Channel frequency, to the kilohertz. For a network that does not use the region's own slots. Applied when you let go.
+
+meshtastic-close-hint = Close the Meshtastic panel. The receiver keeps running until you switch it off.
+
+meshtastic-float-hint = Lift the panel out into a floating window over the waterfall.
+
+meshtastic-dock-hint = Dock the panel back under the waterfall.
+
+meshtastic-tune-mode-hint = The radio is also put in wide FM, so the loudspeaker and the recorder have the channel's signal; leaving puts the mode back.

@@ -9613,3 +9613,17 @@ sonde-card-click-to-listen = Dinlemek için frekansa tıklayın
 sonde-type-all = Tüm türler
 
 sonde-type-hover = Tek bir sonda türünü ara: seçmek taramayı başlatır, tarama bu tür duyulana dek pencereyi bant boyunca kaydırır. Yalnızca bu tür listelenir ve çizilir.
+
+meshtastic-preset-auto = Otomatik
+
+meshtastic-preset-auto-hint = Tüm ön ayarları aynı anda dinler (ShortTurbo'dan LongSlow'a kadar). Ağın hangisini kullandığı bilinmiyorsa seçmeye gerek yoktur.
+
+meshtastic-freq-hint = Kanal frekansı, kilohertz hassasiyetinde. Bölgenin kendi kanal aralıklarını kullanmayan bir ağ için. Bıraktığınızda uygulanır.
+
+meshtastic-close-hint = Meshtastic panelini kapat. Alıcı siz kapatana kadar çalışmaya devam eder.
+
+meshtastic-float-hint = Paneli şelalenin üzerinde kayan bir pencereye çıkar.
+
+meshtastic-dock-hint = Paneli şelalenin altına geri yerleştir.
+
+meshtastic-tune-mode-hint = Telsiz ayrıca geniş FM'ye alınır; hoparlör ve kayıt cihazı kanalın sinyalini alır. Çıkınca mod geri gelir.

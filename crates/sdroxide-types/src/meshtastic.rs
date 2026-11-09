@@ -14,9 +14,11 @@ use serde::{Deserialize, Serialize};
 /// 869.65 MHz sub-band.
 pub const MESH_DEFAULT_HZ: f64 = 869_525_000.0;
 
-/// The default region and preset, by the names the protocol gives them.
+/// The default region and preset, by the names the protocol gives them. The
+/// preset is "Auto": every preset is listened for at once, so a network on
+/// any of them is heard without knowing which it runs.
 pub const MESH_DEFAULT_REGION: &str = "EU_868";
-pub const MESH_DEFAULT_PRESET: &str = "LongFast";
+pub const MESH_DEFAULT_PRESET: &str = "Auto";
 
 /// Lowest and highest channel frequency the lane accepts (the 433, 868 and
 /// 915 MHz regions, with a margin).
@@ -251,11 +253,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn the_defaults_are_eu_868_long_fast() {
+    fn the_defaults_are_eu_868_every_preset() {
         let s = MeshtasticSettings::default();
         assert!(!s.enabled);
         assert_eq!(s.region, "EU_868");
-        assert_eq!(s.preset, "LongFast");
+        assert_eq!(s.preset, "Auto");
         assert_eq!(s.frequency_hz, 869_525_000.0);
         assert_eq!(s.restore, None);
     }

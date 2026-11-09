@@ -9181,7 +9181,7 @@ fn rx_plan_allows(ctx: &egui::Context, band: Band) -> bool {
         // between bands ("ALL") open with a confirmed list.
         Some((lock, confirmed, bands)) => {
             !lock
-                || band.is_listen_service()
+                || band.rx_always_open()
                 || (confirmed && (band == Band::Gen || bands.contains(&band)))
         }
         None => true,

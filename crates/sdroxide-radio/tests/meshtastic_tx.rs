@@ -95,7 +95,7 @@ fn caps() -> DeviceCaps {
 }
 
 fn on() -> MeshtasticSettings {
-    MeshtasticSettings { enabled: true, ..Default::default() }
+    MeshtasticSettings { enabled: true, preset: "LongFast".into(), ..Default::default() }
 }
 
 fn hello(text: &str) -> Command {
