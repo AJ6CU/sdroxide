@@ -9639,3 +9639,7 @@ meshtastic-tune-mode-hint = De radio gaat ook naar brede FM, zodat de luidspreke
 wefax-revert-auto-slant = Scheefstand herstellen
 
 wefax-revert-auto-slant-hint = Maakt de automatische scheefstandcorrectie van deze kaart ongedaan: de klokcorrectie gaat terug naar de hier ingestelde waarde en de automatische correctie blijft uit tot de volgende kaart. Reeds ontvangen regels veranderen niet.
+
+qrzcard-no-account = Geen QRZ.com-account ingesteld -
+
+qrzcard-account-link = bekijk de accountstatus

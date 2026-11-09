@@ -187,13 +187,18 @@ fn qrz_lookup(
                 .map(|n| n.tag_name().name())
                 .collect();
             tracing::debug!("QRZ card {call}: fields {}", tags.join(","));
-            let image =
+            let xml_image =
                 tag_text(&doc, "image").filter(|u| u.starts_with("https://") || u.starts_with("http://"));
             // The text first, so the card is not held up by the picture or the
-            // translation; the whole record follows.
-            info.photo_pending = image.is_some();
+            // translation; the whole record follows. The picture is not known
+            // yet when the XML has none: the public page may still carry it.
+            info.photo_pending = true;
             interim(info.clone());
             translate_card(&mut info);
+            let image = xml_image.or_else(|| {
+                page_photo(call).map_err(|e| tracing::debug!("QRZ page of {call}: {e}")).ok().flatten()
+            });
+            info.photo_pending = false;
             if let Some(url) = image {
                 // A picture that cannot be had is no reason to lose the rest.
                 info.photo = match http::get_bytes(&url, PHOTO_FETCH_MAX) {
@@ -203,12 +208,35 @@ fn qrz_lookup(
                         None
                     }
                 };
-                info.photo_pending = false;
             }
         }
         return Ok(info);
     }
     Err("QRZ session could not be established".into())
+}
+
+/// The operator's picture from QRZ's public page `qrz.com/db/<call>`, where it
+/// is the page's `og:image` whether or not anyone is logged in. This is what
+/// the XML API withholds from an account without the XML subscription. Only
+/// the public page is read: no login, no cookie. `None` when the operator has
+/// no picture.
+fn page_photo(call: &str) -> Result<Option<String>, String> {
+    let body = http::get(&format!("https://www.qrz.com/db/{}", urlencode(call)))?;
+    Ok(og_image(&body))
+}
+
+/// The `og:image` address of an HTML page, when it is a QRZ-hosted https URL.
+fn og_image(html: &str) -> Option<String> {
+    let at = html.find("property=\"og:image\"")?;
+    // The attribute sits inside one `<meta …>` tag, before or after `property`.
+    let start = html[..at].rfind('<')?;
+    let end = at + html[at..].find('>')?;
+    let tag = &html[start..end];
+    let from = tag.find("content=\"")? + "content=\"".len();
+    let url = &tag[from..from + tag[from..].find('"')?];
+    let url = url.replace("&amp;", "&");
+    let host = url.strip_prefix("https://")?.split('/').next()?;
+    (host == "qrz.com" || host.ends_with(".qrz.com")).then_some(url)
 }
 
 fn qrz_login(creds: &Credentials) -> Result<String, String> {
@@ -312,6 +340,7 @@ fn parse_qrz(doc: &roxmltree::Document, call: &str, today: (i32, u32, u32)) -> C
     info.qsl_via = tag_text(doc, "qslmgr").filter(|s| !s.is_empty());
     // QRZ's own remark, e.g. that the complete record needs a subscription.
     info.note = tag_text(doc, "Message");
+    info.limited = info.note.as_deref().is_some_and(|m| m.to_ascii_lowercase().contains("subscription"));
     info
 }
 
@@ -458,6 +487,35 @@ fn urlencode(s: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The picture of a record QRZ withheld comes from the public page's
+    /// `og:image`; a page without one, or pointing off QRZ, gives none.
+    #[test]
+    fn the_public_page_gives_the_picture_the_xml_withheld() {
+        let page = r#"<head><meta property="og:title" content="DA6SL Callsign Page" />
+<meta property="og:image" content="https://cdn-bio.qrz.com/l/da6sl/a.JPG?p=9976&amp;q=1" /></head>"#;
+        assert_eq!(
+            og_image(page).as_deref(),
+            Some("https://cdn-bio.qrz.com/l/da6sl/a.JPG?p=9976&q=1")
+        );
+        assert_eq!(og_image(r#"<meta property="og:title" content="x" />"#), None);
+        let off = r#"<meta property="og:image" content="https://evil.example/a.jpg" />"#;
+        assert_eq!(og_image(off), None, "only QRZ-hosted pictures are fetched");
+        let plain = r#"<meta property="og:image" content="http://cdn-bio.qrz.com/a.jpg" />"#;
+        assert_eq!(og_image(plain), None, "https only");
+    }
+
+    /// QRZ's "subscription required" remark marks the card as cut short.
+    #[test]
+    fn a_record_cut_short_for_lack_of_a_subscription_is_marked() {
+        let xml = r#"<QRZDatabase><Callsign><call>DO5HOK</call><fname>Holger</fname>
+<name>Klein</name></Callsign><Session><Message>A subscription is required to access the complete record.</Message></Session></QRZDatabase>"#;
+        let doc = roxmltree::Document::parse(xml).unwrap();
+        let i = parse_qrz(&doc, "DO5HOK", (2026, 11, 9));
+        assert!(i.limited);
+        let full = roxmltree::Document::parse(QRZ_XML).unwrap();
+        assert!(!parse_qrz(&full, "F4ABC", (2026, 11, 9)).limited);
+    }
 
     /// A record as QRZ's XML API answers a subscriber.
     const QRZ_XML: &str = r#"<?xml version="1.0" encoding="utf-8" ?>

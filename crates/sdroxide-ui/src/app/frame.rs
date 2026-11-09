@@ -2286,6 +2286,12 @@ impl eframe::App for SdroxideApp {
         // says — that switch is about filling the log form, this one is the
         // card's own.
         crate::callsign_card::set_active(&ctx, self.net_cfg_edit.qrz_card_active());
+        // The one card over the waterfall, then the link in a card that leads
+        // to the account page.
+        crate::callsign_card::show_floating(&ctx);
+        if crate::callsign_card::take_open_account(&ctx) {
+            self.open_settings_tab("uploads");
+        }
         for call in crate::callsign_card::take_requests(&ctx) {
             self.pending_lookups.push(call);
         }

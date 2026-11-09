@@ -9631,3 +9631,7 @@ meshtastic-tune-mode-hint = Telsiz ayrıca geniş FM'ye alınır; hoparlör ve k
 wefax-revert-auto-slant = Eğimi geri al
 
 wefax-revert-auto-slant-hint = Bu haritadaki otomatik eğim düzeltmesini geri alır: saat ayarı burada girilen değere döner ve otomatik düzeltme sonraki haritaya kadar kapalı kalır. Daha önce alınan satırlar değişmez.
+
+qrzcard-no-account = Kayıtlı QRZ.com hesabı yok -
+
+qrzcard-account-link = hesap durumuna bak

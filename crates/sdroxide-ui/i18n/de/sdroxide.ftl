@@ -9631,3 +9631,7 @@ meshtastic-tune-mode-hint = Das Funkgerät wird auch auf Breitband-FM gestellt, 
 wefax-revert-auto-slant = Neigung zurücksetzen
 
 wefax-revert-auto-slant-hint = Macht die automatische Neigungskorrektur dieser Karte rückgängig: Der Takt-Trimm kehrt auf den hier eingestellten Wert zurück, die automatische Korrektur bleibt bis zur nächsten Karte aus. Bereits empfangene Zeilen bleiben unverändert.
+
+qrzcard-no-account = Kein QRZ.com-Konto hinterlegt -
+
+qrzcard-account-link = Kontostatus ansehen

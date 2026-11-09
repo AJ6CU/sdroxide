@@ -9569,3 +9569,7 @@ meshtastic-tune-mode-hint = 电台同时切换到宽带调频，使扬声器和�
 wefax-revert-auto-slant = 撤销倾斜校正
 
 wefax-revert-auto-slant-hint = 撤销此图的自动倾斜校正：时钟微调回到此处设置的值，自动校正在下一张图之前保持关闭。已接收的行不会改变。
+
+qrzcard-no-account = 未登记 QRZ.com 账户 -
+
+qrzcard-account-link = 查看账户状态
