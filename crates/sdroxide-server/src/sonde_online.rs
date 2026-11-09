@@ -36,6 +36,9 @@ const MAX_CELLS: usize = 32;
 pub(crate) const MAX_ASKS_PER_MINUTE: usize = 12;
 /// The most bytes read of a reply.
 const MAX_BYTES: u64 = 4 * 1024 * 1024;
+/// The most bytes read of a flight: SondeHub sends every frame (about 7 MB
+/// after three hours), which is reduced to a few hundred places here.
+const FLIGHT_MAX_BYTES: u64 = 32 * 1024 * 1024;
 
 /// How a request ended.
 #[derive(Debug, PartialEq)]
@@ -162,7 +165,7 @@ fn ask_flight(address: &str) -> Result<String, String> {
     let body = resp
         .body_mut()
         .with_config()
-        .limit(MAX_BYTES)
+        .limit(FLIGHT_MAX_BYTES)
         .read_to_string()
         .map_err(|e| e.to_string())?;
     serde_json::to_string(&parse_flight(&body)).map_err(|e| e.to_string())

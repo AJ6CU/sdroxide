@@ -33,9 +33,10 @@ pub const REFRESH_S: i64 = 60;
 pub const RETRY_S: i64 = 15;
 /// A list older than this is asked for again when a sonde is picked.
 pub const HURRY_AFTER_S: i64 = 20;
-/// The most bytes read of a reply.
+/// The most bytes read of a reply. A whole flight from SondeHub is every
+/// frame of the sonde (about 7 MB after three hours), far more than the list.
 #[cfg(not(target_arch = "wasm32"))]
-const MAX_BYTES: u64 = 4 * 1024 * 1024;
+const MAX_BYTES: u64 = 32 * 1024 * 1024;
 
 /// The station's address for the list, the locator rounded to 0.1°.
 pub fn station_url(peer: &str, lat: f64, lon: f64) -> Option<String> {
