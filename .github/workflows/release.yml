@@ -105,8 +105,8 @@ jobs:
           # Pi. That is a deliberate choice about who these downloads are for,
           # not a claim that the artifacts were broken.
           #
-          # `-compat` existed because the regular Linux build links glibc 2.39
-          # and refuses to start on Ubuntu 22.04 / Mint 21 / Debian 12 / Pi OS
+          # `-compat` existed because the regular Linux build linked the runner's
+          # glibc (2.39, later 2.43) and refused to start on Ubuntu 22.04 / Mint 21 / Debian 12 / Pi OS
           # bookworm with "version `GLIBC_2.39' not found" (issue report
           # 2026-08). That reason is now carried by the build-from-source
           # section in the README, which works on any distribution, and it is
@@ -123,10 +123,16 @@ jobs:
           # for a specific occasion, can still ask for exactly those builds and
           # pay only for those. `nightly` also still builds `linux-aarch64-compat`.
           #
-          # Every entry carries no `container` key except the `-compat` ones,
-          # which `build` reads as the empty string and GitHub as "no container".
+          # Every Linux entry builds in `ubuntu:22.04` (glibc 2.35), not on the
+          # runner's own image. `ubuntu-latest` moves: it reached glibc 2.43, and
+          # a binary linked there needs `GLIBC_2.43` and its `.deb` gets
+          # `libc6 >= 2.43`, so it refused to install on Ubuntu 24.04 (2.39) and
+          # Debian 12/13 (2.36/2.41). The `-compat` labels are kept only so the
+          # AppImage step and existing dispatches keep working. Windows and macOS
+          # carry no `container` key, which `build` reads as the empty string and
+          # GitHub as "no container".
           platforms='[
-            {"label": "linux-x86_64",         "os": "ubuntu-latest"},
+            {"label": "linux-x86_64",         "os": "ubuntu-latest",    "container": "ubuntu:22.04"},
             {"label": "windows-x86_64",       "os": "windows-latest"},
             {"label": "macos-aarch64",        "os": "macos-latest"},
             {"label": "macos-x86_64",         "os": "macos-15-intel"}
@@ -134,7 +140,7 @@ jobs:
           # Not in a release by default; reachable by naming them in a manual
           # dispatch's `wanted` list. See the note above.
           extra_platforms='[
-            {"label": "linux-aarch64",        "os": "ubuntu-24.04-arm"},
+            {"label": "linux-aarch64",        "os": "ubuntu-24.04-arm", "container": "ubuntu:22.04"},
             {"label": "linux-x86_64-compat",  "os": "ubuntu-latest",    "container": "ubuntu:22.04"},
             {"label": "linux-aarch64-compat", "os": "ubuntu-24.04-arm", "container": "ubuntu:22.04"}
           ]'
@@ -741,6 +747,26 @@ jobs:
             cargo deb --no-build -p sdroxide -o "out/$PKG.deb"
           fi
 
+      - name: Check glibc floor (Linux)
+        # A binary that needs a newer glibc than Ubuntu 22.04's (2.35) cannot
+        # start on Debian 12 or Ubuntu 22.04. Fail the build here rather than
+        # on the operator's machine (the runner image once moved to 2.43).
+        if: runner.os == 'Linux'
+        run: |
+          max=$(objdump -T target/release/sdroxide | grep -o 'GLIBC_[0-9.]*' | sed 's/GLIBC_//' | sort -Vu | tail -n1)
+          echo "highest GLIBC symbol needed: ${max:-none}"
+          if [[ -n "$max" && "$(printf '%s\n2.35\n' "$max" | sort -V | tail -n1)" != "2.35" ]]; then
+            echo "::error::binary needs GLIBC_$max, newer than 2.35"; exit 1
+          fi
+          for deb in out/*.deb; do
+            [[ -e "$deb" ]] || continue
+            libc=$(dpkg-deb -f "$deb" Depends | grep -o 'libc6 (>= [0-9.]*' | grep -o '[0-9.]*$' || true)
+            echo "$deb: libc6 >= ${libc:-none}"
+            if [[ -n "$libc" && "$(printf '%s\n2.35\n' "$libc" | sort -V | tail -n1)" != "2.35" ]]; then
+              echo "::error::$deb depends on libc6 >= $libc"; exit 1
+            fi
+          done
+
       - name: Package AppImage (Linux)
         # Issue #208: one file to download and run, with no install step and no
         # package manager.
@@ -750,7 +776,7 @@ jobs:
         #
         # * -compat, because an AppImage is a promise that the file runs on the
         #   machine it lands on, and that promise is glibc's to keep. The
-        #   regular Linux build needs glibc 2.39; this one links 2.35 and so
+        #   regular Linux builds now link 2.35 too (same container); this one
         #   covers the stable distributions as well as the current ones.
         # * standard (no SoapySDR), because a SoapySDR AppImage would have to
         #   carry libSoapySDR *and* the driver modules it goes looking for at
