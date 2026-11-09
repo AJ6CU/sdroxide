@@ -264,17 +264,18 @@ pub fn hover_text(meters: Option<&Meters>, audio_level: bool) -> String {
 /// with no box — the Classic UI bar, where the readout beside it has none either
 /// — asks for the face alone.
 ///
-/// `view` is what the operator asked it to measure. The second value is the view
-/// an arrow on the instrument turned to this frame, for the caller to keep; the
-/// response is the instrument's own, whose click cycles the face. A click on an
-/// arrow belongs to the arrow and is not also a click on the face.
+/// `view` is what the operator asked it to measure. The second value is what an
+/// arrow on the instrument asked for this frame, for the caller to keep (see
+/// [`Turn`]); the response is the instrument's own, whose click cycles the
+/// face. A click on an arrow belongs to the arrow and is not also a click on
+/// the face.
 pub fn show(
     ui: &mut Ui,
     meters: Option<&Meters>,
     style: SmeterStyle,
     view: MeterView,
     outline: bool,
-) -> (Response, Option<MeterView>) {
+) -> (Response, Option<Turn>) {
     // Fill whatever the (zero-padding) box hands us.
     let size = ui.available_size();
     // The receiver is stood down while transmitting, so the Rx view has nothing
@@ -302,19 +303,32 @@ const ARROW_GUTTER: f32 = 16.0;
 /// Narrowest face that has the room to carry arrows.
 const ARROWS_MIN_W: f32 = 180.0;
 
-/// The two arrows at the sides of the face. Each turns the instrument to the
-/// previous or the next view; the one the click chose is returned.
+/// What an arrow on the instrument asked for.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Turn {
+    /// Transmitting: the instrument turns to this reading.
+    View(MeterView),
+    /// Receiving: every reading is the signal, so the arrows turn the face
+    /// (needle, bar, trace) the way a click does, forwards or backwards.
+    Face { forward: bool },
+}
+
+/// The two arrows at the sides of the face.
+///
+/// While transmitting each turns the instrument to the previous or the next
+/// reading (power, SWR, ALC, signal). On receive there is only one reading, so
+/// they turn the face instead — the same cycle as a click on the face, in
+/// either direction. The one the click chose is returned.
 ///
 /// Drawn after the face, over its edges, and given their own hit areas: the
 /// face is one big click target, and without these a click on an arrow would
-/// also cycle the face. On receive they are dimmed — the choice they make is
-/// kept for the next over, which the hover says.
+/// also cycle the face.
 fn arrows(
     ui: &mut Ui,
     resp: &Response,
     meters: Option<&Meters>,
     view: MeterView,
-) -> Option<MeterView> {
+) -> Option<Turn> {
     let rect = resp.rect;
     if rect.width() < ARROWS_MIN_W {
         return None;
@@ -327,25 +341,21 @@ fn arrows(
         let cx = if forward { rect.right() - w * 0.5 - 1.0 } else { rect.left() + w * 0.5 + 1.0 };
         let zone = Rect::from_center_size(pos2(cx, rect.center().y), vec2(w, h));
         let target = turn(meters, view, forward);
-        let name = crate::i18n::Tr::tr(target);
-        let when =
-            if keyed { String::new() } else { format!(" {}", tr!("smeter-arrow-on-receive")) };
-        let hover = if forward {
-            tr!("smeter-arrow-next-hover", view = name, when = when)
-        } else {
-            tr!("smeter-arrow-prev-hover", view = name, when = when)
+        let hover = match (keyed, forward) {
+            (true, true) => {
+                tr!("smeter-arrow-next-hover", view = crate::i18n::Tr::tr(target))
+            }
+            (true, false) => {
+                tr!("smeter-arrow-prev-hover", view = crate::i18n::Tr::tr(target))
+            }
+            (false, true) => tr!("smeter-arrow-next-face"),
+            (false, false) => tr!("smeter-arrow-prev-face"),
         };
         let r = ui
             .interact(zone, resp.id.with(("smeter-arrow", forward)), Sense::click())
             .on_hover_cursor(eframe::egui::CursorIcon::PointingHand)
             .on_hover_text(hover);
-        let ink = if r.hovered() {
-            READOUT()
-        } else if keyed {
-            READOUT().linear_multiply(0.8)
-        } else {
-            SUBDUED().linear_multiply(0.7)
-        };
+        let ink = if r.hovered() { READOUT() } else { READOUT().linear_multiply(0.8) };
         let s = 4.5 * k.max(0.85);
         let (tip, base) = if forward { (s * 0.8, -s * 0.6) } else { (-s * 0.8, s * 0.6) };
         let c = zone.center();
@@ -355,7 +365,7 @@ fn arrows(
             Stroke::NONE,
         ));
         if r.clicked() {
-            picked = Some(target);
+            picked = Some(if keyed { Turn::View(target) } else { Turn::Face { forward } });
         }
     }
     picked
@@ -802,11 +812,18 @@ pub fn view_available(meters: Option<&Meters>, view: MeterView) -> bool {
 
 /// The view an arrow turns to: the next (or previous) one with something to
 /// show, so the needle is never parked on a quantity nobody measures.
+///
+/// While transmitting a view that would draw what is already on the dial is
+/// stepped over too: with only SWR measured, `Auto` already shows SWR, and an
+/// arrow that "turned" to the pinned SWR view changed nothing the operator could
+/// see — which read as a broken arrow.
 pub fn turn(meters: Option<&Meters>, view: MeterView, forward: bool) -> MeterView {
+    let keyed = meters.is_some_and(|m| m.tx.is_some());
+    let now = shown_view(meters, view);
     let mut v = view;
     for _ in 0..MeterView::ALL.len() {
         v = if forward { v.next() } else { v.prev() };
-        if view_available(meters, v) {
+        if view_available(meters, v) && !(keyed && shown_view(meters, v) == now) {
             return v;
         }
     }
@@ -1766,16 +1783,15 @@ mod tests {
         let full = keyed(Some(5.0), Some(1.4), Some(0.5), Some(0.1));
         let mut v = MeterView::Auto;
         let mut seen = vec![v];
-        for _ in 0..4 {
+        for _ in 0..3 {
             v = turn(Some(&full), v, true);
             seen.push(v);
         }
-        assert_eq!(
-            seen,
-            [MeterView::Auto, MeterView::Power, MeterView::Swr, MeterView::Alc, MeterView::Rx]
-        );
+        // `Auto` already draws the power, so the pinned Power view is stepped over.
+        assert_eq!(seen, [MeterView::Auto, MeterView::Swr, MeterView::Alc, MeterView::Rx]);
         assert_eq!(turn(Some(&full), MeterView::Rx, true), MeterView::Auto, "it wraps round");
         assert_eq!(turn(Some(&full), MeterView::Auto, false), MeterView::Rx, "and back");
+        assert_eq!(turn(Some(&full), MeterView::Swr, false), MeterView::Power);
 
         let no_bridge = keyed(None, None, Some(0.5), Some(0.3));
         assert!(!view_available(Some(&no_bridge), MeterView::Swr));
@@ -1786,6 +1802,21 @@ mod tests {
         rx.tx = None;
         assert!(MeterView::ALL.iter().all(|v| view_available(Some(&rx), *v)));
         assert_eq!(turn(None, MeterView::Auto, true), MeterView::Power);
+    }
+
+    /// The report from a TS-2000: only the SWR is measured, so `Auto` already
+    /// draws it and the right arrow "turned" to the pinned SWR view — the dial
+    /// did not move. Every arrow press must change what is drawn.
+    #[test]
+    fn an_arrow_always_changes_what_the_dial_draws() {
+        let swr_only = keyed(None, Some(1.1), None, None);
+        let m = Some(&swr_only);
+        for forward in [true, false] {
+            let next = turn(m, MeterView::Auto, forward);
+            assert_ne!(shown_view(m, next), shown_view(m, MeterView::Auto), "forward={forward}");
+            let again = turn(m, next, forward);
+            assert_ne!(shown_view(m, again), shown_view(m, next), "and again, forward={forward}");
+        }
     }
 
     /// A rig that has not answered an ALC read must read as *not reported*, not
@@ -1829,6 +1860,17 @@ mod tests {
         let signal = super::hover_text(Some(&m), false);
         assert!(signal.contains("Received signal strength"), "{signal}");
         assert!(!signal.contains("Audio level"), "{signal}");
+    }
+
+    /// On receive the arrows turn the face, one way or the other.
+    #[test]
+    fn the_face_cycle_runs_backwards_as_well_as_forwards() {
+        for s in [SmeterStyle::Needle, SmeterStyle::Bar, SmeterStyle::Trace] {
+            assert_eq!(s.next().prev(), s);
+            assert_eq!(s.prev().next(), s);
+            assert_ne!(s.prev(), s);
+            assert_ne!(s.prev_compact().compact(), SmeterStyle::Needle, "{s:?}");
+        }
     }
 
     #[test]

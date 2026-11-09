@@ -618,6 +618,22 @@ impl SmeterStyle {
         let next = self.next();
         if next.compact() != next { next.next() } else { next }
     }
+
+    /// The face before this one: the click cycle run backwards, for the left
+    /// arrow of the meter on receive.
+    pub fn prev(self) -> Self {
+        match self {
+            SmeterStyle::Needle => SmeterStyle::Trace,
+            SmeterStyle::Bar => SmeterStyle::Needle,
+            SmeterStyle::Trace => SmeterStyle::Bar,
+        }
+    }
+
+    /// The face before this one, skipping any this box cannot show.
+    pub fn prev_compact(self) -> Self {
+        let prev = self.prev();
+        if prev.compact() != prev { prev.prev() } else { prev }
+    }
 }
 
 /// Where the solar-system 3D window was: its inner size and, where the platform

@@ -9325,11 +9325,13 @@ meter-view-swr = SWR
 
 meter-view-alc = ALC
 
-smeter-arrow-prev-hover = 前の表示: { $view }{ $when }
+smeter-arrow-prev-hover = 前の表示: { $view }
 
-smeter-arrow-next-hover = 次の表示: { $view }{ $when }
+smeter-arrow-next-hover = 次の表示: { $view }
 
-smeter-arrow-on-receive = (送信中に使われます)
+smeter-arrow-prev-face = 前のメーター
+
+smeter-arrow-next-face = 次のメーター
 
 sonde-card-source-both = 無線 + SondeHub（両方で受信）
 

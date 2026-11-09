@@ -9402,12 +9402,15 @@ meter-view-swr = SWR
 
 meter-view-alc = ALC
 
-# $view is the name of the reading (meter-view-*); $when is smeter-arrow-on-receive or empty.
-smeter-arrow-prev-hover = Previous reading: { $view }{ $when }
+# $view is the name of the reading (meter-view-*). The arrows turn the readings
+# while transmitting and the face (needle, bar, trace) on receive.
+smeter-arrow-prev-hover = Previous reading: { $view }
 
-smeter-arrow-next-hover = Next reading: { $view }{ $when }
+smeter-arrow-next-hover = Next reading: { $view }
 
-smeter-arrow-on-receive = (used when transmitting)
+smeter-arrow-prev-face = Previous face
+
+smeter-arrow-next-face = Next face
 
 sonde-card-source-both = Radio + SondeHub (both hear it)
 

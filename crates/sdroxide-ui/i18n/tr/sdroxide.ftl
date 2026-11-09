@@ -9377,11 +9377,13 @@ meter-view-swr = SWR
 
 meter-view-alc = ALC
 
-smeter-arrow-prev-hover = Önceki ölçüm: { $view }{ $when }
+smeter-arrow-prev-hover = Önceki ölçüm: { $view }
 
-smeter-arrow-next-hover = Sonraki ölçüm: { $view }{ $when }
+smeter-arrow-next-hover = Sonraki ölçüm: { $view }
 
-smeter-arrow-on-receive = (vericiyle yayın yaparken kullanılır)
+smeter-arrow-prev-face = Önceki kadran
+
+smeter-arrow-next-face = Sonraki kadran
 
 sonde-card-source-both = Telsiz + SondeHub (ikisi de alıyor)
 

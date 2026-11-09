@@ -9377,11 +9377,13 @@ meter-view-swr = ROE
 
 meter-view-alc = ALC
 
-smeter-arrow-prev-hover = Medição anterior: { $view }{ $when }
+smeter-arrow-prev-hover = Medição anterior: { $view }
 
-smeter-arrow-next-hover = Próxima medição: { $view }{ $when }
+smeter-arrow-next-hover = Próxima medição: { $view }
 
-smeter-arrow-on-receive = (usada ao transmitir)
+smeter-arrow-prev-face = Mostrador anterior
+
+smeter-arrow-next-face = Próximo mostrador
 
 sonde-card-source-both = Rádio + SondeHub (ambos a recebem)
 

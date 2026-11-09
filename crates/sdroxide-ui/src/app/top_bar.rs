@@ -1169,8 +1169,8 @@ impl SdroxideApp {
                             if resp.clicked() {
                                 self.set_smeter_style(style.next_compact());
                             }
-                            if let Some(v) = turned {
-                                self.set_smeter_view(v);
+                            if let Some(t) = turned {
+                                self.apply_smeter_turn(t, style, true);
                             }
                         },
                     );
@@ -2477,6 +2477,25 @@ impl SdroxideApp {
         }
     }
 
+    /// What an arrow on the meter asked for: a reading while transmitting, the
+    /// next or previous face on receive (the click's cycle, either way round).
+    fn apply_smeter_turn(
+        &mut self,
+        turn: smeter::Turn,
+        style: sdroxide_types::SmeterStyle,
+        compact: bool,
+    ) {
+        match turn {
+            smeter::Turn::View(v) => self.set_smeter_view(v),
+            smeter::Turn::Face { forward } => self.set_smeter_style(match (forward, compact) {
+                (true, true) => style.next_compact(),
+                (true, false) => style.next(),
+                (false, true) => style.prev_compact(),
+                (false, false) => style.prev(),
+            }),
+        }
+    }
+
     /// Take the view an arrow on the meter turned to and write it out, for the
     /// same reasons as [`Self::set_smeter_style`].
     fn set_smeter_view(&mut self, view: sdroxide_types::MeterView) {
@@ -2527,8 +2546,8 @@ impl SdroxideApp {
         if let Some(style) = picked {
             self.set_smeter_style(style);
         }
-        if let Some(view) = turned {
-            self.set_smeter_view(view);
+        if let Some(t) = turned {
+            self.apply_smeter_turn(t, style, compact);
         }
     }
 
