@@ -821,28 +821,10 @@ fn is_root_route(path: &str) -> bool {
         {
             true
         }
-        _ if is_translation_file(path) => true,
         _ => path
             .strip_prefix("/ws/")
             .is_some_and(|id| !id.is_empty() && id.bytes().all(|b| b.is_ascii_digit())),
     }
-}
-
-/// `/i18n/<tag>/sdroxide.ftl`: the language the browser build fetches (the wasm
-/// carries English only), the one file of the client's `dist` that sits in
-/// folders. Listed with the endpoints so that it keeps them, directly and
-/// behind a prefix, instead of being cut down to `/sdroxide.ftl`.
-///
-/// The tag is what a BCP 47 tag is made of, so a path climbing out of the
-/// folder (`/i18n/../sdroxide.ftl`) is not one.
-fn is_translation_file(path: &str) -> bool {
-    path.strip_prefix("/i18n/")
-        .and_then(|rest| rest.strip_suffix("/sdroxide.ftl"))
-        .is_some_and(|tag| {
-            !tag.is_empty()
-                && tag.len() <= 23
-                && tag.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
-        })
 }
 
 /// The path a request really names, once whatever a reverse proxy left in
@@ -864,10 +846,9 @@ fn is_translation_file(path: &str) -> bool {
 ///   [`is_root_route`]'s paths is that endpoint reached through a prefix, so
 ///   the prefix is dropped: `/sdroxide/ws/1` is `/ws/1`.
 /// * Everything else is a **file**, and the client's `dist` is flat — no
-///   subdirectories at all, but the translations ([`is_translation_file`],
-///   counted with the endpoints above) — so a path with a directory in it can
-///   only be a prefix, and the last segment is the file: `/sdroxide/app.wasm`
-///   is `/app.wasm`. A path that ends in `/` names a directory, which is the
+///   subdirectories at all — so a path with a directory in it can only be a
+///   prefix, and the last segment is the file: `/sdroxide/app.wasm` is
+///   `/app.wasm`. A path that ends in `/` names a directory, which is the
 ///   client's own page, so it becomes `/`.
 ///
 /// Neither can collide with a real request, because there is nothing real
@@ -1733,32 +1714,6 @@ mod proxy_prefix_tests {
         assert_eq!(strip_proxy_prefix("/ws/ws/3"), Some("/ws/3".to_string()));
     }
 
-    /// The browser build fetches its language from `i18n/<tag>/sdroxide.ftl`,
-    /// the one place the client's `dist` is not flat. That file keeps its two
-    /// folders, directly and behind any prefix; without that it was read as
-    /// `/sdroxide.ftl`, answered "not found", and the client stayed in English
-    /// whatever language was picked or detected.
-    #[test]
-    fn a_translation_file_keeps_its_folders() {
-        assert_eq!(strip_proxy_prefix("/i18n/fr/sdroxide.ftl"), None);
-        assert_eq!(strip_proxy_prefix("/i18n/pt-BR/sdroxide.ftl"), None);
-        assert_eq!(
-            strip_proxy_prefix("/sdroxide/i18n/fr/sdroxide.ftl"),
-            Some("/i18n/fr/sdroxide.ftl".to_string())
-        );
-        assert_eq!(
-            strip_proxy_prefix("/shack/sdr/i18n/zh-CN/sdroxide.ftl"),
-            Some("/i18n/zh-CN/sdroxide.ftl".to_string())
-        );
-        // Only that shape: any other file there is still just its own name, and
-        // a tag that is not a tag (a path climbing out, nothing at all) is not
-        // one either.
-        assert_eq!(strip_proxy_prefix("/i18n/fr/other.ftl"), Some("/other.ftl".to_string()));
-        assert_eq!(strip_proxy_prefix("/i18n/../sdroxide.ftl"), Some("/sdroxide.ftl".to_string()));
-        assert_eq!(strip_proxy_prefix("/i18n//sdroxide.ftl"), Some("/sdroxide.ftl".to_string()));
-        assert_eq!(strip_proxy_prefix("/x/fr/sdroxide.ftl"), Some("/sdroxide.ftl".to_string()));
-    }
-
     /// The picture of the open card is an endpoint too, behind any prefix.
     #[test]
     fn the_aircraft_photo_survives_a_proxy_prefix() {
@@ -1894,14 +1849,5 @@ mod asset_name_tests {
         assert_eq!(asset_name("/index.html"), "index.html");
         assert_eq!(asset_name("/audio_bridge.js"), "audio_bridge.js");
         assert_eq!(asset_name("/sdroxide-web-abc_bg.wasm"), "sdroxide-web-abc_bg.wasm");
-    }
-
-    /// A translation sits in folders and is asked for by its whole name, so
-    /// `i18n/fr/sdroxide.ftl` is found in the embedded `dist` and a language
-    /// that is not there says "not found" instead of returning the page.
-    #[test]
-    fn a_translation_is_found_by_its_whole_name() {
-        assert_eq!(asset_name("/i18n/fr/sdroxide.ftl"), "i18n/fr/sdroxide.ftl");
-        assert_eq!(asset_name("/i18n/pt-BR/sdroxide.ftl"), "i18n/pt-BR/sdroxide.ftl");
     }
 }
