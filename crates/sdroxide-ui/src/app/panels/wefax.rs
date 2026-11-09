@@ -261,6 +261,14 @@ impl SdroxideApp {
                 self.digi_cfg_edit.wefax_slant_ppm = ppm;
                 changed = true;
             }
+            // Undo what the auto-slant measured for this page, if the chart
+            // came out worse for it. The trim goes back to the value above.
+            if crate::chrome::chip(ui, false, &tr!("wefax-revert-auto-slant"))
+                .on_hover_text(tr!("wefax-revert-auto-slant-hint"))
+                .clicked()
+            {
+                cmds.push(Command::WefaxRevertSlant);
+            }
 
             // How the chart in progress is displayed. Nothing here touches the
             // decoder — a chart takes a quarter of an hour, and waiting for it

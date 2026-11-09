@@ -578,6 +578,21 @@ pub struct WefaxRx {
     /// difference between "it acted" and "it never had enough signal to act" is
     /// a number nobody could see. Reported with each page (#444).
     last_slant: (f64, u32),
+    /// The operator's own trim: where every page starts. The auto-slant adds to
+    /// it for the page it measured and is dropped at the next one, so a wrong
+    /// measurement on a weak phasing signal cannot lean the pages after it.
+    slant_base: f64,
+    /// The trim before the last auto correction, that correction, and the
+    /// `last_slant` it replaced; held until the next window of phasing lines
+    /// has checked the correction made the walk smaller, not larger.
+    slant_pending: Option<(f64, f64, (f64, u32))>,
+    /// No more auto-slant on this page: the last correction was undone, by the
+    /// check above or by the operator.
+    slant_locked: bool,
+    /// The last line drawn, to stand in for a line the receiver lost.
+    last_line: Vec<u8>,
+    /// Lost lines repeated in a row.
+    lost_run: u32,
 
     phase: Phase,
     /// Demodulated brightness of the line being built, one entry per input
@@ -857,15 +872,30 @@ struct SlantFit {
     sy: f64,
     sxy: f64,
     sxx: f64,
+    syy: f64,
 }
 
 impl SlantFit {
+    /// Standard error of the slope, samples per line: how far the pulse's
+    /// positions scatter around the fitted line, over the spread of the lines.
+    fn slope_error(&self) -> f64 {
+        let sxx = self.sxx - self.sx * self.sx / self.n;
+        if self.n < 3.0 || sxx <= 0.0 {
+            return f64::INFINITY;
+        }
+        let sxy = self.sxy - self.sx * self.sy / self.n;
+        let syy = self.syy - self.sy * self.sy / self.n;
+        let sse = (syy - sxy * sxy / sxx).max(0.0);
+        (sse / (self.n - 2.0) / sxx).sqrt()
+    }
+
     fn add(&mut self, i: f64, p: f64) {
         self.n += 1.0;
         self.sx += i;
         self.sy += p;
         self.sxy += i * p;
         self.sxx += i * i;
+        self.syy += p * p;
     }
 
     /// Samples of walk per line, once there are enough lines to say.
@@ -935,6 +965,9 @@ const SLANT_FINE_LINES: u32 = 50;
 /// page of bands — issue #239, where the decoder was worse than leaving the
 /// clock alone.
 const SLANT_MAX_PPM: f64 = 2_000.0;
+/// How many standard errors a fitted walk must stand above before it is
+/// believed to be a clock error and not the pulse's scatter.
+const SLANT_SIGNIFICANCE: f64 = 3.0;
 /// How far a phasing line's pulse must stand above the line's own median
 /// brightness to be read as a pulse rather than as a chart's own bright area.
 ///
@@ -984,6 +1017,11 @@ impl WefaxRx {
             slant_fit: SlantFit::default(),
             phasing_lines: 0,
             last_slant: (0.0, 0),
+            slant_base: 0.0,
+            slant_pending: None,
+            slant_locked: false,
+            last_line: Vec::new(),
+            lost_run: 0,
             phase: Phase::Idle,
             line_buf: Vec::new(),
             line_start: 0.0,
@@ -1065,6 +1103,25 @@ impl WefaxRx {
     /// Sample-clock trim, parts per million.
     pub fn set_slant_ppm(&mut self, ppm: f32) {
         self.slant_ppm = ppm as f64;
+        self.slant_base = ppm as f64;
+        self.slant_pending = None;
+    }
+
+    /// Undo the auto-slant on the page in progress: the trim goes back to the
+    /// operator's own and the auto-slant stays off until the next page. The
+    /// lines already drawn are not touched, only the ones still to come.
+    pub fn revert_slant(&mut self) {
+        self.slant_ppm = self.slant_base;
+        self.slant_pending = None;
+        self.slant_locked = true;
+        self.slant_fit = SlantFit::default();
+        self.phasing_lines = 0;
+        self.last_slant = (0.0, 0);
+    }
+
+    /// The auto-slant is off for this page because a correction was undone.
+    pub fn slant_reverted(&self) -> bool {
+        self.slant_locked
     }
 
     pub fn slant_ppm(&self) -> f32 {
@@ -1215,6 +1272,12 @@ impl WefaxRx {
         self.phase_samples = 0;
         self.slant_fit = SlantFit::default();
         self.phasing_lines = 0;
+        self.slant_ppm = self.slant_base;
+        self.slant_pending = None;
+        self.slant_locked = false;
+        self.last_slant = (0.0, 0);
+        self.last_line.clear();
+        self.lost_run = 0;
         self.auto_begun = auto;
         self.phasing_stack.reset();
         self.lock_lines = LOCK_LINES;
@@ -1416,7 +1479,29 @@ impl WefaxRx {
         let origin = from - self.px_start - PIC_DELAY_SAMPLES;
         let sums =
             picture_line(&self.px_buf, origin, self.samples_per_line(), self.ioc.width() as usize);
-        self.shade(&sums)
+        let (gray, share) = self.shade(&sums);
+        self.conceal(gray, share)
+    }
+
+    /// Stand-in for a lost line. A line with almost nothing of its own in it was
+    /// lost by the receiver (an AGC pump, a fade): drawn as it came it is a
+    /// black stripe, so the line above stands in, for a few lines and no more,
+    /// so a long fade shows as one instead of as a smear.
+    fn conceal(&mut self, mut gray: Vec<u8>, share: f32) -> Vec<u8> {
+        if self.fill
+            && share < PIC_LOST_SHARE
+            && self.lost_run < PIC_LOST_RUN
+            && self.last_line.len() == gray.len()
+        {
+            self.lost_run += 1;
+            gray.clone_from(&self.last_line);
+        } else {
+            if share >= PIC_LOST_SHARE {
+                self.lost_run = 0;
+            }
+            self.last_line.clone_from(&gray);
+        }
+        gray
     }
 
     /// Brightness of each pixel's summed phase step, 0..255.
@@ -1426,7 +1511,7 @@ impl WefaxRx {
     /// noise on a weak pixel looks like) has nothing to say: it takes the
     /// nearest pixel that does, up to [`PIC_FILL_PX`] away, and is left as it
     /// is when none is that close.
-    fn shade(&self, sums: &[(Complex32, f32)]) -> Vec<u8> {
+    fn shade(&self, sums: &[(Complex32, f32)]) -> (Vec<u8>, f32) {
         let expect = self.samples_per_line() as f32 / sums.len().max(1) as f32 * self.pic_mag;
         let valid = |&(s, m): &(Complex32, f32)| {
             !self.fill || (m >= PIC_MIN_WEIGHT * expect && s.norm() >= PIC_COHERENCE * m)
@@ -1461,7 +1546,8 @@ impl WefaxRx {
             }
             right[i] = last;
         }
-        (0..n)
+        let share = ok.iter().filter(|&&v| v).count() as f32 / n.max(1) as f32;
+        let gray = (0..n)
             .map(|i| {
                 if ok[i] {
                     return level(&sums[i]);
@@ -1471,7 +1557,8 @@ impl WefaxRx {
                 let j = if dl <= dr { left[i] } else { right[i] };
                 if dl.min(dr) <= PIC_FILL_PX { level(&sums[j]) } else { level(&sums[i]) }
             })
-            .collect()
+            .collect();
+        (gray, share)
     }
 
     /// Forget the phase steps before sample `from`.
@@ -1652,10 +1739,19 @@ impl WefaxRx {
     /// measurement to name is still corrected once the whole signal has been
     /// read (see [`SLANT_FINE_LINES`]).
     fn probe_slant(&mut self, line: &[f32]) {
+        if self.slant_locked {
+            return;
+        }
         let Some(pos) = phasing_skew_strict(line) else { return };
         self.phasing_lines += 1;
         self.slant_fit.add(f64::from(self.phasing_lines), f64::from(pos));
         let Some(slope) = self.slant_fit.slope(SLANT_PROBE_LINES) else { return };
+        // A walk the pulse's own scatter could have made is noise, not drift:
+        // on a weak signal the fit used to name a slant out of it and lean a
+        // page that was straight.
+        if slope.abs() < SLANT_SIGNIFICANCE * self.slant_fit.slope_error() {
+            return;
+        }
         // Pulse movement in samples per line, as a fraction of the nominal
         // line: a clock that is too long walks the pulse backwards, and that is
         // exactly the amount the trim must come down by.
@@ -1670,7 +1766,23 @@ impl WefaxRx {
         } else {
             SLANT_COARSE_MIN_PPM
         };
+        // The window since the last correction has now been measured against
+        // the clock that correction set. A good correction leaves no walk; one
+        // that leaves a walk the other way, at least half as large, was made
+        // from a mis-measure and has made the page worse: undo it and leave the
+        // clock alone for the rest of the page.
+        if let Some((prev, applied, prev_last)) = self.slant_pending.take() {
+            if ppm * applied < 0.0 && ppm.abs() >= 0.5 * applied.abs() && ppm.abs() >= floor {
+                self.slant_ppm = prev;
+                self.last_slant = prev_last;
+                self.slant_locked = true;
+                self.slant_fit = SlantFit::default();
+                self.phasing_lines = 0;
+                return;
+            }
+        }
         if (floor..=SLANT_MAX_PPM).contains(&ppm.abs()) {
+            self.slant_pending = Some((self.slant_ppm, ppm, self.last_slant));
             // Clamped as well as filtered: a handful of small mis-measures in a
             // row must not walk the clock away from the signal either.
             self.last_slant = (ppm, self.slant_fit.n as u32);
@@ -1977,6 +2089,12 @@ const PIC_MIN_WEIGHT: f32 = 0.34;
 /// Coherence a pixel needs, and how far its stand-in may be, pixels.
 const PIC_COHERENCE: f32 = 0.25;
 const PIC_FILL_PX: usize = 24;
+
+/// A line with fewer than this share of pixels drawn from their own signal is
+/// a lost line, and the line above is repeated for it, at most
+/// [`PIC_LOST_RUN`] times in a row.
+const PIC_LOST_SHARE: f32 = 0.15;
+const PIC_LOST_RUN: u32 = 4;
 
 /// Sum the phase steps across each of `width` pixels of a line that begins
 /// `origin` steps into `px` and is `spl` long. The ends of a pixel count in
@@ -2419,6 +2537,103 @@ mod tests {
             assert!((ppm as f64 - slant).abs() < 80.0, "reported {ppm} for {slant}");
             assert!(lines > 0, "the correction must say how many lines it used");
         }
+    }
+
+    /// **A page starts from the operator's trim, not from the last page's
+    /// correction**: a wrong measurement on a weak phasing signal leaned every
+    /// page after it, while the pages that were re-measured came out straight.
+    #[test]
+    fn a_new_page_starts_from_the_operators_trim() {
+        let mut rx = WefaxRx::new(RATE);
+        rx.set_slant_ppm(100.0);
+        rx.start_manual(&mut Vec::new());
+        let _ = drain(&mut rx, &phasing_slanted(Lpm::L120, 40, 700.0));
+        assert!(rx.slant_ppm() > 500.0, "the page must have been corrected first");
+        rx.start_manual(&mut Vec::new());
+        assert_eq!(rx.slant_ppm(), 100.0);
+        assert!(!rx.slant_reverted());
+    }
+
+    /// **A correction that makes the walk worse is undone.** Twenty lines walk
+    /// one way and the next twenty, measured against the clock the first
+    /// correction set, walk back: the first reading was a mis-measure.
+    #[test]
+    fn a_correction_that_made_the_walk_worse_is_reverted() {
+        let mut rx = WefaxRx::new(RATE);
+        rx.start_manual(&mut Vec::new());
+        // A correction of +600 ppm has just been made (as if from a window the
+        // noise bent), and the signal's own clock is 1000 ppm the other way.
+        rx.slant_ppm = 600.0;
+        rx.slant_pending = Some((0.0, 600.0, (0.0, 0)));
+        let audio = phasing_slanted(Lpm::L120, 36, -1000.0);
+        let _ = drain(&mut rx, &audio);
+        assert!(rx.slant_reverted(), "the bad correction was kept: {}", rx.slant_ppm());
+        assert_eq!(rx.slant_ppm(), 0.0);
+        assert_eq!(rx.slant_correction().1, 0);
+    }
+
+    /// The operator can undo the auto-slant by hand, and it stays off for the
+    /// page; the next page measures again.
+    #[test]
+    fn the_operator_can_revert_the_auto_slant() {
+        let mut rx = WefaxRx::new(RATE);
+        rx.set_slant_ppm(50.0);
+        rx.start_manual(&mut Vec::new());
+        let _ = drain(&mut rx, &phasing_slanted(Lpm::L120, 32, 800.0));
+        assert!(rx.slant_ppm() > 500.0);
+        rx.revert_slant();
+        assert_eq!(rx.slant_ppm(), 50.0);
+        let _ = drain(&mut rx, &phasing_slanted(Lpm::L120, 30, 800.0));
+        assert_eq!(rx.slant_ppm(), 50.0, "the auto-slant must stay off after a revert");
+        rx.start_manual(&mut Vec::new());
+        let _ = drain(&mut rx, &phasing_slanted(Lpm::L120, 40, 800.0));
+        assert!(rx.slant_ppm() > 500.0, "the next page must measure again");
+    }
+
+    /// A walk the pulse's scatter could have made is not a slant.
+    #[test]
+    fn a_noisy_phasing_walk_is_not_believed() {
+        let mut fit = SlantFit::default();
+        for i in 1..=20 {
+            // Positions that jump about with no trend, then a tiny drift on top.
+            let p = 3000.0 + if i % 2 == 0 { 40.0 } else { -40.0 } + f64::from(i) * 0.5;
+            fit.add(f64::from(i), p);
+        }
+        let slope = fit.slope(20).unwrap();
+        assert!(slope.abs() < SLANT_SIGNIFICANCE * fit.slope_error());
+        let mut clean = SlantFit::default();
+        for i in 1..=20 {
+            clean.add(f64::from(i), 3000.0 + f64::from(i) * 2.0);
+        }
+        assert!(clean.slope(20).unwrap().abs() > SLANT_SIGNIFICANCE * clean.slope_error());
+    }
+
+    /// **A line the receiver lost is not drawn as a black stripe.**
+    #[test]
+    fn a_lost_line_repeats_the_line_above_for_a_while() {
+        let mut rx = WefaxRx::new(RATE);
+        rx.pic_mag = 1.0;
+        let n = 64usize;
+        let good: Vec<(Complex32, f32)> = (0..n)
+            .map(|_| {
+                let m = rx.samples_per_line() as f32 / n as f32;
+                (Complex32::new(m, 0.0), m)
+            })
+            .collect();
+        let lost: Vec<(Complex32, f32)> = (0..n).map(|_| (Complex32::new(0.0, 0.0), 0.0)).collect();
+        let (g, share) = rx.shade(&good);
+        assert!(share > 0.9);
+        let (_, lost_share) = rx.shade(&lost);
+        assert!(lost_share < PIC_LOST_SHARE);
+        let first = rx.conceal(g.clone(), share);
+        assert_eq!(first, g);
+        let bad = vec![0u8; n];
+        for _ in 0..PIC_LOST_RUN {
+            assert_eq!(rx.conceal(bad.clone(), lost_share), g, "the line above must stand in");
+        }
+        assert_eq!(rx.conceal(bad.clone(), lost_share), bad, "a long fade is shown as it is");
+        let _ = rx.conceal(g.clone(), share);
+        assert_eq!(rx.conceal(bad.clone(), lost_share), g, "a good line starts the count again");
     }
 
     /// **A slant too small for a short measurement is still corrected.**

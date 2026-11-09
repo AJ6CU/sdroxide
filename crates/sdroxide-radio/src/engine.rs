@@ -11541,6 +11541,11 @@ impl Engine {
                     d.wefax_nudge(px);
                 }
             }
+            WefaxRevertSlant => {
+                if let Some(d) = self.digi.as_mut() {
+                    d.wefax_revert_slant();
+                }
+            }
             SstvTx { mode, png } => {
                 // Decode the UI-composed PNG to RGB and queue it; the controller
                 // keys TX on the next poll.
