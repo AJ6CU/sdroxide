@@ -54,6 +54,8 @@ struct Bench {
     audio: Option<Vec<f32>>,
     /// Sample index since the source opened, for walking `audio`.
     n: usize,
+    /// Carrier amplitude, full scale being 1.0.
+    amp: f32,
 }
 
 impl Bench {
@@ -65,12 +67,22 @@ impl Bench {
             phase: 0.0,
             audio: None,
             n: 0,
+            amp: 0.5,
         }
     }
 
     /// The same carrier, amplitude-modulated with a voice.
+    ///
+    /// Weaker than the bare one, on purpose. At 0.5 (-6 dBFS) the skirts of a
+    /// carrier beside the scan's -60 dBFS threshold still clear it for several
+    /// channels either side, and the demodulator there hears the voice leaking
+    /// in: the scan then stops on the first of those channels, 50 kHz below the
+    /// signal, and says it heard speech. That is what a strong neighbour does
+    /// to a real receiver too, so it is the bench that was too loud, not the
+    /// detector that was wrong. At 0.02 (-34 dBFS) the carrier is still well
+    /// above the threshold and its skirts are not.
     fn speaking(signal_hz: Option<f64>) -> Self {
-        Bench { audio: Some(voice_audio()), ..Bench::new(signal_hz) }
+        Bench { audio: Some(voice_audio()), amp: 0.02, ..Bench::new(signal_hz) }
     }
 }
 
@@ -135,7 +147,7 @@ impl IqSource for Bench {
                         _ => 1.0,
                     };
                     self.n += 1;
-                    let amp = 0.5 * env;
+                    let amp = self.amp * env;
                     *s = Complex32::new(co as f32 * amp, si as f32 * amp);
                 }
             }
