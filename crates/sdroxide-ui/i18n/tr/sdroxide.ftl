@@ -461,6 +461,7 @@ settings-radio-n = radyo { $n }
 settings-on-station = { $station } üzerinde
 settings-add-radio-on-station = { $station } üzerine bir radyo ekle — istasyon onu hemen sunar
 settings-panadapter-receiver-for = { $radio } için panadaptör alıcısı
+settings-panadapter-kiwi-zoom-note = Alıcı olarak bir KiwiSDR kullanıldığında şelalesi, frekansın çevresinde yaklaşık 2 MHz'e yakınlaştırılmış açılır. Bunu o telsizin ayarlarında, Bant görünümü aralığı altında değiştirin.
 settings-hang-up-stays-on = Bağlantıyı kes. Radyo { $station } üzerinde kalır.
 settings-close-on-station = { $radio }, { $station } üzerinde kapatılsın mı? Yapılandırması o makinede kalır; buradaki sekme onunla birlikte kapanır, herkesinkiyle birlikte de.
 settings-close-it-on = { $station } üzerinde kapat

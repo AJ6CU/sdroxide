@@ -456,6 +456,7 @@ settings-radio-n = radio { $n }
 settings-on-station = Op { $station }
 settings-add-radio-on-station = Een radio toevoegen op { $station } — het station serveert hem meteen
 settings-panadapter-receiver-for = Panadapter-ontvanger voor { $radio }
+settings-panadapter-kiwi-zoom-note = Met een KiwiSDR als ontvanger opent het waterval ingezoomd op ongeveer 2 MHz rond de frequentie. Wijzig dit in de instellingen van die radio onder Span bandweergave.
 settings-hang-up-stays-on = Ophangen. De radio blijft op { $station }.
 settings-close-on-station = { $radio } sluiten op { $station }? De configuratie blijft op die machine; het tabblad hier sluit mee, en dat van alle anderen ook.
 settings-close-it-on = Sluit hem op { $station }

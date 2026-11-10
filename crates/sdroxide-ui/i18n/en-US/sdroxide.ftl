@@ -461,6 +461,7 @@ settings-radio-n = radio { $n }
 settings-on-station = On { $station }
 settings-add-radio-on-station = Add a radio on { $station } — the station serves it straight away
 settings-panadapter-receiver-for = Panadapter receiver for { $radio }
+settings-panadapter-kiwi-zoom-note = With a KiwiSDR as the receiver, its waterfall opens zoomed to about 2 MHz around the dial. Change it in that radio's settings, under Band view span.
 settings-hang-up-stays-on = Hang up. The radio stays on { $station }.
 settings-close-on-station = Close { $radio } on { $station }? Its configuration stays on that machine; the tab here closes with it, and so does everyone else's.
 settings-close-it-on = Close it on { $station }

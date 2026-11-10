@@ -461,6 +461,7 @@ settings-radio-n = rádio { $n }
 settings-on-station = Em { $station }
 settings-add-radio-on-station = Adicionar um rádio em { $station } — a estação o atende imediatamente
 settings-panadapter-receiver-for = Receptor do panadaptador para { $radio }
+settings-panadapter-kiwi-zoom-note = Com um KiwiSDR como receptor, sua cascata abre ampliada em cerca de 2 MHz ao redor da frequência. Altere nas configurações desse rádio, em Largura da visão de banda.
 settings-hang-up-stays-on = Desligar. O rádio continua em { $station }.
 settings-close-on-station = Fechar { $radio } em { $station }? A configuração dele continua naquela máquina; a aba aqui fecha junto, e também a de todos os outros.
 settings-close-it-on = Fechar em { $station }

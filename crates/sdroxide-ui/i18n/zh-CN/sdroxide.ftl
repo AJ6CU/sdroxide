@@ -458,6 +458,7 @@ settings-radio-n = 电台 { $n }
 settings-on-station = 位于 { $station }
 settings-add-radio-on-station = 在 { $station } 上添加电台——电台站点会立即为其提供服务
 settings-panadapter-receiver-for = { $radio } 的全景接收机
+settings-panadapter-kiwi-zoom-note = 使用 KiwiSDR 作为接收机时，其瀑布图会以拨盘为中心放大到约 2 MHz。可在该电台设置的“频段视图跨度”中更改。
 settings-hang-up-stays-on = 挂断。电台仍保留在 { $station } 上。
 settings-close-on-station = 要在 { $station } 上关闭 { $radio } 吗？其配置仍保留在该机器上；此处的选项卡随之关闭，其他人的也一样。
 settings-close-it-on = 在 { $station } 上关闭它
