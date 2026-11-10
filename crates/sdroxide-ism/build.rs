@@ -84,16 +84,6 @@ fn main() {
 
     let build = dst.join("build");
     println!("cargo:rustc-link-search=native={}", build.join("src").display());
-    println!("cargo:rustc-link-lib=static=r_433");
-
-    if cfg!(target_os = "windows") {
-        // mongoose, which r_api.c's network outputs pull in.
-        println!("cargo:rustc-link-lib=dylib=ws2_32");
-    } else {
-        println!("cargo:rustc-link-lib=dylib=m");
-        println!("cargo:rustc-link-lib=dylib=pthread");
-    }
-
     let includes = [rtl433.join("include"), build.join("include")];
 
     let mut shim = cc::Build::new();
@@ -102,6 +92,24 @@ fn main() {
         shim.include(inc);
     }
     shim.compile("sdroxide_rtl433_shim");
+
+    // After the shim, not before: the shim calls into r_433, and GNU ld reads
+    // static libraries once, in order, so r_433 (and what it needs) must come
+    // later on the link line. Before, `cargo test -p sdroxide-ism` failed on
+    // windows-gnu with "undefined reference to `r_create_cfg'".
+    println!("cargo:rustc-link-lib=static=r_433");
+
+    if cfg!(target_os = "windows") {
+        // mongoose, which r_api.c's network outputs pull in.
+        println!("cargo:rustc-link-lib=dylib=ws2_32");
+        // rtl_433's term_ctl.c asks the workstation name (NetWkstaGetInfo,
+        // NetApiBufferFree); without this the examples fail to link on
+        // windows-gnu with "undefined reference to `NetWkstaGetInfo'".
+        println!("cargo:rustc-link-lib=dylib=netapi32");
+    } else {
+        println!("cargo:rustc-link-lib=dylib=m");
+        println!("cargo:rustc-link-lib=dylib=pthread");
+    }
 
     // Only our own header: rtl_433's would drag mongoose and the pulse detector
     // into Rust, none of which the bridge names.
