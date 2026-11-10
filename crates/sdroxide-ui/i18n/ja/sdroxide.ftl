@@ -9588,3 +9588,5 @@ navtex-freq-cw = CW モード
 navtex-freq-international = 国際（英語）
 
 navtex-freq-national = 国内（現地語）
+
+settings-panadapter-kiwi-zoom-note = 受信機にKiwiSDRを使うと、そのウォーターフォールはダイヤル周辺の約2 MHzに拡大されて開きます。変更するには、その無線機の設定の「バンド表示のスパン」で行います。

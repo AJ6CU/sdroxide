@@ -9640,3 +9640,5 @@ navtex-freq-cw = modo CW
 navtex-freq-international = internacional, em inglês
 
 navtex-freq-national = nacional, no idioma local
+
+settings-panadapter-kiwi-zoom-note = Com um KiwiSDR como receptor, sua cascata abre ampliada em cerca de 2 MHz ao redor da frequência. Altere nas configurações desse rádio, em Largura da visão de banda.

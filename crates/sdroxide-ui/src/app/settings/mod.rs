@@ -5015,6 +5015,8 @@ impl SdroxideApp {
         );
         ui.add_space(4.0);
         ui.label(RichText::new(tr!("settings-give-radio-wideband-panadapter-borrowing")).weak());
+        ui.add_space(2.0);
+        ui.label(RichText::new(tr!("settings-panadapter-kiwi-zoom-note")).weak());
         ui.add_space(6.0);
 
         egui::Grid::new("panadapter-grid")

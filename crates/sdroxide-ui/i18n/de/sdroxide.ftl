@@ -9632,3 +9632,5 @@ navtex-freq-cw = CW-Modus
 navtex-freq-international = international, auf Englisch
 
 navtex-freq-national = national, in der Landessprache
+
+settings-panadapter-kiwi-zoom-note = Mit einem KiwiSDR als Empfänger öffnet sich sein Wasserfall auf etwa 2 MHz um die Frequenz herum vergrößert. Ändern Sie das in den Einstellungen dieses Funkgeräts unter Bereich der Bandansicht.

@@ -9578,3 +9578,5 @@ navtex-freq-cw = CW 模式
 navtex-freq-international = 国际，英语
 
 navtex-freq-national = 国内，当地语言
+
+settings-panadapter-kiwi-zoom-note = 使用 KiwiSDR 作为接收机时，其瀑布图会以拨盘为中心放大到约 2 MHz。可在该电台设置的“频段视图跨度”中更改。

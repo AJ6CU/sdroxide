@@ -9640,3 +9640,5 @@ navtex-freq-cw = CW-modus
 navtex-freq-international = internationaal, in het Engels
 
 navtex-freq-national = nationaal, in de landstaal
+
+settings-panadapter-kiwi-zoom-note = Met een KiwiSDR als ontvanger opent het waterval ingezoomd op ongeveer 2 MHz rond de frequentie. Wijzig dit in de instellingen van die radio onder Span bandweergave.

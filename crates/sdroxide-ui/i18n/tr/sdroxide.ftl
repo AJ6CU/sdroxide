@@ -9640,3 +9640,5 @@ navtex-freq-cw = CW modu
 navtex-freq-international = uluslararası, İngilizce
 
 navtex-freq-national = ulusal, yerel dilde
+
+settings-panadapter-kiwi-zoom-note = Alıcı olarak bir KiwiSDR kullanıldığında şelalesi, frekansın çevresinde yaklaşık 2 MHz'e yakınlaştırılmış açılır. Bunu o telsizin ayarlarında, Bant görünümü aralığı altında değiştirin.

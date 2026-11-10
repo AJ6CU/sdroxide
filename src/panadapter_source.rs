@@ -52,8 +52,19 @@ use std::collections::VecDeque;
 use std::time::Instant;
 
 use sdroxide_radio::{Complex32, ControlUpdate, IqSource, Result};
-use sdroxide_types::{DeviceCaps, Mode, PanadapterAudio, PanadapterConfig};
+use sdroxide_types::{DeviceCaps, KiwiConfig, Mode, PanadapterAudio, PanadapterConfig};
 use tracing::{info, warn};
+
+/// How far in the lent KiwiSDR's own waterfall is zoomed while it is somebody's
+/// panadapter: 30 MHz / 2^4, about 1.9 MHz around the dial.
+///
+/// A Kiwi on its own opens on its whole 0-30 MHz band, which is a band map to
+/// tune by. Beside a transceiver the operator wants the band they are on, not a
+/// strip where one pixel is 29 kHz. Only a receiver that reports no zoom at all
+/// (zoom 0, the default) is moved: one the operator zoomed on purpose is left
+/// where they put it, and a receiver that is not a Kiwi has no such control and
+/// is never asked.
+const PAIRED_KIWI_WF_ZOOM: u8 = 4;
 
 /// How much transceiver audio may queue up before the oldest is dropped.
 ///
@@ -123,11 +134,21 @@ impl PanadapterSource {
     /// `rx_caps` and `ctrl_caps` are what the two devices reported when they
     /// opened; [`Self::merge_caps`] is what the engine is told.
     pub fn new(
-        rx: Box<dyn IqSource>,
+        mut rx: Box<dyn IqSource>,
         ctrl: Box<dyn IqSource>,
         cfg: PanadapterConfig,
         mode: Option<Mode>,
     ) -> Self {
+        let unzoomed_kiwi = rx
+            .current_gains()
+            .iter()
+            .any(|(name, zoom)| name == KiwiConfig::WF_ZOOM_ELEMENT && *zoom < 0.5);
+        if unzoomed_kiwi
+            && let Err(e) =
+                rx.set_gain_element(KiwiConfig::WF_ZOOM_ELEMENT, f64::from(PAIRED_KIWI_WF_ZOOM))
+        {
+            warn!("could not zoom the paired KiwiSDR's waterfall: {e}");
+        }
         let off = mode.map_or(cfg.offset_hz, |m| cfg.offset_for(m));
         let label = format!("{} + {} panadapter", ctrl.describe(), rx.describe());
         info!(
@@ -891,6 +912,9 @@ mod tests {
         signal_dbm: Option<f32>,
         /// What `usable_frac` answers: 1.0 for a receiver with no opinion.
         usable: f64,
+        /// The KiwiSDR waterfall zoom this fake reports, or none for a receiver
+        /// that has no such control.
+        kiwi_zoom: Option<f64>,
     }
 
     impl Fake {
@@ -905,6 +929,7 @@ mod tests {
                     audio: Vec::new(),
                     signal_dbm: None,
                     usable: 1.0,
+                    kiwi_zoom: None,
                 },
                 log,
             )
@@ -953,6 +978,35 @@ mod tests {
         fn usable_frac(&self) -> f64 {
             self.usable
         }
+        fn current_gains(&self) -> Vec<(String, f64)> {
+            self.kiwi_zoom.map(|z| vec![(KiwiConfig::WF_ZOOM_ELEMENT.to_string(), z)]).unwrap_or_default()
+        }
+    }
+
+    /// Pair `rx` with a plain rig and say which gain elements the receiver was
+    /// asked to set while the pairing was being built.
+    fn pair_with(rx: Fake, rx_log: &Arc<Mutex<Log>>) -> Vec<String> {
+        let (ctrl, _) = Fake::new("rig", 48_000.0, 14_100_000.0);
+        let _src = PanadapterSource::new(Box::new(rx), Box::new(ctrl), cfg(), Some(Mode::Usb));
+        let asked = rx_log.lock().unwrap().gains.clone();
+        asked
+    }
+
+    /// Proves: a KiwiSDR left on its whole 0-30 MHz band is zoomed in when it
+    /// becomes a transceiver's panadapter, a Kiwi the operator already zoomed
+    /// is left alone, and a receiver with no such control is never asked.
+    #[test]
+    fn a_paired_kiwi_on_its_whole_band_is_zoomed_in() {
+        let (mut kiwi, log) = Fake::new("kiwi", 12_000.0, 14_100_000.0);
+        kiwi.kiwi_zoom = Some(0.0);
+        assert_eq!(pair_with(kiwi, &log), vec![format!("kiwi:{}", KiwiConfig::WF_ZOOM_ELEMENT)]);
+
+        let (mut zoomed, log) = Fake::new("kiwi", 12_000.0, 14_100_000.0);
+        zoomed.kiwi_zoom = Some(6.0);
+        assert!(pair_with(zoomed, &log).is_empty(), "a zoom chosen on purpose is kept");
+
+        let (plain, log) = Fake::new("sdr", 2_000_000.0, 14_100_000.0);
+        assert!(pair_with(plain, &log).is_empty(), "only a Kiwi has this control");
     }
 
     fn cfg() -> PanadapterConfig {
