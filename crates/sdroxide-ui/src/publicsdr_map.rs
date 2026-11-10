@@ -609,6 +609,15 @@ pub fn show(
 
     // ── interaction ──
     let mut changed = false;
+    // What a click lands on is read where the click was, not where the pointer
+    // is. A finger leaves no hover position (the pointer is gone by the frame
+    // the tap arrives in), so a pick read off `hovered` alone found nothing
+    // under a tap and the map did nothing on a phone or a tablet.
+    let under_click: Vec<(usize, f32)> = if resp.clicked() {
+        resp.interact_pointer_pos().or_else(|| resp.hover_pos()).map(under).unwrap_or_default()
+    } else {
+        Vec::new()
+    };
     if !hovered.is_empty() {
         // One block per receiver under the pointer, and a count of the rest.
         let tip = hovered
@@ -620,19 +629,21 @@ pub fn show(
         let more = hovered.len().saturating_sub(MAX_PICKED);
         let tip = if more > 0 { format!("{tip}\n+{more}") } else { tip };
         resp.clone().on_hover_text(tip);
-        // A click picks all of them (at most MAX_PICKED, nearest first) and
-        // schedules their connection checks.
-        if resp.clicked() {
+    }
+    if resp.clicked() {
+        if !under_click.is_empty() {
+            // A click picks all of them (at most MAX_PICKED, nearest first) and
+            // schedules their connection checks.
             let chosen: Vec<&PublicSdrEntry> =
-                hovered.iter().take(MAX_PICKED).map(|&(i, _)| screen[i].0).collect();
+                under_click.iter().take(MAX_PICKED).map(|&(i, _)| screen[i].0).collect();
             state.picked = chosen.iter().map(|e| key(e)).collect();
             state.schedule_checks(&chosen, crate::time::now_unix_f64());
             changed = true;
+        } else if !state.picked.is_empty() {
+            // A click on open sea or land lets go of the pick.
+            state.picked.clear();
+            changed = true;
         }
-    } else if resp.clicked() && !state.picked.is_empty() {
-        // A click on open sea or land lets go of the pick.
-        state.picked.clear();
-        changed = true;
     }
 
     // Hand-moved: say how to give the view back to the auto-fit.
@@ -820,5 +831,96 @@ mod tests {
         let a = key(&e);
         e.address = "5.6.7.8:5555".into();
         assert_ne!(a, key(&e));
+    }
+
+    /// One frame of the map with `events`, at time `t`; the dot is the only
+    /// receiver, so the map frames it dead centre.
+    fn map_frame(
+        ctx: &eframe::egui::Context,
+        st: &mut PublicSdrMapState,
+        e: &PublicSdrEntry,
+        t: f64,
+        events: Vec<eframe::egui::Event>,
+    ) -> eframe::egui::Pos2 {
+        use eframe::egui;
+        let input = egui::RawInput {
+            time: Some(t),
+            screen_rect: Some(egui::Rect::from_min_size(
+                egui::pos2(0.0, 0.0),
+                egui::vec2(600.0, 400.0),
+            )),
+            events,
+            ..Default::default()
+        };
+        let mut centre = egui::Pos2::ZERO;
+        let mut out = ctx.run_ui(input, |ui| {
+            let (w, h) = (ui.available_width(), 300.0);
+            centre = egui::Rect::from_min_size(ui.cursor().min, vec2(w, h)).center();
+            show(ui, st, &[e], None, h);
+        });
+        out.textures_delta.clear();
+        centre
+    }
+
+    /// Proves: a tap on a dot picks it. A finger leaves no hover position — the
+    /// pointer is gone by the frame the tap lands in — so a pick read off the
+    /// hover alone finds nothing under a touch and the tap does nothing at all
+    /// on a phone or tablet in the web client.
+    #[test]
+    fn a_tap_with_no_hover_picks_the_dot() {
+        use eframe::egui::{Event, PointerButton};
+        let _guard = crate::multi::frame_test_lock();
+        let e = spy("1.2.3.4:5555");
+        let ctx = eframe::egui::Context::default();
+        let mut st = PublicSdrMapState::default();
+        let centre = map_frame(&ctx, &mut st, &e, 0.0, vec![]);
+        let mods = eframe::egui::Modifiers::NONE;
+        let tap = vec![
+            Event::PointerMoved(centre),
+            Event::PointerButton {
+                pos: centre,
+                button: PointerButton::Primary,
+                pressed: true,
+                modifiers: mods,
+            },
+            Event::PointerButton {
+                pos: centre,
+                button: PointerButton::Primary,
+                pressed: false,
+                modifiers: mods,
+            },
+            Event::PointerGone,
+        ];
+        map_frame(&ctx, &mut st, &e, 0.1, tap);
+        assert_eq!(st.picked, vec![key(&e)], "the tap picked nothing");
+    }
+
+    /// The mouse case, beside the touch one so a fix for either keeps both.
+    #[test]
+    fn a_click_with_the_pointer_still_there_picks_the_dot() {
+        use eframe::egui::{Event, PointerButton};
+        let _guard = crate::multi::frame_test_lock();
+        let e = spy("1.2.3.4:5555");
+        let ctx = eframe::egui::Context::default();
+        let mut st = PublicSdrMapState::default();
+        let centre = map_frame(&ctx, &mut st, &e, 0.0, vec![]);
+        let mods = eframe::egui::Modifiers::NONE;
+        let click = vec![
+            Event::PointerMoved(centre),
+            Event::PointerButton {
+                pos: centre,
+                button: PointerButton::Primary,
+                pressed: true,
+                modifiers: mods,
+            },
+            Event::PointerButton {
+                pos: centre,
+                button: PointerButton::Primary,
+                pressed: false,
+                modifiers: mods,
+            },
+        ];
+        map_frame(&ctx, &mut st, &e, 0.1, click);
+        assert_eq!(st.picked, vec![key(&e)], "the click picked nothing");
     }
 }

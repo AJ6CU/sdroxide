@@ -826,8 +826,9 @@ impl SdroxideApp {
         //      before that 2026-11-05: "die Karte rutscht in die Breite", the
         //      loop a map sized from `available_height` started without the
         //      panel.
-        // The map's return value (pick changed) is not needed: the rows are
-        // drawn from the pick every frame.
+        // The rows are drawn from the pick every frame, but the panel is laid
+        // out before the map, so a click that changes the pick is only shown by
+        // the next frame: ask for it, or the rows wait for the pointer to move.
         let mut take = None;
         egui::Panel::bottom(ui.id().with("publicsdr_map_rows"))
             .frame(egui::Frame::NONE)
@@ -836,7 +837,9 @@ impl SdroxideApp {
                 take = self.public_sdr_map_rows(ui, all, &picked, my_pos, star);
             });
         let h = ui.available_height().max(crate::publicsdr_map::MIN_HEIGHT);
-        show(ui, &mut self.public_sdr_map_state, &visible, my_pos, h);
+        if show(ui, &mut self.public_sdr_map_state, &visible, my_pos, h) {
+            crate::repaint::animate(ui.ctx());
+        }
         take
     }
 
