@@ -107,10 +107,15 @@ impl Radio {
     }
 
     fn confirm(&mut self) {
+        self.confirm_bands(vec![Band::M20, Band::M40]);
+    }
+
+    /// Confirm TX and RX lists that tick exactly `bands`.
+    fn confirm_bands(&mut self, bands: Vec<Band>) {
         let cfg = RadioConfig {
-            tx_band_enable: Some(vec![Band::M20, Band::M40]),
+            tx_band_enable: Some(bands.clone()),
             tx_bands_confirmed: true,
-            rx_band_enable: Some(vec![Band::M20, Band::M40]),
+            rx_band_enable: Some(bands),
             rx_bands_confirmed: true,
             ..RadioConfig::default()
         };
@@ -156,13 +161,17 @@ fn a_radio_on_its_own_plan_does_not_touch_another_and_is_not_touched() {
     assert_eq!(b.tune(14_074_000.0), 14_074_000.0, "B's plan is the station's: 20 m is still there");
     assert_eq!(b.tune(7_074_000.0), 7_074_000.0);
 
-    // A confirms again: under its own plan there is no 20 m, so 14.074 MHz is
-    // not a band it may tune to, while 40 m is.
-    a.confirm();
-    assert_eq!(a.tune(14_074_000.0), 14_074_000.0, "A has not moved yet: still where it was");
+    // Both radios confirm lists with 40 m ticked and 20 m not. A frequency in
+    // no band at all is open once a list is confirmed (there is no row for it),
+    // so the plan is what tells the two radios apart: under A's own plan there
+    // is no 20 m and 14.074 MHz is in no band, so A tunes there; under the
+    // station's plan it is 20 m, which B's list leaves off, so B is refused.
+    a.confirm_bands(vec![Band::M40]);
+    b.confirm_bands(vec![Band::M40]);
     assert_eq!(a.tune(7_074_000.0), 7_074_000.0, "40 m is YES on A");
-    assert_eq!(a.tune(14_074_000.0), 7_074_000.0, "no 20 m on A's own plan: refused");
-    assert_eq!(b.tune(14_074_000.0), 14_074_000.0, "while B, on the station's plan, tunes there");
+    assert_eq!(b.tune(7_074_000.0), 7_074_000.0, "40 m is YES on B");
+    assert_eq!(a.tune(14_074_000.0), 14_074_000.0, "no 20 m on A's own plan: in no band, open");
+    assert_eq!(b.tune(14_074_000.0), 7_074_000.0, "20 m is on B's (the station's) plan and off its list");
 
     // The choice is in A's radio.json and in no other.
     let a_json = std::fs::read_to_string(root.join("radio-1").join("radio.json")).unwrap();
