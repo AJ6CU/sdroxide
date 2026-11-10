@@ -158,6 +158,7 @@ Everything else that was in this list has been merged or closed since â€” s
 - AppImage â€” beslissing nodig.
 
 ## Recently done
+- 2026-11-10 — Version in the web client's tab title (added by F4NRM, owned by Claude): the browser tab said only "SDR Oxide Brown" (the static page title); the desktop window already carried the version. The web client now sets the tab title to the same `window_title` ("SDR Oxide Brown 2.3.0.2.2"). Not seen in a real browser here.
 - 2026-11-10 — KiwiSDR as a panadapter for a CAT radio, PR 4/5 (#647; added by F4NRM, owned by Claude): a Kiwi paired as the receiver of a CAT transceiver opens its waterfall at zoom 4 (about 2 MHz around the dial) when it was at zoom 0 (the whole 0-30 MHz); a Kiwi the operator already zoomed is left alone. A note in Settings > Radio > Panadapter says so. No config field, no protocol change. Not tried with a real Kiwi and rig here.
 - 2026-11-10 — KiwiSDR as a panadapter, PR 3/5 (#646; added by F4NRM, owned by Claude): NEAR KIWI chip in the Public SDR window, between MAP and the network chips: the 10 nearest KiwiSDRs that can be taken, closest first, from the station's grid square (a note when none is set). A view toggle, no protocol change.
 - 2026-11-10 — KiwiSDR as a panadapter, PR 2/5 (#645; added by F4NRM, owned by Claude): on the Public SDRs map a tap (touch gives no hover position) picks the receiver under it, and the map repaints at once. A mouse click already worked; the touch path did not.
