@@ -1994,10 +1994,12 @@ impl SdroxideApp {
             }
             if save {
                 if let Some((name, png)) = &self.sstv.full_png {
-                    crate::download::save_as(name, png, crate::download::Mime::Png);
-                    // Also put the picture into the selected slot, so it can be
-                    // sent without a separate load step.
-                    self.sstv.set_slot(self.sstv.selected_slot, png.clone(), cmds);
+                    // **A copy on this computer, and nothing else.** It used to
+                    // also put the picture into the selected transmit slot, so
+                    // pressing Save replaced the picture that was already there
+                    // (issue #650). Loading a picture into a slot is what the
+                    // Re-upload chip is for, and that chip says so.
+                    cmds.extend(crate::app::panels::sstv::save_picture_copy(name, png));
                 }
             }
             // Opening the QSL composer, not sending anything: the message is
@@ -3178,15 +3180,18 @@ impl SdroxideApp {
                         ui.horizontal(|ui| {
                             if crate::chrome::chip(ui, false, tr!("sstv-save-picture")).clicked() {
                                 if let Some(png) = self.sstv.compose_png(dims) {
-                                    crate::download::save_as(
-                                        "sstv-composed.png",
+                                    // **A copy on this computer, and nothing
+                                    // else.** This press used to drop the
+                                    // composed picture into the selected slot as
+                                    // well, which replaced the picture under it
+                                    // and stamped the text twice on the next
+                                    // send (issue #650).
+                                    cmds.extend(crate::app::panels::sstv::save_picture_copy(
+                                        &crate::app::panels::sstv::composed_file_name(
+                                            crate::time::now_unix(),
+                                        ),
                                         &png,
-                                        crate::download::Mime::Png,
-                                    );
-                                    // Also put the composed picture into the
-                                    // selected slot, so it can be sent without
-                                    // a separate load step.
-                                    self.sstv.set_slot(self.sstv.selected_slot, png.clone(), cmds);
+                                    ));
                                     note = Some(tr!("sstv-composed-saved"));
                                 }
                             }
@@ -3967,6 +3972,32 @@ pub(in crate::app) fn reception_report(report: &SstvQsl, station_line: &str) -> 
     format!("Reception report\n{}", lines.join("\n"))
 }
 
+/// **A saved copy is a file, and nothing else** (issue #650).
+///
+/// Pressing "Save picture…" used to do two things: write the copy out *and* put
+/// the same picture into the selected transmit slot. That replaced the picture
+/// already in the slot — the operator's own N°1 — with no way back, which is the
+/// fault F4NRM reported. A picture is loaded into a slot by the chip that says
+/// it does that ("Re-upload"), and that is the only press that sends
+/// [`Command::ImageSetSlot`].
+///
+/// The command list is **returned** rather than taken so a test can see that a
+/// save produces none: this function is the one place to change if that ever
+/// needs to be untrue, and the test names it.
+pub(in crate::app) fn save_picture_copy(name: &str, png: &[u8]) -> Vec<Command> {
+    crate::download::save_as(name, png, crate::download::Mime::Png);
+    Vec::new()
+}
+
+/// The name a composed picture is offered under: `sstv-composed-<unix>.png`.
+///
+/// The time is in it because a fixed name meant every save proposed the same
+/// file, so a second save in the same folder quietly replaced the first — the
+/// other half of what F4NRM reported.
+pub(in crate::app) fn composed_file_name(unix: i64) -> String {
+    format!("sstv-composed-{unix}.png")
+}
+
 /// The body offered pre-written: the reception note, then room for the
 /// operator's own sentence.
 ///
@@ -4058,6 +4089,34 @@ mod qsl_tests {
             ..Default::default()
         };
         assert_eq!(qsl.written.as_deref(), Some("/home/operator/Pictures/qsl.png"));
+    }
+}
+
+#[cfg(test)]
+mod save_tests {
+    use super::*;
+
+    /// **Saving a copy sends nothing to the engine** (issue #650).
+    ///
+    /// The press used to write the file *and* load the same picture into the
+    /// selected transmit slot, so the picture that was there was replaced for
+    /// good — F4NRM's "it replaces your N°1 saved picture". What the caller does
+    /// with this list is extend a list with nothing; a slot is filled only by
+    /// the chip that says it fills one.
+    #[test]
+    fn saving_a_copy_does_not_fill_a_transmit_slot() {
+        let cmds = save_picture_copy("sstv-1794321120000.png", b"\x89PNG-received");
+        assert!(cmds.is_empty(), "a save is a file, not a slot change: {cmds:?}");
+    }
+
+    /// **Two saves are two files.** The name carries the time; it used to be
+    /// `sstv-composed.png` every time, so the second save in a folder quietly
+    /// replaced the first.
+    #[test]
+    fn a_composed_picture_is_offered_under_a_new_name_each_time() {
+        let a = composed_file_name(1_794_321_120);
+        assert_eq!(a, "sstv-composed-1794321120.png");
+        assert_ne!(a, composed_file_name(1_794_321_121), "the same name twice replaces a file");
     }
 }
 
