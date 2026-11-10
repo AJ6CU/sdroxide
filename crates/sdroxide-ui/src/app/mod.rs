@@ -632,6 +632,12 @@ pub struct SdroxideApp {
     /// Result of the last PlutoSDR "Test connection".
     pluto_test_result: Option<TestOutcome>,
     seen_first_state: bool,
+    /// The decimations this screen's DEC chip has asked for and not yet seen
+    /// land. A change it did not ask for — `L SPECTRUM_SPAN` over rigctl,
+    /// another client — refits the view to the whole new span; one it did ask
+    /// for keeps the operator's zoom, as before. See `DecimAsks` and
+    /// `refit_on_outside_span_change` in `spectrum.rs`.
+    decim_asks: spectrum::DecimAsks,
     /// The dial and the centre this screen has just sent, held against
     /// engine snapshots that have not caught up with them. See [`dial_hold`].
     dial_hold: dial_hold::DialHold,
@@ -2342,6 +2348,7 @@ impl SdroxideApp {
             pluto_devices: Vec::new(),
             pluto_test_result: None,
             seen_first_state: false,
+            decim_asks: spectrum::DecimAsks::default(),
             dial_hold: dial_hold::DialHold::default(),
             show_memories: false,
             show_extras: false,

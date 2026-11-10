@@ -204,10 +204,12 @@ pub fn decimation_for_span(device_rate_hz: f64, span_hz: f64) -> u32 {
 /// The spans `SPECTRUM_SPAN` can give, narrowest first: the device rate over
 /// each power-of-two decimation the front end can carry.
 ///
-/// Hamlib's own place for a scope's spans is the rig's `spectrum_spans`, in
-/// ascending order, and `\dump_caps` prints them on a "Spectrum spans:"
-/// line; a client that reads them offers exactly the widths it will get,
-/// rather than asking and reading back (issue #469). Every span listed is one
+/// Hamlib's own place for a scope's spans is the rig's `spectrum_spans`
+/// (narrowest first in the rigs that have them, ending with 0), and
+/// `\dump_caps` prints them on a "Spectrum spans:" line (Hamlib's
+/// tests/dumpcaps.c, see `dump_caps` in proto.rs); a client that reads
+/// them offers exactly the widths it will get, rather than asking and
+/// reading back (issue #469). Every span listed is one
 /// [`decimation_for_span`] sets exactly. Empty where there is no rate.
 pub fn spectrum_spans(device_rate_hz: f64) -> Vec<f64> {
     if !(device_rate_hz > 0.0) {

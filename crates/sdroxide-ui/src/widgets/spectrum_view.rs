@@ -4749,6 +4749,7 @@ mod offset_hint_tests {
 #[cfg(test)]
 mod ctr_zoom_sim {
     use super::*;
+    use crate::app::spectrum::{DecimAsks, refit_on_outside_span_change};
     use std::collections::VecDeque;
 
     const WIDTH: f32 = 1000.0;
@@ -4772,6 +4773,12 @@ mod ctr_zoom_sim {
         target: CtrTarget,
         /// What CTR centres, in Hz above the dial: 0 for the dial, 1500 for FT8's band.
         anchor_off: f64,
+        /// The span the front end delivers: `DEV_SPAN` over the decimation.
+        dev_span: f64,
+        /// The front end's decimation, 1 until a snapshot changes it.
+        decimation: u32,
+        /// What this screen's DEC chip has asked for and not yet seen land.
+        decim_asks: DecimAsks,
     }
 
     /// What the operator sees at the end of one frame.
@@ -4803,6 +4810,37 @@ mod ctr_zoom_sim {
                 sent: 0,
                 target: None,
                 anchor_off: 0.0,
+                dev_span: DEV_SPAN,
+                decimation: 1,
+                decim_asks: DecimAsks::default(),
+            }
+        }
+
+        /// This screen's DEC chip asks for `decimation` at `now`, as
+        /// `decim_chip` does.
+        fn dec_chip(&mut self, decimation: u32, now: f64) {
+            self.decim_asks.push(decimation, now);
+        }
+
+        /// A snapshot with a new decimation arrives at `now` -- from this
+        /// screen's DEC chip or from outside (`L SPECTRUM_SPAN`) -- and the
+        /// view is refitted, or not, by the same two calls
+        /// `recenter_if_tuned_away` makes (issue #469).
+        fn decimation_arrives(&mut self, decimation: u32, now: f64) {
+            let prev_decimation = self.decimation;
+            let prev_rate = self.state.sample_rate;
+            self.decimation = decimation;
+            self.dev_span = DEV_SPAN / f64::from(decimation);
+            self.state.sample_rate = self.dev_span;
+            let ours = decimation != prev_decimation && self.decim_asks.answers(decimation, now);
+            if refit_on_outside_span_change(
+                ours,
+                prev_decimation,
+                decimation,
+                prev_rate,
+                self.state.sample_rate,
+            ) {
+                self.view.fit(self.state.center_hz, self.dev_span);
             }
         }
 
@@ -4827,14 +4865,15 @@ mod ctr_zoom_sim {
             self.engine_step();
             self.state.center_hz = self.engine_center;
             let mut dev_center = self.state.center_hz;
-            let (zoom_center, zoom_span) = self.pan.view_bounds(dev_center, DEV_SPAN);
+            let dev_span = self.dev_span;
+            let (zoom_center, zoom_span) = self.pan.view_bounds(dev_center, dev_span);
             let rect = Rect::from_min_size(egui::pos2(0.0, 0.0), egui::vec2(WIDTH, 400.0));
             let mut cmds = Vec::new();
             let view = &mut self.view;
             let state = &mut self.state;
 
             if factor != 1.0 {
-                zoom_about(view, x, &rect, factor, DEV_SPAN);
+                zoom_about(view, x, &rect, factor, dev_span);
             }
 
             // --- mirror of the CTR block in `show` ---
@@ -4887,7 +4926,7 @@ mod ctr_zoom_sim {
                 self.centred_at = Some((vfo, view.span()));
             }
             self.asked = asked;
-            let (clamp_center, clamp_span) = self.pan.view_bounds(dev_center, DEV_SPAN);
+            let (clamp_center, clamp_span) = self.pan.view_bounds(dev_center, dev_span);
             view.clamp_to(clamp_center, clamp_span);
             // --- end of mirror ---
 
@@ -5030,6 +5069,105 @@ mod ctr_zoom_sim {
                 seen.off_hz
             );
         }
+    }
+
+    /// The span changed from outside (`L SPECTRUM_SPAN` over rigctl) while
+    /// zoomed in with CTR on: narrowed, then widened past where it started.
+    /// Each time the view opens on the new span and the dial settles in the
+    /// middle (issue #469).
+    #[test]
+    fn a_span_changed_from_outside_refits_with_the_dial_in_the_middle() {
+        for lag in [0, 3] {
+            for guard in [0.0, 25_000.0] {
+                let mut sim = Sim::new(lag, guard);
+                settled(&mut sim, 10);
+                for _ in 0..30 {
+                    sim.frame(500.0, 0.85);
+                }
+                for decimation in [8, 1] {
+                    sim.decimation_arrives(decimation, 1.0);
+                    let span = DEV_SPAN / f64::from(decimation);
+                    let seen = settled(&mut sim, lag + 6);
+                    assert!(
+                        seen.off_hz.abs() <= seen.span / WIDTH as f64,
+                        "lag={lag} guard={guard} span={span}: dial {:+.0} Hz off the middle",
+                        seen.off_hz
+                    );
+                    assert!(
+                        seen.span <= span * 1.0001,
+                        "lag={lag} guard={guard}: view {} wider than the span {span}",
+                        seen.span
+                    );
+                    if guard == 0.0 {
+                        assert!(
+                            (seen.span - span).abs() <= span * 1e-6,
+                            "lag={lag}: view {} not the whole span {span}",
+                            seen.span
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    /// Two quick DEC chip clicks on this screen, 1 -> 2 -> 4, both sent before
+    /// the first snapshot lands, zoomed in with CTR on: the zoom is kept
+    /// through both snapshots, and the dial stays in the middle. Also with the
+    /// engine applying only the last of the two.
+    #[test]
+    fn two_quick_dec_clicks_keep_the_zoom() {
+        for lag in [0, 3] {
+            for guard in [0.0, 25_000.0] {
+                for both_land in [true, false] {
+                    let mut sim = Sim::new(lag, guard);
+                    settled(&mut sim, 10);
+                    for _ in 0..30 {
+                        sim.frame(500.0, 0.85);
+                    }
+                    let zoomed = settled(&mut sim, lag + 6).span;
+                    sim.dec_chip(2, 1.0);
+                    sim.dec_chip(4, 1.05);
+                    if both_land {
+                        sim.decimation_arrives(2, 1.1);
+                        settled(&mut sim, 1);
+                    }
+                    sim.decimation_arrives(4, 1.2);
+                    let seen = settled(&mut sim, lag + 6);
+                    let what = format!("lag={lag} guard={guard} both_land={both_land}");
+                    assert!(
+                        (seen.span - zoomed).abs() <= zoomed * 1e-6,
+                        "{what}: zoom {} not kept (was {zoomed})",
+                        seen.span
+                    );
+                    assert!(
+                        seen.off_hz.abs() <= seen.span / WIDTH as f64,
+                        "{what}: dial {:+.0} Hz off the middle",
+                        seen.off_hz
+                    );
+                }
+            }
+        }
+    }
+
+    /// The DEC chip asked for /2 and the engine refused it; later, from
+    /// outside, the span goes to /2 after all. That is from outside, and
+    /// refits.
+    #[test]
+    fn a_refused_dec_ask_does_not_claim_a_later_outside_change() {
+        let mut sim = Sim::new(0, 0.0);
+        settled(&mut sim, 10);
+        for _ in 0..30 {
+            sim.frame(500.0, 0.85);
+        }
+        sim.dec_chip(2, 1.0);
+        sim.decimation_arrives(2, 1.0 + crate::app::spectrum::DECIM_ASK_S + 1.0);
+        let seen = settled(&mut sim, 6);
+        let span = DEV_SPAN / 2.0;
+        assert!(
+            (seen.span - span).abs() <= span * 1e-6,
+            "view {} not the whole span {span}",
+            seen.span
+        );
     }
 
     /// FT8 with CTR on: the middle of the decode band (dial + 1500 Hz) is the

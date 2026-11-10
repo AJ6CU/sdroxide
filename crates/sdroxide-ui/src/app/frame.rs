@@ -4003,6 +4003,7 @@ impl SdroxideApp {
                     self.dial_hold.apply(&mut s, now);
                     let prev_vfo = self.state.active_freq_hz();
                     let prev_rate = self.state.sample_rate;
+                    let prev_decimation = self.state.decimation;
                     let prev_mode = self.state.rx[0].mode;
                     let prev_band = self.state.band;
                     self.state = s;
@@ -4036,7 +4037,13 @@ impl SdroxideApp {
                     {
                         self.clear_digi_band_rx();
                     }
-                    self.recenter_if_tuned_away(prev_vfo, prev_rate, band_changed);
+                    self.recenter_if_tuned_away(
+                        prev_vfo,
+                        prev_rate,
+                        prev_decimation,
+                        band_changed,
+                        now,
+                    );
                     // The announcer diffs *this* — the engine's own snapshot —
                     // rather than `self.state` per frame, because the UI
                     // mutates that optimistically before the engine confirms

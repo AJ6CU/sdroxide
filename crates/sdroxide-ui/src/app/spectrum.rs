@@ -1081,13 +1081,35 @@ impl SdroxideApp {
         &mut self,
         prev_vfo: f64,
         prev_rate: f64,
+        prev_decimation: u32,
         band_changed: bool,
+        now: f64,
     ) {
         let vfo = self.state.active_freq_hz();
         let first = !self.seen_first_state;
         self.seen_first_state = true;
+        // Whatever happens below, a decimation change that answers one of the
+        // DEC chip's asks spends it (and any older ask it overtook); one that
+        // answers none spends nothing. See `DecimAsks`.
+        let ours = self.state.decimation != prev_decimation
+            && self.decim_asks.answers(self.state.decimation, now);
         if self.view.is_unset() {
             return; // spectrum_view will fit and center on first draw
+        }
+        // The span was changed from outside this screen — `L SPECTRUM_SPAN`
+        // over rigctl, or another client's DEC chip — so the view opens on
+        // the whole new span, wider or narrower, and the operator zooms again
+        // from there (issue #469). The DEC chip on this screen is not this:
+        // it keeps the zoom, as it always has.
+        if refit_on_outside_span_change(
+            ours,
+            prev_decimation,
+            self.state.decimation,
+            prev_rate,
+            self.state.sample_rate,
+        ) {
+            self.view.fit(self.state.center_hz, self.dev_span());
+            return;
         }
         // The device window grew far past the view. On an audio-mode front end
         // (a CAT rig or an Icom over LAN) that is the radio's own scope taking
@@ -1235,6 +1257,77 @@ fn window_follows_the_rig(caps: &sdroxide_types::DeviceCaps) -> bool {
 /// frame never matches, so a deliberate zoom into part of the sweep survives.
 fn refit_on_window_growth(audio_mode: bool, prev_rate: f64, new_rate: f64, view_span: f64) -> bool {
     audio_mode && prev_rate > 0.0 && new_rate > prev_rate * 4.0 && view_span * 2.0 < new_rate
+}
+
+/// How long the DEC chip's ask is waited for, in seconds. An ask the engine
+/// refuses never arrives, so it is forgotten after this rather than taking a
+/// later outside change to the same value for the chip's own. A real answer
+/// lands in a frame or two.
+pub(crate) const DECIM_ASK_S: f64 = 2.0;
+
+/// The decimations this screen's DEC chip has asked for and not yet seen land,
+/// oldest first, each with when it was asked. Several can be in flight: two
+/// quick clicks send two asks before the first snapshot arrives.
+#[derive(Debug, Default)]
+pub(crate) struct DecimAsks(Vec<(u32, f64)>);
+
+impl DecimAsks {
+    /// The DEC chip asked for `decimation` at `now`.
+    pub(crate) fn push(&mut self, decimation: u32, now: f64) {
+        self.0.push((decimation, now));
+        // A handful at most in practice; bounded all the same.
+        if self.0.len() > 8 {
+            self.0.remove(0);
+        }
+    }
+
+    /// Whether a decimation that has just arrived is one this screen asked for.
+    ///
+    /// Asks older than [`DECIM_ASK_S`] are dropped first, so one the engine
+    /// refused cannot claim a later outside change. A match spends that ask and
+    /// every older one, which it overtook (the engine may apply only the last
+    /// of a quick run). A change that matches nothing spends nothing: an ask
+    /// still in flight keeps its zoom when it lands.
+    pub(crate) fn answers(&mut self, decimation: u32, now: f64) -> bool {
+        self.0.retain(|&(_, at)| now - at <= DECIM_ASK_S);
+        match self.0.iter().position(|&(d, _)| d == decimation) {
+            Some(i) => {
+                self.0.drain(..=i);
+                true
+            }
+            None => false,
+        }
+    }
+}
+
+/// True when the decimation changed on the same device and this screen did not
+/// ask for it — `L SPECTRUM_SPAN` from a rigctl client, or another client's
+/// DEC chip. The view is then refitted to the whole new span (issue #469):
+/// whoever moved the span from outside cannot see this screen's zoom, and a
+/// widened span left behind a narrow zoom is invisible until the operator
+/// zooms out by hand.
+///
+/// `ours` is whether the change answers one of this screen's DEC chip asks
+/// ([`DecimAsks::answers`]): that keeps the zoom. The device rate (the
+/// sample rate times the decimation) must be the same before and after, so a
+/// different device or rate — and the very first snapshot — is left to the
+/// rules that handle those.
+pub(crate) fn refit_on_outside_span_change(
+    ours: bool,
+    prev_decimation: u32,
+    decimation: u32,
+    prev_rate: f64,
+    rate: f64,
+) -> bool {
+    if decimation == prev_decimation || ours {
+        return false;
+    }
+    if !(prev_rate > 0.0 && rate > 0.0 && prev_decimation > 0 && decimation > 0) {
+        return false;
+    }
+    let before = prev_rate * f64::from(prev_decimation);
+    let after = rate * f64::from(decimation);
+    (before - after).abs() <= before * 1e-6
 }
 
 /// The frequency the panadapter is anchored on — what is being listened to,
@@ -1398,10 +1491,10 @@ mod tests {
     use super::Mode;
     use super::WIDER_THAN_PASSBAND;
     use super::{
-        AutoFit, FIT_ARRIVED_DB, FIT_MIN_GAP_S, FIT_SETTLE_S, FIT_STEP_S, average_in,
-        base_fft_for_rate, fit_due, focus_hz, glide_step, levels_drifted, pick_levels,
-        refit_on_window_growth, saturated_bins, slack_viewport, sstv_audio_window,
-        wefax_open_window,
+        AutoFit, DECIM_ASK_S, DecimAsks, FIT_ARRIVED_DB, FIT_MIN_GAP_S, FIT_SETTLE_S, FIT_STEP_S,
+        average_in, base_fft_for_rate, fit_due, focus_hz, glide_step, levels_drifted, pick_levels,
+        refit_on_outside_span_change, refit_on_window_growth, saturated_bins, slack_viewport,
+        sstv_audio_window, wefax_open_window,
     };
 
     /// The SSTV view on a demod-audio front end. The picture is 1200-2300 Hz of
@@ -1582,6 +1675,85 @@ mod tests {
             2_500_000.0,
             48_000.0
         ));
+    }
+
+    /// A span set over rigctl (`L SPECTRUM_SPAN`) or by another client:
+    /// the view opens on the whole new span, wider or narrower (issue #469).
+    #[test]
+    fn a_span_changed_from_outside_refits_the_view() {
+        // 2.4 MS/s device: /8 (300 kHz) widened to /1 (2.4 MHz), and back.
+        assert!(refit_on_outside_span_change(false, 8, 1, 300_000.0, 2_400_000.0));
+        assert!(refit_on_outside_span_change(false, 1, 8, 2_400_000.0, 300_000.0));
+        // This screen asked for something else: still from outside.
+        let mut asks = DecimAsks::default();
+        asks.push(2, 0.0);
+        assert!(!asks.answers(1, 0.1));
+        assert!(refit_on_outside_span_change(false, 8, 1, 300_000.0, 2_400_000.0));
+    }
+
+    /// This screen's DEC chip keeps the zoom, as it always has.
+    #[test]
+    fn the_dec_chip_on_this_screen_keeps_the_zoom() {
+        assert!(!refit_on_outside_span_change(true, 8, 1, 300_000.0, 2_400_000.0));
+        assert!(!refit_on_outside_span_change(true, 8, 16, 300_000.0, 150_000.0));
+    }
+
+    /// Two quick DEC clicks, 1 -> 2 -> 4, both sent before the first snapshot:
+    /// each snapshot is the chip's own, and neither spends the other's ask.
+    #[test]
+    fn two_dec_asks_in_flight_are_both_ours() {
+        let mut asks = DecimAsks::default();
+        asks.push(2, 0.0);
+        asks.push(4, 0.05);
+        assert!(asks.answers(2, 0.1));
+        assert!(asks.answers(4, 0.15));
+        // Both spent: an outside change to either is from outside again.
+        assert!(!asks.answers(2, 0.2));
+        assert!(!asks.answers(4, 0.2));
+    }
+
+    /// The engine applies only the last of a quick run: that one is ours, and
+    /// it spends the ask it overtook.
+    #[test]
+    fn an_overtaken_dec_ask_is_spent_with_the_one_that_lands() {
+        let mut asks = DecimAsks::default();
+        asks.push(2, 0.0);
+        asks.push(4, 0.05);
+        assert!(asks.answers(4, 0.1));
+        assert!(!asks.answers(2, 0.2), "the overtaken ask must not linger");
+    }
+
+    /// A change the chip did not ask for spends nothing: the chip's ask still
+    /// in flight is its own when it lands.
+    #[test]
+    fn an_outside_change_does_not_spend_the_chips_ask() {
+        let mut asks = DecimAsks::default();
+        asks.push(4, 0.0);
+        assert!(!asks.answers(2, 0.1));
+        assert!(asks.answers(4, 0.2));
+    }
+
+    /// An ask the engine refused never lands; past `DECIM_ASK_S` it no longer
+    /// claims an outside change to the same value.
+    #[test]
+    fn a_refused_dec_ask_is_forgotten() {
+        let mut asks = DecimAsks::default();
+        asks.push(2, 0.0);
+        assert!(!asks.answers(2, DECIM_ASK_S + 0.1));
+        // Within the wait it is still the chip's.
+        asks.push(2, 10.0);
+        assert!(asks.answers(2, 10.0 + DECIM_ASK_S));
+    }
+
+    /// Not a span change: the same decimation, a new device or rate, or the
+    /// first snapshot — each left to the rules that handle it.
+    #[test]
+    fn only_a_decimation_change_on_the_same_device_refits() {
+        assert!(!refit_on_outside_span_change(false, 4, 4, 600_000.0, 600_000.0));
+        // Another device: 2.4 MS/s /4 becomes 10 MS/s /8.
+        assert!(!refit_on_outside_span_change(false, 4, 8, 600_000.0, 1_250_000.0));
+        assert!(!refit_on_outside_span_change(false, 1, 8, 0.0, 300_000.0));
+        assert!(!refit_on_outside_span_change(false, 0, 8, 2_400_000.0, 300_000.0));
     }
 
     #[test]

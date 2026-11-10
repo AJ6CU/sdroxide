@@ -3469,6 +3469,8 @@ impl SdroxideApp {
         if crate::chrome::chip(ui, now > 1, label).on_hover_text(hint).clicked() {
             let next = if now * 2 > max { 1 } else { now * 2 };
             cmds.push(Command::SetDecimation(next));
+            // Ours: the view keeps its zoom when this one lands.
+            self.decim_asks.push(next, ui.ctx().input(|i| i.time));
         }
     }
 

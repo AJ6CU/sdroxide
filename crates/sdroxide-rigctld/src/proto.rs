@@ -707,6 +707,15 @@ fn dispatch(
             // scope's spans — narrowest first, each as `%.0f ` — so a
             // client offers exactly those (issue #469). Not in `\dump_state`:
             // netrigctl parses that line by line, and every client with it.
+            // The label and format are Hamlib's, character for character, so
+            // a client parsing either gets the same thing:
+            //   tests/dumpcaps.c, dumpcaps():
+            //     fprintf(fout, "Spectrum spans: %s\n", prntbuf);
+            //   src/sprintflst.c, rig_sprintf_spectrum_spans(): "%.0f " each,
+            //     in the order of caps->spectrum_spans, which ends with 0
+            //     (include/hamlib/rig.h); the rigs list them narrowest first
+            //     (rigs/dummy/dummy.c, rigs/icom/ic7300.c).
+            // https://github.com/Hamlib/Hamlib/blob/9199f8a239aed26b5eb0ee9c1a73bf51580483ce/tests/dumpcaps.c#L1063
             if st.can_decimate {
                 let spans = spectrum_spans(st.device_rate_hz);
                 if !spans.is_empty() {
