@@ -242,6 +242,10 @@ mod web {
                 // does. (The list is also at `radios` beside this page, for
                 // anyone looking from outside the app.)
                 let first = radio_query(&search);
+                // The tab carries the version, as the desktop window does: the
+                // static page says only the name, and nothing else in the
+                // browser tells which build the station is serving.
+                document.set_title(&sdroxide_ui::window_title(""));
                 let url = match first {
                     Some(id) => format!("{ws_proto}://{host}{base}ws/{id}"),
                     None => format!("{ws_proto}://{host}{base}ws"),
