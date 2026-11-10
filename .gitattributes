@@ -1,0 +1,39 @@
+# Line endings: LF in the repository AND in every checkout, on every OS.
+# `eol=lf` wins over a contributor's `core.autocrlf`, so a CRLF written by an
+# editor on Windows is turned back into LF when the file is added, and a
+# checkout never writes CRLF. The `line-endings` workflow refuses a CRLF that
+# still gets through.
+* text=auto eol=lf
+
+# Binary files: never touched.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.wav binary
+*.pdf binary
+*.bin binary
+*.i16 binary
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary
+*.pyc binary
+*.onnx binary
+*.lzh binary
+*.der binary
+*.img binary
+*.wasm binary
+*.zip binary
+*.gz binary
+*.xz binary
+
+# Data files that carry CRLF on purpose (a real-world format, or a captured
+# reply the parser is tested against): kept byte for byte.
+crates/sdroxide-solar/tests/fixtures/amateur.txt -text
+crates/sdroxide-solar/tests/fixtures/hamqsl.xml -text
+crates/sdroxide-solar/tests/fixtures/qo100.txt -text
+crates/sdroxide-types/src/cty.dat -text
+crates/sdroxide-types/src/sked-fallback.csv -text

@@ -1,0 +1,29 @@
+name: line-endings
+
+# CRLF must not be possible in this repository: every tracked text file is LF
+# (see `.gitattributes`). This job fails a push or a pull request that adds a
+# text file whose blob in the index holds CRLF, or a mix of both. Files marked
+# `-text` in `.gitattributes` (binary files, and the few data files that carry
+# CRLF on purpose) are not looked at.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lf-only:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: No CRLF in tracked text files
+        run: |
+          bad=$(git ls-files --eol | awk '$1=="i/crlf" || $1=="i/mixed" {print $1, $NF}')
+          if [ -n "$bad" ]; then
+            echo "These files hold CRLF in the index. Use LF (see .gitattributes):"
+            echo "$bad"
+            exit 1
+          fi
+          echo "All tracked text files are LF."
