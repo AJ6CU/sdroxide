@@ -201,6 +201,27 @@ pub fn decimation_for_span(device_rate_hz: f64, span_hz: f64) -> u32 {
     factor.min(sdroxide_types::max_decimation(device_rate_hz))
 }
 
+/// The spans `SPECTRUM_SPAN` can give, narrowest first: the device rate over
+/// each power-of-two decimation the front end can carry.
+///
+/// Hamlib's own place for a scope's spans is the rig's `spectrum_spans`, in
+/// ascending order, and `\dump_caps` prints them on a "Spectrum spans:"
+/// line; a client that reads them offers exactly the widths it will get,
+/// rather than asking and reading back (issue #469). Every span listed is one
+/// [`decimation_for_span`] sets exactly. Empty where there is no rate.
+pub fn spectrum_spans(device_rate_hz: f64) -> Vec<f64> {
+    if !(device_rate_hz > 0.0) {
+        return Vec::new();
+    }
+    let mut factor = sdroxide_types::max_decimation(device_rate_hz).min(MAX_DECIMATION);
+    let mut spans = Vec::new();
+    while factor >= 1 {
+        spans.push(device_rate_hz / factor as f64);
+        factor /= 2;
+    }
+    spans
+}
+
 /// A passband of the same width, centred on `pitch_hz`.
 ///
 /// A CW filter is centred on the sidetone by rule — the BW chip's presets do
