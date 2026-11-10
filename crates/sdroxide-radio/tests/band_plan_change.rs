@@ -236,10 +236,10 @@ fn a_change_of_plan_withdraws_the_confirmations_and_the_same_plan_does_not() {
         rig.seen.notices
     );
     assert_eq!(rig.tune(7_074_000.0), 7_074_000.0, "nothing moved: still confirmed");
-    rig.send(Command::SelectBandPlan { name: Some("bandplan-de-nrw".into()) });
+    rig.send(Command::SelectBandPlan { name: Some("bandplan-de".into()) });
     rig.confirm();
     assert_eq!(rig.tune(14_074_000.0), 14_074_000.0);
-    let nrw = root.join("bandplans").join("bandplan-de-nrw.json");
+    let nrw = root.join("bandplans").join("bandplan-de.json");
     let edited = std::fs::read_to_string(&nrw).unwrap().replace("\"M20\", \"lo_mhz\": 14.0", "\"M20\", \"lo_mhz\": 14.1");
     assert!(edited.contains("\"lo_mhz\": 14.1"), "the edit applied");
     std::fs::write(&nrw, edited).unwrap();
