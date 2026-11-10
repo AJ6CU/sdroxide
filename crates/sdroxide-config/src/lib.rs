@@ -5269,20 +5269,20 @@ mod tests {
         assert!(!root.join("bandplan.json").exists(), "the old file is no longer seeded");
         assert!(take_load_alerts().is_empty(), "a new library is not a problem to report");
         assert_eq!(band_plan_selection(), None);
-        assert!(list_band_plans().iter().any(|p| p.file == "bandplan-de-nrw" && p.shipped));
+        assert!(list_band_plans().iter().any(|p| p.file == "bandplan-de" && p.shipped));
 
         // Choosing a plan runs it, remembers it, and a restart finds it again.
-        let nrw = select_band_plan(Some("Bandplan DE NRW")).unwrap();
+        let nrw = select_band_plan(Some("Bandplan DE")).unwrap();
         assert!(!nrw.is_default());
-        assert_eq!(band_plan_selection().as_deref(), Some("bandplan-de-nrw"));
+        assert_eq!(band_plan_selection().as_deref(), Some("bandplan-de"));
         assert_eq!(load_band_plan(), nrw);
-        assert_eq!(Settings::load().band_plan.as_deref(), Some("bandplan-de-nrw"));
+        assert_eq!(Settings::load().band_plan.as_deref(), Some("bandplan-de"));
 
         // A choice that cannot be honoured leaves the choice as it was.
         assert!(select_band_plan(Some("no-such-plan")).is_err());
-        assert_eq!(band_plan_selection().as_deref(), Some("bandplan-de-nrw"));
+        assert_eq!(band_plan_selection().as_deref(), Some("bandplan-de"));
         // The plan running cannot be deleted from under the station.
-        assert!(delete_band_plan("bandplan-de-nrw").unwrap_err().contains("running"));
+        assert!(delete_band_plan("bandplan-de").unwrap_err().contains("running"));
 
         // An imported plan is only added: it runs when it is chosen.
         let mine = r#"{"meta":{"name":"Mine"},
@@ -5290,7 +5290,7 @@ mod tests {
             "region2":{"bands":[{"band":"M2","lo_mhz":144.0,"hi_mhz":148.0}]},
             "region3":{"bands":[{"band":"M2","lo_mhz":144.0,"hi_mhz":148.0}]}}"#;
         assert_eq!(import_band_plan("Mine", mine).unwrap(), "mine");
-        assert_eq!(band_plan_selection().as_deref(), Some("bandplan-de-nrw"));
+        assert_eq!(band_plan_selection().as_deref(), Some("bandplan-de"));
         let picked = select_band_plan(Some("mine")).unwrap();
         assert_eq!(
             picked.region(sdroxide_types::Region::R1).edges(sdroxide_types::Band::M2),
@@ -5306,18 +5306,18 @@ mod tests {
 
         // A chosen plan whose file has gone runs the built-in tables, says so,
         // and keeps the choice — it is somebody's document, not ours to unpick.
-        select_band_plan(Some("bandplan-de-nrw")).unwrap();
-        fs::remove_file(lib.join("bandplan-de-nrw.json")).unwrap();
+        select_band_plan(Some("bandplan-de")).unwrap();
+        fs::remove_file(lib.join("bandplan-de.json")).unwrap();
         assert!(load_band_plan().is_default());
         let alerts = take_load_alerts();
         assert_eq!(alerts.len(), 1, "{alerts:?}");
         assert!(alerts[0].contains("built-in"), "{}", alerts[0]);
-        assert_eq!(band_plan_selection().as_deref(), Some("bandplan-de-nrw"));
+        assert_eq!(band_plan_selection().as_deref(), Some("bandplan-de"));
 
         // And one that will not parse is left alone, as before.
-        fs::write(lib.join("bandplan-de-nrw.json"), "{ \"region1\": ").unwrap();
+        fs::write(lib.join("bandplan-de.json"), "{ \"region1\": ").unwrap();
         assert!(load_band_plan().is_default());
-        assert_eq!(fs::read_to_string(lib.join("bandplan-de-nrw.json")).unwrap(), "{ \"region1\": ");
+        assert_eq!(fs::read_to_string(lib.join("bandplan-de.json")).unwrap(), "{ \"region1\": ");
         assert_eq!(take_load_alerts().len(), 1);
         select_band_plan(None).unwrap();
 

@@ -182,13 +182,13 @@ fn a_radio_on_its_own_plan_does_not_touch_another_and_is_not_touched() {
     // station, so B's confirmations go; A runs its own plan and keeps its.
     let a_was = a.confirmed();
     assert!(a_was);
-    b.send(Command::SelectBandPlan { name: Some("bandplan-de-nrw".into()) });
+    b.send(Command::SelectBandPlan { name: Some("bandplan-de".into()) });
     a.send(Command::ReloadBandPlan); // A hears nothing new from the station
     assert!(!b.confirmed(), "B follows the station: unconfirmed");
     a.drain();
     assert!(a.confirmed(), "A runs its own plan: the station's change is not its change");
 
-    // A leaves its own plan for the station's, which is now NRW: a different
+    // A leaves its own plan for the station's, which is now Germany: a different
     // plan from the one A was on, so A is unconfirmed again.
     a.send(Command::SelectRadioBandPlan { name: None });
     assert!(!a.confirmed(), "A moved from its own plan to the station's");

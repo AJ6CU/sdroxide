@@ -8391,10 +8391,9 @@ The same holds across a restart: if the plan the station runs at start-up is not
 the one the lists were confirmed against, they start unconfirmed.
 
 **Plans that come with the program.** The first time the station makes its library it
-copies in twenty-one plans, which never replace a file of yours afterwards and can be
-deleted like any other: **Germany (NRW)** and **Germany (bandplan)** — two German
-plans of our own format with their own allocations — and national band lists for
-Australia, Austria, Belgium, Brazil, Canada, China (Mainland), France, Indonesia, Ireland,
+copies in twenty plans, which never replace a file of yours afterwards and can be
+deleted like any other: national band lists for
+Australia, Austria, Belgium, Brazil, Canada, China (Mainland), France, Germany, Indonesia, Ireland,
 Italy, the Netherlands, the Republic of Korea, Russia, Slovakia, Turkey, the United
 Kingdom and the United States, plus a **Worldwide** list and **QO-100**. The national
 lists are converted band lists (*A list of bands*, above): they change what the waterfall

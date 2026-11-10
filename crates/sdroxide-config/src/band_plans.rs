@@ -51,10 +51,11 @@ const LEGACY_KEY: &str = "own";
 /// it is made (and put back by RESTORE SHIPPED PLANS): `(key, text)`. Never
 /// overwritten by a start — a shipped plan the operator edited stays as they left it.
 ///
-/// Germany (NRW) and Germany (bandplan) are plans of our own format with their own
-/// allocations; every other plan is a national band list converted by
+/// Every plan is a national band list converted by
 /// [`sdroxide_types::convert_band_list`], so its allocations are the built-in IARU
 /// ones and it changes what the waterfall strip draws, never the transmit lockout.
+/// Germany is the same: the built-in IARU tables are the default for it, and
+/// `bandplan-de` is the list the operator can choose in the drop-down.
 pub const SHIPPED: &[(&str, &str)] = &[
     ("bandplan-at", include_str!("../assets/bandplans/bandplan-at.json")),
     ("bandplan-au", include_str!("../assets/bandplans/bandplan-au.json")),
@@ -63,7 +64,6 @@ pub const SHIPPED: &[(&str, &str)] = &[
     ("bandplan-ca", include_str!("../assets/bandplans/bandplan-ca.json")),
     ("bandplan-cn", include_str!("../assets/bandplans/bandplan-cn.json")),
     ("bandplan-de", include_str!("../assets/bandplans/bandplan-de.json")),
-    ("bandplan-de-nrw", include_str!("../assets/bandplans/bandplan-de-nrw.json")),
     ("bandplan-fr", include_str!("../assets/bandplans/bandplan-fr.json")),
     ("bandplan-general", include_str!("../assets/bandplans/bandplan-general.json")),
     ("bandplan-id", include_str!("../assets/bandplans/bandplan-id.json")),
@@ -516,12 +516,12 @@ mod tests {
         shipped.sort();
         assert_eq!(files, shipped, "every shipped plan, and nothing else");
         assert!(listed.iter().all(|p| p.shipped));
-        let nrw = listed.iter().find(|p| p.file == "bandplan-de-nrw").unwrap();
-        assert_eq!(nrw.name, "Germany (NRW)");
+        let de = listed.iter().find(|p| p.file == "bandplan-de").unwrap();
+        assert_eq!(de.name, "Germany");
         // A shipped plan the operator deleted is not brought back by a start.
-        delete_in(&dir, "bandplan-de-nrw").unwrap();
+        delete_in(&dir, "bandplan-de").unwrap();
         ensure_library_in(&dir).unwrap();
-        assert!(!list_in(&dir).iter().any(|p| p.file == "bandplan-de-nrw"));
+        assert!(!list_in(&dir).iter().any(|p| p.file == "bandplan-de"));
     }
 
     fn shipped(key: &str) -> &'static str {
@@ -543,20 +543,16 @@ mod tests {
             assert!(text.len() < BAND_PLAN_MAX_BYTES / 4, "{key} is {} bytes", text.len());
             assert!(!plan.is_default(), "{key} is the built-in plan under another name");
         }
-        assert_eq!(SHIPPED.len(), 21);
+        assert_eq!(SHIPPED.len(), 20);
     }
 
     /// Every shipped plan that is a converted band list keeps the built-in
     /// allocations: it draws and names, it never opens or closes a band for
-    /// transmitting. The two Germany plans carry allocations of their own, by
-    /// the decision of whoever supplied them.
+    /// transmitting.
     #[test]
     fn a_shipped_converted_plan_never_moves_the_transmit_lockout() {
         let stock = BandPlan::default();
         for (key, text) in SHIPPED {
-            if matches!(*key, "bandplan-de" | "bandplan-de-nrw") {
-                continue;
-            }
             let plan = check_plan_text(text).unwrap();
             for region in Region::ALL {
                 for band in Band::ALL {
@@ -572,19 +568,18 @@ mod tests {
     }
 
     #[test]
-    fn the_two_german_plans_are_who_they_say_they_are() {
-        let nrw = check_plan_text(shipped("bandplan-de-nrw")).unwrap();
-        assert_eq!(nrw.meta().name, "Germany (NRW)");
+    fn the_german_plan_is_the_one_list_and_the_old_two_are_gone() {
+        assert!(!SHIPPED.iter().any(|(k, _)| *k == "bandplan-de-nrw"), "NRW is no longer shipped");
         let de = check_plan_text(shipped("bandplan-de")).unwrap();
-        assert_eq!(de.meta().name, "Germany (bandplan)");
-        assert_eq!(de.meta().author, "drdatapi");
-        // Kept as supplied: the 27 MHz stretch is in it, with the label it came with.
+        assert_eq!(de.meta().name, "Germany");
+        assert_eq!(de.meta().country, "Germany");
+        // The list as supplied: the 40 m amateur row is there under its name.
         let kept = de
             .region(Region::R1)
             .segments()
             .iter()
-            .any(|s| s.lo == 27_415_000.0 && s.hi == 27_995_000.0 && s.label.is_some());
-        assert!(kept, "the plan was supplied with this segment and is shipped whole");
+            .any(|s| s.lo == 7_000_000.0 && s.hi == 7_200_000.0 && s.label == Some("40m-Amateur"));
+        assert!(kept, "the 40 m row of the German list");
     }
 
     #[test]
@@ -749,20 +744,20 @@ mod tests {
         ensure_library_in(&dir).unwrap();
         assert_eq!(restore_shipped_in(&dir).unwrap(), Vec::<String>::new(), "nothing to restore");
 
-        delete_in(&dir, "bandplan-de-nrw").unwrap();
-        assert_eq!(restore_shipped_in(&dir).unwrap(), vec!["bandplan-de-nrw".to_string()]);
-        assert!(read_in(&dir, "bandplan-de-nrw").is_ok());
+        delete_in(&dir, "bandplan-de").unwrap();
+        assert_eq!(restore_shipped_in(&dir).unwrap(), vec!["bandplan-de".to_string()]);
+        assert!(read_in(&dir, "bandplan-de").is_ok());
 
         // Edited by the operator: replaced, and their version is kept once.
-        let edited = shipped("bandplan-de-nrw").replace("Germany (NRW)", "My own NRW");
-        fs::write(file_in(&dir, "bandplan-de-nrw"), &edited).unwrap();
-        assert_eq!(restore_shipped_in(&dir).unwrap(), vec!["bandplan-de-nrw".to_string()]);
+        let edited = shipped("bandplan-de").replace("Germany", "My own DE");
+        fs::write(file_in(&dir, "bandplan-de"), &edited).unwrap();
+        assert_eq!(restore_shipped_in(&dir).unwrap(), vec!["bandplan-de".to_string()]);
         assert_eq!(
-            fs::read_to_string(file_in(&dir, "bandplan-de-nrw")).unwrap(),
-            shipped("bandplan-de-nrw")
+            fs::read_to_string(file_in(&dir, "bandplan-de")).unwrap(),
+            shipped("bandplan-de")
         );
         assert_eq!(
-            fs::read_to_string(library_in(&dir).join("bandplan-de-nrw.json.bak")).unwrap(),
+            fs::read_to_string(library_in(&dir).join("bandplan-de.json.bak")).unwrap(),
             edited
         );
         // The operator's own plans are not touched.
