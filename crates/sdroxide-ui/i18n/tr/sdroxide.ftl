@@ -9640,3 +9640,9 @@ navtex-freq-cw = CW modu
 navtex-freq-international = uluslararası, İngilizce
 
 navtex-freq-national = ulusal, yerel dilde
+
+publicsdr-near-kiwi = YAKIN KIWI
+
+publicsdr-near-kiwi-tip = Locator'ınıza en yakın, boş kanalı olan { $n } KiwiSDR alıcısı, en yakın olan önce. Birini bir CAT telsizinin bant görünümü olarak kullanın.
+
+publicsdr-near-kiwi-no-grid = YAKIN KIWI için locator'ınız gerekir: alıcıları mesafeye göre sıralamak için istasyon ayarlarında girin.

@@ -9632,3 +9632,9 @@ navtex-freq-cw = CW-Modus
 navtex-freq-international = international, auf Englisch
 
 navtex-freq-national = national, in der Landessprache
+
+publicsdr-near-kiwi = KIWI NAH
+
+publicsdr-near-kiwi-tip = Nur die { $n } KiwiSDR-Empfänger, die Ihrem Locator am nächsten sind und einen freien Kanal haben, der nächste zuerst. Als Bandansicht für ein CAT-Funkgerät verwendbar.
+
+publicsdr-near-kiwi-no-grid = KIWI NAH braucht Ihren Locator: Tragen Sie ihn in den Stationseinstellungen ein, um die Empfänger nach Entfernung zu ordnen.

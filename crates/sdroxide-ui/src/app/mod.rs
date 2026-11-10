@@ -589,6 +589,10 @@ pub struct SdroxideApp {
     /// Indexed by `PublicSdrNetwork::ALL`, positionally.
     public_sdr_nets_shown: [bool; sdroxide_types::PublicSdrNetwork::ALL.len()],
     public_sdr_free_only: bool,
+    /// NEAR KIWI: only the KiwiSDR receivers nearest to the station's locator
+    /// that have a free channel, closest first. For a CAT rig that wants a
+    /// nearby receiver as its band view.
+    public_sdr_near_kiwi: bool,
     public_sdr_in_band: bool,
     /// Take a SpyServer in its VFO+FFT shape rather than wideband. No effect on
     /// a KiwiSDR, which has only one shape.
@@ -2323,6 +2327,7 @@ impl SdroxideApp {
             // On, because a full receiver is not a receiver an operator can
             // use, and the reason is still shown for the ones this hides.
             public_sdr_free_only: true,
+            public_sdr_near_kiwi: false,
             public_sdr_in_band: false,
             public_sdr_low_bw: false,
             public_sdr_confirm: None,
