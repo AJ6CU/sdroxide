@@ -456,6 +456,7 @@ settings-radio-n = Funkgerät { $n }
 settings-on-station = Auf { $station }
 settings-add-radio-on-station = Ein Funkgerät auf { $station } hinzufügen — die Station bedient es sofort
 settings-panadapter-receiver-for = Panorama-Empfänger für { $radio }
+settings-panadapter-kiwi-zoom-note = Mit einem KiwiSDR als Empfänger öffnet sich sein Wasserfall auf etwa 2 MHz um die Frequenz herum vergrößert. Ändern Sie das in den Einstellungen dieses Funkgeräts unter Bereich der Bandansicht.
 settings-hang-up-stays-on = Auflegen. Das Funkgerät bleibt auf { $station }.
 settings-close-on-station = { $radio } auf { $station } schließen? Seine Konfiguration bleibt auf diesem Rechner; der Reiter hier schließt sich mit ihm, und ebenso der aller anderen.
 settings-close-it-on = Auf { $station } schließen
@@ -9632,5 +9633,3 @@ navtex-freq-cw = CW-Modus
 navtex-freq-international = international, auf Englisch
 
 navtex-freq-national = national, in der Landessprache
-
-settings-panadapter-kiwi-zoom-note = Mit einem KiwiSDR als Empfänger öffnet sich sein Wasserfall auf etwa 2 MHz um die Frequenz herum vergrößert. Ändern Sie das in den Einstellungen dieses Funkgeräts unter Bereich der Bandansicht.

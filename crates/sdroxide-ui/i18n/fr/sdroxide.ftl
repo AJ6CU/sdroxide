@@ -456,6 +456,7 @@ settings-radio-n = radio { $n }
 settings-on-station = Sur { $station }
 settings-add-radio-on-station = Ajouter une radio sur { $station } — la station la sert immédiatement
 settings-panadapter-receiver-for = Récepteur du panoramique pour { $radio }
+settings-panadapter-kiwi-zoom-note = Avec un KiwiSDR comme récepteur, sa cascade s'ouvre zoomée sur environ 2 MHz autour du dial. Modifiez-la dans les réglages de cette radio, sous Largeur de la vue de bande.
 settings-hang-up-stays-on = Raccrocher. La radio reste sur { $station }.
 settings-close-on-station = Fermer { $radio } sur { $station } ? Sa configuration reste sur cette machine ; l'onglet ici se ferme avec elle, et aussi celui de tous les autres.
 settings-close-it-on = La fermer sur { $station }
@@ -9643,5 +9644,3 @@ navtex-freq-cw = mode CW
 navtex-freq-international = international, en anglais
 
 navtex-freq-national = national, dans la langue du pays
-
-settings-panadapter-kiwi-zoom-note = Avec un KiwiSDR comme récepteur, sa cascade s'ouvre zoomée sur environ 2 MHz autour du dial. Modifiez-la dans les réglages de cette radio, sous Largeur de la vue de bande.

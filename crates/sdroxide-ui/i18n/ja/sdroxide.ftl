@@ -458,6 +458,7 @@ settings-radio-n = 無線機 { $n }
 settings-on-station = { $station } 上
 settings-add-radio-on-station = { $station } に無線機を追加 — ステーションがすぐに提供します
 settings-panadapter-receiver-for = { $radio } のパナダプター受信機
+settings-panadapter-kiwi-zoom-note = 受信機にKiwiSDRを使うと、そのウォーターフォールはダイヤル周辺の約2 MHzに拡大されて開きます。変更するには、その無線機の設定の「バンド表示のスパン」で行います。
 settings-hang-up-stays-on = 切断します。無線機は { $station } に残ります。
 settings-close-on-station = { $station } 上の { $radio } を閉じますか？ その構成はそのマシンに残ります。ここのタブは閉じられ、他の人のタブも同様に閉じられます。
 settings-close-it-on = { $station } で閉じる
@@ -9588,5 +9589,3 @@ navtex-freq-cw = CW モード
 navtex-freq-international = 国際（英語）
 
 navtex-freq-national = 国内（現地語）
-
-settings-panadapter-kiwi-zoom-note = 受信機にKiwiSDRを使うと、そのウォーターフォールはダイヤル周辺の約2 MHzに拡大されて開きます。変更するには、その無線機の設定の「バンド表示のスパン」で行います。

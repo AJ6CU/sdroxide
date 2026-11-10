@@ -462,6 +462,7 @@ settings-radio-n = радио { $n }
 settings-on-station = На станции { $station }
 settings-add-radio-on-station = Добавить радио на { $station } — станция обслуживает его сразу
 settings-panadapter-receiver-for = Приёмник панорамы для { $radio }
+settings-panadapter-kiwi-zoom-note = Если приёмником служит KiwiSDR, его водопад открывается с увеличением примерно на 2 МГц вокруг частоты. Измените это в настройках этого радио, пункт «Полоса вида диапазона».
 settings-hang-up-stays-on = Положить трубку. Радио остаётся на { $station }.
 settings-close-on-station = Закрыть { $radio } на { $station }? Его конфигурация остаётся на той машине; вкладка здесь закрывается вместе с ней, и вместе с ней — у всех остальных.
 settings-close-it-on = Закрыть на { $station }
@@ -9655,5 +9656,3 @@ navtex-freq-cw = режим CW
 navtex-freq-international = международная, на английском
 
 navtex-freq-national = национальная, на местном языке
-
-settings-panadapter-kiwi-zoom-note = Если приёмником служит KiwiSDR, его водопад открывается с увеличением примерно на 2 МГц вокруг частоты. Измените это в настройках этого радио, пункт «Полоса вида диапазона».

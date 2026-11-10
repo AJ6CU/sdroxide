@@ -464,6 +464,7 @@ settings-radio-n = radio { $n }
 settings-on-station = Su { $station }
 settings-add-radio-on-station = Aggiungi una radio su { $station } — la stazione la serve subito
 settings-panadapter-receiver-for = Ricevitore del panadapter per { $radio }
+settings-panadapter-kiwi-zoom-note = Con un KiwiSDR come ricevitore, la sua cascata si apre ingrandita su circa 2 MHz attorno alla frequenza. Modificalo nelle impostazioni di quella radio, in Ampiezza della vista di banda.
 settings-hang-up-stays-on = Riaggancia. La radio resta su { $station }.
 settings-close-on-station = Chiudere { $radio } su { $station }? La sua configurazione resta su quella macchina; la scheda qui si chiude con essa, e con essa quella di tutti gli altri.
 settings-close-it-on = Chiudila su { $station }
@@ -9649,5 +9650,3 @@ navtex-freq-cw = modo CW
 navtex-freq-international = internazionale, in inglese
 
 navtex-freq-national = nazionale, nella lingua locale
-
-settings-panadapter-kiwi-zoom-note = Con un KiwiSDR come ricevitore, la sua cascata si apre ingrandita su circa 2 MHz attorno alla frequenza. Modificalo nelle impostazioni di quella radio, in Ampiezza della vista di banda.
