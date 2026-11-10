@@ -69,8 +69,10 @@ async fn send(
 fn far_end_dongle() -> RadioConfig {
     RadioConfig {
         // A configured radio, not an upgrade: the engine fills a missing
-        // transmit band list in on start, which would change what is stored.
+        // transmit or receive band list in on start, which would change what
+        // is stored.
         tx_band_enable: Some(Vec::new()),
+        rx_band_enable: Some(Vec::new()),
         backend: Backend::RtlSdr,
         rtlsdr: RtlSdrConfig {
             serial: Some("00000042".into()),
