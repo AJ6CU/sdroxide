@@ -65,8 +65,9 @@ to CRLF with no change of content; the tree was put back to LF in one dedicated 
 - `.editorconfig` (`end_of_line = lf`) and `newline_style = "Unix"` in `rustfmt.toml` make editors and
   `rustfmt` write LF.
 - The `line-endings` workflow fails any push or pull request that adds a text file holding CRLF.
-- Only the files marked `-text` in `.gitattributes` keep their bytes: binary files, and the few data files
-  that carry CRLF on purpose (`cty.dat`, `sked-fallback.csv`, the solar fixtures).
+- No text file is an exception: even the data files that came with CRLF (`cty.dat`, `sked-fallback.csv`,
+  the solar fixtures) are LF now, and their parsers read lines with `lines()`/`trim()`. Only the binary
+  files (`binary` in `.gitattributes`) keep their bytes.
 
 Rules for an agent:
 
@@ -75,11 +76,12 @@ Rules for an agent:
    fix it before committing; never edit `.gitattributes` to make it pass.
 3. Before every commit, read `git diff --numstat`: a file whose changed-line count is its whole length, or
    hundreds of files for a small change, is an ending accident. Stop and find why before pushing.
-   `git ls-files --eol` must show no `i/crlf` or `i/mixed` outside `attr/-text`.
+   `git ls-files --eol` must show no `i/crlf` and no `i/mixed`, no exception.
 4. `core.autocrlf` may stay as it is on a contributor's machine; `.gitattributes` wins. On Windows,
    `git config core.autocrlf input` is the cleaner setting.
-5. A new data file that must keep CRLF (a captured reply, a real-world format) gets a `-text` line in
-   `.gitattributes` in the same PR, with the reason.
+5. A data file captured with CRLF (a server reply, a real-world format) is committed as LF; the parser must
+   accept both (`lines()`, `trim()`), as the real downloads keep their CRLF at run time. If a test needs
+   the CR itself, build the string in the test (`"a\r\nb"`), do not commit a CRLF file.
 
 ## F4NRM's areas (PR required, never straight to main)
 

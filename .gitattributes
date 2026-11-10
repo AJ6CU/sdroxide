@@ -29,11 +29,3 @@
 *.zip binary
 *.gz binary
 *.xz binary
-
-# Data files that carry CRLF on purpose (a real-world format, or a captured
-# reply the parser is tested against): kept byte for byte.
-crates/sdroxide-solar/tests/fixtures/amateur.txt -text
-crates/sdroxide-solar/tests/fixtures/hamqsl.xml -text
-crates/sdroxide-solar/tests/fixtures/qo100.txt -text
-crates/sdroxide-types/src/cty.dat -text
-crates/sdroxide-types/src/sked-fallback.csv -text
