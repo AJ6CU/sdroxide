@@ -55,22 +55,27 @@ text or more choices than it is worth is a bad trade even when it is correct —
 and the operator at the bench is the one who pays for it. Nobody is pushed to
 the back of the queue for being the reason the program exists.
 
-## Line endings: one method (decided 2026-11-08, do not re-think it)
+## Line endings: LF is the target (decided 2026-11-10, replaces the 2026-11-08 "keep what it has" rule)
 
-State: `core.autocrlf=true`, the repo is mixed: about 1300 files have a **CRLF blob** (`i/crlf`), about
-620 an LF blob (`i/lf`), working tree CRLF for both. Rule: **a file keeps the line endings it has.**
-Never convert a file, never "normalise" the repo.
+The project was **LF from its first commit**. The CRLF came in one accident: PR 507 (2026-11-06, one
+commit) turned about 1290 files from LF to CRLF with no change of content. The index is mixed today
+(about 1200 `.rs`/`.toml` blobs CRLF, about 160 LF). The repository will be normalised to LF **once, in one
+dedicated PR**; until then, do not make it worse and do not fix it file by file.
 
-1. **Edit existing files with the Edit tool only.** It keeps CRLF (checked: a multi-line `old_string`
-   written with LF matches a CRLF file, the diff stays minimal). Never `sed -i`, never a Python/`awk`
-   rewrite, never `cat >`/heredoc or the Write tool over an existing repo file. New files: Write is fine.
-2. `rustfmt` on a touched file turns it LF: always follow it with the gate below.
-3. **Gate, before every `git add` / commit, no exception:** `bash /d/sdrfull/tools/sdr-eol.sh` (puts CRLF
-   back on every `i/crlf w/lf` file, then prints `git diff --numstat`). Read that numstat: a file whose
-   changed-line count is its whole length is an ending accident, fix it before committing.
-4. Do not try a pre-commit hook: `git add` has already turned the file LF in the index by then (tried).
-5. Do not write `.gitattributes` or change `core.autocrlf`: repo-wide change, PR only, not ours.
-6. In messages, tables and PR bodies, never paste text copied from a CRLF file without checking it.
+1. **Everything you write is LF**: new files (Write is fine), messages, tables and PR bodies.
+2. **An existing CRLF file is edited with the Edit tool only**, which keeps its CRLF, so the diff stays
+   minimal. Never `sed -i`, never a Python/`awk` rewrite, never `cat >`/heredoc or the Write tool over an
+   existing repo file, never convert one file on its own.
+3. **Gate, before every `git add` / commit, no exception:** read `git diff --numstat`. A file whose
+   changed-line count is its whole length is an ending accident: fix it before committing. If
+   `git diff --stat` lists hundreds of files for a change that touches a few, stop and find why before
+   pushing. (`sdr-eol.sh`, which put CRLF back, is retired: do not run it.)
+4. `rustfmt` writes LF: do not run it on a file that is still CRLF in the index (the diff would show the
+   whole file); on a file that is LF in the index it is fine. Format the touched files only.
+5. Do not change `core.autocrlf` or write `.gitattributes` / `.editorconfig` outside the normalisation PR:
+   repo-wide change, PR only. That PR adds `.gitattributes` (`* text=auto eol=lf`), `.editorconfig`
+   (`end_of_line = lf`) and `newline_style = "Unix"` in `rustfmt.toml`.
+6. Do not try a pre-commit hook for conversion: `git add` has already changed the file by then (tried).
 
 ## F4NRM's areas (PR required, never straight to main)
 
