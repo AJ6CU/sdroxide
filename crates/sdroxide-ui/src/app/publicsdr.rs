@@ -307,6 +307,34 @@ fn passes_chips(
         && (!mine_only || favourites.contains(&e.address))
 }
 
+/// How many receivers NEAR KIWI keeps.
+const NEAR_KIWI_COUNT: usize = 10;
+
+/// The KiwiSDR receivers nearest to `me` that can be taken, closest first.
+///
+/// In: the receivers the other chips let through, the station's position, how
+/// many to keep. Out: at most `n` of them. A receiver with no position cannot
+/// be ranked and is left out; so is one that is full or otherwise refused
+/// ([`PublicSdrEntry::blocked_reason`]), because the nearest receiver an
+/// operator cannot connect to is no use as a band view.
+fn nearest_kiwis<'a>(
+    entries: &[&'a PublicSdrEntry],
+    me: (f64, f64),
+    n: usize,
+) -> Vec<&'a PublicSdrEntry> {
+    let mut near: Vec<(f64, &PublicSdrEntry)> = entries
+        .iter()
+        .copied()
+        .filter(|e| e.network == PublicSdrNetwork::KiwiSdr && e.blocked_reason().is_none())
+        .filter_map(|e| {
+            let (lat, lon) = (e.lat?, e.lon?);
+            Some((sdroxide_types::distance_km(me, (f64::from(lat), f64::from(lon))), e))
+        })
+        .collect();
+    near.sort_by(|a, b| a.0.total_cmp(&b.0));
+    near.into_iter().take(n).map(|(_, e)| e).collect()
+}
+
 /// The connection field in front of a picked receiver's row on the map view:
 /// ONLINE, SILENT, or CHECKING… until the answer is in; what answered (or why
 /// nothing did) on hover.
@@ -388,14 +416,19 @@ impl SdroxideApp {
         &self,
         entries: &'a [PublicSdrEntry],
         dial_hz: f64,
+        my_pos: Option<(f64, f64)>,
     ) -> Vec<(&'a PublicSdrEntry, i32)> {
         let query = self.public_sdr_search.trim();
-        let visible: Vec<&PublicSdrEntry> = entries
+        // NEAR KIWI picks its own network, so the network chips are not asked.
+        let all_nets = [true; PublicSdrNetwork::ALL.len()];
+        let nets: &[bool] =
+            if self.public_sdr_near_kiwi { &all_nets } else { &self.public_sdr_nets_shown };
+        let mut visible: Vec<&PublicSdrEntry> = entries
             .iter()
             .filter(|e| {
                 passes_chips(
                     e,
-                    &self.public_sdr_nets_shown,
+                    nets,
                     self.public_sdr_free_only,
                     self.public_sdr_in_band,
                     dial_hz,
@@ -404,6 +437,11 @@ impl SdroxideApp {
                 )
             })
             .collect();
+        if self.public_sdr_near_kiwi
+            && let Some(me) = my_pos
+        {
+            visible = nearest_kiwis(&visible, me, NEAR_KIWI_COUNT);
+        }
         ranked(&visible, query)
     }
 
@@ -575,6 +613,14 @@ impl SdroxideApp {
             {
                 self.public_sdr_map = true;
             }
+            // NEAR KIWI sits right after the views and before the network
+            // chips: it is a view of the Kiwis, not one more filter on them.
+            if crate::chrome::chip(ui, self.public_sdr_near_kiwi, tr!("publicsdr-near-kiwi"))
+                .on_hover_text(tr!("publicsdr-near-kiwi-tip", n = NEAR_KIWI_COUNT))
+                .clicked()
+            {
+                self.public_sdr_near_kiwi = !self.public_sdr_near_kiwi;
+            }
             ui.separator();
             for (i, net) in PublicSdrNetwork::ALL.iter().enumerate() {
                 if crate::chrome::chip(ui, self.public_sdr_nets_shown[i], net.label())
@@ -649,6 +695,14 @@ impl SdroxideApp {
             }
         });
 
+        if self.public_sdr_near_kiwi && my_pos.is_none() {
+            ui.label(
+                RichText::new(tr!("publicsdr-near-kiwi-no-grid"))
+                    .size(11.0)
+                    .color(crate::theme::ALERT()),
+            );
+        }
+
         let Some(dir) = &directory else {
             ui.separator();
             ui.add_space(8.0);
@@ -692,7 +746,7 @@ impl SdroxideApp {
         });
         ui.separator();
 
-        let rows = self.public_sdr_rows(&dir.entries, dial_hz);
+        let rows = self.public_sdr_rows(&dir.entries, dial_hz, my_pos);
         if self.public_sdr_map {
             if let Some(e) = self.public_sdr_map_view(ui, &dir.entries, &rows, my_pos, star) {
                 *picked = Some(e);
@@ -1277,6 +1331,38 @@ mod tests {
                 "the {want} is not on the row (starred={starred}): {text:?}"
             );
         }
+    }
+
+    /// **NEAR KIWI is the nearest Kiwis that can be taken, closest first.** A
+    /// SpyServer is not a Kiwi, a full receiver cannot be taken, and one with no
+    /// position cannot be ranked; the list stops at the count asked for.
+    #[test]
+    fn near_kiwi_keeps_the_closest_free_kiwis_in_order() {
+        let at = |name: &str, lat: f32, lon: f32| {
+            let mut e = entry(name, "");
+            e.lat = Some(lat);
+            e.lon = Some(lon);
+            e
+        };
+        let me = (48.0, 2.0);
+        let far = at("far", 40.0, -74.0);
+        let near = at("near", 48.5, 2.5);
+        let mid = at("mid", 51.5, 0.0);
+        let mut full = at("full", 48.1, 2.1);
+        full.users = full.max_users;
+        let mut spy = at("spy", 48.2, 2.2);
+        spy.network = PublicSdrNetwork::SpyServer;
+        let unplaced = entry("unplaced", "");
+        let all = [&far, &near, &mid, &full, &spy, &unplaced];
+
+        let got = nearest_kiwis(&all, me, 10);
+        let names: Vec<&str> = got.iter().map(|e| e.name.as_str()).collect();
+        assert_eq!(names, ["near", "mid", "far"]);
+        assert!(full.blocked_reason().is_some(), "the fixture's full Kiwi is refused");
+
+        let two = nearest_kiwis(&all, me, 2);
+        assert_eq!(two.len(), 2);
+        assert_eq!(two[0].name, "near");
     }
 
     /// **The dock is a choice, honoured only where the slot is free.** Closed or

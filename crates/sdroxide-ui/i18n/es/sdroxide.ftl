@@ -9631,3 +9631,9 @@ navtex-freq-cw = modo CW
 navtex-freq-international = internacional, en inglés
 
 navtex-freq-national = nacional, en el idioma local
+
+publicsdr-near-kiwi = KIWI CERCANO
+
+publicsdr-near-kiwi-tip = Solo los { $n } receptores KiwiSDR más cercanos a su locator que tienen un canal libre, el más cercano primero. Úselo como vista de banda de una radio CAT.
+
+publicsdr-near-kiwi-no-grid = KIWI CERCANO necesita su locator: indíquelo en los ajustes de la estación para ordenar los receptores por distancia.

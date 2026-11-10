@@ -9578,3 +9578,9 @@ navtex-freq-cw = CW 模式
 navtex-freq-international = 国际，英语
 
 navtex-freq-national = 国内，当地语言
+
+publicsdr-near-kiwi = 附近KIWI
+
+publicsdr-near-kiwi-tip = 仅显示离您的定位符最近且有空闲通道的 { $n } 台 KiwiSDR 接收机，最近的在前。可用作 CAT 电台的频段视图。
+
+publicsdr-near-kiwi-no-grid = “附近KIWI”需要您的定位符：请在电台设置中填写，以便按距离对接收机排序。

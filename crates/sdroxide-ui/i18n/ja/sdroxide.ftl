@@ -9588,3 +9588,9 @@ navtex-freq-cw = CW モード
 navtex-freq-international = 国際（英語）
 
 navtex-freq-national = 国内（現地語）
+
+publicsdr-near-kiwi = 近くのKIWI
+
+publicsdr-near-kiwi-tip = ロケーターに最も近く、空きチャンネルのあるKiwiSDR受信機を近い順に{ $n }台だけ表示します。CAT無線機のバンド表示として使えます。
+
+publicsdr-near-kiwi-no-grid = 近くのKIWIにはロケーターが必要です。局の設定で入力すると、受信機を距離順に並べられます。
